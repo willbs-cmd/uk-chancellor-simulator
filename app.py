@@ -1,31 +1,31 @@
 import streamlit as st
 import random
 
-st.set_page_config(page_title='UK Chancellor Simulator', layout='wide')
+st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
     st.session_state.party = 'Labour'
-    st.session_state.approval = 50
-    st.session_state.market_conf = 70
-    st.session_state.debt = 95.1
-    st.session_state.deficit = 4.2
-    st.session_state.inflation = 2.4
-    st.session_state.interest_rate = 4.5
-    st.session_state.gilt_yield = 4.1
-    st.session_state.growth = 1.1
-    st.session_state.headroom = 15.0
+    st.session_state.approval = 48
+    st.session_state.market_conf = 65
+    st.session_state.debt = 98.2
+    st.session_state.deficit = 5.4
+    st.session_state.inflation = 3.2
+    st.session_state.interest_rate = 5.0
+    st.session_state.gilt_yield = 4.7
+    st.session_state.growth = 0.8
+    st.session_state.headroom = 8.5
     st.session_state.year = 1
     st.session_state.block = 1
     st.session_state.term = 1
     st.session_state.active_crisis = None
-    st.session_state.message = 'Welcome to Number 11 Downing Street. Your parliamentary term begins.'
+    st.session_state.message = 'Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching.'
     st.session_state.initialized = True
 
 if st.session_state.step == 'setup':
-    st.title('🏛️ The UK Chancellor Simulator')
+    st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Choose Your Government')
-    st.write('Before taking the reins at Number 11, select which political party is forming the government:')
+    st.write('Economic headroom is tight (£8.5B) and debt is nearly 100% of GDP. Choose wisely:')
     
     party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats'])
     
@@ -34,11 +34,11 @@ if st.session_state.step == 'setup':
         if st.button('Enter Number 11', type='primary'):
             st.session_state.party = party_choice
             if party_choice == 'Conservative':
-                st.session_state.approval = 48
-                st.session_state.market_conf = 75
+                st.session_state.approval = 46
+                st.session_state.market_conf = 70
             elif party_choice == 'Liberal Democrats':
-                st.session_state.approval = 52
-                st.session_state.market_conf = 65
+                st.session_state.approval = 49
+                st.session_state.market_conf = 60
             st.session_state.step = 'game'
             st.rerun()
     with col_b:
@@ -47,10 +47,10 @@ if st.session_state.step == 'setup':
             st.rerun()
     st.stop()
 
-st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator')
+st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
 st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
 
-# Top Metric Bar (Rounded cleanly to 1 decimal place)
+# Top Metric Bar
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%')
 col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%')
@@ -68,24 +68,25 @@ with st.expander('📊 Macroeconomic Dashboard (Detailed Stats)'):
     m3.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
     m4.metric('Bank Rate (Interest)', f'{round(st.session_state.interest_rate, 1)}%')
     m5.metric('10-Year Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
-    st.caption('Monitor these core indicators to ensure bond vigilantes and the Bank of England remain supportive.')
+    st.caption('WARNING: High gilt yields and inflation will penalize your headroom automatically each year.')
 
 st.divider()
 
 if st.button('← Back to Party Selection'):
+    st.session_state.setup = 'setup'
     st.session_state.step = 'setup'
     st.rerun()
 
 if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
     
-    score = (st.session_state.approval * 0.7) + (st.session_state.market_conf * 0.3)
+    score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (st.session_state.deficit * 1.5)
     if st.session_state.party == 'Labour':
-        gov_seats = int(max(150, min(450, 326 + (score - 50) * 4)))
+        gov_seats = int(max(120, min(450, 326 + (score - 50) * 4.5)))
     elif st.session_state.party == 'Conservative':
-        gov_seats = int(max(120, min(440, 326 + (score - 50) * 4)))
+        gov_seats = int(max(100, min(440, 326 + (score - 50) * 4.5)))
     else:
-        gov_seats = int(max(80, min(380, 250 + (score - 50) * 3)))
+        gov_seats = int(max(70, min(380, 240 + (score - 50) * 3.5)))
         
     opp_seats = 650 - gov_seats
     majority = gov_seats - 326
@@ -111,7 +112,7 @@ if st.session_state.year > 5:
     c3.metric('Final OBR Headroom', f'£{round(st.session_state.headroom, 1)}B')
 
     if gov_seats >= 326:
-        st.success('Landslide or stable victory! You have secured another term in Downing Street.')
+        st.success('Incredible feat! You survived Hardcore Mode and kept your majority.')
         if st.button('Continue to Next Term'):
             st.session_state.term += 1
             st.session_state.year = 1
@@ -119,26 +120,33 @@ if st.session_state.year > 5:
             st.session_state.step = 'game'
             st.rerun()
     else:
-        st.error('You lost your majority at the ballot box! Time to pack your bags.')
+        st.error('The markets and electorate punished your economic management. You lost your majority.')
         if st.button('Start New Career'):
             st.session_state.clear()
             st.rerun()
     st.stop()
 
-# Helper function for 30% post-execution crisis check
+# Helper function for 45% post-execution crisis check & economic drift
 def process_block_execution(next_year, next_block):
+    # Hardcore economic pressure drift based on gilt yields and deficit
+    if st.session_state.gilt_yield > 4.5:
+        st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
+    if st.session_state.inflation > 3.0:
+        st.session_state.approval = round(st.session_state.approval - 1.5, 1)
+        
     crises_pool = [
-        ('🚨 BREAKING: Bond Market Panic! Yields on UK gilts are spiking rapidly following international rumors.', 
-         'Bail out gilt markets with a £5B treasury backstop (-£5B Headroom, +10 Market Conf)', 'Ignore and let bond vigilantes test the currency (-15 Market Conf, +1 Debt)'),
-        ('🚨 BREAKING: Major Hospital Cyberattack! Core NHS patient databases locked down across trusts.', 
-         'Approve emergency private cybersecurity contractors (-£3B Headroom, +5 Approval)', 'Refuse extra funds and rely on internal IT teams (-8 Approval, -5 Market Conf)'),
-        ('🚨 BREAKING: Severe Flash Flooding Hits Regional Towns! Hundreds of homes submerged.', 
-         'Deploy an immediate £4B emergency flood-defence relief package (-£4B Headroom, +8 Approval)', 'Offer standard insurance support only (-10 Approval)'),
-        ('🚨 BREAKING: National Rail Network Strikes Loom! Train drivers announce indefinite walkouts.', 
-         'Bust the strike with above-inflation pay concessions (-£5B Headroom, +8 Approval)', 'Stand firm against union demands and endure travel chaos (-10 Approval, -4 Growth)')
+        ('🚨 BREAKING: Severe Gilt Market Revolt! Foreign investors dump UK debt as yields surge past 5.5%.', 
+         'Deploy emergency Bank of England intervention (-£7B Headroom, +8 Market Conf)', 'Refuse intervention and let bond vigilantes feast (-18 Market Conf, +2.5 Debt)'),
+        ('🚨 BREAKING: National Health Service Staff Walkout! Nurses and junior doctors launch coordinated strikes.', 
+         'Meet pay demands in full to avoid collapse (-£6B Headroom, +10 Approval, +0.4 Inflation)', 'Stand firm and invoke emergency service minimums (-12 Approval, -3 Growth)'),
+        ('🚨 BREAKING: Major Energy Retailer Bankruptcy! State bailout required to keep lights on.', 
+         'Absorb company liabilities into public balance sheet (-£5B Headroom, +6 Approval)', 'Let customers scatter to higher tariffs (-9 Approval, +0.5 Inflation)'),
+        ('🚨 BREAKING: Public Sector Pension Black Hole Discovered! OBR mandates immediate funding correction.', 
+         'Inject emergency cash reserves to plug shortfall (-£5.5B Headroom, +5 Market Conf)', 'Cut departmental budgets across the board (-10 Approval, +4 Market Conf)')
     ]
     
-    if random.random() < 0.30 and st.session_state.year < 5:
+    # Increased to 45% chance in Hardcore mode
+    if random.random() < 0.45 and st.session_state.year < 5:
         st.session_state.active_crisis = random.choice(crises_pool)
     
     st.session_state.year = next_year
@@ -149,21 +157,21 @@ def process_block_execution(next_year, next_block):
 if st.session_state.active_crisis is not None:
     c_title, c_opt1, c_opt2 = st.session_state.active_crisis
     st.error(c_title)
-    st.write('Your policy decision has triggered an immediate national emergency that requires your urgent intervention.')
+    st.write('Hardcore Crisis: Emergency intervention required immediately.')
     crisis_choice = st.radio('Choose emergency response:', [c_opt1, c_opt2])
     if st.button('Resolve Crisis'):
         if c_opt1 in crisis_choice:
-            st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
-            st.session_state.approval = round(st.session_state.approval + 6, 1)
-            st.session_state.market_conf = round(st.session_state.market_conf + 4, 1)
-            st.session_state.gilt_yield = round(st.session_state.gilt_yield - 0.2, 1)
-            st.session_state.message = 'Crisis Handled: Swift intervention stabilized the situation.'
+            st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
+            st.session_state.approval = round(st.session_state.approval + 5, 1)
+            st.session_state.market_conf = round(st.session_state.market_conf + 5, 1)
+            st.session_state.gilt_yield = round(st.session_state.gilt_yield - 0.3, 1)
+            st.session_state.message = 'Crisis Handled: Expensive intervention stabilized markets.'
         else:
-            st.session_state.approval = round(st.session_state.approval - 10, 1)
-            st.session_state.market_conf = round(st.session_state.market_conf - 8, 1)
-            st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.5, 1)
-            st.session_state.deficit = round(st.session_state.deficit + 0.5, 1)
-            st.session_state.message = 'Crisis Handled: Ignored intervention to save cash. Trust takes a hit.'
+            st.session_state.approval = round(st.session_state.approval - 12, 1)
+            st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
+            st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.7, 1)
+            st.session_state.deficit = round(st.session_state.deficit + 0.8, 1)
+            st.session_state.message = 'Crisis Handled: Ignored warning signs. Markets and public punish you.'
         st.session_state.active_crisis = None
         st.rerun()
     st.stop()
@@ -176,37 +184,38 @@ if st.session_state.year == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
         st.write('The NHS and police demand an immediate cash injection to clear backlogs.')
         choice = st.radio('Select strategy:', [
-            '1. (Hard Left / Socialist) Nationalize key utilities and tax corporate wealth to fully fund public services.',
-            '2. (Social Democratic) Borrow and invest heavily in public infrastructure and frontline NHS staff.',
-            '3. (Centric / Pragmatic) Raid defense spending slightly and implement targeted efficiency savings.',
-            '4. (Free-Market Libertarian) Cut red tape, freeze public spending, and rely on private healthcare delivery.',
-            '5. (Strict Fiscal Austerity) Enforce immediate spending freezes and departmental cuts to protect headroom.'
+            '1. (Hard Left) Nationalize key utilities and impose steep wealth taxes.',
+            '2. (Social Democratic) Borrow heavily to fund public infrastructure and NHS staff.',
+            '3. (Centric) Raid defense spending slightly and implement targeted efficiency savings.',
+            '4. (Free-Market) Cut red tape, freeze public spending, and rely on private healthcare.',
+            '5. (Fiscal Austerity) Enforce immediate spending freezes and departmental cuts.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom + 2.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 6, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
-                st.session_state.message = 'Socialist wealth taxes enacted! Public rejoices, City markets panic.'
+                st.session_state.headroom = round(st.session_state.headroom + 1.5, 1)
+                st.session_state.approval = round(st.session_state.approval + 5, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 16, 1)
+                st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.6, 1)
+                st.session_state.message = 'Wealth taxes enacted! City bond vigilantes trigger a sell-off.'
             elif '2.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 8.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.deficit = round(st.session_state.deficit + 1.0, 1)
-                st.session_state.message = 'Keynesian stimulus deployed! Public services boosted.'
+                st.session_state.headroom = round(st.session_state.headroom - 7.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.deficit = round(st.session_state.deficit + 1.2, 1)
+                st.session_state.message = 'Keynesian stimulus deployed, but deficit expands.'
             elif '3.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
                 st.session_state.approval = round(st.session_state.approval + 2, 1)
-                st.session_state.message = 'Pragmatic compromise found. Steady progress maintained.'
+                st.session_state.message = 'Pragmatic compromise found.'
             elif '4.' in choice:
                 st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
-                st.session_state.approval = round(st.session_state.approval - 6, 1)
+                st.session_state.approval = round(st.session_state.approval - 7, 1)
                 st.session_state.growth = round(st.session_state.growth + 0.2, 1)
-                st.session_state.message = 'Deregulation path chosen. Markets cheer; voters express concern.'
+                st.session_state.message = 'Deregulation path chosen.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 6.0, 1)
-                st.session_state.approval = round(st.session_state.approval - 10, 1)
-                st.session_state.deficit = round(st.session_state.deficit - 0.8, 1)
-                st.session_state.message = 'Hard austerity applied. Headroom restored; public fury mounts.'
+                st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
+                st.session_state.approval = round(st.session_state.approval - 12, 1)
+                st.session_state.deficit = round(st.session_state.deficit - 0.9, 1)
+                st.session_state.message = 'Austerity applied. Headroom recovered, public outraged.'
             process_block_execution(1, 2)
 
     elif st.session_state.block == 2:
@@ -221,27 +230,27 @@ if st.session_state.year == 1:
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 9.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 12, 1)
-                st.session_state.deficit = round(st.session_state.deficit + 1.5, 1)
-                st.session_state.message = 'Unions fully appeased! Borrowing surges.'
+                st.session_state.headroom = round(st.session_state.headroom - 8.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 10, 1)
+                st.session_state.deficit = round(st.session_state.deficit + 1.4, 1)
+                st.session_state.inflation = round(st.session_state.inflation + 0.4, 1)
+                st.session_state.message = 'Unions appeased, but inflation ticks upward.'
             elif '2.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 7, 1)
-                st.session_state.message = 'Fair pay settlement reached with workforce.'
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
+                st.session_state.approval = round(st.session_state.approval + 6, 1)
+                st.session_state.message = 'Fair pay settlement reached.'
             elif '3.' in choice:
-                st.session_state.approval = round(st.session_state.approval - 3, 1)
-                st.session_state.message = 'Compromise struck. Minor strikes continue.'
+                st.session_state.approval = round(st.session_state.approval - 4, 1)
+                st.session_state.message = 'Compromise struck with minor disruption.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
-                st.session_state.approval = round(st.session_state.approval - 9, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.message = 'Private contracting introduced. Efficiency gains, deep union backlash.'
+                st.session_state.market_conf = round(st.session_state.market_conf + 9, 1)
+                st.session_state.approval = round(st.session_state.approval - 10, 1)
+                st.session_state.message = 'Private contracting introduced.'
             else:
-                st.session_state.approval = round(st.session_state.approval - 12, 1)
+                st.session_state.approval = round(st.session_state.approval - 14, 1)
                 st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
                 st.session_state.inflation = round(st.session_state.inflation - 0.3, 1)
-                st.session_state.message = 'Pay cap enforced. Markets love the discipline; workers furious.'
+                st.session_state.message = 'Pay cap enforced. Markets pleased, workforce furious.'
             process_block_execution(1, 3)
 
     elif st.session_state.block == 3:
@@ -256,27 +265,27 @@ if st.session_state.year == 1:
         ])
         if st.button('Execute Block 3 (End of Year 1)'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom + 8.0, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 18, 1)
-                st.session_state.approval = round(st.session_state.approval + 5, 1)
-                st.session_state.message = 'Wealth taxes implemented! Capital flight detected.'
+                st.session_state.headroom = round(st.session_state.headroom + 7.0, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 20, 1)
+                st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.8, 1)
+                st.session_state.message = 'Wealth tax causes capital flight and gilt sell-off.'
             elif '2.' in choice:
-                st.session_state.growth = round(st.session_state.growth + 0.5, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
-                st.session_state.message = 'Green industrial strategy launched! Growth picks up.'
+                st.session_state.growth = round(st.session_state.growth + 0.4, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
+                st.session_state.message = 'Green industrial strategy launched.'
             elif '3.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.2, 1)
-                st.session_state.message = 'Pragmatic autumn budget delivered.'
+                st.session_state.message = 'Pragmatic budget delivered.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 14, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.4, 1)
-                st.session_state.message = 'Corporation tax slashed! Global firms rush in.'
+                st.session_state.market_conf = round(st.session_state.market_conf + 12, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
+                st.session_state.message = 'Corporation tax slashed.'
             else:
                 st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
                 st.session_state.deficit = round(st.session_state.deficit - 1.0, 1)
-                st.session_state.approval = round(st.session_state.approval - 5, 1)
-                st.session_state.message = 'Budgets frozen. Deficit shrinks.'
+                st.session_state.approval = round(st.session_state.approval - 6, 1)
+                st.session_state.message = 'Budgets frozen.'
             process_block_execution(2, 1)
 
 elif st.session_state.year == 2:
@@ -292,27 +301,27 @@ elif st.session_state.year == 2:
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 7.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.message = 'Welfare expanded. Claimants protected, budget strained.'
+                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.message = 'Welfare expanded.'
             elif '2.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
                 st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
                 st.session_state.approval = round(st.session_state.approval + 5, 1)
-                st.session_state.message = 'Health coaching deployed successfully.'
+                st.session_state.message = 'Health coaching deployed.'
             elif '3.' in choice:
                 st.session_state.headroom = round(st.session_state.headroom + 2.0, 1)
-                st.session_state.message = 'Moderate welfare adjustments made.'
+                st.session_state.message = 'Moderate welfare checks.'
             elif '4.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom + 4.0, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 3.5, 1)
                 st.session_state.market_conf = round(st.session_state.market_conf + 4, 1)
-                st.session_state.approval = round(st.session_state.approval - 6, 1)
-                st.session_state.message = 'Employment support outsourced to private firms.'
+                st.session_state.approval = round(st.session_state.approval - 7, 1)
+                st.session_state.message = 'Employment support outsourced.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 8.0, 1)
-                st.session_state.approval = round(st.session_state.approval - 14, 1)
-                st.session_state.deficit = round(st.session_state.deficit - 1.2, 1)
-                st.session_state.message = 'Benefits slashed. Massive savings, heavy political fallout.'
+                st.session_state.headroom = round(st.session_state.headroom + 7.5, 1)
+                st.session_state.approval = round(st.session_state.approval - 16, 1)
+                st.session_state.deficit = round(st.session_state.deficit - 1.1, 1)
+                st.session_state.message = 'Benefits slashed. Massive public backlash.'
             process_block_execution(2, 2)
 
     elif st.session_state.block == 2:
@@ -327,23 +336,24 @@ elif st.session_state.year == 2:
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf - 20, 1)
-                st.session_state.approval = round(st.session_state.approval + 7, 1)
-                st.session_state.message = 'Mega banks broken up! Financial sector in uproar.'
+                st.session_state.market_conf = round(st.session_state.market_conf - 22, 1)
+                st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.7, 1)
+                st.session_state.approval = round(st.session_state.approval + 6, 1)
+                st.session_state.message = 'Mega banks broken up! Markets plummet.'
             elif '2.' in choice:
                 st.session_state.market_conf = round(st.session_state.market_conf + 2, 1)
                 st.session_state.approval = round(st.session_state.approval + 4, 1)
                 st.session_state.message = 'Green lending mandates enacted.'
             elif '3.' in choice:
                 st.session_state.market_conf = round(st.session_state.market_conf + 3, 1)
-                st.session_state.message = 'Existing regulatory settings maintained.'
+                st.session_state.message = 'Regulations maintained.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 15, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 14, 1)
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.approval = round(st.session_state.approval - 8, 1)
-                st.session_state.message = 'Bonus caps scrapped! City traders celebrate; public outraged.'
+                st.session_state.approval = round(st.session_state.approval - 9, 1)
+                st.session_state.message = 'Bonus caps scrapped.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 6.0, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 5.5, 1)
                 st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
                 st.session_state.message = 'Emergency banking surcharge levied.'
             process_block_execution(2, 3)
@@ -360,13 +370,13 @@ elif st.session_state.year == 2:
         ])
         if st.button('Execute Block 3 (End of Year 2)'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.message = 'State council housing funded directly.'
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.message = 'State council housing funded.'
             elif '2.' in choice:
                 st.session_state.approval = round(st.session_state.approval + 6, 1)
                 st.session_state.growth = round(st.session_state.growth + 0.2, 1)
-                st.session_state.message = 'Metro devolution empowered!'
+                st.session_state.message = 'Metro devolution empowered.'
             elif '3.' in choice:
                 st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
                 st.session_state.message = 'Bailout grants issued.'
@@ -375,8 +385,8 @@ elif st.session_state.year == 2:
                 st.session_state.approval = round(st.session_state.approval - 7, 1)
                 st.session_state.message = 'Municipal assets privatized.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
-                st.session_state.approval = round(st.session_state.approval - 9, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 4.5, 1)
+                st.session_state.approval = round(st.session_state.approval - 10, 1)
                 st.session_state.message = 'Councils forced into deep cuts.'
             process_block_execution(3, 1)
 
@@ -393,11 +403,11 @@ elif st.session_state.year == 3:
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 7.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 9, 1)
-                st.session_state.message = 'Railways fully nationalized!'
+                st.session_state.headroom = round(st.session_state.headroom - 6.5, 1)
+                st.session_state.approval = round(st.session_state.approval + 8, 1)
+                st.session_state.message = 'Railways fully nationalized.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.approval = round(st.session_state.approval + 6, 1)
                 st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
                 st.session_state.message = 'Bus networks integrated.'
             elif '3.' in choice:
@@ -409,8 +419,8 @@ elif st.session_state.year == 3:
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
                 st.session_state.message = 'Private rail consortia contracted.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 4.5, 1)
-                st.session_state.approval = round(st.session_state.approval - 5, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 4.0, 1)
+                st.session_state.approval = round(st.session_state.approval - 6, 1)
                 st.session_state.message = 'Infrastructure projects frozen.'
             process_block_execution(3, 2)
 
@@ -426,25 +436,25 @@ elif st.session_state.year == 3:
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 10, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 10, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.message = 'Rent controls and state housing blitz enacted.'
+                st.session_state.approval = round(st.session_state.approval + 9, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.message = 'Rent controls enacted.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
                 st.session_state.growth = round(st.session_state.growth + 0.2, 1)
                 st.session_state.message = 'Social housing quotas mandated.'
             elif '3.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.approval = round(st.session_state.approval + 6, 1)
+                st.session_state.approval = round(st.session_state.approval + 5, 1)
                 st.session_state.message = 'Planning laws streamlined.'
             elif '4.' in choice:
-                st.session_state.growth = round(st.session_state.growth + 0.6, 1)
-                st.session_state.approval = round(st.session_state.approval - 8, 1)
-                st.session_state.message = 'Greenbelt abolished! Developers boom, environmentalists revolt.'
+                st.session_state.growth = round(st.session_state.growth + 0.5, 1)
+                st.session_state.approval = round(st.session_state.approval - 9, 1)
+                st.session_state.message = 'Greenbelt abolished.'
             else:
-                st.session_state.approval = round(st.session_state.approval - 5, 1)
-                st.session_state.message = 'Greenbelt protected. Housing crisis persists.'
+                st.session_state.approval = round(st.session_state.approval - 6, 1)
+                st.session_state.message = 'Greenbelt protected.'
             process_block_execution(3, 3)
 
     elif st.session_state.block == 3:
@@ -459,26 +469,26 @@ elif st.session_state.year == 3:
         ])
         if st.button('Execute Block 3 (End of Year 3)'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 6, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 14, 1)
-                st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 5, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 16, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 4.5, 1)
                 st.session_state.message = 'Excess profit taxes levied.'
             elif '2.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.4, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 9, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
                 st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
-                st.session_state.message = 'Green bonds issued successfully.'
+                st.session_state.message = 'Green bonds issued.'
             elif '3.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
                 st.session_state.message = 'Tech incentives established.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
-                st.session_state.approval = round(st.session_state.approval - 4, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 7, 1)
+                st.session_state.approval = round(st.session_state.approval - 5, 1)
                 st.session_state.message = 'Green levies abolished.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 5.5, 1)
-                st.session_state.deficit = round(st.session_state.deficit - 0.9, 1)
-                st.session_state.message = 'Rigid spending caps maintained.'
+                st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
+                st.session_state.deficit = round(st.session_state.deficit - 0.8, 1)
+                st.session_state.message = 'Spending caps maintained.'
             process_block_execution(4, 1)
 
 elif st.session_state.year == 4:
@@ -494,26 +504,26 @@ elif st.session_state.year == 4:
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 11, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 16, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 7.0, 1)
-                st.session_state.message = 'Energy sector nationalized!'
+                st.session_state.approval = round(st.session_state.approval + 10, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 18, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 6.5, 1)
+                st.session_state.message = 'Energy sector nationalized.'
             elif '2.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
                 st.session_state.message = 'Green retrofit drive launched.'
             elif '3.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
-                st.session_state.approval = round(st.session_state.approval + 5, 1)
-                st.session_state.message = 'Targeted energy grants issued.'
+                st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
+                st.session_state.approval = round(st.session_state.approval + 4, 1)
+                st.session_state.message = 'Energy grants issued.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
-                st.session_state.approval = round(st.session_state.approval - 6, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 9, 1)
+                st.session_state.approval = round(st.session_state.approval - 7, 1)
                 st.session_state.message = 'Drilling licenses approved.'
             else:
-                st.session_state.approval = round(st.session_state.approval - 12, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 5, 1)
-                st.session_state.message = 'No intervention. Public bears energy shock.'
+                st.session_state.approval = round(st.session_state.approval - 14, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 6, 1)
+                st.session_state.message = 'No intervention.'
             process_block_execution(4, 2)
 
     elif st.session_state.block == 2:
@@ -528,21 +538,21 @@ elif st.session_state.year == 4:
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 5, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf - 10, 1)
-                st.session_state.inflation = round(st.session_state.inflation + 0.4, 1)
+                st.session_state.approval = round(st.session_state.approval + 4, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
+                st.session_state.inflation = round(st.session_state.inflation + 0.5, 1)
                 st.session_state.message = 'Protectionist tariffs applied.'
             elif '2.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.message = 'Trade alignment pact secured.'
+                st.session_state.market_conf = round(st.session_state.market_conf + 7, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.2, 1)
+                st.session_state.message = 'Trade pact secured.'
             elif '3.' in choice:
                 st.session_state.growth = round(st.session_state.growth + 0.1, 1)
                 st.session_state.message = 'Diplomatic trade talks held.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 12, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.4, 1)
-                st.session_state.approval = round(st.session_state.approval - 5, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
+                st.session_state.approval = round(st.session_state.approval - 6, 1)
                 st.session_state.message = 'Unilateral free trade adopted.'
             else:
                 st.session_state.growth = round(st.session_state.growth - 0.2, 1)
@@ -561,25 +571,25 @@ elif st.session_state.year == 4:
         ])
         if st.button('Execute Block 3 (End of Year 4)'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 10, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 8.0, 1)
-                st.session_state.message = 'UBI pilot launched!'
+                st.session_state.approval = round(st.session_state.approval + 9, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 7.5, 1)
+                st.session_state.message = 'UBI pilot launched.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 7, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 6, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.2, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
                 st.session_state.message = 'Retraining vouchers funded.'
             elif '3.' in choice:
-                st.session_state.headroom = round(st.session_state.headroom + 5.0, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 4.5, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 7, 1)
                 st.session_state.message = 'Fiscal buffers strengthened.'
             elif '4.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 10, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.message = 'Income tax cut!'
+                st.session_state.approval = round(st.session_state.approval + 9, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.message = 'Income tax cut.'
             else:
-                st.session_state.headroom = round(st.session_state.headroom + 7.0, 1)
-                st.session_state.deficit = round(st.session_state.deficit - 1.2, 1)
+                st.session_state.headroom = round(st.session_state.headroom + 6.0, 1)
+                st.session_state.deficit = round(st.session_state.deficit - 1.0, 1)
                 st.session_state.message = 'Surpluses locked in.'
             process_block_execution(5, 1)
 
@@ -596,23 +606,23 @@ elif st.session_state.year == 5:
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.message = 'Private contractors banned from NHS.'
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.message = 'Private contractors banned.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 9, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
-                st.session_state.message = 'Staff recruitment and weekend clinics funded.'
+                st.session_state.approval = round(st.session_state.approval + 8, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
+                st.session_state.message = 'Staff recruitment funded.'
             elif '3.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 6, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 5, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
                 st.session_state.message = 'Private capacity utilized.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
-                st.session_state.approval = round(st.session_state.approval - 15, 1)
-                st.session_state.message = 'Insurance model introduced. Public uproar!'
+                st.session_state.market_conf = round(st.session_state.market_conf + 9, 1)
+                st.session_state.approval = round(st.session_state.approval - 16, 1)
+                st.session_state.message = 'Insurance model introduced. Major backlash.'
             else:
-                st.session_state.approval = round(st.session_state.approval - 6, 1)
+                st.session_state.approval = round(st.session_state.approval - 7, 1)
                 st.session_state.message = 'No extra NHS funds.'
             process_block_execution(5, 2)
 
@@ -628,24 +638,24 @@ elif st.session_state.year == 5:
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 9, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 8, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
                 st.session_state.message = 'Wealth taxes pledged.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 10, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 5.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 9, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 4.5, 1)
                 st.session_state.message = 'Cost-of-living support delivered.'
             elif '3.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 6, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 4.0, 1)
+                st.session_state.approval = round(st.session_state.approval + 5, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 3.5, 1)
                 st.session_state.message = 'Defense and pensions secured.'
             elif '4.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
-                st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-                st.session_state.message = 'Stamp duty and inheritance tax abolished.'
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 7, 1)
+                st.session_state.headroom = round(st.session_state.headroom - 5.5, 1)
+                st.session_state.message = 'Taxes abolished.'
             else:
-                st.session_state.market_conf = round(st.session_state.market_conf + 10, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 9, 1)
                 st.session_state.message = 'Spending caps held firm.'
             process_block_execution(5, 3)
 
@@ -661,24 +671,24 @@ elif st.session_state.year == 5:
         ])
         if st.button('Face the Electorate & Vote'):
             if '1.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 12, 1)
-                st.session_state.headroom = max(0, st.session_state.headroom - 6.0)
-                st.session_state.message = 'Final Budget Delivered: Socialist manifesto pitched.'
+                st.session_state.approval = round(st.session_state.approval + 10, 1)
+                st.session_state.headroom = max(0, st.session_state.headroom - 5.0)
+                st.session_state.message = 'Manifesto pitched.'
             elif '2.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 11, 1)
-                st.session_state.growth = round(st.session_state.growth + 0.4, 1)
-                st.session_state.message = 'Final Budget Delivered: Social democratic platform set.'
+                st.session_state.approval = round(st.session_state.approval + 10, 1)
+                st.session_state.growth = round(st.session_state.growth + 0.3, 1)
+                st.session_state.message = 'Social democratic platform set.'
             elif '3.' in choice:
-                st.session_state.approval = round(st.session_state.approval + 8, 1)
-                st.session_state.market_conf = round(st.session_state.market_conf + 8, 1)
-                st.session_state.message = 'Final Budget Delivered: Pragmatic center platform.'
+                st.session_state.approval = round(st.session_state.approval + 7, 1)
+                st.session_state.market_conf = round(st.session_state.market_conf + 7, 1)
+                st.session_state.message = 'Pragmatic platform set.'
             elif '4.' in choice:
-                st.session_state.market_conf = round(st.session_state.market_conf + 15, 1)
-                st.session_state.approval = round(st.session_state.approval + 4, 1)
-                st.session_state.message = 'Final Budget Delivered: Free-market tax cuts.'
+                st.session_state.market_conf = round(st.session_state.market_conf + 12, 1)
+                st.session_state.approval = round(st.session_state.approval + 3, 1)
+                st.session_state.message = 'Free-market platform set.'
             else:
-                st.session_state.market_conf = round(st.session_state.market_conf + 20, 1)
-                st.session_state.approval = round(st.session_state.approval - 8, 1)
-                st.session_state.message = 'Final Budget Delivered: Orthodox austerity.'
+                st.session_state.market_conf = round(st.session_state.market_conf + 16, 1)
+                st.session_state.approval = round(st.session_state.approval - 10, 1)
+                st.session_state.message = 'Austerity platform set.'
             st.session_state.year = 6
             st.rerun()
