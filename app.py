@@ -22,6 +22,13 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
     
+    # Store previous values to calculate live deltas
+    st.session_state.prev_approval = 48
+    st.session_state.prev_market = 65
+    st.session_state.prev_growth = 0.8
+    st.session_state.prev_headroom = 8.5
+    st.session_state.prev_debt = 98.2
+    
     st.session_state.poll_history = {
         'Year': [1],
         'Labour': [38],
@@ -71,7 +78,9 @@ if st.session_state.step == 'setup':
                 st.session_state.approval = 48
                 st.session_state.market_conf = 65
                 st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [8]}
-                
+            
+            st.session_state.prev_approval = st.session_state.approval
+            st.session_state.prev_market = st.session_state.market_conf
             st.session_state.step = 'game'
             st.rerun()
     with col_b:
@@ -83,13 +92,21 @@ if st.session_state.step == 'setup':
 st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
 st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
 
-# Top Metric Bar
+# Calculate real-time deltas for top metric bar
+d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
+d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
+d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
+d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1)
+d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
+
+# Top Metric Bar with Green/Red Delta Arrows
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%')
-col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%')
-col3.metric('Economic Growth', f'{round(st.session_state.growth, 1)}%')
-col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B')
-col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
+col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%', f'{d_approval:+}%' if d_approval != 0 else '0%')
+col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%', f'{d_market:+}%' if d_market != 0 else '0%')
+col3.metric('Economic Growth', f'{round(st.session_state.growth, 1)}%', f'{d_growth:+}%' if d_growth != 0 else '0%')
+col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B', f'£{d_headroom:+}%' if d_headroom != 0 else '£0B')
+# Note: For debt, inverse color so an increase in debt is red and a decrease is green
+col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP', f'{d_debt:+}%' if d_debt != 0 else '0%', delta_color='inverse')
 
 st.divider()
 
@@ -189,7 +206,16 @@ def update_polling_data(current_year):
             if len(st.session_state.poll_history[p]) < len(st.session_state.poll_history['Year']):
                 st.session_state.poll_history[p].append(val)
 
+def snapshot_metrics():
+    # Save current metrics as previous values before updating for the next turn
+    st.session_state.prev_approval = st.session_state.approval
+    st.session_state.prev_market = st.session_state.market_conf
+    st.session_state.prev_growth = st.session_state.growth
+    st.session_state.prev_headroom = st.session_state.headroom
+    st.session_state.prev_debt = st.session_state.debt
+
 def process_block_execution(next_year, next_block, chosen_ideology):
+    snapshot_metrics()
     st.session_state.last_ideology = chosen_ideology
     
     if st.session_state.gilt_yield > 4.5:
@@ -240,6 +266,7 @@ if st.session_state.active_crisis is not None:
     st.write('Hardcore Crisis: Emergency intervention required immediately.')
     crisis_choice = st.radio('Choose emergency response:', [c_opt1, c_opt2])
     if st.button('Resolve Crisis'):
+        snapshot_metrics()
         if c_opt1 in crisis_choice:
             st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
             st.session_state.approval = round(st.session_state.approval + 5, 1)
