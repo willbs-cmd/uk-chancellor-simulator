@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import pandas as pd
-import plotly.express as px
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 
@@ -94,7 +93,7 @@ col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
 
 st.divider()
 
-# ==================== MACROECONOMIC STATS & POLLED GRAPH ====================
+# ==================== MACROECONOMIC STATS & NATIVE LINE CHART ====================
 with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
@@ -104,37 +103,8 @@ with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m5.metric('10-Year Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
     
     st.markdown('### 📈 Voting Intention Tracker (% Share)')
-    
-    # Build styled Plotly line chart
-    df_polls = pd.DataFrame(st.session_state.poll_history)
-    df_melted = df_polls.melt(id_vars=['Year'], var_name='Party', value_name='Share')
-    
-    party_colors = {
-        'Labour': '#e4003b',
-        'Conservative': '#0087dc',
-        'Liberal Democrats': '#faa61a',
-        'Reform UK': '#12B6CF',
-        'Green Party': '#6AB023'
-    }
-    
-    fig = px.line(
-        df_melted, 
-        x='Year', 
-        y='Share', 
-        color='Party', 
-        color_discrete_map=party_colors,
-        markers=True,
-        labels={'Share': 'Vote Share (%)', 'Year': 'Term Year'}
-    )
-    fig.update_layout(
-        xaxis=dict(dtick=1, range=[1, 5]),
-        yaxis=dict(range=[0, 60]),
-        margin=dict(l=20, r=20, t=30, b=20),
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
+    st.line_chart(df_polls)
     st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
 st.divider()
