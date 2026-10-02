@@ -25,9 +25,15 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
 if st.session_state.step == 'setup':
     st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Choose Your Government')
-    st.write('Economic headroom is tight (£8.5B) and debt is nearly 100% of GDP. Choose wisely:')
+    st.write('Economic headroom is tight (£8.5B) and debt is nearly 100% of GDP. Select which party is forming the government:')
     
-    party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats'])
+    party_choice = st.selectbox('Select Governing Party:', [
+        'Labour', 
+        'Conservative', 
+        'Liberal Democrats', 
+        'Reform UK', 
+        'Green Party'
+    ])
     
     col_a, col_b = st.columns([1, 4])
     with col_a:
@@ -39,6 +45,15 @@ if st.session_state.step == 'setup':
             elif party_choice == 'Liberal Democrats':
                 st.session_state.approval = 49
                 st.session_state.market_conf = 60
+            elif party_choice == 'Reform UK':
+                st.session_state.approval = 42
+                st.session_state.market_conf = 55
+            elif party_choice == 'Green Party':
+                st.session_state.approval = 45
+                st.session_state.market_conf = 50
+            else: # Labour
+                st.session_state.approval = 48
+                st.session_state.market_conf = 65
             st.session_state.step = 'game'
             st.rerun()
     with col_b:
@@ -81,19 +96,19 @@ if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
     
     score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (st.session_state.deficit * 1.5)
-    if st.session_state.party == 'Labour':
-        gov_seats = int(max(120, min(450, 326 + (score - 50) * 4.5)))
-    elif st.session_state.party == 'Conservative':
-        gov_seats = int(max(100, min(440, 326 + (score - 50) * 4.5)))
-    else:
-        gov_seats = int(max(70, min(380, 240 + (score - 50) * 3.5)))
+    
+    # Adjust seat calculations based on party scaling
+    multiplier = 4.5
+    if st.session_state.party in ['Reform UK', 'Green Party']:
+        multiplier = 3.5 # Third parties face higher first-past-the-post penalties
         
+    gov_seats = int(max(40, min(450, 326 + (score - 50) * multiplier)))
     opp_seats = 650 - gov_seats
     majority = gov_seats - 326
     
     if majority >= 0:
         result_text = f'{st.session_state.party} Majority of {majority}'
-        box_color = '#e4003b' if st.session_state.party == 'Labour' else ('#0087dc' if st.session_state.party == 'Conservative' else '#faa61a')
+        box_color = '#e4003b' if st.session_state.party == 'Labour' else ('#0087dc' if st.session_state.party == 'Conservative' else ('#faa61a' if st.session_state.party == 'Liberal Democrats' else ('#12B6CF' if st.session_state.party == 'Reform UK' else '#6AB023')))
     else:
         result_text = f'Hung Parliament (Short by {abs(majority)} seats)'
         box_color = '#555555'
@@ -128,7 +143,6 @@ if st.session_state.year > 5:
 
 # Helper function for 45% post-execution crisis check & economic drift
 def process_block_execution(next_year, next_block):
-    # Hardcore economic pressure drift based on gilt yields and deficit
     if st.session_state.gilt_yield > 4.5:
         st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
     if st.session_state.inflation > 3.0:
@@ -145,7 +159,6 @@ def process_block_execution(next_year, next_block):
          'Inject emergency cash reserves to plug shortfall (-£5.5B Headroom, +5 Market Conf)', 'Cut departmental budgets across the board (-10 Approval, +4 Market Conf)')
     ]
     
-    # Increased to 45% chance in Hardcore mode
     if random.random() < 0.45 and st.session_state.year < 5:
         st.session_state.active_crisis = random.choice(crises_pool)
     
@@ -184,10 +197,10 @@ if st.session_state.year == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
         st.write('The NHS and police demand an immediate cash injection to clear backlogs.')
         choice = st.radio('Select strategy:', [
-            '1. (Hard Left) Nationalize key utilities and impose steep wealth taxes.',
+            '1. (Hard Left / Socialist) Nationalize key utilities and impose steep wealth taxes.',
             '2. (Social Democratic) Borrow heavily to fund public infrastructure and NHS staff.',
             '3. (Centric) Raid defense spending slightly and implement targeted efficiency savings.',
-            '4. (Free-Market) Cut red tape, freeze public spending, and rely on private healthcare.',
+            '4. (Free-Market / Right) Cut red tape, freeze public spending, and rely on private healthcare.',
             '5. (Fiscal Austerity) Enforce immediate spending freezes and departmental cuts.'
         ])
         if st.button('Execute Block 1'):
