@@ -1,8 +1,9 @@
 import streamlit as st
 import random
 import pandas as pd
+import plotly.express as px
 
-st.set_page_config(page_title='UK Chancellor Simulator - Hardcore & Linked Chains', layout='wide')
+st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
@@ -22,7 +23,6 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
     
-    # Polling history tracker across years (approximate simulated figures)
     st.session_state.poll_history = {
         'Year': [1],
         'Labour': [38],
@@ -52,7 +52,6 @@ if st.session_state.step == 'setup':
     with col_a:
         if st.button('Enter Number 11', type='primary'):
             st.session_state.party = party_choice
-            # Set initial poll leader based on choice
             if party_choice == 'Conservative':
                 st.session_state.approval = 46
                 st.session_state.market_conf = 70
@@ -69,7 +68,7 @@ if st.session_state.step == 'setup':
                 st.session_state.approval = 45
                 st.session_state.market_conf = 50
                 st.session_state.poll_history = {'Year': [1], 'Labour': [28], 'Conservative': [26], 'Liberal Democrats': [12], 'Reform UK': [8], 'Green Party': [26]}
-            else: # Labour
+            else:
                 st.session_state.approval = 48
                 st.session_state.market_conf = 65
                 st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [8]}
@@ -82,7 +81,7 @@ if st.session_state.step == 'setup':
             st.rerun()
     st.stop()
 
-st.title(f'🏛️️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
+st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
 st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
 
 # Top Metric Bar
@@ -95,7 +94,7 @@ col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
 
 st.divider()
 
-# ==================== MACROECONOMIC STATS & POLLING CHARTS ====================
+# ==================== MACROECONOMIC STATS & POLLED GRAPH ====================
 with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
@@ -105,8 +104,37 @@ with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m5.metric('10-Year Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
     
     st.markdown('### 📈 Voting Intention Tracker (% Share)')
-    df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
-    st.line_chart(df_polls)
+    
+    # Build styled Plotly line chart
+    df_polls = pd.DataFrame(st.session_state.poll_history)
+    df_melted = df_polls.melt(id_vars=['Year'], var_name='Party', value_name='Share')
+    
+    party_colors = {
+        'Labour': '#e4003b',
+        'Conservative': '#0087dc',
+        'Liberal Democrats': '#faa61a',
+        'Reform UK': '#12B6CF',
+        'Green Party': '#6AB023'
+    }
+    
+    fig = px.line(
+        df_melted, 
+        x='Year', 
+        y='Share', 
+        color='Party', 
+        color_discrete_map=party_colors,
+        markers=True,
+        labels={'Share': 'Vote Share (%)', 'Year': 'Term Year'}
+    )
+    fig.update_layout(
+        xaxis=dict(dtick=1, range=[1, 5]),
+        yaxis=dict(range=[0, 60]),
+        margin=dict(l=20, r=20, t=30, b=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig, use_container_width=True)
     st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
 st.divider()
@@ -163,17 +191,13 @@ if st.session_state.year > 5:
             st.rerun()
     st.stop()
 
-# Helper function for updating polls when years advance
 def update_polling_data(current_year):
-    # Dynamically shift poll shares based on current approval and random fluctuation
     gov_party = st.session_state.party
     approval_boost = (st.session_state.approval - 50) * 0.4
     
-    # Update or append year
     if current_year not in st.session_state.poll_history['Year']:
         st.session_state.poll_history['Year'].append(current_year)
         
-        # Calculate new shares
         base_shares = {
             'Labour': 32,
             'Conservative': 30,
@@ -182,7 +206,6 @@ def update_polling_data(current_year):
             'Green Party': 10
         }
         
-        # Boost governing party based on approval
         base_shares[gov_party] += approval_boost
         
         for p in base_shares:
@@ -196,7 +219,6 @@ def update_polling_data(current_year):
             if len(st.session_state.poll_history[p]) < len(st.session_state.poll_history['Year']):
                 st.session_state.poll_history[p].append(val)
 
-# Helper function for linked chain reactions and post-execution crises
 def process_block_execution(next_year, next_block, chosen_ideology):
     st.session_state.last_ideology = chosen_ideology
     
