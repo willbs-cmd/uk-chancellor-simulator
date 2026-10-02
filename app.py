@@ -586,4 +586,3 @@ elif st.session_state.year == 5:
                 st.session_state.message = 'Final Budget Delivered: Constitutional overhaul proposed! Reformers cheer, establishment panics.'
             st.session_state.year = 6
             st.rerun()
-" -Encoding utf8
