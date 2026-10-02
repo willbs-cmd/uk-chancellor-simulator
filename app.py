@@ -1,4 +1,4 @@
-﻿import streamlit as st
+Set-Content -Path "app.py" -Value "import streamlit as st
 import random
 
 st.set_page_config(page_title='UK Chancellor Simulator', layout='wide')
@@ -110,8 +110,8 @@ if st.session_state.year > 5:
 
 st.info(st.session_state.message)
 
-# ==================== EXPANDED BREAKING CRISIS CHECK ====================
-if st.session_state.active_crisis is None and random.random() < 0.40 and st.session_state.year < 5:
+# ==================== RARE BREAKING CRISIS CHECK (15% chance) ====================
+if st.session_state.active_crisis is None and random.random() < 0.15 and st.session_state.year < 5:
     crises_pool = [
         ('🚨 BREAKING: Bond Market Panic! Yields on UK gilts are spiking rapidly following international rumors.', 
          'Bail out gilt markets with a £5B treasury backstop (-£5B Headroom, +10 Market Conf)', 'Ignore and let bond vigilantes test the currency (-15 Market Conf, +1 Debt)'),
@@ -119,12 +119,8 @@ if st.session_state.active_crisis is None and random.random() < 0.40 and st.sess
          'Approve emergency private cybersecurity contractors (-£3B Headroom, +5 Approval)', 'Refuse extra funds and rely on internal IT teams (-8 Approval, -5 Market Conf)'),
         ('🚨 BREAKING: Severe Flash Flooding Hits Regional Towns! Hundreds of homes submerged.', 
          'Deploy an immediate £4B emergency flood-defence relief package (-£4B Headroom, +8 Approval)', 'Offer standard insurance support only (-10 Approval)'),
-        ('🚨 BREAKING: Historic Steelworks Threatens Immediate Closure! Thousands of jobs on the line.', 
-         'Provide a state nationalization rescue bridge loan (-£6B Headroom, +6 Approval, -5 Market Conf)', 'Let market forces decide and allow plant closure (-12 Approval, +2 Growth)'),
         ('🚨 BREAKING: National Rail Network Strikes Loom! Train drivers announce indefinite walkouts.', 
-         'Bust the strike with above-inflation pay concessions (-£5B Headroom, +8 Approval)', 'Stand firm against union demands and endure travel chaos (-10 Approval, -4 Growth)'),
-        ('🚨 BREAKING: Energy Supplier Collapse! A major household energy provider goes bust overnight.', 
-         'Inject emergency taxpayer funds to absorb customer accounts (-£4B Headroom, +6 Approval)', 'Let customers transfer automatically with higher standing charges (-8 Approval)')
+         'Bust the strike with above-inflation pay concessions (-£5B Headroom, +8 Approval)', 'Stand firm against union demands and endure travel chaos (-10 Approval, -4 Growth)')
     ]
     st.session_state.active_crisis = random.choice(crises_pool)
 
@@ -146,7 +142,7 @@ if st.session_state.active_crisis is not None:
         st.rerun()
     st.stop()
 
-# ==================== REGULAR BLOCK PROGRESSION ====================
+# ==================== REGULAR BLOCK PROGRESSION WITH EXPANDED OPTIONS ====================
 if st.session_state.year == 1:
     if st.session_state.block == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
@@ -154,7 +150,8 @@ if st.session_state.year == 1:
         choice = st.radio('Select strategy:', [
             '1. Raid Defence spending to cover the immediate shortfall.',
             '2. Borrow directly and expand the deficit.',
-            '3. Raise Income Tax by 2% immediately.'
+            '3. Raise Income Tax by 2% immediately.',
+            '4. Institute a digital services levy on tech giants to fund public services without broad taxes.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
@@ -165,10 +162,15 @@ if st.session_state.year == 1:
                 st.session_state.headroom -= 10.0
                 st.session_state.market_conf -= 10
                 st.session_state.message = 'Borrowed cash. Headroom takes a major hit.'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval -= 12
                 st.session_state.market_conf += 5
                 st.session_state.message = 'Tax hiked. Public trust plunges.'
+            else:
+                st.session_state.headroom += 3.0
+                st.session_state.market_conf -= 4
+                st.session_state.approval += 4
+                st.session_state.message = 'Tech levy introduced! Revenue raised, though tech lobbyists push back.'
             st.session_state.block = 2
             st.rerun()
 
@@ -178,7 +180,8 @@ if st.session_state.year == 1:
         choice = st.radio('Select strategy:', [
             '1. Give teachers and nurses a full inflation-matching pay rise.',
             '2. Offer a sub-inflation settlement and risk targeted strikes.',
-            '3. Stand firm with a total pay freeze and invoke emergency anti-strike laws.'
+            '3. Stand firm with a total pay freeze and invoke emergency anti-strike laws.',
+            '4. Introduce a productivity-linked bonus scheme tied to NHS and school efficiency targets.'
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
@@ -188,10 +191,15 @@ if st.session_state.year == 1:
             elif '2.' in choice:
                 st.session_state.approval -= 4
                 st.session_state.message = 'Compromise offer made. Disruptive strikes continue.'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval -= 10
                 st.session_state.market_conf += 8
                 st.session_state.message = 'Pay frozen. Markets love the discipline; workforce furious.'
+            else:
+                st.session_state.growth += 0.2
+                st.session_state.headroom -= 2.5
+                st.session_state.approval += 5
+                st.session_state.message = 'Productivity bonus enacted! Moderate cost, better reform buy-in.'
             st.session_state.block = 3
             st.rerun()
 
@@ -201,7 +209,8 @@ if st.session_state.year == 1:
         choice = st.radio('Select strategy:', [
             '1. Announce capital investment incentives to juice business confidence.',
             '2. Implement spending cuts across government departments to rebuild headroom.',
-            '3. Do nothing and let current tax and spend trajectories run.'
+            '3. Do nothing and let current tax and spend trajectories run.',
+            '4. Launch a comprehensive review of tax loopholes and capital gains exemptions.'
         ])
         if st.button('Execute Block 3 (End of Year 1)'):
             if '1.' in choice:
@@ -212,9 +221,14 @@ if st.session_state.year == 1:
                 st.session_state.headroom += 6.0
                 st.session_state.approval -= 6
                 st.session_state.message = 'Departments squeezed. Headroom restored.'
-            else:
+            elif '3.' in choice:
                 st.session_state.debt += 1.0
                 st.session_state.message = 'Maintained course. Deficit edges higher.'
+            else:
+                st.session_state.headroom += 7.5
+                st.session_state.market_conf += 6
+                st.session_state.approval -= 3
+                st.session_state.message = 'Loopholes closed! Treasury chest bolstered significantly.'
             st.session_state.year = 2
             st.session_state.block = 1
             st.rerun()
@@ -226,7 +240,8 @@ elif st.session_state.year == 2:
         choice = st.radio('Select strategy:', [
             '1. Overhaul disability benefits and restrict eligibility criteria.',
             '2. Increase employment support funding without cutting benefits.',
-            '3. Leave the welfare system untouched.'
+            '3. Leave the welfare system untouched.',
+            '4. Partner with local NHS trusts to provide integrated back-to-work health coaching.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
@@ -237,9 +252,14 @@ elif st.session_state.year == 2:
                 st.session_state.headroom -= 4.0
                 st.session_state.approval += 6
                 st.session_state.message = 'Support expanded. Long-term outlook improves.'
-            else:
+            elif '3.' in choice:
                 st.session_state.debt += 1.5
                 st.session_state.message = 'Welfare left untouched.'
+            else:
+                st.session_state.growth += 0.3
+                st.session_state.headroom -= 3.0
+                st.session_state.approval += 7
+                st.session_state.message = 'Health coaching launched! Healthier workforce returns to jobs.'
             st.session_state.block = 2
             st.rerun()
 
@@ -249,7 +269,8 @@ elif st.session_state.year == 2:
         choice = st.radio('Select strategy:', [
             '1. Deregulate banking rules and lower corporation tax for financial firms.',
             '2. Maintain strict consumer protections and anti-money laundering controls.',
-            '3. Impose a temporary windfall tax on banking profits.'
+            '3. Impose a temporary windfall tax on banking profits.',
+            '4. Create a specialized regulatory sandbox for fintech and AI financial startups.'
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
@@ -259,10 +280,14 @@ elif st.session_state.year == 2:
             elif '2.' in choice:
                 st.session_state.market_conf += 3
                 st.session_state.message = 'Regulations upheld.'
-            else:
+            elif '3.' in choice:
                 st.session_state.market_conf -= 15
                 st.session_state.headroom += 5.0
                 st.session_state.message = 'Windfall tax levied!'
+            else:
+                st.session_state.growth += 0.4
+                st.session_state.market_conf += 8
+                st.session_state.message = 'Fintech sandbox established! Innovation hub attracts global capital.'
             st.session_state.block = 3
             st.rerun()
 
@@ -272,7 +297,8 @@ elif st.session_state.year == 2:
         choice = st.radio('Select strategy:', [
             '1. Decentralize tax-raising powers to local metro mayors.',
             '2. Provide targeted central government bailout grants.',
-            '3. Force councils to handle cuts locally through asset sales.'
+            '3. Force councils to handle cuts locally through asset sales.',
+            '4. Consolidate local authorities into larger regional unitary councils to cut back-office overhead.'
         ])
         if st.button('Execute Block 3 (End of Year 2)'):
             if '1.' in choice:
@@ -282,9 +308,14 @@ elif st.session_state.year == 2:
             elif '2.' in choice:
                 st.session_state.headroom -= 4.0
                 st.session_state.message = 'Bailouts issued.'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval -= 8
                 st.session_state.message = 'Councils forced to sell assets.'
+            else:
+                st.session_state.headroom += 4.5
+                st.session_state.market_conf += 5
+                st.session_state.approval -= 4
+                st.session_state.message = 'Councils consolidated! Bureaucracy cut, local politicians protest.'
             st.session_state.year = 3
             st.session_state.block = 1
             st.rerun()
@@ -296,7 +327,8 @@ elif st.session_state.year == 3:
         choice = st.radio('Select strategy:', [
             '1. Fund universal bus franchising and local transit integration.',
             '2. Prioritize high-speed intercity rail lines.',
-            '3. Freeze major capital infrastructure projects to save cash.'
+            '3. Freeze major capital infrastructure projects to save cash.',
+            '4. Launch a regional pothole repair and local active travel fund.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
@@ -307,10 +339,14 @@ elif st.session_state.year == 3:
                 st.session_state.growth += 0.4
                 st.session_state.headroom -= 7.0
                 st.session_state.message = 'Rail investment backed!'
-            else:
+            elif '3.' in choice:
                 st.session_state.headroom += 4.0
                 st.session_state.approval -= 5
                 st.session_state.message = 'Projects frozen.'
+            else:
+                st.session_state.approval += 6
+                st.session_state.headroom -= 2.0
+                st.session_state.message = 'Local travel fund deployed! Motorists and cyclists rejoice.'
             st.session_state.block = 2
             st.rerun()
 
@@ -320,7 +356,8 @@ elif st.session_state.year == 3:
         choice = st.radio('Select strategy:', [
             '1. Overhaul planning laws to mandate local housing targets.',
             '2. Provide government-backed first-time buyer mortgages.',
-            '3. Protect greenbelt land and leave planning controls as they are.'
+            '3. Protect greenbelt land and leave planning controls as they are.',
+            '4. Fast-track high-density social housing builds on brownfield urban sites.'
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
@@ -331,9 +368,14 @@ elif st.session_state.year == 3:
                 st.session_state.approval += 4
                 st.session_state.market_conf -= 5
                 st.session_state.message = 'Mortgages backed!'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval -= 4
                 st.session_state.message = 'Greenbelt protected.'
+            else:
+                st.session_state.approval += 9
+                st.session_state.headroom -= 5.0
+                st.session_state.growth += 0.2
+                st.session_state.message = 'Brownfield social housing funded! Affordable homes rise.'
             st.session_state.block = 3
             st.rerun()
 
@@ -343,7 +385,8 @@ elif st.session_state.year == 3:
         choice = st.radio('Select strategy:', [
             '1. Introduce tax incentives for artificial intelligence and tech research.',
             '2. Implement broad public sector efficiency targets.',
-            '3. Maintain current fiscal settings.'
+            '3. Maintain current fiscal settings.',
+            '4. Issue sovereign green bonds to fund nationwide clean energy grids.'
         ])
         if st.button('Execute Block 3 (End of Year 3)'):
             if '1.' in choice:
@@ -354,8 +397,13 @@ elif st.session_state.year == 3:
                 st.session_state.headroom += 5.0
                 st.session_state.approval -= 3
                 st.session_state.message = 'Efficiency targets set.'
-            else:
+            elif '3.' in choice:
                 st.session_state.message = 'Fiscal settings maintained.'
+            else:
+                st.session_state.market_conf += 10
+                st.session_state.growth += 0.3
+                st.session_state.headroom -= 4.0
+                st.session_state.message = 'Green bonds issued! ESG investors pour capital into the UK.'
             st.session_state.year = 4
             st.session_state.block = 1
             st.rerun()
@@ -367,7 +415,8 @@ elif st.session_state.year == 4:
         choice = st.radio('Select strategy:', [
             '1. Launch a massive state-backed green retrofitting drive.',
             '2. Fast-track new North Sea oil and gas drilling licenses.',
-            '3. Cap household energy bills via direct government borrowing.'
+            '3. Cap household energy bills via direct government borrowing.',
+            '4. Partner with nuclear energy developers to accelerate next-gen small modular reactors.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
@@ -378,10 +427,15 @@ elif st.session_state.year == 4:
                 st.session_state.market_conf += 8
                 st.session_state.approval -= 6
                 st.session_state.message = 'Drilling approved!'
-            else:
+            elif '3.' in choice:
                 st.session_state.debt += 2.5
                 st.session_state.approval += 10
                 st.session_state.message = 'Bills capped!'
+            else:
+                st.session_state.market_conf += 7
+                st.session_state.growth += 0.2
+                st.session_state.headroom -= 6.0
+                st.session_state.message = 'SMR nuclear backed! Long-term clean baseload secured.'
             st.session_state.block = 2
             st.rerun()
 
@@ -391,7 +445,8 @@ elif st.session_state.year == 4:
         choice = st.radio('Select strategy:', [
             '1. Negotiate a comprehensive digital and green trade alignment pact.',
             '2. Retaliate with counter-tariffs to protect domestic manufacturing.',
-            '3. Absorb trade friction without policy intervention.'
+            '3. Absorb trade friction without policy intervention.',
+            '4. Establish bilateral free trade agreements with emerging Commonwealth economies.'
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
@@ -402,9 +457,13 @@ elif st.session_state.year == 4:
                 st.session_state.market_conf -= 6
                 st.session_state.approval += 4
                 st.session_state.message = 'Counter-tariffs applied.'
-            else:
+            elif '3.' in choice:
                 st.session_state.growth -= 0.2
                 st.session_state.message = 'Trade friction ignored.'
+            else:
+                st.session_state.growth += 0.3
+                st.session_state.market_conf += 4
+                st.session_state.message = 'Commonwealth trade deals signed! New export markets opened.'
             st.session_state.block = 3
             st.rerun()
 
@@ -414,7 +473,8 @@ elif st.session_state.year == 4:
         choice = st.radio('Select strategy:', [
             '1. Target R&D tax credits toward green energy startups.',
             '2. Build up fiscal buffers and treasury reserves.',
-            '3. Cut stamp duty to stimulate the property market.'
+            '3. Cut stamp duty to stimulate the property market.',
+            '4. Provide a universal apprenticeship and adult retraining voucher scheme.'
         ])
         if st.button('Execute Block 3 (End of Year 4)'):
             if '1.' in choice:
@@ -425,10 +485,15 @@ elif st.session_state.year == 4:
                 st.session_state.headroom += 5.0
                 st.session_state.market_conf += 10
                 st.session_state.message = 'Fiscal buffers strengthened.'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval += 4
                 st.session_state.headroom -= 2.0
                 st.session_state.message = 'Stamp duty cut!'
+            else:
+                st.session_state.approval += 6
+                st.session_state.growth += 0.2
+                st.session_state.headroom -= 3.0
+                st.session_state.message = 'Retraining vouchers launched! Skills gaps closed.'
             st.session_state.year = 5
             st.session_state.block = 1
             st.rerun()
@@ -440,7 +505,8 @@ elif st.session_state.year == 5:
         choice = st.radio('Select strategy:', [
             '1. Fund weekend NHS clinics using private sector capacity.',
             '2. Launch a major recruitment drive for frontline medical staff.',
-            '3. Rely on existing efficiency measures within the health service.'
+            '3. Rely on existing efficiency measures within the health service.',
+            '4. Roll out AI-driven diagnostic hubs across all regional hospitals.'
         ])
         if st.button('Execute Block 1'):
             if '1.' in choice:
@@ -451,9 +517,14 @@ elif st.session_state.year == 5:
                 st.session_state.approval += 5
                 st.session_state.headroom -= 5.0
                 st.session_state.message = 'Staff recruitment backed!'
-            else:
+            elif '3.' in choice:
                 st.session_state.approval -= 4
                 st.session_state.message = 'No extra funds deployed.'
+            else:
+                st.session_state.approval += 8
+                st.session_state.growth += 0.2
+                st.session_state.headroom -= 3.5
+                st.session_state.message = 'AI diagnostic hubs deployed! Backlogs clear rapidly.'
             st.session_state.block = 2
             st.rerun()
 
@@ -463,7 +534,8 @@ elif st.session_state.year == 5:
         choice = st.radio('Select strategy:', [
             '1. Increase defense spending to 2.5% of GDP.',
             '2. Provide targeted cost-of-living cash support to low-income households.',
-            '3. Hold firm on spending caps to protect fiscal headroom.'
+            '3. Hold firm on spending caps to protect fiscal headroom.',
+            '4. Announce a pensioner fuel dividend and triple-lock protection guarantee.'
         ])
         if st.button('Execute Block 2'):
             if '1.' in choice:
@@ -475,9 +547,13 @@ elif st.session_state.year == 5:
                 st.session_state.approval += 9
                 st.session_state.headroom -= 5.0
                 st.session_state.message = 'Cost-of-living support delivered!'
-            else:
+            elif '3.' in choice:
                 st.session_state.market_conf += 8
                 st.session_state.message = 'Spending caps held firm.'
+            else:
+                st.session_state.approval += 10
+                st.session_state.headroom -= 4.5
+                st.session_state.message = 'Pensioner dividend secured! Older voters rally behind you.'
             st.session_state.block = 3
             st.rerun()
 
@@ -487,7 +563,8 @@ elif st.session_state.year == 5:
         choice = st.radio('Select strategy:', [
             '1. Unfreeze income tax thresholds and deliver a voter-friendly middle-class tax cut.',
             '2. Establish a landmark Sovereign Wealth Fund funded by carbon dividends.',
-            '3. Deliver strict, orthodox fiscal austerity to prove uncompromising financial discipline.'
+            '3. Deliver strict, orthodox fiscal austerity to prove uncompromising financial discipline.',
+            '4. Propose a radical constitutional reform package (House of Lords replacement & proportional representation).'
         ])
         if st.button('Face the Electorate & Vote'):
             if '1.' in choice:
@@ -499,10 +576,14 @@ elif st.session_state.year == 5:
                 st.session_state.market_conf += 12
                 st.session_state.growth += 0.4
                 st.session_state.message = 'Final Budget Delivered: Sovereign Wealth Fund launched.'
-            else:
+            elif '3.' in choice:
                 st.session_state.market_conf += 18
                 st.session_state.approval -= 10
                 st.session_state.message = 'Final Budget Delivered: Austerity budget delivered.'
+            else:
+                st.session_state.approval += 8
+                st.session_state.market_conf -= 8
+                st.session_state.message = 'Final Budget Delivered: Constitutional overhaul proposed! Reformers cheer, establishment panics.'
             st.session_state.year = 6
             st.rerun()
-
+" -Encoding utf8
