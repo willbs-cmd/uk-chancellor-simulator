@@ -9,6 +9,10 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.approval = 50
     st.session_state.market_conf = 70
     st.session_state.debt = 95.1
+    st.session_state.deficit = 4.2
+    st.session_state.inflation = 2.4
+    st.session_state.interest_rate = 4.5
+    st.session_state.gilt_yield = 4.1
     st.session_state.growth = 1.1
     st.session_state.headroom = 15.0
     st.session_state.year = 1
@@ -46,12 +50,25 @@ if st.session_state.step == 'setup':
 st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator')
 st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
 
+# Top Metric Bar
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric('Public Approval', f'{st.session_state.approval}%')
 col2.metric('Market Confidence', f'{st.session_state.market_conf}%')
-col3.metric('National Debt', f'{st.session_state.debt}% of GDP')
-col4.metric('Economic Growth', f'{st.session_state.growth}%')
-col5.metric('OBR Headroom', f'£{st.session_state.headroom:.1f}B')
+col3.metric('Economic Growth', f'{st.session_state.growth}%')
+col4.metric('OBR Headroom', f'£{st.session_state.headroom:.1f}B')
+col5.metric('National Debt', f'{st.session_state.debt}% of GDP')
+
+st.divider()
+
+# ==================== MACROECONOMIC STATS DROPDOWN ====================
+with st.expander('📊 Macroeconomic Dashboard (Detailed Stats)'):
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric('National Debt', f'{st.session_state.debt}% of GDP')
+    m2.metric('Annual Deficit', f'£{st.session_state.deficit:.1f}B')
+    m3.metric('Inflation Rate', f'{st.session_state.inflation}%')
+    m4.metric('Bank Rate (Interest)', f'{st.session_state.interest_rate}%')
+    m5.metric('10-Year Gilt Yield', f'{st.session_state.gilt_yield}%')
+    st.caption('Monitor these core indicators to ensure bond vigilantes and the Bank of England remain supportive of your fiscal path.')
 
 st.divider()
 
@@ -133,16 +150,19 @@ if st.session_state.active_crisis is not None:
             st.session_state.headroom -= 4.5
             st.session_state.approval += 6
             st.session_state.market_conf += 4
+            st.session_state.gilt_yield -= 0.2
             st.session_state.message = 'Crisis Handled: Swift intervention stabilized the situation.'
         else:
             st.session_state.approval -= 10
             st.session_state.market_conf -= 8
+            st.session_state.gilt_yield += 0.5
+            st.session_state.deficit += 0.5
             st.session_state.message = 'Crisis Handled: Ignored intervention to save cash. Trust takes a hit.'
         st.session_state.active_crisis = None
         st.rerun()
     st.stop()
 
-# ==================== REGULAR BLOCK PROGRESSION WITH EXPANDED OPTIONS ====================
+# ==================== REGULAR BLOCK PROGRESSION ====================
 if st.session_state.year == 1:
     if st.session_state.block == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
@@ -161,11 +181,14 @@ if st.session_state.year == 1:
             elif '2.' in choice:
                 st.session_state.headroom -= 10.0
                 st.session_state.market_conf -= 10
-                st.session_state.message = 'Borrowed cash. Headroom takes a major hit.'
+                st.session_state.deficit += 1.2
+                st.session_state.gilt_yield += 0.3
+                st.session_state.message = 'Borrowed cash. Headroom takes a major hit, deficit expands.'
             elif '3.' in choice:
                 st.session_state.approval -= 12
                 st.session_state.market_conf += 5
-                st.session_state.message = 'Tax hiked. Public trust plunges.'
+                st.session_state.inflation -= 0.3
+                st.session_state.message = 'Tax hiked. Public trust plunges, inflation cools.'
             else:
                 st.session_state.headroom += 3.0
                 st.session_state.market_conf -= 4
@@ -187,6 +210,7 @@ if st.session_state.year == 1:
             if '1.' in choice:
                 st.session_state.headroom -= 6.0
                 st.session_state.approval += 10
+                st.session_state.deficit += 0.8
                 st.session_state.message = 'Pay rise funded! Unions appeased, headroom shrinks.'
             elif '2.' in choice:
                 st.session_state.approval -= 4
@@ -194,6 +218,7 @@ if st.session_state.year == 1:
             elif '3.' in choice:
                 st.session_state.approval -= 10
                 st.session_state.market_conf += 8
+                st.session_state.inflation -= 0.2
                 st.session_state.message = 'Pay frozen. Markets love the discipline; workforce furious.'
             else:
                 st.session_state.growth += 0.2
@@ -220,7 +245,8 @@ if st.session_state.year == 1:
             elif '2.' in choice:
                 st.session_state.headroom += 6.0
                 st.session_state.approval -= 6
-                st.session_state.message = 'Departments squeezed. Headroom restored.'
+                st.session_state.deficit -= 1.0
+                st.session_state.message = 'Departments squeezed. Headroom restored, deficit reduced.'
             elif '3.' in choice:
                 st.session_state.debt += 1.0
                 st.session_state.message = 'Maintained course. Deficit edges higher.'
@@ -247,6 +273,7 @@ elif st.session_state.year == 2:
             if '1.' in choice:
                 st.session_state.headroom += 7.0
                 st.session_state.approval -= 12
+                st.session_state.deficit -= 0.9
                 st.session_state.message = 'Benefits tightened. Significant savings achieved.'
             elif '2.' in choice:
                 st.session_state.headroom -= 4.0
@@ -283,7 +310,8 @@ elif st.session_state.year == 2:
             elif '3.' in choice:
                 st.session_state.market_conf -= 15
                 st.session_state.headroom += 5.0
-                st.session_state.message = 'Windfall tax levied!'
+                st.session_state.gilt_yield -= 0.2
+                st.session_state.message = 'Windfall tax levied! Cash raised, gilt yields ease.'
             else:
                 st.session_state.growth += 0.4
                 st.session_state.market_conf += 8
@@ -315,7 +343,7 @@ elif st.session_state.year == 2:
                 st.session_state.headroom += 4.5
                 st.session_state.market_conf += 5
                 st.session_state.approval -= 4
-                st.session_state.message = 'Councils consolidated! Bureaucracy cut, local politicians protest.'
+                st.session_state.message = 'Councils consolidated! Bureaucracy cut.'
             st.session_state.year = 3
             st.session_state.block = 1
             st.rerun()
@@ -342,11 +370,12 @@ elif st.session_state.year == 3:
             elif '3.' in choice:
                 st.session_state.headroom += 4.0
                 st.session_state.approval -= 5
-                st.session_state.message = 'Projects frozen.'
+                st.session_state.deficit -= 0.5
+                st.session_state.message = 'Projects frozen. Deficit shrinks slightly.'
             else:
                 st.session_state.approval += 6
                 st.session_state.headroom -= 2.0
-                st.session_state.message = 'Local travel fund deployed! Motorists and cyclists rejoice.'
+                st.session_state.message = 'Local travel fund deployed!'
             st.session_state.block = 2
             st.rerun()
 
@@ -367,7 +396,8 @@ elif st.session_state.year == 3:
             elif '2.' in choice:
                 st.session_state.approval += 4
                 st.session_state.market_conf -= 5
-                st.session_state.message = 'Mortgages backed!'
+                st.session_state.inflation += 0.2
+                st.session_state.message = 'Mortgages backed! Demand stimulus pushes inflation slightly.'
             elif '3.' in choice:
                 st.session_state.approval -= 4
                 st.session_state.message = 'Greenbelt protected.'
@@ -375,7 +405,7 @@ elif st.session_state.year == 3:
                 st.session_state.approval += 9
                 st.session_state.headroom -= 5.0
                 st.session_state.growth += 0.2
-                st.session_state.message = 'Brownfield social housing funded! Affordable homes rise.'
+                st.session_state.message = 'Brownfield social housing funded!'
             st.session_state.block = 3
             st.rerun()
 
@@ -396,6 +426,7 @@ elif st.session_state.year == 3:
             elif '2.' in choice:
                 st.session_state.headroom += 5.0
                 st.session_state.approval -= 3
+                st.session_state.deficit -= 0.8
                 st.session_state.message = 'Efficiency targets set.'
             elif '3.' in choice:
                 st.session_state.message = 'Fiscal settings maintained.'
@@ -403,7 +434,8 @@ elif st.session_state.year == 3:
                 st.session_state.market_conf += 10
                 st.session_state.growth += 0.3
                 st.session_state.headroom -= 4.0
-                st.session_state.message = 'Green bonds issued! ESG investors pour capital into the UK.'
+                st.session_state.gilt_yield -= 0.3
+                st.session_state.message = 'Green bonds issued! Gilt yields ease.'
             st.session_state.year = 4
             st.session_state.block = 1
             st.rerun()
@@ -430,12 +462,14 @@ elif st.session_state.year == 4:
             elif '3.' in choice:
                 st.session_state.debt += 2.5
                 st.session_state.approval += 10
-                st.session_state.message = 'Bills capped!'
+                st.session_state.deficit += 1.5
+                st.session_state.gilt_yield += 0.4
+                st.session_state.message = 'Bills capped via borrowing! Deficit and gilt yields spike.'
             else:
                 st.session_state.market_conf += 7
                 st.session_state.growth += 0.2
                 st.session_state.headroom -= 6.0
-                st.session_state.message = 'SMR nuclear backed! Long-term clean baseload secured.'
+                st.session_state.message = 'SMR nuclear backed!'
             st.session_state.block = 2
             st.rerun()
 
@@ -456,14 +490,15 @@ elif st.session_state.year == 4:
             elif '2.' in choice:
                 st.session_state.market_conf -= 6
                 st.session_state.approval += 4
-                st.session_state.message = 'Counter-tariffs applied.'
+                st.session_state.inflation += 0.3
+                st.session_state.message = 'Counter-tariffs applied. Import costs push inflation up.'
             elif '3.' in choice:
                 st.session_state.growth -= 0.2
                 st.session_state.message = 'Trade friction ignored.'
             else:
                 st.session_state.growth += 0.3
                 st.session_state.market_conf += 4
-                st.session_state.message = 'Commonwealth trade deals signed! New export markets opened.'
+                st.session_state.message = 'Commonwealth trade deals signed!'
             st.session_state.block = 3
             st.rerun()
 
@@ -484,7 +519,8 @@ elif st.session_state.year == 4:
             elif '2.' in choice:
                 st.session_state.headroom += 5.0
                 st.session_state.market_conf += 10
-                st.session_state.message = 'Fiscal buffers strengthened.'
+                st.session_state.deficit -= 1.0
+                st.session_state.message = 'Fiscal buffers strengthened, deficit reduced.'
             elif '3.' in choice:
                 st.session_state.approval += 4
                 st.session_state.headroom -= 2.0
@@ -493,7 +529,7 @@ elif st.session_state.year == 4:
                 st.session_state.approval += 6
                 st.session_state.growth += 0.2
                 st.session_state.headroom -= 3.0
-                st.session_state.message = 'Retraining vouchers launched! Skills gaps closed.'
+                st.session_state.message = 'Retraining vouchers launched!'
             st.session_state.year = 5
             st.session_state.block = 1
             st.rerun()
@@ -524,7 +560,7 @@ elif st.session_state.year == 5:
                 st.session_state.approval += 8
                 st.session_state.growth += 0.2
                 st.session_state.headroom -= 3.5
-                st.session_state.message = 'AI diagnostic hubs deployed! Backlogs clear rapidly.'
+                st.session_state.message = 'AI diagnostic hubs deployed!'
             st.session_state.block = 2
             st.rerun()
 
@@ -553,7 +589,7 @@ elif st.session_state.year == 5:
             else:
                 st.session_state.approval += 10
                 st.session_state.headroom -= 4.5
-                st.session_state.message = 'Pensioner dividend secured! Older voters rally behind you.'
+                st.session_state.message = 'Pensioner dividend secured!'
             st.session_state.block = 3
             st.rerun()
 
@@ -579,10 +615,11 @@ elif st.session_state.year == 5:
             elif '3.' in choice:
                 st.session_state.market_conf += 18
                 st.session_state.approval -= 10
-                st.session_state.message = 'Final Budget Delivered: Austerity budget delivered.'
+                st.session_state.gilt_yield -= 0.5
+                st.session_state.message = 'Final Budget Delivered: Austerity budget delivered. Bond yields fall.'
             else:
                 st.session_state.approval += 8
                 st.session_state.market_conf -= 8
-                st.session_state.message = 'Final Budget Delivered: Constitutional overhaul proposed! Reformers cheer, establishment panics.'
+                st.session_state.message = 'Final Budget Delivered: Constitutional overhaul proposed!'
             st.session_state.year = 6
             st.rerun()
