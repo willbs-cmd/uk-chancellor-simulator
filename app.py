@@ -1,4 +1,4 @@
-Set-Content -Path "app.py" -Value "import streamlit as st
+import streamlit as st
 import random
 
 st.set_page_config(page_title='UK Chancellor Simulator', layout='wide')
