@@ -3,8 +3,6 @@ import streamlit as st
 import altair as alt
 import country
 
-# ----------------- DATA DICTIONARIES -----------------
-
 TAXES = {
     'income':   dict(label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02),
     'ni':       dict(label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
@@ -22,7 +20,6 @@ TAX_POLICIES = {
 
 OTHER_RECEIPTS = 290.0  
 
-# Default starting baselines for Year 1 (in £bn). These will compound year-on-year.
 SPEND_DEFAULTS = {
     'welfare':   dict(label='Welfare & pensions', short='Welfare & pensions', default=330.0),
     'health':    dict(label='NHS & health', short='NHS & health', default=215.0),
@@ -46,8 +43,6 @@ BASE_INTEREST = 105.4
 
 PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7fb8b0', '#c4c46f', '#8aa0a0', '#d98cb3', '#444444', '#777777']
 
-# ----------------- LOGIC -----------------
-
 def defaults():
     return {
         'tax': {k: v['default'] for k, v in TAXES.items()},
@@ -65,14 +60,10 @@ def ensure():
         s.budget_applied = defaults()
         s.budget_interest = BASE_INTEREST
         
-    for k, v in s.budget_applied['tax'].items():
-        s.setdefault(f'bt_{k}', v)
-    for k, v in s.budget_applied['spend'].items():
-        s.setdefault(f'bs_{k}', float(v))
-    for k, v in s.budget_applied['tax_pol'].items():
-        s.setdefault(f'btp_{k}', v)
-    for k, v in s.budget_applied['spend_pol'].items():
-        s.setdefault(f'bsp_{k}', v)
+    for k, v in s.budget_applied['tax'].items(): s.setdefault(f'bt_{k}', v)
+    for k, v in s.budget_applied['spend'].items(): s.setdefault(f'bs_{k}', float(v))
+    for k, v in s.budget_applied['tax_pol'].items(): s.setdefault(f'btp_{k}', v)
+    for k, v in s.budget_applied['spend_pol'].items(): s.setdefault(f'bsp_{k}', v)
 
 def read():
     s = st.session_state
@@ -100,20 +91,17 @@ def revenue_pie(b):
     data['Fuel, alcohol & other'] = OTHER_RECEIPTS
     
     pol_rev = sum(TAX_POLICIES[k]['yield_bn'] for k, active in b['tax_pol'].items() if active)
-    if pol_rev > 0:
-        data['Special Tax Schemes'] = round(pol_rev, 1)
+    if pol_rev > 0: data['Special Tax Schemes'] = round(pol_rev, 1)
     return data
 
 def spending_pie(b):
     s = st.session_state
     ensure()
-    # Compute department spending from the compounded baseline + this year's % adjustment
     data = {SPEND_DEFAULTS[k]['short']: round(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0), 1) for k in SPEND_DEFAULTS}
     data['Debt interest'] = round(interest(), 1)
     
     pol_spend = sum(SPEND_POLICIES[k]['cost_bn'] for k, active in b['spend_pol'].items() if active)
-    if pol_spend > 0:
-        data['Special Spending Pledges'] = round(pol_spend, 1)
+    if pol_spend > 0: data['Special Spending Pledges'] = round(pol_spend, 1)
     return data
 
 def impact(old, new):
@@ -121,8 +109,6 @@ def impact(old, new):
     ensure()
     ro, rn = revenues(old), revenues(new)
     d = {k: rn[k] - ro[k] for k in ro}
-    
-    # Calculate difference in £bn compared to the current applied budget
     ds = {k: s.dept_spend[k] * ((new['spend'][k] - old['spend'][k]) / 100.0) for k in SPEND_DEFAULTS}
     
     tax_pol_diff = sum(p['yield_bn'] for k, p in TAX_POLICIES.items() if new['tax_pol'][k]) - sum(p['yield_bn'] for k, p in TAX_POLICIES.items() if old['tax_pol'][k])
@@ -160,8 +146,7 @@ def impact(old, new):
                 growth=growth, inflation=inflation, real_wages=-0.010 * d['income'] - 0.006 * d['ni'],
                 unemployment=0.010 * d['ni'] + 0.004 * d['corp'])
 
-def _clip(v):
-    return max(0, min(100, v))
+def _clip(v): return max(0, min(100, v))
 
 def _apply():
     s = st.session_state
@@ -193,15 +178,20 @@ def _reset():
     for k, v in s.budget_applied['spend_pol'].items(): s[f'bsp_{k}'] = v
 
 def apply_ongoing():
-    """Called at the end of the year: permanently compounds the percentage changes into next year's base."""
     s = st.session_state
     ensure()
+    party = s.party
+
+    # Capture ideological metrics before resetting the base
+    corp_change = s.budget_applied['tax']['corp'] - TAXES['corp']['default']
+    welfare_change = float(s.budget_applied['spend']['welfare'])
+    climate_change = float(s.budget_applied['spend']['climate'])
+    other_change = float(s.budget_applied['spend']['other'])
     
     # 1. Compound this year's % decisions into permanent baselines
     for k in SPEND_DEFAULTS:
         pct_change = s.budget_applied['spend'].get(k, 0.0)
         s.dept_spend[k] = round(s.dept_spend[k] * (1.0 + pct_change / 100.0), 1)
-        # Reset the slider for next year back to 0.0% (maintain current base)
         s[f'bs_{k}'] = 0.0
         s.budget_applied['spend'][k] = 0.0
 
@@ -222,6 +212,24 @@ def apply_ongoing():
         'energy_bills': -1.5 * dv['climate'],
     }, snapshot=False)
 
+    # 3. IDEOLOGICAL BUDGETING LOOP
+    if party in ['Conservative', 'Reform UK'] and corp_change > 0:
+        s.backbench_opinion = max(0, s.backbench_opinion - 15)
+        s.message += " Your backbenchers are furious about the Corporation Tax hike."
+        
+    if party in ['Labour', 'Green Party'] and welfare_change < 0:
+        s.party_opinion = max(0, s.party_opinion - 15)
+        s.message += " The left wing of your party is in open revolt over welfare cuts."
+        
+    if party == 'Liberal Democrats' and climate_change < 0:
+        s.party_opinion = max(0, s.party_opinion - 15)
+        s.message += " Your party base is angry about cuts to climate spending."
+        
+    if party in ['SNP', 'Plaid Cymru'] and other_change < 0:
+        s.party_opinion = max(0, s.party_opinion - 15)
+        s.message += " Your regional assembly is furious about cuts to devolved block grants."
+
+    # 4. Interest Check
     new_interest = interest()
     drift = new_interest - s.get('budget_interest', BASE_INTEREST)
     if abs(drift) > 0.05:
@@ -230,13 +238,10 @@ def apply_ongoing():
         s.budget_interest = new_interest
     if s.headroom < 0:
         s.market_conf = round(_clip(s.market_conf - min(4, 0.15 * -s.headroom)), 1)
-        s.message = f"{s.message} ⚠️ Negative OBR headroom: markets punish the breach of your fiscal rules."
-
-# ----------------- UI RENDERING -----------------
+        s.message += " ⚠️ Negative OBR headroom: markets punish the breach of your fiscal rules."
 
 def _pie(data):
     df = pd.DataFrame([{'Category': str(k), 'Value': float(v)} for k, v in data.items() if float(v) > 0])
-    
     if not df.empty:
         chart = alt.Chart(df).mark_arc(innerRadius=65, outerRadius=125, stroke='#0d1f17', strokeWidth=2).encode(
             theta=alt.Theta(field="Value", type="quantitative"),
@@ -244,7 +249,6 @@ def _pie(data):
                             legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=12, symbolType='square')),
             tooltip=[alt.Tooltip('Category:N', title='Item'), alt.Tooltip('Value:Q', title='Amount (£bn)', format=',.1f')]
         ).properties(height=300, background='transparent').configure_view(strokeWidth=0)
-        
         st.altair_chart(chart, use_container_width=True)
 
 def render():
@@ -253,7 +257,6 @@ def render():
     applied, cur = s.budget_applied, read()
     changed = cur != applied
 
-    # Totals
     pol_rev = sum(TAX_POLICIES[k]['yield_bn'] for k, active in cur['tax_pol'].items() if active)
     rev_now = sum(revenues(cur).values()) + OTHER_RECEIPTS + pol_rev
     
@@ -276,7 +279,6 @@ def render():
 
     left, right = st.columns(2)
     
-    # ----- TAXES COLUMN -----
     with left:
         st.markdown('#### Taxes')
         for k, t in TAXES.items():
@@ -294,10 +296,8 @@ def render():
         
         st.markdown("---")
         st.markdown('#### Revenue Raising Schemes')
-        for k, p in TAX_POLICIES.items():
-            st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}")
+        for k, p in TAX_POLICIES.items(): st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}")
 
-    # ----- SPENDING COLUMN -----
     with right:
         st.markdown('#### Department Spending (Annual % Change)')
         st.caption('Set annual spending growth or cuts (-15% to +15%). Changes compound into baseline budgets each year.')
@@ -306,7 +306,6 @@ def render():
             st.markdown(f"**{sp['label']}** (Current base: £{base:,.1f}bn)")
             c1, c2 = st.columns([3, 1])
             with c1:
-                # Annual adjustment slider: -15.0% to +15.0%
                 st.slider(f"{sp['label']} slider", -15.0, 15.0, value=float(s[f'bs_{k}']), step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
             with c2:
                 pct = float(s[f'bs_{k}'])
@@ -317,8 +316,7 @@ def render():
 
         st.markdown("---")
         st.markdown('#### Spending Pledges')
-        for k, p in SPEND_POLICIES.items():
-            st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}")
+        for k, p in SPEND_POLICIES.items(): st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}")
 
     st.caption(f'Debt interest (£{interest():,.1f}bn) is set by gilt yields and total debt stock, not by departmental budgets.')
 
