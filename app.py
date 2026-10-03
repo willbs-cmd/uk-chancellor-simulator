@@ -21,6 +21,8 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
     st.session_state.headlines = None
+    st.session_state.budget_passed = False
+    st.session_state.sacked = False
 
     # Economic Stats
     st.session_state.approval = 48.0
@@ -136,7 +138,12 @@ def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
 
 def update_polling_data(current_year):
     gov_party = st.session_state.party
-    approval_boost = (st.session_state.approval - 50) * 0.35
+    
+    # LINK 1: State of the Nation score now directly impacts your polling!
+    nation_score = country._overall(st.session_state.country) * 100
+    nation_bonus = (nation_score - 50) * 0.15 
+    
+    approval_boost = ((st.session_state.approval - 50) * 0.35) + nation_bonus
 
     if current_year not in st.session_state.poll_history['Year']:
         st.session_state.poll_history['Year'].append(current_year)
@@ -164,14 +171,33 @@ def snapshot_metrics():
     s.prev_headroom = s.headroom
     s.prev_debt = s.debt
 
-def process_block_execution(next_year, next_block, chosen_ideology):
+def process_block_execution(next_year, next_block, chosen_ideology, effect=None):
     snapshot_metrics()
     st.session_state.last_ideology = chosen_ideology
     st.session_state.headlines = generate_headlines(chosen_ideology)
     country.apply_decision(chosen_ideology)
 
+    # LINK 4: Direct decision effects hit the country state
+    if effect:
+        country_effects = {k: v for k, v in effect.items() if k in country.STATS}
+        if country_effects:
+            country.nudge(country_effects, snapshot=False)
+
     if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
     if st.session_state.inflation > 3.0: st.session_state.approval = round(st.session_state.approval - 1.5, 1)
+
+    # LINK 2: The "Sick Workforce" & "Crumbling Infrastructure" Drags
+    if st.session_state.country['nhs_waiting'] > 7.5:
+        st.session_state.growth = round(st.session_state.growth - 0.15, 2)
+        st.session_state.message += " The massive NHS backlog is dragging down economic growth."
+        
+    if st.session_state.country['rail'] < 70:
+        st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
+        st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
+
+    if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
+        st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
+        st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
 
     update_political_capital(chosen_ideology, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
     update_polling_data(next_year)
@@ -419,8 +445,8 @@ else:
             else:
                 humphrey_message(f"As for the House of Lords, Chancellor, they supported the bill (**{lords_ayes} Contents** to {lords_noes} Not-Contents). Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
                 
-            # Render Budget Newspapers!
-            render_newspapers(*st.session_state.headlines)
+            if st.session_state.get('headlines'):
+                render_newspapers(*st.session_state.headlines)
             
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
@@ -482,7 +508,6 @@ else:
             if st.session_state.get('message'):
                 news_box(st.session_state.message)
                 
-            # Render the newspapers right under the news box if a decision was just made!
             if st.session_state.get('headlines'):
                 render_newspapers(*st.session_state.headlines)
                 
@@ -539,7 +564,7 @@ else:
                         ideologies = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
                         selected_type = ideologies[idx]
                         
-                        process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
+                        process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type, effect)
                 else:
                     st.write("No decision data found for this block.")
                     if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
