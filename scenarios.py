@@ -158,7 +158,8 @@ BUDGET_LINKS = [
     ('defence_scare', 'spend', 'defence', '<=', 55, 0.35), ('corp_exodus', 'tax', 'corp', '>=', 30, 0.35),
 ]
 
-def get(crisis_id): return CRISES.get(crisis_id) if isinstance(crisis_id, str) else None
+def get(crisis_id):
+    return CRISES.get(crisis_id) if isinstance(crisis_id, str) else None
 
 def pick_next(year, block, ideology):
     s = st.session_state
@@ -203,7 +204,8 @@ def _fmt(fx):
 def option_labels(crisis):
     return [f'{label} ({_fmt(fx)})' if _fmt(fx) else label for label, fx in crisis['opts']]
 
-def _clip(v): return max(0, min(100, v))
+def _clip(v):
+    return max(0, min(100, v))
 
 def apply_fx(fx):
     s = st.session_state
@@ -220,11 +222,33 @@ def apply_fx(fx):
 def resolve(crisis, index):
     label, fx = crisis['opts'][index]
     apply_fx(fx)
+    
+    # Initialize the memory for Humphrey so he never repeats himself back-to-back
+    if 'last_humphrey_quote' not in st.session_state:
+        st.session_state.last_humphrey_quote = ""
+        
     humphrey_replies = [
         "A very courageous decision, Chancellor.",
         "Quite so, Chancellor. I shall draft a press release meaning absolutely nothing.",
         "I foresee immense administrative complications, but I shall execute your will, Chancellor.",
         "A bold strategy, Chancellor. The exact strategy, in fact, that ruined your predecessor.",
-        "Yes, Chancellor. In the fullness of time, this may even prove to have been the right choice."
+        "Yes, Chancellor. In the fullness of time, this may even prove to have been the right choice.",
+        "If you insist, Chancellor. Though I must point out that in government, doing nothing is often the most productive course of action.",
+        "Excellent, Chancellor. We shall set up an interdepartmental committee to monitor the implementation. That should delay it indefinitely.",
+        "As you wish, Chancellor. I shall instruct the civil service to proceed with all deliberate lack of speed.",
+        "A triumph of hope over experience, Chancellor.",
+        "To be perfectly frank, Chancellor, the Treasury views this decision with a mixture of horror and profound amusement.",
+        "I am fully seized of your instructions, Chancellor, and will implement them with the exact degree of enthusiasm they warrant.",
+        "An interesting approach. Usually, when one is in a hole, one stops digging. But you have asked for a larger shovel.",
+        "We must be very careful not to let the electorate know we've done this. It might give them ideas.",
+        "Quite, Chancellor. A decision that will echo through the corridors of power... mostly in whispers of disbelief.",
+        "I shall ensure the implementation is sufficiently complex so that no one can ever trace the blame back to you."
     ]
-    return f"**Crisis handled: {label}**<br><br>*Sir Humphrey Appleby adds:* \"{random.choice(humphrey_replies)}\""
+    
+    # Filter out the last used quote
+    available_replies = [r for r in humphrey_replies if r != st.session_state.last_humphrey_quote]
+    
+    chosen_quote = random.choice(available_replies)
+    st.session_state.last_humphrey_quote = chosen_quote
+    
+    return f"**Crisis handled: {label}**<br><br>*Sir Humphrey Appleby adds:* \"{chosen_quote}\""
