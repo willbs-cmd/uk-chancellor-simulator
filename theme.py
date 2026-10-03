@@ -103,9 +103,12 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
 
 /* Long metric values (e.g. "98.2% of GDP") wrap instead of truncating */
-[data-testid="stMetricValue"], [data-testid="stMetricValue"] > div {
+[data-testid="stMetric"] { overflow: hidden; min-width: 0; box-sizing: border-box; }
+[data-testid="stMetric"] > div, [data-testid="stMetricValue"] { max-width: 100%; min-width: 0; }
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
   white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
-  font-size: 1.7rem !important; line-height: 1.15;
+  overflow-wrap: anywhere; word-break: normal;
+  font-size: clamp(1.15rem, 1.7vw, 1.6rem) !important; line-height: 1.15;
 }
 
 /* Custom components */
