@@ -83,20 +83,16 @@ def check_pledges():
     if 'budget_applied' not in s: return
     b = s.budget_applied
     broken = []
-    
     if "Never raise Basic Income Tax" in s.pledges and b['tax']['inc_basic'] > 20 and "Never raise Basic Income Tax" not in s.broken_pledges: broken.append("Never raise Basic Income Tax")
     if "Never raise VAT" in s.pledges and b['tax']['vat'] > 20 and "Never raise VAT" not in s.broken_pledges: broken.append("Never raise VAT")
     if "Never raise Corporation Tax" in s.pledges and b['tax']['corp'] > 25 and "Never raise Corporation Tax" not in s.broken_pledges: broken.append("Never raise Corporation Tax")
     if "Never raise Capital Gains Tax" in s.pledges and b['tax']['cgt'] > 20 and "Never raise Capital Gains Tax" not in s.broken_pledges: broken.append("Never raise Capital Gains Tax")
-    
     if "Protect NHS Funding (No Cuts)" in s.pledges and float(b['spend']['health']) < 0 and "Protect NHS Funding (No Cuts)" not in s.broken_pledges: broken.append("Protect NHS Funding (No Cuts)")
     if "Protect Education (No Cuts)" in s.pledges and float(b['spend']['education']) < 0 and "Protect Education (No Cuts)" not in s.broken_pledges: broken.append("Protect Education (No Cuts)")
     if "Never increase Welfare Spending" in s.pledges and float(b['spend']['welfare']) > 0 and "Never increase Welfare Spending" not in s.broken_pledges: broken.append("Never increase Welfare Spending")
-    
     if "Eliminate the Deficit" in s.pledges and s.deficit > 0 and s.year == 5 and "Eliminate the Deficit" not in s.broken_pledges: broken.append("Eliminate the Deficit")
         
     penalty_mult = 0.5 if s.spad and s.spad.startswith('The Spin Doctor') else 1.0
-    
     for p in broken:
         s.broken_pledges.append(p)
         s.approval_cap -= int(15 * penalty_mult)
@@ -184,7 +180,6 @@ def update_polling_data(current_year):
     if current_year not in s.poll_history['Year']:
         s.poll_history['Year'].append(current_year)
         base = {p: s.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
-        
         if gov in ['SNP', 'Plaid Cymru']: base[gov] += (boost * 0.2)
         else: base[gov] += boost
 
@@ -258,14 +253,7 @@ if st.session_state.step == 'setup':
     col1, col2 = st.columns([1, 1])
     with col1:
         party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru'])
-        
-        # Added the Pink Fantasy Kingdom Scenario!
-        scenario = st.selectbox('Historical Scenario:', [
-            "2026: The Fragile Present", 
-            "2008: The Great Financial Crash", 
-            "1978: Winter of Discontent",
-            "1453: The Pink Fantasy Kingdom 🌸"
-        ])
+        scenario = st.selectbox('Historical Scenario:', ["2026: The Fragile Present", "2008: The Great Financial Crash", "1978: Winter of Discontent", "1453: The Pink Fantasy Kingdom 🌸"])
         
         spad_options = [
             "The Spin Doctor (Halves penalties from broken pledges/scandals)",
@@ -359,37 +347,72 @@ if st.session_state.step == 'setup':
 
 
 # ==================== THE PINK THEME CSS INJECTION ====================
-# If the Pink Fantasy Kingdom scenario is chosen, inject a massive CSS override
 if st.session_state.get('pink_theme'):
     st.markdown("""
     <style>
-    .stApp, [data-testid="stSidebar"] { background-color: #ffe6f2 !important; background-image: none !important; }
+    /* Base Backgrounds */
+    .stApp, [data-testid="stSidebar"], header { background-color: #ffe6f2 !important; background-image: none !important; }
+    
+    /* Typography Default */
     h1, h2, h3, h4, p, span, label, td, th, li { color: #5c0033 !important; }
     
-    .sc-card { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border: 1px solid #ff99cc !important; border-top: 3px solid #ff1493 !important; box-shadow: 0 6px 10px rgba(255,105,180,0.2) !important; }
-    .ch-banner { background: linear-gradient(145deg, #ffb3d9, #ff99cc) !important; border-left: 6px solid #ff1493 !important; box-shadow: 0 6px 12px rgba(255,105,180,0.3) !important; }
-    .ch-news { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border-left: 4px solid #ff1493 !important; box-shadow: 0 4px 8px rgba(255,105,180,0.2) !important; }
+    /* Fix Stat Cards */
+    .sc-card { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border: 1px solid #ff99cc !important; border-top: 3px solid #ff1493 !important; }
+    .sc-value, .sc-label, .sc-delta, .sc-info { color: #5c0033 !important; }
+    .sc-info { border-color: #ff1493 !important; }
+    .sc-good { color: #008000 !important; background: rgba(0,255,0,0.15) !important; }
+    .sc-bad { color: #cc0000 !important; background: rgba(255,0,0,0.15) !important; }
+    .sc-flat { color: #5c0033 !important; }
     
+    /* Fix Humphrey Memo (Override inline dark green) */
+    div[style*="linear-gradient(145deg, #162a20, #0b1712)"] {
+        background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important;
+        border-left: 5px solid #ff1493 !important;
+        box-shadow: 0 6px 12px rgba(255,105,180,0.3) !important;
+    }
+    div[style*="color: #f4f0e6;"] { color: #5c0033 !important; }
+    div[style*="color: #d4af37;"] { color: #ff1493 !important; }
+    span[style*="color: #d4af37;"] { color: #ff1493 !important; }
+    
+    /* Fix Parliament Bar (Override inline dark green) */
+    div[style*="linear-gradient(145deg, #10261c, #0b1a13)"] {
+        background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important;
+        border: 1px solid #ff99cc !important;
+    }
+    div[style*="background:#07100c;"] { background: #ffe6f2 !important; border-color: #ff99cc !important; }
+    span[style*="background:#10261c;"] { background: #ffb3d9 !important; border-color: #ff99cc !important; color: #5c0033 !important; }
+    
+    /* Fix Banners & News */
+    .ch-banner { background: linear-gradient(145deg, #ffb3d9, #ff99cc) !important; border-left: 6px solid #ff1493 !important; }
+    .ch-banner .sub { color: #ff1493 !important; }
+    .ch-news { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border-left: 4px solid #ff1493 !important; color: #5c0033 !important; }
+    
+    /* Fix Poll Bars */
+    .ch-bar .name, .ch-bar .val { color: #5c0033 !important; }
+    .ch-bar .track { background: #ffe6f2 !important; border-color: #ff99cc !important; }
+    
+    /* Fix Radio Buttons */
     [data-testid="stRadio"] label { background: linear-gradient(145deg, #ffe6f2, #ffcce6) !important; border: 1px solid #ff99cc !important; }
-    [data-testid="stRadio"] label:hover { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border-color: #ff1493 !important; }
+    [data-testid="stRadio"] label:hover { border-color: #ff1493 !important; }
     [data-testid="stRadio"] label:has(input:checked) { background: linear-gradient(145deg, #ffb3d9, #ff99cc) !important; border-color: #ff1493 !important; box-shadow: inset 4px 0 0 #ff1493 !important; }
     
-    div.stButton > button { background: linear-gradient(145deg, #ff66b2, #ff3399) !important; border: 1px solid #ff1493 !important; color: #fff !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-    div.stButton > button span { color: #fff !important; }
-    div.stButton > button:hover { background: #ff1493 !important; box-shadow: 0 4px 10px rgba(255,20,147,0.4) !important; }
+    /* Fix Main Buttons */
+    div.stButton > button { background: linear-gradient(145deg, #ff66b2, #ff3399) !important; border: 1px solid #ff1493 !important; }
+    div.stButton > button p, div.stButton > button span, div.stButton > button div { color: #ffffff !important; }
+    div.stButton > button:hover { background: #ff1493 !important; }
     
+    /* Fix Tables */
     .ch-table { background: linear-gradient(145deg, #ffe6f2, #ffcce6) !important; border: 1px solid #ff99cc !important; }
     .ch-table th { background: #ff99cc !important; border-bottom: 2px solid #ff1493 !important; color: #5c0033 !important; }
     .ch-table td { border-bottom: 1px solid #ffb3d9 !important; color: #5c0033 !important; }
     
-    .ch-crisis { background: #ffd9e6 !important; border: 1px solid #ff1493 !important; border-left: 6px solid #ff1493 !important; }
+    /* Fix Pledges (Override inline dark green/red) */
+    div[style*="background:#10261c;"] { background: #ffcce6 !important; border-color: #008000 !important; color: #008000 !important; }
+    div[style*="background:#2a1111;"] { background: #ffb3d9 !important; border-color: #cc0000 !important; color: #cc0000 !important; }
     
-    .ch-pip { background: #ff99cc !important; }
-    .ch-pip.done { background: #ff1493 !important; }
-    .ch-pip.now { background: #fff !important; box-shadow: 0 0 8px #ff1493 !important; }
-    
-    [data-testid="stSidebar"] { border-right: 1px solid #ff99cc !important; }
+    /* UI Elements */
     hr { border-bottom: 1px solid #ff99cc !important; }
+    [data-testid="stSidebar"] { border-right: 1px solid #ff99cc !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -403,7 +426,7 @@ with st.sidebar:
     st.markdown(f"<span style='color:{m_color}; font-weight:bold; font-size:1.1rem;'>{s.macro_cycle.upper()}</span>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown(f"**🕵️ Special Advisor:**")
-    st.markdown(f"<span style='color:#efe9da;'>{s.spad.split(' (')[0] if s.spad else 'None'}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span>{s.spad.split(' (')[0] if s.spad else 'None'}</span>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown(f"**💷 Sleaze Level:** {s.sleaze}%")
     st.progress(min(100, s.sleaze) / 100.0)
@@ -588,7 +611,7 @@ if is_budget_block or is_mini_budget:
                 if p in s.broken_pledges:
                     p_cols[i%3].markdown(f"<div style='background:#2a1111; border:1px solid #e65c4f; padding:10px; border-radius:6px; color:#e3b3ab; text-align:center;'>❌ <s>{p}</s></div>", unsafe_allow_html=True)
                 else:
-                    success_color = "#4a0e2e" if s.get('pink_theme') else "#6fbf8a"
+                    success_color = "#008000" if s.get('pink_theme') else "#6fbf8a"
                     p_cols[i%3].markdown(f"<div style='background:#10261c; border:1px solid {success_color}; padding:10px; border-radius:6px; color:{success_color}; text-align:center; font-weight:bold;'>✅ {p}</div>", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
             
