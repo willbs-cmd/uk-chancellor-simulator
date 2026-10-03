@@ -8,7 +8,7 @@ import budget
 import decisions
 import scenarios as scen
 
-st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', initial_sidebar_state="expanded")
+st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
 
 # ==================== INITIALIZATION & SAFETY RESET ====================
@@ -82,10 +82,16 @@ def check_pledges():
     if 'budget_applied' not in s: return
     b = s.budget_applied
     broken = []
+    
     if "Never raise Basic Income Tax" in s.pledges and b['tax']['inc_basic'] > 20 and "Never raise Basic Income Tax" not in s.broken_pledges: broken.append("Never raise Basic Income Tax")
     if "Never raise VAT" in s.pledges and b['tax']['vat'] > 20 and "Never raise VAT" not in s.broken_pledges: broken.append("Never raise VAT")
     if "Never raise Corporation Tax" in s.pledges and b['tax']['corp'] > 25 and "Never raise Corporation Tax" not in s.broken_pledges: broken.append("Never raise Corporation Tax")
-    if "Protect NHS Funding" in s.pledges and s.dept_spend['health'] < 215.0 and "Protect NHS Funding" not in s.broken_pledges: broken.append("Protect NHS Funding")
+    if "Never raise Capital Gains Tax" in s.pledges and b['tax']['cgt'] > 20 and "Never raise Capital Gains Tax" not in s.broken_pledges: broken.append("Never raise Capital Gains Tax")
+    
+    if "Protect NHS Funding (No Cuts)" in s.pledges and float(b['spend']['health']) < 0 and "Protect NHS Funding (No Cuts)" not in s.broken_pledges: broken.append("Protect NHS Funding (No Cuts)")
+    if "Protect Education (No Cuts)" in s.pledges and float(b['spend']['education']) < 0 and "Protect Education (No Cuts)" not in s.broken_pledges: broken.append("Protect Education (No Cuts)")
+    if "Never increase Welfare Spending" in s.pledges and float(b['spend']['welfare']) > 0 and "Never increase Welfare Spending" not in s.broken_pledges: broken.append("Never increase Welfare Spending")
+    
     if "Eliminate the Deficit" in s.pledges and s.deficit > 0 and s.year == 5 and "Eliminate the Deficit" not in s.broken_pledges: broken.append("Eliminate the Deficit")
         
     penalty_mult = 0.5 if s.spad and s.spad.startswith('The Spin Doctor') else 1.0
@@ -239,13 +245,13 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     enforce_spad_passives()
     check_imf_bailout()
     
-    s.active_crisis = scen.pick_next(s.year, s.block, chosen_ideology)
     s.year, s.block = next_year, next_block
+    s.active_crisis = scen.pick_next(s.year, s.block, chosen_ideology)
     st.rerun()
 
 # ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
-    st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
+    st.title('🏛️️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Form Your Government')
     
     col1, col2 = st.columns([1, 1])
@@ -262,9 +268,17 @@ if st.session_state.step == 'setup':
         spad_choice = st.selectbox('Hire a Special Advisor (SpAd):', spad_options)
         
     with col2:
-        pledge_choices = st.multiselect('Select exactly 3 Core Manifesto Pledges:', 
-                                        ["Never raise Basic Income Tax", "Never raise VAT", "Never raise Corporation Tax", "Protect NHS Funding", "Eliminate the Deficit"],
-                                        max_selections=3)
+        pledge_options = [
+            "Never raise Basic Income Tax", 
+            "Never raise VAT", 
+            "Never raise Corporation Tax",
+            "Never raise Capital Gains Tax",
+            "Protect NHS Funding (No Cuts)",
+            "Protect Education (No Cuts)",
+            "Never increase Welfare Spending",
+            "Eliminate the Deficit"
+        ]
+        pledge_choices = st.multiselect('Select exactly 3 Core Manifesto Pledges:', pledge_options, max_selections=3)
 
     if len(pledge_choices) != 3:
         st.warning("⚠️ You must select exactly 3 Manifesto Pledges to enter Number 11.")
@@ -331,19 +345,15 @@ if st.session_state.step == 'setup':
 s = st.session_state
 with st.sidebar:
     st.markdown("### 💼 Chancellor's Briefcase")
-    
     st.markdown(f"**🌍 Macro Cycle:**")
     m_color = "#6fbf8a" if s.macro_cycle == "Boom" else ("#e65c4f" if s.macro_cycle == "Recession" else "#a3b8ad")
     st.markdown(f"<span style='color:{m_color}; font-weight:bold; font-size:1.1rem;'>{s.macro_cycle.upper()}</span>", unsafe_allow_html=True)
-    
     st.markdown("---")
     st.markdown(f"**🕵️ Special Advisor:**")
     st.markdown(f"<span style='color:#efe9da;'>{s.spad.split(' (')[0] if s.spad else 'None'}</span>", unsafe_allow_html=True)
-    
     st.markdown("---")
     st.markdown(f"**💷 Sleaze Level:** {s.sleaze}%")
     st.progress(min(100, s.sleaze) / 100.0)
-    
     st.markdown("---")
     st.markdown("**📜 Manifesto Pledges:**")
     for pledge in s.pledges:
@@ -467,11 +477,9 @@ if is_budget_block or is_mini_budget:
     if s.get('budget_passed'):
         st.subheader("🏛 Parliamentary Vote Results")
         
-        # Calculate votes including any bribes used!
         bb = s.backbench_opinion
         commons_ayes = int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.get('whip_votes', 0))
-        if s.spad and s.spad.startswith('The Enforcer'):
-            commons_ayes += 20
+        if s.spad and s.spad.startswith('The Enforcer'): commons_ayes += 20
         commons_ayes = min(650, max(0, commons_ayes))
         
         if bb > 70: st.success(f"**House of Commons:** Passed with a thumping majority! (Ayes: {commons_ayes})")
@@ -520,6 +528,16 @@ if is_budget_block or is_mini_budget:
             st.subheader(f"Year {s.year} - Block 3: The Chancellor's Budget")
             humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions.")
             
+            st.markdown("### 📜 Active Manifesto Pledges")
+            st.caption("Do not violate these promises in your budget below, or the press will crucify you for a U-Turn.")
+            p_cols = st.columns(3)
+            for i, p in enumerate(s.pledges):
+                if p in s.broken_pledges:
+                    p_cols[i%3].markdown(f"<div style='background:#2a1111; border:1px solid #e65c4f; padding:10px; border-radius:6px; color:#e3b3ab; text-align:center;'>❌ <s>{p}</s></div>", unsafe_allow_html=True)
+                else:
+                    p_cols[i%3].markdown(f"<div style='background:#10261c; border:1px solid #6fbf8a; padding:10px; border-radius:6px; color:#6fbf8a; text-align:center; font-weight:bold;'>✅ {p}</div>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
         if 'budget_applied' not in s: budget.ensure()
         budget.render()
         
@@ -536,8 +554,7 @@ if is_budget_block or is_mini_budget:
 
         bb = s.backbench_opinion
         commons_ayes = int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.whip_votes)
-        if s.spad and s.spad.startswith('The Enforcer'):
-            commons_ayes += 20
+        if s.spad and s.spad.startswith('The Enforcer'): commons_ayes += 20
         if revolt_warning: commons_ayes -= 35
         commons_ayes = min(650, max(0, commons_ayes))
         
@@ -601,7 +618,6 @@ else:
             e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbp_usd - 1.27), unsafe_allow_html=True)
 
             st.markdown(f"<div style='text-align:right; font-size:0.85rem; color:#a3b8ad; margin-bottom:12px;'>Overall UK Tax Burden: <b>{tax_burden}% of GDP</b></div>", unsafe_allow_html=True)
-
             render_parliament_bar(s.seats, s.party)
 
         with tab_pol:
@@ -678,7 +694,7 @@ else:
                 check_imf_bailout()
                 st.rerun()
         else:
-            decision_data = decisions.DECISIONS.get((s.year, s.block))
+            decision_data = decisions.get_decision(s.term, s.year, s.block)
             if decision_data:
                 st.subheader(f"Block {s.block}: {decision_data['title']}")
                 st.write(decision_data['text'])
