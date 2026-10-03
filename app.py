@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import pandas as pd
 
-from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message, render_newspapers
+from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message, render_newspapers, stat_card
 import country
 import budget
 import decisions
@@ -260,19 +260,19 @@ d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1
 d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%', help="The percentage of the electorate that supports your government. High approval boosts PM confidence and helps win elections.")
-c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%', help="How much the financial sector trusts your economic management. If this drops too low, borrowing costs spike and trigger a fiscal crisis.")
-c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%', help="The annual rate of GDP growth. Higher growth naturally increases tax revenues over time.")
-c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', help="Your fiscal safety margin. Dropping into the negative breaks fiscal rules and panics the markets.")
-c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', delta_color='inverse', help="Total government debt as a % of GDP. High debt massively increases annual interest payments, eating into your budget.")
+c1.markdown(stat_card('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%', "The percentage of the electorate that supports your government. High approval boosts PM confidence and helps win elections.", d_approval), unsafe_allow_html=True)
+c2.markdown(stat_card('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%', "How much the financial sector trusts your economic management. If this drops too low, borrowing costs spike and trigger a fiscal crisis.", d_market), unsafe_allow_html=True)
+c3.markdown(stat_card('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%', "The annual rate of GDP growth. Higher growth naturally increases tax revenues over time.", d_growth), unsafe_allow_html=True)
+c4.markdown(stat_card('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', "Your fiscal safety margin. Dropping into the negative breaks fiscal rules and panics the markets.", d_headroom), unsafe_allow_html=True)
+c5.markdown(stat_card('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', "Total government debt as a % of GDP. High debt massively increases annual interest payments, eating into your budget.", d_debt, inverse=True), unsafe_allow_html=True)
 
 st.markdown("#### 🏛️ Political Capital")
 p1, p2, p3, p4, p5 = st.columns(5)
-p1.metric("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}", help="The Prime Minister's trust in you. If this drops below 40, you will be sacked!")
-p2.metric('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}", help="The backing of your fellow ministers. Kept high by good public approval and generous budgets.")
-p3.metric('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}", help="Overall harmony within your party. If this drops below 35, you will face a leadership crisis and be sacked.")
-p4.metric('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}", help="The mood of your MPs. Keep them happy by making decisions that align with your party's core ideology.")
-p5.metric('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}", help="How the press is reporting on you. Driven by a mix of public approval and market stability.")
+p1.markdown(stat_card("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}", "The Prime Minister's trust in you. If this drops below 40, you will be sacked!", (st.session_state.pm_opinion - st.session_state.prev_pm)), unsafe_allow_html=True)
+p2.markdown(stat_card('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}", "The backing of your fellow ministers. Kept high by good public approval and generous budgets.", (st.session_state.cab_opinion - st.session_state.prev_cab)), unsafe_allow_html=True)
+p3.markdown(stat_card('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}", "Overall harmony within your party. If this drops below 35, you will face a leadership crisis and be sacked.", (st.session_state.party_opinion - st.session_state.prev_party)), unsafe_allow_html=True)
+p4.markdown(stat_card('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}", "The mood of your MPs. Keep them happy by making decisions that align with your party's core ideology.", (st.session_state.backbench_opinion - st.session_state.prev_backbench)), unsafe_allow_html=True)
+p5.markdown(stat_card('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}", "How the press is reporting on you. Driven by a mix of public approval and market stability.", (st.session_state.media_opinion - st.session_state.prev_media)), unsafe_allow_html=True)
 
 st.divider()
 
@@ -486,11 +486,11 @@ else:
             tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
             with tab_econ:
                 m1, m2 = st.columns(2)
-                m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="Shortfall between revenues and spending.")
-                m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="Rate at which prices are rising.")
+                m1.markdown(stat_card('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', 'current', "Shortfall between revenues and spending."), unsafe_allow_html=True)
+                m2.markdown(stat_card('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', 'current', "Rate at which prices are rising."), unsafe_allow_html=True)
                 m3, m4 = st.columns(2)
-                m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="BoE base interest rate.")
-                m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="Government borrowing cost.")
+                m3.markdown(stat_card('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', 'current', "BoE base interest rate."), unsafe_allow_html=True)
+                m4.markdown(stat_card('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', 'current', "Government borrowing cost."), unsafe_allow_html=True)
 
                 st.markdown('### 📈 Voting Intention')
                 df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
