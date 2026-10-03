@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import pandas as pd
 
-from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message
+from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message, render_newspapers
 import country
 import budget
 import decisions
@@ -20,6 +20,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.term = 1
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
+    st.session_state.headlines = None
 
     # Economic Stats
     st.session_state.approval = 48.0
@@ -62,6 +63,41 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
 # ==================== LOGIC FUNCTIONS ====================
 def _clip(val, minimum=0.0, maximum=100.0):
     return max(minimum, min(maximum, val))
+
+def generate_headlines(ideology, is_budget=False, headroom=0):
+    if is_budget:
+        if headroom > 2.0: return ("AUSTERITY BUDGET IGNORES THE POOR", "CHANCELLOR BUILDS FISCAL FORTRESS", "A PRUDENT BUDGET AT LAST")
+        elif headroom < -2.0: return ("END TO AUSTERITY!", "MARKETS PANIC OVER DEFICIT SPENDING", "RECKLESS BORROWING THREATENS ECONOMY")
+        else: return ("A MIXED BAG FOR WORKERS", "CHANCELLOR WALKS THE TIGHTROPE", "PLAYING IT SAFE BEFORE ELECTION")
+            
+    headlines = {
+        'Hard Left': (
+            random.choice(["POWER TO THE PEOPLE!", "BOLD REFORMS AT LAST", "CHANCELLOR TAKES ON THE ELITES"]),
+            random.choice(["MARKETS JITTERY AFTER RADICAL MOVE", "TREASURY TAKES A SHARP LEFT", "A COSTLY GAMBLE?"]),
+            random.choice(["MARXIST MADNESS!", "CLASS WAR DECLARED", "ECONOMY ON THE BRINK"])
+        ),
+        'Social Democratic': (
+            random.choice(["A FAIRER DEAL", "INVESTING IN OUR FUTURE", "FINALLY, SOME COMMON SENSE"]),
+            random.choice(["A PRAGMATIC COMPROMISE", "MODERATE SPENDING BOOST", "CHANCELLOR WALKS THE TIGHTROPE"]),
+            random.choice(["TAX AND SPEND RETURNS", "NANNY STATE EXPANDS", "WHO IS PAYING FOR THIS?"])
+        ),
+        'Centric': (
+            random.choice(["STATUS QUO MAINTAINED", "LACK OF AMBITION", "A MISSED OPPORTUNITY"]),
+            random.choice(["A STEADY HAND AT THE TILLER", "SENSIBLE GOVERNANCE", "CHANCELLOR PLAYS IT SAFE"]),
+            random.choice(["DULL BUT DUTIFUL", "WHERE IS THE GROWTH PLAN?", "KICKING THE CAN DOWN THE ROAD"])
+        ),
+        'Free-Market': (
+            random.choice(["FAT CATS REJOICE", "WORKERS THROWN UNDER THE BUS", "SLASH AND BURN ECONOMICS"]),
+            random.choice(["DEREGULATION DRIVE BEGINS", "A ROLL OF THE DICE", "MARKETS CHEER, PUBLIC GROANS"]),
+            random.choice(["A BREATH OF FRESH AIR", "BRITAIN IS OPEN FOR BUSINESS", "FINALLY, SOME GROWTH!"])
+        ),
+        'Fiscal Austerity': (
+            random.choice(["CRUEL CUTS BITE DEEP", "AUSTERITY 2.0 DECLARED", "THE VULNERABLE PAY THE PRICE"]),
+            random.choice(["TOUGH MEDICINE ADMINISTERED", "BELTS TIGHTENED AT THE TREASURY", "THE DEFICIT HAWKS RETURN"]),
+            random.choice(["BALANCING THE BOOKS", "FISCAL RESPONSIBILITY AT LAST", "HARD CHOICES, RIGHT DECISIONS"])
+        )
+    }
+    return headlines.get(ideology, headlines['Centric'])
 
 def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
     s = st.session_state
@@ -131,6 +167,7 @@ def snapshot_metrics():
 def process_block_execution(next_year, next_block, chosen_ideology):
     snapshot_metrics()
     st.session_state.last_ideology = chosen_ideology
+    st.session_state.headlines = generate_headlines(chosen_ideology)
     country.apply_decision(chosen_ideology)
 
     if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
@@ -321,9 +358,7 @@ if st.session_state.year > 5:
             st.session_state.clear()
             st.rerun()
     elif win:
-        # Calculate Honeymoon Boost
         boost = round(min(15.0, max(5.0, majority_margin / 10.0)), 1)
-        
         st.session_state.approval = _clip(st.session_state.approval + boost)
         st.session_state.pm_opinion = _clip(st.session_state.pm_opinion + boost)
         st.session_state.party_opinion = _clip(st.session_state.party_opinion + boost)
@@ -331,7 +366,6 @@ if st.session_state.year > 5:
         st.session_state.backbench_opinion = _clip(st.session_state.backbench_opinion + boost)
         
         humphrey_message(f"Congratulations, Chancellor. We have survived the electorate. {'Managing a coalition partner will be tedious' if coalition_formed else 'A minority government will be a legislative nightmare'}, but you remain at the Treasury.")
-        
         st.success(f"**YOU SURVIVED!** You retained power and kept your job at Number 11.\n\n🎉 **HONEYMOON PERIOD:** The public and party have granted you a honeymoon period (**+{boost}%** to Public Approval and all Political Capital).")
         
         if st.button('Continue as Chancellor'):
@@ -352,7 +386,6 @@ if st.session_state.year > 5:
 # ==================== MAIN GAMEPLAY LAYOUT ====================
 
 else:
-    # 1. Mid-term Sack Check
     if st.session_state.get('sacked'):
         st.subheader("🚨 SACKED FROM THE TREASURY")
         humphrey_message("I am so sorry, Chancellor. The Prime Minister feels that your continued presence at the Treasury is... politically sub-optimal. The removal van is waiting at the back door of Number 11.")
@@ -362,27 +395,21 @@ else:
             st.rerun()
         st.stop()
 
-    # 2. Block 3 is now the Budget!
     if st.session_state.block == 3:
         if st.session_state.get('budget_passed'):
             st.subheader("🏛️ Parliamentary Vote Results")
             bb = st.session_state.backbench_opinion
             
-            # Deterministic Commons Vote Math
             base_ayes = 326 if st.session_state.party not in ['SNP', 'Plaid Cymru'] else 300
             commons_ayes = int(base_ayes + (bb / 1.5) - 20 + (st.session_state.year * 2))
             commons_ayes = min(650, max(0, commons_ayes))
             commons_noes = 650 - commons_ayes
             commons_str = f"**Ayes:** {commons_ayes} | **Noes:** {commons_noes}"
             
-            if bb > 70:
-                st.success(f"**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{commons_str}")
-            elif bb > 40:
-                st.info(f"**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{commons_str}")
-            else:
-                st.warning(f"**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.\n\n{commons_str}")
+            if bb > 70: st.success(f"**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{commons_str}")
+            elif bb > 40: st.info(f"**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{commons_str}")
+            else: st.warning(f"**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.\n\n{commons_str}")
                 
-            # Deterministic Lords Vote Math
             lords_ayes = int(200 + (st.session_state.approval * 2.5))
             lords_ayes = min(750, max(0, lords_ayes))
             lords_noes = 750 - lords_ayes
@@ -392,6 +419,9 @@ else:
             else:
                 humphrey_message(f"As for the House of Lords, Chancellor, they supported the bill (**{lords_ayes} Contents** to {lords_noes} Not-Contents). Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
                 
+            # Render Budget Newspapers!
+            render_newspapers(*st.session_state.headlines)
+            
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
                 snapshot_metrics() 
@@ -403,6 +433,7 @@ else:
                 st.session_state.year += 1
                 st.session_state.block = 1
                 st.session_state.budget_passed = False
+                st.session_state.headlines = None
                 st.rerun()
         else:
             st.subheader(f"Year {st.session_state.year} - Block 3: The Chancellor's Budget")
@@ -419,9 +450,9 @@ else:
                 else:
                     if st.session_state.approval < 40: st.session_state.market_conf -= 1.0
                     st.session_state.budget_passed = True
+                    st.session_state.headlines = generate_headlines(None, True, st.session_state.headroom)
                     st.rerun()
 
-    # 3. Blocks 1-2: Standard Split Screen
     else:
         col_game, col_dash = st.columns([1.0, 1.0], gap="large")
         
@@ -451,6 +482,10 @@ else:
             if st.session_state.get('message'):
                 news_box(st.session_state.message)
                 
+            # Render the newspapers right under the news box if a decision was just made!
+            if st.session_state.get('headlines'):
+                render_newspapers(*st.session_state.headlines)
+                
             if st.session_state.active_crisis is not None:
                 crisis = scen.get(st.session_state.active_crisis)
                 if crisis is None:
@@ -471,6 +506,8 @@ else:
                     
                     ideology_proxy = ['Hard Left', 'Centric', 'Free-Market', 'Centric'] 
                     proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
+                    
+                    st.session_state.headlines = generate_headlines(proxy)
                     update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
 
                     st.session_state.active_crisis = None
