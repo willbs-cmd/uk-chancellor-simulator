@@ -7,6 +7,20 @@ def C(title, humphrey, *args):
     return dict(title=title, humphrey=humphrey, opts=opts)
 
 CRISES = {
+    # --- NEW POLITICAL CAPITAL CRISES ---
+    'leadership_challenge': C('🚨 BREAKING: Leadership Challenge!',
+                     "Chancellor, your backbenchers have decided the Prime Minister is a liability. You must intervene to save them, or wield the knife yourself.",
+                     'Bribe the rebels with uncosted pet projects', dict(headroom=-3.5, approval=-2, pm_opinion=15, backbench_opinion=20),
+                     'Unleash the whips to threaten and bully them', dict(market=2, pm_opinion=10, backbench_opinion=-10),
+                     'Publicly support the PM but plot in secret', dict(approval=2, pm_opinion=20, cab_opinion=10)),
+                     
+    'tabloid_scandal': C('🚨 BREAKING: Major Tabloid Scandal!',
+                     "Fleet Street has dug up some rather unedifying photographs of a senior Cabinet Minister, Chancellor. The press demands blood.",
+                     'Force the Minister to resign immediately', dict(cab_opinion=-15, media_opinion=20, approval=3),
+                     'Defend the Minister and attack the press', dict(media_opinion=-20, backbench_opinion=10, approval=-5),
+                     'Distract them by leaking a popular new tax cut', dict(headroom=-2.0, approval=5, media_opinion=15)),
+
+    # --- EXISTING CRISES ---
     'gilt_revolt': C('🚨 BREAKING: Severe Gilt Market Revolt! Foreign investors dump UK debt as yields surge past 5.5%.',
                      "Chancellor, the bond markets have taken a sudden and profound dislike to us. If we do not intervene, we may find ourselves in the rather novel position of national bankruptcy.",
                      'Deploy emergency Bank of England intervention', dict(headroom=-7, market=8, gilt=-0.4),
@@ -14,19 +28,19 @@ CRISES = {
                      'Announce an emergency package of brutal spending cuts to restore confidence', dict(approval=-8, headroom=4, market=6, gilt=-0.2)),
     
     'nhs_walkout': C('🚨 BREAKING: National Health Service Staff Walkout! Nurses and junior doctors launch coordinated strikes.',
-                     "The medical practitioners have opted for a spontaneous cessation of labour, Chancellor. We could pay them, but that would set a terrifying precedent: rewarding people for complaining.",
+                     "The medical practitioners have opted for a spontaneous cessation of labour, Chancellor. We could pay them, but that would set a terrifying precedent.",
                      'Meet pay demands in full to avoid collapse', dict(headroom=-6, approval=10, inflation=0.4, nhs_morale=8),
                      'Stand firm and invoke emergency service minimums', dict(approval=-12, growth=-0.3, nhs_morale=-10, nhs_waiting=0.4),
                      'Offer a one-off non-consolidated bonus', dict(headroom=-2.5, approval=3, nhs_morale=2, inflation=0.1)),
     
     'energy_bankruptcy': C('🚨 BREAKING: Major Energy Retailer Bankruptcy! State bailout required to keep lights on.',
-                           "An energy firm has carelessly misplaced its capital, Chancellor. We can bail them out, or we can let the free market freeze the electorate. I leave the optics entirely to you.",
+                           "An energy firm has carelessly misplaced its capital, Chancellor. We can bail them out, or we can let the free market freeze the electorate.",
                            'Absorb company liabilities into public balance sheet', dict(headroom=-5, approval=6, energy_bills=-40),
                            'Let customers scatter to higher tariffs', dict(approval=-9, inflation=0.5, energy_bills=120),
                            'Broker a rescue by a rival firm with temporary state loans', dict(headroom=-1.5, market=2, energy_bills=30)),
     
     'pension_hole': C('🚨 BREAKING: Public Sector Pension Black Hole Discovered! OBR mandates immediate funding correction.',
-                      "It appears there is a slight discrepancy in the pension fund. A 'black hole', the tabloids call it. I prefer to think of it as a deferred negative asset.",
+                      "It appears there is a slight discrepancy in the pension fund. A 'black hole', the tabloids call it.",
                       'Inject emergency cash reserves to plug shortfall', dict(headroom=-5.5, market=5),
                       'Cut departmental budgets across the board', dict(approval=-10, market=4, schools=-3, nhs_morale=-3),
                       'Increase employee contribution rates to share the pain', dict(approval=-6, real_wages=-0.2, market=2)),
@@ -38,56 +52,55 @@ CRISES = {
                       'Pay the ransom quietly through an untraceable proxy', dict(headroom=-1.0, approval=-4, market=-3)),
     
     'floods': C('🚨 BREAKING: Catastrophic Winter Floods! Thousands of homes and several northern towns are underwater.',
-                "It is raining, Chancellor. And unfortunately, the water has decided to gather in places where people live. The Prime Minister will need wellington boots and a very large chequebook.",
+                "It is raining, Chancellor. And unfortunately, the water has decided to gather in places where people live.",
                 'Launch a national flood recovery and defence fund', dict(headroom=-5, approval=8, netzero=2),
                 'Leave recovery to councils and insurers', dict(approval=-10, homeless=8),
                 'Deploy the army for logistics but provide no new cash', dict(approval=-2, homeless=4, market=1)),
     
     'bank_run': C('🚨 BREAKING: Regional Bank Run! Depositors queue outside a mid-sized lender as confidence evaporates.',
-                  "The public has decided to withdraw their money from the banks all at once. An annoying habit they have when panicked.",
+                  "The public has decided to withdraw their money from the banks all at once.",
                   'Guarantee all deposits to stop contagion', dict(headroom=-6, market=6, approval=3),
                   'Let it fail under the resolution regime', dict(market=-10, approval=-6, unemployment=0.1),
                   'Force a shotgun merger with a high street giant', dict(market=4, approval=-2, unemployment=0.1)),
     
     'steel_closure': C('🚨 BREAKING: Last Blast Furnace to Close! Thousands of jobs are at risk in a former industrial heartland.',
-                       "Heavy industry is heavy, Chancellor. And expensive. Nationalising it would save jobs but ruin the balance sheet. Letting it collapse would ruin the jobs but save the balance sheet.",
+                       "Heavy industry is heavy, Chancellor. And expensive. Nationalising it would save jobs but ruin the balance sheet.",
                        'Nationalise the plant to save the jobs', dict(headroom=-4, approval=7, market=-3),
                        'Let the market decide', dict(approval=-8, market=3, unemployment=0.2),
                        'Provide heavy subsidies to transition to green steel', dict(headroom=-2.5, netzero=4, approval=4)),
 
-    # --- NEW CRISES ---
     'prison_riot': C('🚨 BREAKING: Massive Prison Riot! Overcrowding has sparked a violent uprising in a major high-security facility.',
-                     "The criminal classes are expressing their displeasure with the accommodation, Chancellor. The Home Secretary is demanding cash for emergency prison barges.",
+                     "The criminal classes are expressing their displeasure with the accommodation, Chancellor.",
                      'Approve emergency capital for new private prison contracts', dict(headroom=-3.0, approval=4, market=2, prisons=-5),
                      'Release non-violent offenders early to ease pressure', dict(approval=-12, prisons=-8, market=-1),
                      'Send in the military and suppress it without new funding', dict(approval=-4, prisons=2, market=-3)),
                      
     'ai_job_crisis': C('🚨 BREAKING: White-Collar AI Bloodbath! Major city firms announce 50,000 job cuts, replacing staff with AI.',
-                       "The robots are taking over the City, Chancellor. It seems algorithms are far cheaper than accountants, and they don't ask for bonuses. The unions are furious.",
+                       "The robots are taking over the City, Chancellor. It seems algorithms are far cheaper than accountants.",
                        'Implement an emergency "Robot Tax" to fund retraining', dict(headroom=2.0, market=-8, approval=6, unemployment=-0.1),
                        'Embrace the efficiency and let the market adjust naturally', dict(market=7, approval=-9, unemployment=0.4, growth=0.2),
                        'Ban AI from public sector procurement to protect state jobs', dict(approval=3, market=-4, growth=-0.1)),
                        
     'grid_blackout': C('🚨 BREAKING: Rolling Blackouts! The National Grid has failed to meet peak winter demand.',
-                       "The lights have gone out, Chancellor. The public is sitting in the dark, which gives them plenty of time to reflect on the government's competence.",
+                       "The lights have gone out, Chancellor. The public is sitting in the dark.",
                        'Bribe industrial users to shut down factories temporarily', dict(headroom=-2.5, approval=-3, growth=-0.3, market=-4),
                        'Fire up decommissioned coal plants at massive expense', dict(headroom=-1.5, approval=4, netzero=-8, market=2),
                        'Allow rolling domestic blackouts to continue', dict(approval=-16, market=-8, growth=-0.2)),
                        
     'farming_collapse': C('🚨 BREAKING: Agricultural Collapse! A horrible harvest and post-Brexit red tape threatens domestic food supplies.',
-                          "The farmers are threatening to drive their tractors down Whitehall, Chancellor. It’s terrible for traffic, and worse for the polls.",
+                          "The farmers are threatening to drive their tractors down Whitehall, Chancellor.",
                           'Inject emergency subsidies directly to farming businesses', dict(headroom=-3.0, approval=5, inflation=-0.2),
                           'Drop all food import tariffs to secure cheap foreign produce', dict(market=6, approval=-4, inflation=-0.4, real_wages=-0.2),
                           'Do nothing and allow food prices to naturally spike', dict(approval=-10, inflation=0.8, market=-2)),
 
     'flash_crash': C('🚨 BREAKING: Currency Flash Crash! A rogue algorithmic trade has sent Sterling plummeting 10% in minutes.',
-                     "The Pound has fallen off a cliff, Chancellor. Importers are panicking, exporters are rejoicing, and the Bank of England is asking if we should intervene.",
+                     "The Pound has fallen off a cliff, Chancellor. Importers are panicking, exporters are rejoicing.",
                      'Order the BoE to burn foreign reserves to prop up the Pound', dict(headroom=-4.0, market=5, inflation=-0.2),
                      'Let the currency find its new natural floor', dict(market=-8, approval=-5, inflation=0.6, growth=0.2),
                      'Suspend trading on the London Stock Exchange temporarily', dict(market=-15, approval=-2, gilt=0.5)),
 
     'border_surge': C('🚨 BREAKING: Border Crisis! Record Channel crossings overwhelm processing and hotel capacity.',
-                      "The Home Office has miscalculated again, Chancellor. We are out of hotel rooms. They are asking for more money.",
+                      "The Home Office has miscalculated again, Chancellor. We are out of hotel rooms.",
                       'Fund rapid processing and new returns deals', dict(headroom=-3.5, approval=5),
                       'Announce tougher deterrence with no extra funding', dict(approval=-4, homeless=3),
                       'Requisition disused military bases for basic camps', dict(headroom=-1, approval=2, homeless=1)),
@@ -105,26 +118,26 @@ CRISES = {
                         'Impose fines and strip assets from the parent company', dict(approval=8, market=-6, energy_bills=10)),
     
     'winter_flu': C('🚨 BREAKING: Winter Flu Surge! A&E wards overflow and ambulances queue outside hospitals.',
-                    "Winter has arrived, Chancellor. An entirely predictable annual event that catches the Department of Health completely by surprise.",
+                    "Winter has arrived, Chancellor. An entirely predictable annual event.",
                     'Fund emergency winter capacity', dict(headroom=-4, approval=5, nhs_waiting=-0.1, nhs_morale=3),
                     'Rely on existing winter plans', dict(approval=-9, nhs_waiting=0.3, nhs_morale=-5),
                     'Cancel elective surgeries and bring in military medics', dict(approval=-5, nhs_waiting=0.8, nhs_morale=-2)),
     
     'rating_warning': C('🚨 BREAKING: Credit Rating Warning! A major agency puts the UK on negative watch over weak public finances.',
-                        "A group of young men in New York with spreadsheets have decided they do not like your economic strategy, Chancellor.",
+                        "A group of young men in New York with spreadsheets have decided they do not like your economic strategy.",
                         'Publish a credible debt-reduction plan', dict(headroom=3, market=8, approval=-4),
                         'Dismiss the warning as politically motivated', dict(market=-10, gilt=0.5),
                         'Lobby the agency privately and promise future reforms', dict(market=-4, gilt=0.2)),
 
     # --- LINKED CRISES ---
     'capital_flight': C('🔗 LINKED REACTION: Your aggressive socialist policies have sparked a sudden flight of millionaires to Dublin and Frankfurt!',
-                        "Chancellor, your policies have been deemed 'courageous' by the international elite. They are currently relocating their assets.",
+                        "Chancellor, your policies have been deemed 'courageous' by the international elite.",
                         'Offer tax exemptions for multinational executives', dict(headroom=-4, market=10),
                         'Double down with emergency capital export controls', dict(market=-15, approval=6),
                         'Launch a patriotic investment bond to retain domestic capital', dict(headroom=-1, market=3, approval=2)),
     
     'utility_failure': C('🔗 LINKED REACTION: Your recent deregulation has caused private water and energy providers to suffer major infrastructure leaks!',
-                         "It seems the 'invisible hand' of the market is currently covered in raw sewage, Chancellor. The utilities are failing.",
+                         "It seems the 'invisible hand' of the market is currently covered in raw sewage, Chancellor.",
                          'Bail out the private operators with state emergency grants', dict(headroom=-5, approval=-6),
                          'Threaten forcible public receivership', dict(market=-12, approval=8),
                          'Impose severe regulatory fines and force executive resignations', dict(approval=5, market=-4, energy_bills=20)),
@@ -142,13 +155,13 @@ CRISES = {
                        'Bring in the army to cover essential duties', dict(approval=-9, prisons=5, market=-2)),
     
     'wage_spiral': C('🔗 LINKED REACTION: Giant public pay deals have de-anchored inflation expectations across the economy!',
-                     "We gave them the money, they spent it, and now everything costs more. It is a terrifying concept called 'economics', Chancellor.",
+                     "We gave them the money, they spent it, and now everything costs more. It is a terrifying concept called 'economics'.",
                      'Back the Bank of England with a tight fiscal squeeze', dict(headroom=3, approval=-6, inflation=-0.4, market=5),
                      'Let it ride and hope it fades', dict(inflation=0.6, market=-8, approval=-3),
                      'Implement a temporary freeze on all prices and rents', dict(approval=8, market=-12, inflation=-0.8, growth=-0.4)),
     
     'welfare_rebellion': C('🔗 LINKED REACTION: Your disability benefit cuts have sparked mass protests and a backbench revolt!',
-                           "Taking money from the vulnerable was a bold move, Chancellor. Tragically, the public has noticed. Even your own MPs are developing a conscience.",
+                           "Taking money from the vulnerable was a bold move, Chancellor. Tragically, the public has noticed.",
                            'Reverse the harshest cuts', dict(headroom=-4, approval=8, child_poverty=-1),
                            'Press ahead regardless', dict(approval=-8, child_poverty=1.2),
                            'Tweak the criteria to exempt the most severe cases', dict(headroom=-1.5, approval=3, child_poverty=-0.2)),
@@ -172,7 +185,7 @@ CRISES = {
                           'Rebrand them as "Eco-Towns" with strict green criteria', dict(approval=2, homes_built=6, netzero=1)),
     
     'retaliation': C('🔗 LINKED REACTION: Your protectionist tariffs have triggered counter-tariffs on British exports!',
-                     "It appears our trading partners did not appreciate our tariffs, Chancellor. They have retaliated. The Foreign Secretary is apoplectic.",
+                     "It appears our trading partners did not appreciate our tariffs, Chancellor. They have retaliated.",
                      'Negotiate a rapid de-escalation deal', dict(headroom=-2, market=4, approval=-2, inflation=-0.1),
                      'Escalate and defend domestic industry', dict(approval=4, market=-8, inflation=0.4, real_wages=-0.3),
                      'File a lengthy WTO dispute and ride it out', dict(approval=-1, market=-2, growth=-0.1)),
@@ -202,7 +215,6 @@ RANDOM_POOL = ['gilt_revolt', 'nhs_walkout', 'energy_bankruptcy', 'pension_hole'
 
 IDEOLOGY_LINKS = {'Hard Left': 'capital_flight', 'Free-Market': 'utility_failure', 'Fiscal Austerity': 'service_collapse'}
 
-# Linked to blocks 1 and 2 now!
 DECISION_LINKS = {
     (1, 1, 'Hard Left'): ('gilt_revolt', 0.5), (1, 1, 'Fiscal Austerity'): ('police_revolt', 0.6),
     (1, 2, 'Hard Left'): ('wage_spiral', 0.6), (1, 2, 'Fiscal Austerity'): ('nhs_walkout', 0.7),
@@ -226,6 +238,17 @@ def pick_next(year, block, ideology):
     s.crisis_reason = ''
     last = s.get('last_crisis')
 
+    # 1. NEW: Check Political Capital Crises FIRST
+    if s.get('party_opinion', 100) < 40 and last != 'leadership_challenge':
+        s.crisis_reason = "🚨 Your party has lost faith in the government's direction!"
+        s.last_crisis = 'leadership_challenge'
+        return 'leadership_challenge'
+        
+    if s.get('media_opinion', 100) < 30 and last != 'tabloid_scandal':
+        s.crisis_reason = "🚨 Fleet Street has turned against you!"
+        s.last_crisis = 'tabloid_scandal'
+        return 'tabloid_scandal'
+
     link = DECISION_LINKS.get((year, block, ideology))
     if link and random.random() < link[1]:
         s.crisis_reason = f'🔗 This follows directly from your last decision ({ideology}).'
@@ -247,7 +270,6 @@ def pick_next(year, block, ideology):
                 s.last_crisis = cid
                 return cid
 
-    # Exactly 25% chance for a random crisis to trigger!
     if year < 5 and random.random() < 0.25:
         options = [c for c in RANDOM_POOL if c != last] or RANDOM_POOL
         s.last_crisis = random.choice(options)
@@ -280,6 +302,8 @@ def apply_fx(fx):
     if 'deficit' in fx: s.deficit = round(s.deficit + fx['deficit'], 1)
     if 'debt' in fx: s.debt = round(s.debt + fx['debt'], 1)
     if 'gilt' in fx: s.gilt_yield = round(s.gilt_yield + fx['gilt'], 2)
+    
+    # Pass direct effects down to the country file too!
     country.nudge({k: v for k, v in fx.items() if k in country.STATS})
 
 def resolve(crisis, index):
@@ -301,10 +325,7 @@ def resolve(crisis, index):
         "A triumph of hope over experience, Chancellor.",
         "To be perfectly frank, Chancellor, the Treasury views this decision with a mixture of horror and profound amusement.",
         "I am fully seized of your instructions, Chancellor, and will implement them with the exact degree of enthusiasm they warrant.",
-        "An interesting approach. Usually, when one is in a hole, one stops digging. But you have asked for a larger shovel.",
-        "We must be very careful not to let the electorate know we've done this. It might give them ideas.",
-        "Quite, Chancellor. A decision that will echo through the corridors of power... mostly in whispers of disbelief.",
-        "I shall ensure the implementation is sufficiently complex so that no one can ever trace the blame back to you."
+        "An interesting approach. Usually, when one is in a hole, one stops digging. But you have asked for a larger shovel."
     ]
     
     available_replies = [r for r in humphrey_replies if r != st.session_state.last_humphrey_quote]
