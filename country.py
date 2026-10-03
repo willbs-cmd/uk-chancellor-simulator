@@ -117,13 +117,42 @@ CSS = """
   border-left:6px solid var(--brass,#c9a45c); border-radius:6px; padding:14px 20px; margin-bottom:10px; }
 .cs-grade .letter { font-family:'Newsreader',serif; font-size:2.6rem; font-weight:700; line-height:1; }
 .cs-grade .txt { color:var(--muted,#9fb3a6); }
-.cs-card { background:var(--leather,#163326); border:1px solid #2b5440; border-radius:6px; padding:12px 14px; margin-bottom:8px; cursor: help; }
-.cs-label { color:var(--muted,#9fb3a6); font-size:.82rem; }
+.cs-card { background:var(--leather,#163326); border:1px solid #2b5440; border-radius:6px; padding:12px 14px; margin-bottom:8px; position: relative; }
+.cs-label { color:var(--muted,#9fb3a6); font-size:.82rem; display: flex; align-items: center; justify-content: space-between; }
+.cs-icon { font-size: 1rem; color: #c9a45c; cursor: help; }
 .cs-value { font-family:'Newsreader',serif; font-size:1.5rem; font-weight:700; line-height:1.2; margin:2px 0 8px; }
 .cs-delta { font-family:'IBM Plex Sans',sans-serif; font-size:.78rem; font-weight:600; margin-left:6px; }
 .cs-good { color:#6fbf8a; } .cs-bad { color:#e0705d; } .cs-flat { color:#9fb3a6; }
 .cs-track { background:#10281d; border-radius:4px; height:7px; overflow:hidden; }
 .cs-fill { height:100%; border-radius:4px; }
+
+/* Custom Tooltip Styling */
+.cs-card .tooltiptext {
+  visibility: hidden;
+  width: 90%;
+  background-color: #1a221f;
+  color: #efe9da;
+  text-align: left;
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid #c9a45c;
+  position: absolute;
+  z-index: 999;
+  top: 105%;
+  left: 5%;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+.cs-card:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
 </style>
 """
 
@@ -140,8 +169,10 @@ def _card(key, state, prev):
         delta = f"<span class='cs-delta {'cs-good' if good else 'cs-bad'}'>{arrow} {d:+.{s['dec']}f}</span>"
     width = _score(key, v) * 100
     
-    # We add the title='' attribute here to make the tooltip appear!
-    return (f"<div class='cs-card' title='{s.get('desc', '')}'><div class='cs-label'>{s['label']}</div>"
+    # Render card with the tooltiptext div hidden inside it
+    return (f"<div class='cs-card'>"
+            f"<div class='tooltiptext'>{s.get('desc', '')}</div>"
+            f"<div class='cs-label'><span>{s['label']}</span> <span class='cs-icon'>ⓘ</span></div>"
             f"<div class='cs-value'>{s['fmt'].format(v)}{delta}</div>"
             f"<div class='cs-track'><div class='cs-fill' style='width:{width:.0f}%;background:{colour}'></div></div></div>")
 
@@ -155,8 +186,10 @@ def render():
     letter = 'A' if overall >= 70 else 'B' if overall >= 60 else 'C' if overall >= 50 else 'D' if overall >= 40 else 'F'
     colour = '#6fbf8a' if overall >= 60 else ('#d9b45a' if overall >= 45 else '#d6604f')
     trend = 'unchanged since your last decision' if abs(change) < 0.05 else f"{change:+.1f} since your last decision"
+    
     st.markdown(
-        f"<div class='cs-grade' title='A combined score of all national indicators.'><div class='letter' style='color:{colour}'>{letter}</div>"
+        f"<div class='cs-grade'>"
+        f"<div class='letter' style='color:{colour}'>{letter}</div>"
         f"<div><b>State of the Nation: {overall:.0f}/100</b><div class='txt'>{trend}</div></div></div>",
         unsafe_allow_html=True,
     )
