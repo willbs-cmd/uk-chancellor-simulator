@@ -3,6 +3,7 @@ import random
 import pandas as pd
 
 from theme import apply_theme, header, crisis_card, news_box, render_polls
+import country
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
@@ -126,6 +127,10 @@ with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     render_polls(df_polls)
     st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
+country.ensure_state()
+with st.expander('🇬🇧 State of the Nation', expanded=True):
+    country.render()
+
 st.write('')
 
 if st.button('← Back to Party Selection'):
@@ -218,6 +223,7 @@ def snapshot_metrics():
 def process_block_execution(next_year, next_block, chosen_ideology):
     snapshot_metrics()
     st.session_state.last_ideology = chosen_ideology
+    country.apply_decision(chosen_ideology)
 
     if st.session_state.gilt_yield > 4.5:
         st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
@@ -267,6 +273,7 @@ if st.session_state.active_crisis is not None:
     crisis_choice = st.radio('Choose emergency response:', [c_opt1, c_opt2])
     if st.button('Resolve Crisis'):
         snapshot_metrics()
+        country.apply_crisis(c_title, c_opt1 in crisis_choice)
         if c_opt1 in crisis_choice:
             st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
             st.session_state.approval = round(st.session_state.approval + 5, 1)
