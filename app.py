@@ -204,6 +204,24 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
         s.headroom = round(s.headroom - 1.0, 1)
         s.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
 
+    # --- PARLIAMENTARY DRAMA: Defections and By-Elections ---
+    opposition = 'Conservative' if s.party in ['Labour', 'Liberal Democrats', 'Green Party', 'SNP', 'Plaid Cymru'] else 'Labour'
+    
+    if s.backbench_opinion < 35 and random.random() < 0.4 and s.seats[s.party] > 0:
+        s.seats[s.party] -= 1
+        s.seats[opposition] += 1
+        s.message += f" 🚨 DEFECTION! A furious MP has crossed the floor to join the {opposition} party!"
+        
+    if next_block == 2 and random.random() < 0.4:
+        if s.approval < 45.0 and s.seats[s.party] > 0:
+            s.seats[s.party] -= 1
+            s.seats[opposition] += 1
+            s.message += f" 🗳️ BY-ELECTION DEFEAT: You lost a seat to the {opposition} party due to poor national polling."
+        elif s.approval >= 50.0 and s.seats[opposition] > 0:
+            s.seats[s.party] += 1
+            s.seats[opposition] -= 1
+            s.message += f" 🗳️ BY-ELECTION VICTORY: Your high approval won you a seat from the {opposition} party!"
+
     update_political_capital(chosen_ideology, s.approval - s.prev_approval, s.headroom - s.prev_headroom)
     update_polling_data(next_year)
     check_imf_bailout()
@@ -407,11 +425,11 @@ if s.block == 3:
 
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
-            if st.button("🥓 Offer Pork-Barrel Funds (-£2B)", disabled=s.headroom < 2.0): s.headroom -= 2.0; s.backbench_opinion = min(100, s.backbench_opinion + 15); st.rerun()
+            if st.button("🥓 Offer Pork-Barrel Funds (-£2B)", disabled=s.headroom < 2.0, use_container_width=True): s.headroom -= 2.0; s.backbench_opinion = min(100, s.backbench_opinion + 15); st.rerun()
         with col_w2:
-            if st.button("🗡️ Threaten Rebels (-15 Unity)"): s.party_opinion -= 15; s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
+            if st.button("🗡️ Threaten Rebels (-15 Unity)", use_container_width=True): s.party_opinion -= 15; s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
         with col_w3:
-            if st.button("🤝 Water Down Reforms (-2 Market)"): s.market_conf = max(0, s.market_conf - 2.0); s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
+            if st.button("🤝 Water Down Reforms (-2 Market)", use_container_width=True): s.market_conf = max(0, s.market_conf - 2.0); s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
 
         st.divider()
         if st.button('Submit Budget to the Commons & Lords', type='primary'):
@@ -460,19 +478,39 @@ else:
             
             p3, p4 = st.columns(2)
             p3.markdown(stat_card('Party Unity', f"{s.party_opinion:.0f}/100", f"{s.party_opinion - s.prev_party:+.0f}", "Below 40 = Rebellion", (s.party_opinion - s.prev_party)), unsafe_allow_html=True)
-            p4.markdown(stat_card('Backbench Morale', f"{s.backbench_opinion:.0f}/100", f"{s.backbench_opinion - s.prev_backbench:+.0f}", "Below 20 = Budget Defeat", (s.backbench_opinion - s.prev_backbench)), unsafe_allow_html=True)
+            p4.markdown(stat_card('Backbench Morale', f"{s.backbench_opinion:.0f}/100", f"{s.backbench_opinion - s.prev_backbench:+.0f}", "Below 20 = Defeat", (s.backbench_opinion - s.prev_backbench)), unsafe_allow_html=True)
             
             st.markdown(stat_card('Media Sentiment', f"{s.media_opinion:.0f}/100", f"{s.media_opinion - s.prev_media:+.0f}", "Below 30 = Scandals", (s.media_opinion - s.prev_media)), unsafe_allow_html=True)
             render_parliament_bar(s.seats, s.party)
 
-            if st.button("🔄 Reshuffle Cabinet", help="Spend PM & Cabinet support to purge rebels and restore unity.", use_container_width=True):
-                if s.pm_opinion > 30:
-                    s.pm_opinion -= 15; s.cab_opinion -= 20
-                    s.party_opinion = min(100, s.party_opinion + 25)
-                    s.backbench_opinion = min(100, s.backbench_opinion + 25)
-                    s.message = "🔄 The PM has brutally reshuffled the Cabinet! Rebels purged."
+            st.markdown('### 🏛️ Political Actions')
+            col_pa1, col_pa2 = st.columns(2)
+            with col_pa1:
+                if st.button("🔄 Reshuffle Cabinet", help="Spend 15 PM Opinion and 20 Cabinet Support to purge rebels, restoring 25 Party Unity and 25 Backbench Morale.", use_container_width=True):
+                    if s.pm_opinion > 30:
+                        s.pm_opinion -= 15; s.cab_opinion -= 20
+                        s.party_opinion = min(100, s.party_opinion + 25); s.backbench_opinion = min(100, s.backbench_opinion + 25)
+                        s.message = "🔄 The PM has brutally reshuffled the Cabinet! Rebels purged."
+                        st.rerun()
+                    else: st.error("The PM is too weak to survive a reshuffle!")
+                
+                if st.button("🎙️ PM Broadcast", help="Spend 10 Cabinet Support to bypass the press (+10 Approval, -15 Media).", use_container_width=True):
+                    if s.cab_opinion > 20:
+                        s.cab_opinion -= 10
+                        s.approval = min(s.approval_cap, s.approval + 10); s.media_opinion = max(0, s.media_opinion - 15)
+                        s.message = "🎙️ You delivered a direct broadcast. The public loved it, but the media pundits are furious about being bypassed!"
+                        st.rerun()
+                    else: st.error("The Cabinet refuses to endorse a broadcast.")
+
+            with col_pa2:
+                if st.button("🍷 Court Media Barons", help="Schmooze newspaper owners (+20 Media Sentiment, -15 Party Unity).", use_container_width=True):
+                    s.media_opinion = min(100, s.media_opinion + 20); s.party_opinion = max(0, s.party_opinion - 15)
+                    s.message = "🍷 You attended private dinners with media barons. Fleet Street is glowing, but your grassroots are disgusted by the sleaze."
                     st.rerun()
-                else: st.error("The PM is too weak to survive a reshuffle!")
+                if st.button("💰 Solicit Mega-Donors", help="Secure funding to pacify the party machine (+20 Party Unity, -10 Approval).", use_container_width=True):
+                    s.party_opinion = min(100, s.party_opinion + 20); s.approval = max(0, s.approval - 10)
+                    s.message = "💰 You secured massive donations. The party machine is well-oiled, but the public sees it as cash-for-access."
+                    st.rerun()
 
             st.markdown('### 📈 Voting Intention')
             render_polls(pd.DataFrame(s.poll_history).set_index('Year'))
