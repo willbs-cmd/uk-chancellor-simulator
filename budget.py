@@ -3,7 +3,7 @@ import streamlit as st
 import altair as alt
 import country
 
-# Expanded Income Tax Bands!
+# Expanded Taxes including Capital Gains
 TAXES = {
     'inc_basic':   dict(label='Basic Rate (20p)', short='Basic Tax', default=20, lo=5, hi=40, step=1, base=180.0, per=6.0, decay=0.02),
     'inc_higher':  dict(label='Higher Rate (40p)', short='Higher Tax', default=40, lo=20, hi=60, step=1, base=80.0, per=2.0, decay=0.04),
@@ -11,6 +11,7 @@ TAXES = {
     'ni':          dict(label='National Insurance (%)', short='NI', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
     'vat':         dict(label='VAT (%)', short='VAT', default=20, lo=5, hi=35, step=1, base=170.0, per=8.0, decay=0.04),
     'corp':        dict(label='Corporation tax (%)', short='Corp Tax', default=25, lo=5, hi=45, step=1, base=90.0, per=2.5, decay=0.04),
+    'cgt':         dict(label='Capital Gains Tax (%)', short='Cap Gains', default=20, lo=10, hi=50, step=1, base=15.0, per=0.5, decay=0.01),
     'property':    dict(label='Property taxes (% change)', short='Property', default=0, lo=-50, hi=100, step=5, base=110.0, per=1.1, decay=0.004),
 }
 
@@ -19,6 +20,7 @@ TAX_POLICIES = {
     'nondom':      dict(label='Scrap Non-Dom Tax Status', yield_bn=2.5, app=2, mkt=-2, gro=0),
     'windfall':    dict(label='Windfall Tax on Energy Firms', yield_bn=4.0, app=3, mkt=-3, gro=-0.1),
     'wealth':      dict(label='1% Wealth Tax on assets >£10m', yield_bn=9.0, app=4, mkt=-6, gro=-0.2),
+    'fuel_freeze': dict(label='Freeze Fuel Duty', yield_bn=-2.0, app=3, mkt=0, gro=0.1),
 }
 
 OTHER_RECEIPTS = 290.0  
@@ -36,10 +38,12 @@ SPEND_DEFAULTS = {
 }
 
 SPEND_POLICIES = {
-    'hs2':       dict(label='Revive Full HS2 Rail Project', cost_bn=8.0, app=2, mkt=0, gro=0.2),
-    'meals':     dict(label='Universal Free School Meals', cost_bn=2.5, app=3, mkt=0, gro=0),
-    'child_cap': dict(label='Scrap Two-Child Benefit Limit', cost_bn=3.0, app=2, mkt=-1, gro=0),
-    'water':     dict(label='Nationalise Water Companies', cost_bn=10.0, app=5, mkt=-4, gro=0),
+    'hs2':         dict(label='Revive Full HS2 Rail Project', cost_bn=8.0, app=2, mkt=0, gro=0.2),
+    'meals':       dict(label='Universal Free School Meals', cost_bn=2.5, app=3, mkt=0, gro=0),
+    'water':       dict(label='Nationalise Water Companies', cost_bn=10.0, app=5, mkt=-4, gro=0),
+    'child_cap':   dict(label='Scrap Two-Child Benefit Limit', cost_bn=3.0, app=2, mkt=-1, gro=0),
+    'winter_fuel': dict(label='Means-test Winter Fuel Payment', cost_bn=-1.5, app=-5, mkt=1, gro=0),
+    'triple_lock': dict(label='Scrap Pension Triple Lock', cost_bn=-6.0, app=-12, mkt=4, gro=0),
 }
 
 BASE_INTEREST = 105.4 
@@ -79,7 +83,6 @@ def read():
 
 def revenues(b):
     out = {}
-    # Apply Global Macro Cycle!
     cycle = st.session_state.get('macro_cycle', 'Stagnation')
     mod = 1.15 if cycle == 'Boom' else (0.85 if cycle == 'Recession' else 1.0)
     
@@ -130,9 +133,9 @@ def impact(old, new):
     approval = (-0.10 * household - 0.03 * d['property']
                 + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
                 + 0.02 * (ds['justice'] + ds['housing'] + ds['transport']) + 0.01 * ds['defence'])
-    market = max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
+    market = max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property'] - 0.10 * d['cgt']
     
-    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.003 * d['inc_basic'] - 0.002 * d['inc_higher'] - 0.001 * d['inc_add']
+    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.003 * d['inc_basic'] - 0.002 * d['inc_higher'] - 0.001 * d['inc_add'] - 0.002 * d['cgt']
               + 0.008 * (ds['transport'] + ds['housing'] + ds['climate'])
               + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'])
               + 0.001 * ds['defence'])
@@ -212,7 +215,7 @@ def apply_ongoing():
         'nhs_waiting': -0.004 * dv['health'],
         'nhs_morale': 0.05 * dv['health'],
         'schools': 0.04 * dv['education'] + (2 if sp_pol['meals'] else 0),
-        'child_poverty': -0.012 * dv['welfare'] - (4 if sp_pol['child_cap'] else 0),
+        'child_poverty': -0.012 * dv['welfare'] - (4 if sp_pol['child_cap'] else 0) + (2 if sp_pol['winter_fuel'] else 0) + (3 if sp_pol['triple_lock'] else 0),
         'homeless': -0.03 * dv['welfare'] - 0.02 * dv['housing'],
         'homes_built': 0.6 * dv['housing'],
         'prisons': -0.05 * dv['justice'],
@@ -297,7 +300,6 @@ def render():
             with c2:
                 rate = s[f'bt_{k}']
                 diff_rate = rate - t['default']
-                # Local calculation matching revenues() output
                 cycle = s.get('macro_cycle', 'Stagnation')
                 mod = 1.15 if cycle == 'Boom' else (0.85 if cycle == 'Recession' else 1.0)
                 new_rev = (t['base'] + t['per'] * diff_rate - t['decay'] * t['per'] * max(diff_rate, 0) ** 2) * mod
@@ -307,7 +309,9 @@ def render():
         
         st.markdown("---")
         st.markdown('#### Revenue Raising Schemes')
-        for k, p in TAX_POLICIES.items(): st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}")
+        for k, p in TAX_POLICIES.items(): 
+            val_str = f"+£{p['yield_bn']}bn" if p['yield_bn'] > 0 else f"-£{abs(p['yield_bn'])}bn"
+            st.checkbox(f"{p['label']} ({val_str})", key=f"btp_{k}")
 
     with right:
         st.markdown('#### Department Spending (Annual % Change)')
@@ -327,7 +331,10 @@ def render():
 
         st.markdown("---")
         st.markdown('#### Spending Pledges')
-        for k, p in SPEND_POLICIES.items(): st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}")
+        for k, p in SPEND_POLICIES.items(): 
+            # If cost is negative, it's a saving
+            val_str = f"-£{p['cost_bn']}bn" if p['cost_bn'] > 0 else f"+£{abs(p['cost_bn'])}bn (Savings)"
+            st.checkbox(f"{p['label']} ({val_str})", key=f"bsp_{k}")
 
     imp = impact(applied, cur)
     st.markdown('#### Projected impact' if changed else '#### Impact of your current budget')
@@ -340,7 +347,7 @@ def render():
     c[5].metric('Annual Deficit', f"£{s.deficit + imp['deficit']:.1f}B", f"{imp['deficit']:+.1f}", delta_color='inverse')
 
     b1, b2, _ = st.columns([1, 1, 3])
-    b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed)
+    b1.button('Apply Draft Budget', type='primary', on_click=_apply, disabled=not changed)
     b2.button('Reset sliders', on_click=_reset, disabled=not changed)
 
     p1, p2 = st.columns(2)
