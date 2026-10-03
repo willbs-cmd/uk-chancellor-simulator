@@ -1,6 +1,6 @@
-import streamlit as st
 import random
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 
@@ -22,7 +22,6 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
     
-    # Store previous values to calculate live deltas
     st.session_state.prev_approval = 48
     st.session_state.prev_market = 65
     st.session_state.prev_growth = 0.8
@@ -92,25 +91,21 @@ if st.session_state.step == 'setup':
 st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
 st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
 
-# Calculate real-time deltas for top metric bar
 d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
 d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
 d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
 d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1)
 d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
 
-# Top Metric Bar with Green/Red Delta Arrows
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%', f'{d_approval:+}%' if d_approval != 0 else '0%')
 col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%', f'{d_market:+}%' if d_market != 0 else '0%')
 col3.metric('Economic Growth', f'{round(st.session_state.growth, 1)}%', f'{d_growth:+}%' if d_growth != 0 else '0%')
 col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B', f'£{d_headroom:+}%' if d_headroom != 0 else '£0B')
-# Note: For debt, inverse color so an increase in debt is red and a decrease is green
 col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP', f'{d_debt:+}%' if d_debt != 0 else '0%', delta_color='inverse')
 
 st.divider()
 
-# ==================== MACROECONOMIC STATS & NATIVE LINE CHART ====================
 with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
@@ -207,7 +202,6 @@ def update_polling_data(current_year):
                 st.session_state.poll_history[p].append(val)
 
 def snapshot_metrics():
-    # Save current metrics as previous values before updating for the next turn
     st.session_state.prev_approval = st.session_state.approval
     st.session_state.prev_market = st.session_state.market_conf
     st.session_state.prev_growth = st.session_state.growth
@@ -259,7 +253,6 @@ def process_block_execution(next_year, next_block, chosen_ideology):
     st.session_state.block = next_block
     st.rerun()
 
-# ==================== ACTIVE CRISIS SCREEN ====================
 if st.session_state.active_crisis is not None:
     c_title, c_opt1, c_opt2 = st.session_state.active_crisis
     st.error(c_title)
@@ -285,7 +278,6 @@ if st.session_state.active_crisis is not None:
 
 st.info(st.session_state.message)
 
-# ==================== REGULAR BLOCK PROGRESSION ====================
 if st.session_state.year == 1:
     if st.session_state.block == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
