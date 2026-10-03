@@ -31,7 +31,7 @@ header[data-testid="stHeader"] { background: transparent; }
 
 h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper); letter-spacing: -0.01em; }
 
-/* METRIC CARDS - Fixed to prevent truncating text */
+/* METRIC CARDS */
 [data-testid="stMetric"] {
   background: var(--leather);
   border: 1px solid #2b5440;
@@ -110,6 +110,19 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 
 [data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
+
+/* FIX FOR STREAMLIT NATIVE TOOLTIPS (help parameter) */
+div[data-baseweb="tooltip"] > div {
+  background-color: var(--leather) !important;
+  color: var(--paper) !important;
+  border: 1px solid var(--brass) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5) !important;
+}
+div[data-baseweb="tooltip"] > div * {
+  color: var(--paper) !important;
+  background-color: transparent !important;
+}
 
 .ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
 .ch-banner h1 { margin: 0; font-size: 2.1rem; }
