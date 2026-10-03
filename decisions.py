@@ -1,7 +1,6 @@
-"""Policy decisions: one entry per (year, block). Options 1-5 map to IDEOLOGIES in order.
-Effect keys are session-state names; numbers are changes, e.g. headroom=-7.0 means -£7B."""
+"""Policy decisions: one entry per (year, block). Options 1-5 map to IDEOLOGIES in order."""
 
-BLOCKS_PER_YEAR = 4   # three policy decisions, then the Budget
+BLOCKS_PER_YEAR = 4   
 BUDGET_BLOCK = 4
 IDEOLOGIES = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
 
@@ -9,6 +8,7 @@ DECISIONS = {
     (1, 1): dict(
         title='The Spring Emergency Statement',
         text='The NHS and police demand an immediate cash injection to clear backlogs.',
+        humphrey="Welcome to the Treasury, Chancellor. I must warn you, the departments are already crying out for cash. We could, of course, unleash a wave of fiscal irresponsibility, but I would urge a more... measured approach. Masterful inactivity, perhaps?",
         options=[
             '1. (Hard Left / Socialist) Nationalize key utilities and impose steep wealth taxes.',
             '2. (Social Democratic) Borrow heavily to fund public infrastructure and NHS staff.',
@@ -27,6 +27,7 @@ DECISIONS = {
     (1, 2): dict(
         title='Public Sector Pay & Cabinet Pressure',
         text='Public sector unions are threatening widespread strikes over pay freezes.',
+        humphrey="The unions are threatening to bring the country to a standstill, Chancellor. A completely unforeseen consequence of not paying them enough, apparently. Might I suggest we set up an interdepartmental committee to review the feasibility of a review?",
         options=[
             '1. (Hard Left) Meet all union pay demands in full, funded by borrowing.',
             '2. (Social Democratic) Negotiate a generous inflation-matching pay rise linked to tax reforms.',
@@ -45,6 +46,7 @@ DECISIONS = {
     (1, 3): dict(
         title='The Autumn Budget & Fiscal Forecast',
         text='The OBR releases its full annual economic and fiscal outlook.',
+        humphrey="The OBR has produced its forecast, Chancellor. It makes for grim reading. We must appear to be taking decisive action whilst ensuring that absolutely nothing of substance actually changes.",
         options=[
             '1. (Hard Left) Implement a massive wealth tax and capital controls.',
             '2. (Social Democratic) Invest heavily in green industrial strategy and public R&D.',
@@ -63,6 +65,7 @@ DECISIONS = {
     (2, 1): dict(
         title='Welfare & Long-Term Sickness Reform',
         text='Welfare expenditure is spiraling out of control due to rising health claims.',
+        humphrey="Welfare costs are escalating, Chancellor. The public expects compassion, but the Treasury expects solvency. It is a classic dilemma. To act would be highly controversial. To do nothing would be merely disastrous.",
         options=[
             '1. (Hard Left) Expand universal credit and eliminate benefit sanctions.',
             '2. (Social Democratic) Increase wrap-around employment support and health coaching.',
@@ -81,6 +84,7 @@ DECISIONS = {
     (2, 2): dict(
         title='Financial Regulation & The City',
         text='London financial institutions demand deregulation to compete globally.',
+        humphrey="The City is demanding deregulation, Chancellor. They assure us it will lead to unparalleled prosperity. I feel it is my duty to remind you that they said exactly the same thing in 2007. Still, one mustn't stand in the way of progress.",
         options=[
             '1. (Hard Left) Impose strict capital controls and break up high-street mega banks.',
             '2. (Social Democratic) Enforce rigorous ethical and green lending standards on banks.',
@@ -99,6 +103,7 @@ DECISIONS = {
     (2, 3): dict(
         title='Mid-Term Spending Review',
         text='Local government services face severe funding shortages.',
+        humphrey="The local councils are claiming poverty, Chancellor. A standard negotiating tactic. If we give them more money, they will only spend it on providing services to the public. Is that really a precedent we wish to set?",
         options=[
             '1. (Hard Left) Direct central state funding to municipal councils for direct public housing builds.',
             '2. (Social Democratic) Empower metro mayors with universal local tax-raising and transport powers.',
@@ -117,6 +122,7 @@ DECISIONS = {
     (3, 1): dict(
         title='Regional Transport & Infrastructure',
         text='Major regional rail and bus links require strategic capital investment.',
+        humphrey="Ah, infrastructure. The politicians' favourite way of spending billions today for a ribbon-cutting ceremony in twenty years time. May I suggest we commission a feasibility study instead? It's much cheaper and achieves exactly the same result.",
         options=[
             '1. (Hard Left) Fully public-own and nationalize the entire UK railway network.',
             '2. (Social Democratic) Fund universal bus franchising and regional rail integration.',
@@ -135,6 +141,7 @@ DECISIONS = {
     (3, 2): dict(
         title='Housing Supply & Planning Reform',
         text='A severe housing shortage is crippling affordability for younger voters.',
+        humphrey="The public wants more houses, Chancellor, but they absolutely do not want them built anywhere near where they currently live. It is a geographical impossibility. Any radical change here would be a very courageous decision indeed.",
         options=[
             '1. (Hard Left) Implement rent controls and launch a state housebuilding blitz.',
             '2. (Social Democratic) Mandate high social housing quotas on all private developments.',
@@ -153,6 +160,7 @@ DECISIONS = {
     (3, 3): dict(
         title='Year 3 Autumn Statement',
         text='Mid-term economic check-in with international markets.',
+        humphrey="We are mid-way through the Parliament, Chancellor. This is the traditional point at which governments abandon their grand visions and begin desperately pandering to the median voter. Shall I fetch the usual platitudes?",
         options=[
             '1. (Hard Left) Institute a maximum wage cap and steep corporate excess profit taxes.',
             '2. (Social Democratic) Issue sovereign green bonds for nationwide renewable grids.',
@@ -171,6 +179,7 @@ DECISIONS = {
     (4, 1): dict(
         title='Global Energy Shock',
         text='Geopolitical tensions cause international gas prices to surge dramatically.',
+        humphrey="It appears international events are conspiring against us, Chancellor. Highly inconsiderate of them. The public will demand a bailout. The markets will demand fiscal discipline. You, I suspect, will demand a stiff drink.",
         options=[
             '1. (Hard Left) Emergency nationalization of energy producers and price freezes.',
             '2. (Social Democratic) Massive state-backed green retrofitting and insulation drive.',
@@ -189,6 +198,7 @@ DECISIONS = {
     (4, 2): dict(
         title='Trade & International Tariffs',
         text='Major trading partners propose new tariff barriers affecting British exporters.',
+        humphrey="Trade barriers, Chancellor. The diplomatic equivalent of shooting oneself in the foot to prove a point. The Foreign Office recommends a firmly worded memo. The Treasury recommends doing whatever costs the least.",
         options=[
             '1. (Hard Left) Retaliate with strict protectionist tariffs and import controls.',
             '2. (Social Democratic) Negotiate comprehensive digital and green trade alignment pacts.',
@@ -207,6 +217,7 @@ DECISIONS = {
     (4, 3): dict(
         title='Year 4 Autumn Statement',
         text='Preparing the economy for the final year leading to the general election.',
+        humphrey="The election looms, Chancellor. We must construct a narrative of unparalleled economic triumph, despite the evidence pointing entirely to the contrary. We need policies that sound expensive but cost nothing. Any ideas?",
         options=[
             '1. (Hard Left) Announce a universal basic income pilot funded by wealth taxes.',
             '2. (Social Democratic) Provide universal retraining vouchers and green startup grants.',
@@ -225,6 +236,7 @@ DECISIONS = {
     (5, 1): dict(
         title='Pre-Election Healthcare Push',
         text='Waiting lists remain a major electoral vulnerability as the election approaches.',
+        humphrey="The NHS, Chancellor. The great British religion. It is currently consuming more money than the Ministry of Defence, yet still generating endless bad press. Throwing money at it is futile, but politically, it is compulsory.",
         options=[
             '1. (Hard Left) Rebuild NHS capacity strictly via state funding and ban private contractors.',
             '2. (Social Democratic) Launch a massive frontline staff recruitment drive and fund weekend clinics.',
@@ -243,6 +255,7 @@ DECISIONS = {
     (5, 2): dict(
         title='Final Pre-Election Tax & Spend Adjustments',
         text='Special interest groups lobby heavily ahead of the final manifesto commitments.',
+        humphrey="Ah, the 'silly season'. Every lobby group in the land is demanding a slice of the pie. We must ensure we promise them everything whilst drafting the legislation so vaguely that we are committed to absolutely nothing.",
         options=[
             '1. (Hard Left) Implement a wealth tax and fund universal public services.',
             '2. (Social Democratic) Deliver targeted cost-of-living cash support to low-income families.',
@@ -261,6 +274,7 @@ DECISIONS = {
     (5, 3): dict(
         title='The General Election Budget & Manifesto Pitch',
         text='The final moment. Deliver your pre-election budget pitch to the country.',
+        humphrey="The manifesto, Chancellor. The most important work of fiction a politician will ever write. Will we offer them the unattainable socialist utopia, or the equally fictitious free-market paradise? The choice is yours.",
         options=[
             '1. (Hard Left) Radical socialist transformation (Public ownership, wealth taxes, universal services).',
             '2. (Social Democratic) Social democratic renewal (Green investment, NHS expansion, fair taxes).',
