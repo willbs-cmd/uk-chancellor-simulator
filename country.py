@@ -114,6 +114,17 @@ def apply_decision(ideology):
         st.session_state.approval = round(st.session_state.approval + bump, 1)
 
 
+def nudge(effects, snapshot=True):
+    """Add the given {stat: change} to the state of the nation (clamped to each stat's range)."""
+    ensure_state()
+    state = st.session_state.country
+    if snapshot:
+        st.session_state.country_prev = dict(state)
+    for key, delta in effects.items():
+        if key in state:
+            state[key] = _clamp(key, state[key] + delta)
+
+
 def apply_crisis(title, intervened):
     ensure_state()
     state = st.session_state.country
