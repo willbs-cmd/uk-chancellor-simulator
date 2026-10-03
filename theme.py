@@ -29,7 +29,6 @@ header[data-testid="stHeader"] { background: transparent; }
 
 h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper); letter-spacing: -0.01em; }
 
-/* Metric cards */
 [data-testid="stMetric"] {
   background: var(--leather);
   border: 1px solid #2b5440;
@@ -41,11 +40,9 @@ h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper
 [data-testid="stMetricValue"] { font-family: 'Newsreader', serif; font-size: 2rem; font-weight: 700; color: var(--paper); }
 [data-testid="stMetricDelta"] { font-size: 0.8rem; }
 
-/* Expander */
 [data-testid="stExpander"] { background: var(--leather); border: 1px solid #2b5440; border-radius: 6px; }
 [data-testid="stExpander"] summary p { font-family: 'Newsreader', serif; font-size: 1.1rem; }
 
-/* Policy options as selectable cards */
 div[role="radiogroup"] { gap: 0.5rem; }
 div[role="radiogroup"] > label {
   background: var(--leather);
@@ -59,7 +56,6 @@ div[role="radiogroup"] > label:hover { border-color: var(--brass); background: v
 div[role="radiogroup"] > label:has(input:checked) { border-color: var(--brass); background: var(--leather-2); box-shadow: inset 4px 0 0 var(--brass); }
 div[role="radiogroup"] > label p { font-size: 1rem; line-height: 1.45; }
 
-/* Buttons */
 div.stButton > button {
   border-radius: 6px; font-weight: 600; padding: 0.6rem 1.5rem;
   background: transparent; color: var(--paper); border: 1px solid var(--brass);
@@ -68,7 +64,6 @@ div.stButton > button:hover { background: var(--brass); color: var(--bench); bor
 div.stButton > button[kind="primary"] { background: var(--brass); color: var(--bench); }
 div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 
-/* Force readable text everywhere (works even if config.toml is missing) */
 .stApp, .stApp p, .stApp li, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
 [data-testid="stMarkdownContainer"] p, [data-testid="stWidgetLabel"] p,
 [data-testid="stWidgetLabel"] label, [data-testid="stRadio"] label p,
@@ -78,14 +73,12 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-testid="stMetricLabel"] p { color: var(--muted) !important; }
 [data-testid="stMetricDelta"] svg { fill: currentColor; }
 
-/* Expander header was rendering white */
 [data-testid="stExpander"] details, [data-testid="stExpander"] details > summary {
   background: var(--leather) !important; border-radius: 6px;
 }
 [data-testid="stExpander"] details > summary:hover { background: var(--leather-2) !important; }
 [data-testid="stExpander"] summary svg { fill: var(--brass); color: var(--brass); }
 
-/* Radio cards, targeting both old and new Streamlit markup */
 [data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
   background: var(--leather) !important; border: 1px solid #2b5440; border-radius: 6px;
   padding: 12px 16px; width: 100%; margin-bottom: 6px; transition: border-color .15s, background .15s;
@@ -98,11 +91,9 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-testid="stRadio"] label > div:first-child { border-color: var(--brass) !important; }
 [data-testid="stRadio"] label:has(input:checked) > div:first-child { background-color: var(--brass) !important; }
 
-/* Select boxes and inputs on the setup screen */
 [data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
 
-/* Long metric values (e.g. "98.2% of GDP") wrap instead of truncating */
 [data-testid="stMetric"] { overflow: hidden; min-width: 0; box-sizing: border-box; }
 [data-testid="stMetric"] > div, [data-testid="stMetricValue"] { max-width: 100%; min-width: 0; }
 [data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
@@ -111,7 +102,6 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
   font-size: clamp(1.15rem, 1.7vw, 1.6rem) !important; line-height: 1.15;
 }
 
-/* Custom components */
 .ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
 .ch-banner h1 { margin: 0; font-size: 2.1rem; }
 .ch-banner .sub { color: var(--muted); margin-top: 4px; }
@@ -133,10 +123,8 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 </style>
 """
 
-
 def apply_theme():
     st.markdown(CSS, unsafe_allow_html=True)
-
 
 def header(party, term, year, block):
     done = (year - 1) * 3 + (block - 1)
@@ -153,20 +141,16 @@ def header(party, term, year, block):
         unsafe_allow_html=True,
     )
 
-
 def crisis_card(title):
     st.markdown(
         f"<div class='ch-crisis'>{title}<small>Emergency intervention required immediately.</small></div>",
         unsafe_allow_html=True,
     )
 
-
 def news_box(text):
     st.markdown(f"<div class='ch-news'>{text}</div>", unsafe_allow_html=True)
 
-
 def render_polls(df):
-    """df: index = Year, columns = parties. Bars for the latest poll, plus a line chart once there is history."""
     latest = df.iloc[-1]
     rows = ''
     for party, val in latest.sort_values(ascending=False).items():
@@ -179,3 +163,16 @@ def render_polls(df):
         plot = df.copy()
         plot.index = plot.index.astype(int)
         st.line_chart(plot, color=[PARTY_COLOURS[c] for c in plot.columns])
+
+# --- NEW HUMPHREY COMPONENT ---
+def humphrey_message(text):
+    st.markdown(f"""
+    <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 18px; margin: 15px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: bold; font-size: 1.2rem; margin-bottom: 8px; display: flex; align-items: center;'>
+            <span style='font-size: 1.4rem; margin-right: 8px;'>💼</span> Memo from Sir Humphrey Appleby
+        </div>
+        <div style='font-style: italic; color: #efe9da; font-size: 1.05rem; line-height: 1.5;'>
+            "{text}"
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
