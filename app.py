@@ -1,8 +1,11 @@
+import streamlit as st
 import random
 import pandas as pd
-import streamlit as st
+
+from theme import apply_theme, header, crisis_card, news_box, render_polls
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
+apply_theme()
 
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
@@ -21,13 +24,14 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.term = 1
     st.session_state.active_crisis = None
     st.session_state.last_ideology = None
-    
+
+    # Store previous values to calculate live deltas
     st.session_state.prev_approval = 48
     st.session_state.prev_market = 65
     st.session_state.prev_growth = 0.8
     st.session_state.prev_headroom = 8.5
     st.session_state.prev_debt = 98.2
-    
+
     st.session_state.poll_history = {
         'Year': [1],
         'Labour': [38],
@@ -36,7 +40,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
         'Reform UK': [10],
         'Green Party': [8]
     }
-    
+
     st.session_state.message = 'Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching.'
     st.session_state.initialized = True
 
@@ -44,15 +48,15 @@ if st.session_state.step == 'setup':
     st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Choose Your Government')
     st.write('Economic headroom is tight (£8.5B) and debt is nearly 100% of GDP. Select which party is forming the government:')
-    
+
     party_choice = st.selectbox('Select Governing Party:', [
-        'Labour', 
-        'Conservative', 
-        'Liberal Democrats', 
-        'Reform UK', 
+        'Labour',
+        'Conservative',
+        'Liberal Democrats',
+        'Reform UK',
         'Green Party'
     ])
-    
+
     col_a, col_b = st.columns([1, 4])
     with col_a:
         if st.button('Enter Number 11', type='primary'):
@@ -77,7 +81,7 @@ if st.session_state.step == 'setup':
                 st.session_state.approval = 48
                 st.session_state.market_conf = 65
                 st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [8]}
-            
+
             st.session_state.prev_approval = st.session_state.approval
             st.session_state.prev_market = st.session_state.market_conf
             st.session_state.step = 'game'
@@ -88,24 +92,27 @@ if st.session_state.step == 'setup':
             st.rerun()
     st.stop()
 
-st.title(f'🏛️ {st.session_state.party} Government: Chancellor Simulator [HARDCORE]')
-st.markdown(f'### Term {st.session_state.term} | Year {st.session_state.year} of 5 (Decision Block {st.session_state.block} of 3)')
+header(st.session_state.party, st.session_state.term, st.session_state.year, st.session_state.block)
 
+# Calculate real-time deltas for top metric bar
 d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
 d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
 d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
 d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1)
 d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
 
+# Top Metric Bar with Green/Red Delta Arrows
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%', f'{d_approval:+}%' if d_approval != 0 else '0%')
 col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%', f'{d_market:+}%' if d_market != 0 else '0%')
 col3.metric('Economic Growth', f'{round(st.session_state.growth, 1)}%', f'{d_growth:+}%' if d_growth != 0 else '0%')
-col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B', f'£{d_headroom:+}%' if d_headroom != 0 else '£0B')
+col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B', f'£{d_headroom:+}B' if d_headroom != 0 else '£0B')
+# Note: For debt, inverse color so an increase in debt is red and a decrease is green
 col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP', f'{d_debt:+}%' if d_debt != 0 else '0%', delta_color='inverse')
 
-st.divider()
+st.write('')
 
+# ==================== MACROECONOMIC STATS & POLLS ====================
 with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
@@ -113,31 +120,30 @@ with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     m3.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
     m4.metric('Bank Rate (Interest)', f'{round(st.session_state.interest_rate, 1)}%')
     m5.metric('10-Year Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
-    
+
     st.markdown('### 📈 Voting Intention Tracker (% Share)')
     df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
-    st.line_chart(df_polls)
+    render_polls(df_polls)
     st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
-st.divider()
+st.write('')
 
 if st.button('← Back to Party Selection'):
-    st.session_state.setup = 'setup'
     st.session_state.step = 'setup'
     st.rerun()
 
 if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
-    
+
     score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (st.session_state.deficit * 1.5)
     multiplier = 4.5
     if st.session_state.party in ['Reform UK', 'Green Party']:
         multiplier = 3.5
-        
+
     gov_seats = int(max(40, min(450, 326 + (score - 50) * multiplier)))
     opp_seats = 650 - gov_seats
     majority = gov_seats - 326
-    
+
     if majority >= 0:
         result_text = f'{st.session_state.party} Majority of {majority}'
         box_color = '#e4003b' if st.session_state.party == 'Labour' else ('#0087dc' if st.session_state.party == 'Conservative' else ('#faa61a' if st.session_state.party == 'Liberal Democrats' else ('#12B6CF' if st.session_state.party == 'Reform UK' else '#6AB023')))
@@ -176,10 +182,10 @@ if st.session_state.year > 5:
 def update_polling_data(current_year):
     gov_party = st.session_state.party
     approval_boost = (st.session_state.approval - 50) * 0.4
-    
+
     if current_year not in st.session_state.poll_history['Year']:
         st.session_state.poll_history['Year'].append(current_year)
-        
+
         base_shares = {
             'Labour': 32,
             'Conservative': 30,
@@ -187,21 +193,22 @@ def update_polling_data(current_year):
             'Reform UK': 14,
             'Green Party': 10
         }
-        
+
         base_shares[gov_party] += approval_boost
-        
+
         for p in base_shares:
             if p != gov_party:
                 base_shares[p] -= (approval_boost / 4) + random.uniform(-2, 2)
             else:
                 base_shares[p] += random.uniform(-1, 1)
             base_shares[p] = max(5, round(base_shares[p], 1))
-            
+
         for p, val in base_shares.items():
             if len(st.session_state.poll_history[p]) < len(st.session_state.poll_history['Year']):
                 st.session_state.poll_history[p].append(val)
 
 def snapshot_metrics():
+    # Save current metrics as previous values before updating for the next turn
     st.session_state.prev_approval = st.session_state.approval
     st.session_state.prev_market = st.session_state.market_conf
     st.session_state.prev_growth = st.session_state.growth
@@ -211,25 +218,25 @@ def snapshot_metrics():
 def process_block_execution(next_year, next_block, chosen_ideology):
     snapshot_metrics()
     st.session_state.last_ideology = chosen_ideology
-    
+
     if st.session_state.gilt_yield > 4.5:
         st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
     if st.session_state.inflation > 3.0:
         st.session_state.approval = round(st.session_state.approval - 1.5, 1)
-        
+
     update_polling_data(next_year)
-        
+
     crises_pool = [
-        ('🚨 BREAKING: Severe Gilt Market Revolt! Foreign investors dump UK debt as yields surge past 5.5%.', 
+        ('🚨 BREAKING: Severe Gilt Market Revolt! Foreign investors dump UK debt as yields surge past 5.5%.',
          'Deploy emergency Bank of England intervention (-£7B Headroom, +8 Market Conf)', 'Refuse intervention and let bond vigilantes feast (-18 Market Conf, +2.5 Debt)'),
-        ('🚨 BREAKING: National Health Service Staff Walkout! Nurses and junior doctors launch coordinated strikes.', 
+        ('🚨 BREAKING: National Health Service Staff Walkout! Nurses and junior doctors launch coordinated strikes.',
          'Meet pay demands in full to avoid collapse (-£6B Headroom, +10 Approval, +0.4 Inflation)', 'Stand firm and invoke emergency service minimums (-12 Approval, -3 Growth)'),
-        ('🚨 BREAKING: Major Energy Retailer Bankruptcy! State bailout required to keep lights on.', 
+        ('🚨 BREAKING: Major Energy Retailer Bankruptcy! State bailout required to keep lights on.',
          'Absorb company liabilities into public balance sheet (-£5B Headroom, +6 Approval)', 'Let customers scatter to higher tariffs (-9 Approval, +0.5 Inflation)'),
-        ('🚨 BREAKING: Public Sector Pension Black Hole Discovered! OBR mandates immediate funding correction.', 
+        ('🚨 BREAKING: Public Sector Pension Black Hole Discovered! OBR mandates immediate funding correction.',
          'Inject emergency cash reserves to plug shortfall (-£5.5B Headroom, +5 Market Conf)', 'Cut departmental budgets across the board (-10 Approval, +4 Market Conf)')
     ]
-    
+
     if st.session_state.last_ideology == 'Hard Left' and random.random() < 0.50:
         linked_crisis = ('🔗 LINKED REACTION (Capital Flight): Your aggressive socialist policies have sparked a sudden flight of millionaires and corporate HQs to Dublin and Frankfurt!',
                          'Offer tax exemptions for multinational executives (-£4B Headroom, +10 Market Conf)',
@@ -248,15 +255,15 @@ def process_block_execution(next_year, next_block, chosen_ideology):
 
     if random.random() < 0.45 and st.session_state.year < 5:
         st.session_state.active_crisis = random.choice(crises_pool)
-    
+
     st.session_state.year = next_year
     st.session_state.block = next_block
     st.rerun()
 
+# ==================== ACTIVE CRISIS SCREEN ====================
 if st.session_state.active_crisis is not None:
     c_title, c_opt1, c_opt2 = st.session_state.active_crisis
-    st.error(c_title)
-    st.write('Hardcore Crisis: Emergency intervention required immediately.')
+    crisis_card(c_title)
     crisis_choice = st.radio('Choose emergency response:', [c_opt1, c_opt2])
     if st.button('Resolve Crisis'):
         snapshot_metrics()
@@ -276,8 +283,9 @@ if st.session_state.active_crisis is not None:
         st.rerun()
     st.stop()
 
-st.info(st.session_state.message)
+news_box(st.session_state.message)
 
+# ==================== REGULAR BLOCK PROGRESSION ====================
 if st.session_state.year == 1:
     if st.session_state.block == 1:
         st.subheader('Year 1 - Block 1: The Spring Emergency Statement')
