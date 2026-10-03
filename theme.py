@@ -41,7 +41,6 @@ h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper
   overflow: visible !important;
 }
 
-/* Force the labels to wrap onto multiple lines instead of '...' */
 [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] > div, [data-testid="stMetricLabel"] p {
   white-space: normal !important;
   overflow: visible !important;
@@ -111,7 +110,7 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
 
-/* FIX FOR STREAMLIT NATIVE TOOLTIPS (help parameter) */
+/* FIX FOR STREAMLIT NATIVE TOOLTIPS */
 div[data-baseweb="tooltip"] > div {
   background-color: #ffffff !important;
   color: #000000 !important;
@@ -194,6 +193,24 @@ def humphrey_message(text):
         </div>
         <div style='font-style: italic; color: #efe9da; font-size: 1.05rem; line-height: 1.5;'>
             "{text}"
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_newspapers(left_hl, centre_hl, right_hl):
+    st.markdown(f"""
+    <div style='display: flex; gap: 15px; margin: 20px 0;'>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #e4003b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>The Clarion (Left)</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{left_hl}"</div>
+        </div>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #faa61a; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>The Statesman (Centre)</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{centre_hl}"</div>
+        </div>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #0087dc; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>Daily Standard (Right)</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{right_hl}"</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
