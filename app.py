@@ -337,106 +337,159 @@ if st.session_state.year > 5:
 
 # ==================== MAIN GAMEPLAY LAYOUT ====================
 
-if st.session_state.block == 4:
-    st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
-    humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
-    
-    budget.render()
-    
-    st.divider()
-    if st.button('End Year & Advance to Spring', type='primary'):
-        snapshot_metrics() 
-        budget.apply_ongoing()
-        
-        if st.session_state.headroom > 0: st.session_state.pm_opinion = min(100, st.session_state.pm_opinion + 5)
-        else: st.session_state.pm_opinion -= 5
-        
-        st.session_state.year += 1
-        st.session_state.block = 1
-        st.rerun()
-
 else:
-    col_game, col_dash = st.columns([1.4, 1.0], gap="large")
-    
-    with col_dash:
-        tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
-        with tab_econ:
-            m1, m2 = st.columns(2)
-            m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="The shortfall between tax revenues and government spending this year. Adds directly to the National Debt.")
-            m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="The rate at which prices are rising. High inflation severely damages Public Approval and forces Bank Rates up.")
-            m3, m4 = st.columns(2)
-            m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="The Bank of England's base interest rate. High rates cool inflation but strangle Economic Growth.")
-            m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="The interest rate the government pays to borrow money. Spikes when markets lose confidence, destroying your budget.")
+    # 1. Mid-term Sack Check
+    if st.session_state.get('sacked'):
+        st.subheader("🚨 SACKED FROM THE TREASURY")
+        humphrey_message("I am so sorry, Chancellor. The Prime Minister feels that your continued presence at the Treasury is... politically sub-optimal. The removal van is waiting at the back door of Number 11.")
+        st.error(st.session_state.get('sacked_reason', "You have been sacked."))
+        if st.button('Resign & Start New Career'):
+            st.session_state.clear()
+            st.rerun()
+        st.stop()
 
-            st.markdown('### 📈 Voting Intention')
-            df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
-            render_polls(df_polls)
+    # 2. Block 4: Budget & Vote Logic
+    if st.session_state.block == 4:
+        
+        # If the player has hit submit, render the Parliamentary Vote Screen
+        if st.session_state.get('budget_passed'):
+            st.subheader("🏛️ Parliamentary Vote Results")
             
-            st.write('')
-            st.caption("Press 'Resign' below to clear your save data and select a new party.")
-            if st.button('Resign & Start New Career'):
-                st.session_state.clear()
-                st.rerun()
-                
-        with tab_nation:
-            country.render()
-            
-    with col_game:
-        if st.session_state.get('message'):
-            news_box(st.session_state.message)
-            
-        if st.session_state.active_crisis is not None:
-            crisis = scen.get(st.session_state.active_crisis)
-            if crisis is None:
-                st.session_state.active_crisis = None
-                st.rerun()
-                
-            crisis_card(crisis['title'])
-            humphrey_message(crisis['humphrey'])
-            if st.session_state.get('crisis_reason'): st.caption(st.session_state.crisis_reason)
-                
-            labels = scen.option_labels(crisis)
-            crisis_choice = st.radio('Choose emergency response:', labels)
-            
-            if st.button('Resolve Crisis', type="primary"):
-                snapshot_metrics()
-                idx = labels.index(crisis_choice)
-                st.session_state.message = scen.resolve(crisis, idx)
-                
-                ideology_proxy = ['Hard Left', 'Centric', 'Free-Market', 'Centric'] 
-                proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
-                update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
-
-                st.session_state.active_crisis = None
-                st.rerun()
-
-        else:
-            decision_data = decisions.DECISIONS.get((st.session_state.year, st.session_state.block))
-            
-            if decision_data:
-                st.subheader(f"Block {st.session_state.block}: {decision_data['title']}")
-                st.write(decision_data['text'])
-                humphrey_message(decision_data['humphrey'])
-                
-                choice = st.radio('Select strategy:', decision_data['options'])
-                
-                if st.button(f'Execute Policy', type="primary"):
-                    idx = decision_data['options'].index(choice)
-                    effect = decision_data['effects'][idx]
-                    
-                    st.session_state.message = effect.get('message', 'Decision applied.')
-                    if 'headroom' in effect: st.session_state.headroom = round(st.session_state.headroom + effect['headroom'], 1)
-                    if 'approval' in effect: st.session_state.approval = round(st.session_state.approval + effect['approval'], 1)
-                    if 'market_conf' in effect: st.session_state.market_conf = round(st.session_state.market_conf + effect['market_conf'], 1)
-                    if 'deficit' in effect: st.session_state.deficit = round(st.session_state.deficit + effect['deficit'], 1)
-                    if 'growth' in effect: st.session_state.growth = round(st.session_state.growth + effect['growth'], 2)
-                    if 'inflation' in effect: st.session_state.inflation = round(st.session_state.inflation + effect['inflation'], 2)
-                    if 'gilt_yield' in effect: st.session_state.gilt_yield = round(st.session_state.gilt_yield + effect['gilt_yield'], 2)
-
-                    ideologies = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
-                    selected_type = ideologies[idx]
-                    
-                    process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
+            # Commons Result
+            bb = st.session_state.backbench_opinion
+            if bb > 70:
+                commons_text = "The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters."
+                st.success(f"**House of Commons:** {commons_text}")
+            elif bb > 40:
+                commons_text = "The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line."
+                st.info(f"**House of Commons:** {commons_text}")
             else:
-                st.write("No decision data found for this block.")
-                if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
+                commons_text = "The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down. The whips had to make dirty deals."
+                st.warning(f"**House of Commons:** {commons_text}")
+                
+            # Lords Result (Humphrey's trivia moment)
+            if st.session_state.approval < 40:
+                humphrey_message("As for the House of Lords, Chancellor, I must remind you of the Parliament Act of 1911. The Lords cannot reject a Money Bill. However, seeing your dismal poll numbers, they decided to delay it for a month just to be difficult. The markets were briefly irritated, but the bill is now law.")
+            else:
+                humphrey_message("As for the House of Lords, Chancellor, thanks to the Parliament Act of 1911, they cannot vote down a Money Bill. They delivered several hours of tremendously pompous speeches, and then passed it by default. The constitution is a wonderful thing.")
+                
+            st.divider()
+            if st.button('Proceed to Spring', type='primary'):
+                snapshot_metrics() 
+                budget.apply_ongoing()
+                
+                if st.session_state.headroom > 0: st.session_state.pm_opinion = min(100, st.session_state.pm_opinion + 5)
+                else: st.session_state.pm_opinion -= 5
+                
+                st.session_state.year += 1
+                st.session_state.block = 1
+                st.session_state.budget_passed = False
+                st.rerun()
+
+        # If they haven't submitted yet, render the normal budget sliders
+        else:
+            st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
+            humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
+            
+            budget.render()
+            
+            st.divider()
+            if st.button('Submit Budget to the Commons & Lords', type='primary'):
+                # Check for a fatal backbench rebellion!
+                if st.session_state.backbench_opinion < 20:
+                    st.session_state.sacked = True
+                    st.session_state.sacked_reason = "Your backbenchers completely revolted and voted down your Budget! Losing a budget is treated as an automatic vote of no confidence. The Government has collapsed."
+                    st.rerun()
+                else:
+                    # Slight market penalty if Lords delay it due to bad polls
+                    if st.session_state.approval < 40:
+                        st.session_state.market_conf -= 1.0
+                    st.session_state.budget_passed = True
+                    st.rerun()
+
+    # 3. Blocks 1-3: Standard Split Screen
+    else:
+        col_game, col_dash = st.columns([1.0, 1.0], gap="large")
+        
+        with col_dash:
+            tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
+            with tab_econ:
+                m1, m2 = st.columns(2)
+                m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="The shortfall between tax revenues and government spending this year. Adds directly to the National Debt.")
+                m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="The rate at which prices are rising. High inflation severely damages Public Approval and forces Bank Rates up.")
+                m3, m4 = st.columns(2)
+                m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="The Bank of England's base interest rate. High rates cool inflation but strangle Economic Growth.")
+                m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="The interest rate the government pays to borrow money. Spikes when markets lose confidence, destroying your budget.")
+
+                st.markdown('### 📈 Voting Intention')
+                df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
+                render_polls(df_polls)
+                
+                st.write('')
+                st.caption("Press 'Resign' below to clear your save data and select a new party.")
+                if st.button('Resign & Start New Career'):
+                    st.session_state.clear()
+                    st.rerun()
+                    
+            with tab_nation:
+                country.render()
+                
+        with col_game:
+            if st.session_state.get('message'):
+                news_box(st.session_state.message)
+                
+            if st.session_state.active_crisis is not None:
+                crisis = scen.get(st.session_state.active_crisis)
+                if crisis is None:
+                    st.session_state.active_crisis = None
+                    st.rerun()
+                    
+                crisis_card(crisis['title'])
+                humphrey_message(crisis['humphrey'])
+                if st.session_state.get('crisis_reason'): st.caption(st.session_state.crisis_reason)
+                    
+                labels = scen.option_labels(crisis)
+                crisis_choice = st.radio('Choose emergency response:', labels)
+                
+                if st.button('Resolve Crisis', type="primary"):
+                    snapshot_metrics()
+                    idx = labels.index(crisis_choice)
+                    st.session_state.message = scen.resolve(crisis, idx)
+                    
+                    ideology_proxy = ['Hard Left', 'Centric', 'Free-Market', 'Centric'] 
+                    proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
+                    update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+
+                    st.session_state.active_crisis = None
+                    st.rerun()
+
+            else:
+                decision_data = decisions.DECISIONS.get((st.session_state.year, st.session_state.block))
+                
+                if decision_data:
+                    st.subheader(f"Block {st.session_state.block}: {decision_data['title']}")
+                    st.write(decision_data['text'])
+                    humphrey_message(decision_data['humphrey'])
+                    
+                    choice = st.radio('Select strategy:', decision_data['options'])
+                    
+                    if st.button(f'Execute Policy', type="primary"):
+                        idx = decision_data['options'].index(choice)
+                        effect = decision_data['effects'][idx]
+                        
+                        st.session_state.message = effect.get('message', 'Decision applied.')
+                        if 'headroom' in effect: st.session_state.headroom = round(st.session_state.headroom + effect['headroom'], 1)
+                        if 'approval' in effect: st.session_state.approval = round(st.session_state.approval + effect['approval'], 1)
+                        if 'market_conf' in effect: st.session_state.market_conf = round(st.session_state.market_conf + effect['market_conf'], 1)
+                        if 'deficit' in effect: st.session_state.deficit = round(st.session_state.deficit + effect['deficit'], 1)
+                        if 'growth' in effect: st.session_state.growth = round(st.session_state.growth + effect['growth'], 2)
+                        if 'inflation' in effect: st.session_state.inflation = round(st.session_state.inflation + effect['inflation'], 2)
+                        if 'gilt_yield' in effect: st.session_state.gilt_yield = round(st.session_state.gilt_yield + effect['gilt_yield'], 2)
+
+                        ideologies = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
+                        selected_type = ideologies[idx]
+                        
+                        process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
+                else:
+                    st.write("No decision data found for this block.")
+                    if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
