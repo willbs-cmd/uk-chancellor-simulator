@@ -15,31 +15,50 @@ CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 :root {
-  --bench: #0d1f17;      /* Commons bench green, deep */
-  --leather: #163326;    /* panels */
-  --leather-2: #1d4130;  /* hover / raised */
-  --brass: #c9a45c;      /* accent */
-  --paper: #efe9da;      /* text */
+  --bench: #0d1f17;      
+  --leather: #163326;    
+  --leather-2: #1d4130;  
+  --brass: #c9a45c;      
+  --paper: #efe9da;      
   --muted: #9fb3a6;
   --alarm: #c8412f;
 }
 
 html, body, [class*="css"], .stApp { font-family: 'IBM Plex Sans', sans-serif; }
 .stApp { background: var(--bench); color: var(--paper); }
-.block-container { max-width: 1180px; padding-top: 1.5rem; }
+.block-container { max-width: 1250px; padding-top: 1.5rem; }
 header[data-testid="stHeader"] { background: transparent; }
 
 h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper); letter-spacing: -0.01em; }
 
+/* METRIC CARDS - Fixed to prevent truncating text */
 [data-testid="stMetric"] {
   background: var(--leather);
   border: 1px solid #2b5440;
   border-top: 3px solid var(--brass);
   border-radius: 6px;
-  padding: 14px 16px 12px;
+  padding: 10px 12px 10px;
+  overflow: visible !important;
 }
-[data-testid="stMetricLabel"] p { color: var(--muted); font-size: 0.8rem; }
-[data-testid="stMetricValue"] { font-family: 'Newsreader', serif; font-size: 2rem; font-weight: 700; color: var(--paper); }
+
+/* Force the labels to wrap onto multiple lines instead of '...' */
+[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] > div, [data-testid="stMetricLabel"] p {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  color: var(--muted) !important; 
+  font-size: 0.85rem !important;
+  line-height: 1.2 !important;
+}
+
+[data-testid="stMetricValue"] { 
+  font-family: 'Newsreader', serif; 
+  font-size: 1.8rem !important; 
+  font-weight: 700; 
+  color: var(--paper); 
+  white-space: normal !important;
+}
+
 [data-testid="stMetricDelta"] { font-size: 0.8rem; }
 
 [data-testid="stExpander"] { background: var(--leather); border: 1px solid #2b5440; border-radius: 6px; }
@@ -72,7 +91,6 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-testid="stSelectbox"] div, [data-testid="stExpander"] summary p,
 [data-testid="stExpander"] summary span { color: var(--paper) !important; }
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
-[data-testid="stMetricLabel"] p { color: var(--muted) !important; }
 [data-testid="stMetricDelta"] svg { fill: currentColor; }
 
 [data-testid="stExpander"] details, [data-testid="stExpander"] details > summary {
@@ -89,20 +107,9 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-testid="stRadio"] label:has(input:checked) {
   border-color: var(--brass); background: var(--leather-2) !important; box-shadow: inset 4px 0 0 var(--brass);
 }
-[data-testid="stRadio"] label p { font-size: 1rem; line-height: 1.45; }
-[data-testid="stRadio"] label > div:first-child { border-color: var(--brass) !important; }
-[data-testid="stRadio"] label:has(input:checked) > div:first-child { background-color: var(--brass) !important; }
 
 [data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
-
-[data-testid="stMetric"] { overflow: hidden; min-width: 0; box-sizing: border-box; }
-[data-testid="stMetric"] > div, [data-testid="stMetricValue"] { max-width: 100%; min-width: 0; }
-[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
-  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
-  overflow-wrap: anywhere; word-break: normal;
-  font-size: clamp(1.15rem, 1.7vw, 1.6rem) !important; line-height: 1.15;
-}
 
 .ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
 .ch-banner h1 { margin: 0; font-size: 2.1rem; }
