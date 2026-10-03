@@ -33,7 +33,7 @@ PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7
 def defaults():
     # Tax defaults are absolute numbers. Spend defaults are 0 (% change).
     return {'tax': {k: v['default'] for k, v in TAXES.items()},
-            'spend': {k: 0 for k in SPEND.items()}}
+            'spend': {k: 0 for k in SPEND}}
 
 def ensure():
     s = st.session_state
