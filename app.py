@@ -11,16 +11,25 @@ import scenarios as scen
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
 
-# ==================== INITIALIZATION ====================
-# SAFETY RESET: If your save file is missing new variables or uses the old tax system, wipe it!
-required_keys = ['pm_opinion', 'prev_pm', 'imf_bailout', 'seats']
-
+# ==================== INITIALIZATION & SAFETY RESET ====================
+# Aggressively wipe old saves to prevent KeyErrors
 if 'initialized' in st.session_state:
-    # Check if the save file has the old single 'income' tax band instead of 'inc_basic'
-    using_old_taxes = 'budget_applied' in st.session_state and 'income' in st.session_state.budget_applied.get('tax', {})
+    needs_reset = False
     
-    if using_old_taxes or not all(k in st.session_state for k in required_keys):
-        st.session_state.clear()
+    # Check for missing new variables
+    required_keys = ['pm_opinion', 'prev_pm', 'imf_bailout', 'seats', 'pledges']
+    if not all(k in st.session_state for k in required_keys):
+        needs_reset = True
+        
+    # Check if the save file is using the old tax system
+    if 'budget_applied' in st.session_state:
+        tax_dict = st.session_state.budget_applied.get('tax', {})
+        if 'income' in tax_dict or 'inc_basic' not in tax_dict:
+            needs_reset = True
+
+    if needs_reset:
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
 
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
@@ -41,7 +50,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.approval_cap = 100
     st.session_state.macro_cycle = 'Stagnation'
 
-    # Economic Stats
+    # Economic Stats (Deficit represents actual £ Billions)
     st.session_state.approval = 48.0
     st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
@@ -624,7 +633,12 @@ else:
                 # Dynamic economic variables
                 debt_servicing = round(budget.interest(), 1)
                 gbp_usd = round(1.27 * (1.0 + 0.15 * (st.session_state.market_conf / 65.0 - 1.0) - 0.05 * (st.session_state.inflation / 3.0 - 1.0)), 2)
-                tax_burden = round(36.8 + 0.1 * (st.session_state.budget_applied['tax']['inc_basic'] - 20) + 0.08 * (st.session_state.budget_applied['tax']['corp'] - 25), 1)
+                
+                # Safely calculate tax burden fallback
+                b_tax = st.session_state.get('budget_applied', {}).get('tax', {})
+                inc_basic = b_tax.get('inc_basic', 20)
+                corp_tax = b_tax.get('corp', 25)
+                tax_burden = round(36.8 + 0.1 * (inc_basic - 20) + 0.08 * (corp_tax - 25), 1)
 
                 m1, m2 = st.columns(2)
                 m1.markdown(stat_card('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', 'current', "Shortfall between government revenues and expenditure this year. Adds directly to the national debt."), unsafe_allow_html=True)
