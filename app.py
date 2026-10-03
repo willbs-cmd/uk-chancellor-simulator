@@ -190,7 +190,6 @@ if st.session_state.step == 'setup':
 # ==================== MAIN HEADER & DASHBOARD ====================
 header(st.session_state.party, st.session_state.term, st.session_state.year, st.session_state.block)
 
-# Row 1: Economic Dashboard
 d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
 d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
 d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
@@ -204,7 +203,6 @@ c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%"
 c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', help="Your fiscal safety margin. Dropping into the negative breaks fiscal rules and panics the markets.")
 c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', delta_color='inverse', help="Total government debt as a % of GDP. High debt massively increases annual interest payments, eating into your budget.")
 
-# Row 2: Political Capital Dashboard
 st.markdown("#### 🏛️ Political Capital")
 p1, p2, p3, p4, p5 = st.columns(5)
 p1.metric("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}", help="The Prime Minister's trust in you. If this drops below 40, you will be sacked!")
@@ -348,30 +346,22 @@ else:
             st.rerun()
         st.stop()
 
-    # 2. Block 4: Budget & Vote Logic
-    if st.session_state.block == 4:
-        
-        # If the player has hit submit, render the Parliamentary Vote Screen
+    # 2. Block 3 is now the Budget!
+    if st.session_state.block == 3:
         if st.session_state.get('budget_passed'):
             st.subheader("🏛️ Parliamentary Vote Results")
-            
-            # Commons Result
             bb = st.session_state.backbench_opinion
             if bb > 70:
-                commons_text = "The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters."
-                st.success(f"**House of Commons:** {commons_text}")
+                st.success("**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.")
             elif bb > 40:
-                commons_text = "The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line."
-                st.info(f"**House of Commons:** {commons_text}")
+                st.info("**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.")
             else:
-                commons_text = "The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down. The whips had to make dirty deals."
-                st.warning(f"**House of Commons:** {commons_text}")
+                st.warning("**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.")
                 
-            # Lords Result (Humphrey's trivia moment)
             if st.session_state.approval < 40:
-                humphrey_message("As for the House of Lords, Chancellor, I must remind you of the Parliament Act of 1911. The Lords cannot reject a Money Bill. However, seeing your dismal poll numbers, they decided to delay it for a month just to be difficult. The markets were briefly irritated, but the bill is now law.")
+                humphrey_message("As for the House of Lords, Chancellor, I must remind you of the Parliament Act of 1911. The Lords cannot reject a Money Bill. However, seeing your dismal poll numbers, they decided to delay it for a month just to be difficult. The markets were briefly irritated.")
             else:
-                humphrey_message("As for the House of Lords, Chancellor, thanks to the Parliament Act of 1911, they cannot vote down a Money Bill. They delivered several hours of tremendously pompous speeches, and then passed it by default. The constitution is a wonderful thing.")
+                humphrey_message("As for the House of Lords, Chancellor, thanks to the Parliament Act of 1911, they cannot vote down a Money Bill. They delivered several hours of tremendously pompous speeches, and then passed it by default.")
                 
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
@@ -385,29 +375,24 @@ else:
                 st.session_state.block = 1
                 st.session_state.budget_passed = False
                 st.rerun()
-
-        # If they haven't submitted yet, render the normal budget sliders
         else:
-            st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
-            humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
+            st.subheader(f"Year {st.session_state.year} - Block 3: The Chancellor's Budget")
+            humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. Shall we proceed to the dispatch box?")
             
             budget.render()
             
             st.divider()
             if st.button('Submit Budget to the Commons & Lords', type='primary'):
-                # Check for a fatal backbench rebellion!
                 if st.session_state.backbench_opinion < 20:
                     st.session_state.sacked = True
                     st.session_state.sacked_reason = "Your backbenchers completely revolted and voted down your Budget! Losing a budget is treated as an automatic vote of no confidence. The Government has collapsed."
                     st.rerun()
                 else:
-                    # Slight market penalty if Lords delay it due to bad polls
-                    if st.session_state.approval < 40:
-                        st.session_state.market_conf -= 1.0
+                    if st.session_state.approval < 40: st.session_state.market_conf -= 1.0
                     st.session_state.budget_passed = True
                     st.rerun()
 
-    # 3. Blocks 1-3: Standard Split Screen
+    # 3. Blocks 1-2: Standard Split Screen
     else:
         col_game, col_dash = st.columns([1.0, 1.0], gap="large")
         
@@ -415,18 +400,17 @@ else:
             tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
             with tab_econ:
                 m1, m2 = st.columns(2)
-                m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="The shortfall between tax revenues and government spending this year. Adds directly to the National Debt.")
-                m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="The rate at which prices are rising. High inflation severely damages Public Approval and forces Bank Rates up.")
+                m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="Shortfall between revenues and spending.")
+                m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="Rate at which prices are rising.")
                 m3, m4 = st.columns(2)
-                m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="The Bank of England's base interest rate. High rates cool inflation but strangle Economic Growth.")
-                m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="The interest rate the government pays to borrow money. Spikes when markets lose confidence, destroying your budget.")
+                m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="BoE base interest rate.")
+                m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="Government borrowing cost.")
 
                 st.markdown('### 📈 Voting Intention')
                 df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
                 render_polls(df_polls)
                 
                 st.write('')
-                st.caption("Press 'Resign' below to clear your save data and select a new party.")
                 if st.button('Resign & Start New Career'):
                     st.session_state.clear()
                     st.rerun()
