@@ -246,6 +246,7 @@ if st.session_state.year > 5:
     coalition_partner = None
     minority_gov = False
     win = False
+    majority_margin = 0
 
     if is_regional:
         target = 40 if st.session_state.party == 'SNP' else 15
@@ -253,6 +254,7 @@ if st.session_state.year > 5:
         if player_seats >= target:
             result_title = f"{st.session_state.party} Regional Dominance ({player_seats}/{max_reg})"
             win = True
+            majority_margin = player_seats - target
             gov_type = "Holding the Balance of Power in Westminster" if seats[largest] < 326 else "Strong Regional Opposition"
         else:
             result_title = f"{st.session_state.party} Regional Defeat ({player_seats} seats)"
@@ -260,7 +262,8 @@ if st.session_state.year > 5:
     else:
         if player_seats >= 326:
             result_title = f"{st.session_state.party} Majority Government"
-            gov_type = f"Working Majority of {player_seats - 326}"
+            majority_margin = player_seats - 326
+            gov_type = f"Working Majority of {majority_margin}"
             win = True
         else:
             result_title = "Hung Parliament"
@@ -277,10 +280,12 @@ if st.session_state.year > 5:
             
             if coalition_formed:
                 gov_type = f"Formal Coalition with {coalition_partner}"
+                majority_margin = (player_seats + seats[coalition_partner]) - 326
                 win = True
             elif player_seats == seats[largest]:
                 minority_gov = True
                 gov_type = "Fragile Minority Government"
+                majority_margin = 0
                 win = True
             else:
                 gov_type = "Sent to the Opposition Benches"
@@ -316,8 +321,19 @@ if st.session_state.year > 5:
             st.session_state.clear()
             st.rerun()
     elif win:
+        # Calculate Honeymoon Boost
+        boost = round(min(15.0, max(5.0, majority_margin / 10.0)), 1)
+        
+        st.session_state.approval = _clip(st.session_state.approval + boost)
+        st.session_state.pm_opinion = _clip(st.session_state.pm_opinion + boost)
+        st.session_state.party_opinion = _clip(st.session_state.party_opinion + boost)
+        st.session_state.cab_opinion = _clip(st.session_state.cab_opinion + boost)
+        st.session_state.backbench_opinion = _clip(st.session_state.backbench_opinion + boost)
+        
         humphrey_message(f"Congratulations, Chancellor. We have survived the electorate. {'Managing a coalition partner will be tedious' if coalition_formed else 'A minority government will be a legislative nightmare'}, but you remain at the Treasury.")
-        st.success("You retained power and survived the election!")
+        
+        st.success(f"**YOU SURVIVED!** You retained power and kept your job at Number 11.\n\n🎉 **HONEYMOON PERIOD:** The public and party have granted you a honeymoon period (**+{boost}%** to Public Approval and all Political Capital).")
+        
         if st.button('Continue as Chancellor'):
             st.session_state.term += 1
             st.session_state.year = 1
@@ -351,17 +367,30 @@ else:
         if st.session_state.get('budget_passed'):
             st.subheader("🏛️ Parliamentary Vote Results")
             bb = st.session_state.backbench_opinion
+            
+            # Deterministic Commons Vote Math
+            base_ayes = 326 if st.session_state.party not in ['SNP', 'Plaid Cymru'] else 300
+            commons_ayes = int(base_ayes + (bb / 1.5) - 20 + (st.session_state.year * 2))
+            commons_ayes = min(650, max(0, commons_ayes))
+            commons_noes = 650 - commons_ayes
+            commons_str = f"**Ayes:** {commons_ayes} | **Noes:** {commons_noes}"
+            
             if bb > 70:
-                st.success("**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.")
+                st.success(f"**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{commons_str}")
             elif bb > 40:
-                st.info("**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.")
+                st.info(f"**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{commons_str}")
             else:
-                st.warning("**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.")
+                st.warning(f"**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.\n\n{commons_str}")
                 
+            # Deterministic Lords Vote Math
+            lords_ayes = int(200 + (st.session_state.approval * 2.5))
+            lords_ayes = min(750, max(0, lords_ayes))
+            lords_noes = 750 - lords_ayes
+            
             if st.session_state.approval < 40:
-                humphrey_message("As for the House of Lords, Chancellor, I must remind you of the Parliament Act of 1911. The Lords cannot reject a Money Bill. However, seeing your dismal poll numbers, they decided to delay it for a month just to be difficult. The markets were briefly irritated.")
+                humphrey_message(f"As for the House of Lords, Chancellor, they actually voted against us (**{lords_noes} Not-Contents** to {lords_ayes} Contents). I reminded them of the Parliament Act of 1911. They cannot reject a Money Bill. However, seeing your dismal poll numbers, they decided to delay it for a month just to be difficult. The markets were briefly irritated.")
             else:
-                humphrey_message("As for the House of Lords, Chancellor, thanks to the Parliament Act of 1911, they cannot vote down a Money Bill. They delivered several hours of tremendously pompous speeches, and then passed it by default.")
+                humphrey_message(f"As for the House of Lords, Chancellor, they supported the bill (**{lords_ayes} Contents** to {lords_noes} Not-Contents). Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
                 
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
