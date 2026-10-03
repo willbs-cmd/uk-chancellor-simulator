@@ -6,6 +6,8 @@ PARTY_COLOURS = {
     'Liberal Democrats': '#faa61a',
     'Reform UK': '#12B6CF',
     'Green Party': '#6AB023',
+    'SNP': '#FDF38E',
+    'Plaid Cymru': '#005B54',
 }
 
 CSS = """
@@ -164,7 +166,6 @@ def render_polls(df):
         plot.index = plot.index.astype(int)
         st.line_chart(plot, color=[PARTY_COLOURS[c] for c in plot.columns])
 
-# --- NEW HUMPHREY COMPONENT ---
 def humphrey_message(text):
     st.markdown(f"""
     <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 18px; margin: 15px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
