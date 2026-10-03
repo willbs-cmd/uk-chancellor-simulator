@@ -2,38 +2,37 @@ import pandas as pd
 import streamlit as st
 import country
 
-# base = receipts (£bn) at the default rate, per = £bn raised per +1 unit of the rate,
-# decay = diminishing returns on big rises (taxes stop yielding as much when pushed up).
+# Expanded bounds (lo) so you can deeply cut taxes and spending
 TAXES = {
-    'income':   dict(label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=15, hi=30, step=1, base=300.0, per=7.5, decay=0.02),
-    'ni':       dict(label='National Insurance rate (%)', short='National Insurance', default=15, lo=10, hi=20, step=1, base=190.0, per=9.0, decay=0.04),
-    'vat':      dict(label='VAT (%)', short='VAT', default=20, lo=15, hi=25, step=1, base=170.0, per=8.0, decay=0.04),
-    'corp':     dict(label='Corporation tax (%)', short='Corporation tax', default=25, lo=15, hi=35, step=1, base=90.0, per=2.5, decay=0.04),
-    'property': dict(label='Property & wealth taxes (% change in yield)', short='Property & wealth taxes', default=0, lo=-20, hi=50, step=5, base=110.0, per=1.1, decay=0.004),
+    'income':   dict(label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02),
+    'ni':       dict(label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
+    'vat':      dict(label='VAT (%)', short='VAT', default=20, lo=5, hi=35, step=1, base=170.0, per=8.0, decay=0.04),
+    'corp':     dict(label='Corporation tax (%)', short='Corporation tax', default=25, lo=5, hi=45, step=1, base=90.0, per=2.5, decay=0.04),
+    'property': dict(label='Property & wealth taxes (% change in yield)', short='Property & wealth taxes', default=0, lo=-50, hi=100, step=5, base=110.0, per=1.1, decay=0.004),
 }
-OTHER_RECEIPTS = 290.0  # fuel, alcohol and tobacco duties, business rates, misc.
 
-# label, default £bn, min, max
+OTHER_RECEIPTS = 290.0  
+
+# Expanded bounds (lo) so you can slash departmental budgets deeply
 SPEND = {
-    'welfare':   dict(label='Welfare & pensions (£bn)', short='Welfare & pensions', default=330, lo=280, hi=400),
-    'health':    dict(label='NHS & health (£bn)', short='NHS & health', default=215, lo=170, hi=280),
-    'education': dict(label='Education (£bn)', short='Education', default=125, lo=95, hi=165),
-    'defence':   dict(label='Defence (£bn)', short='Defence', default=62, lo=45, hi=100),
-    'transport': dict(label='Transport & infrastructure (£bn)', short='Transport & infrastructure', default=48, lo=30, hi=80),
-    'justice':   dict(label='Policing, courts & prisons (£bn)', short='Policing, courts & prisons', default=45, lo=32, hi=70),
-    'housing':   dict(label='Housing & local government (£bn)', short='Housing & local government', default=60, lo=40, hi=95),
-    'climate':   dict(label='Climate, energy & industry (£bn)', short='Climate, energy & industry', default=35, lo=15, hi=70),
-    'other':     dict(label='Other departments & admin (£bn)', short='Other departments & admin', default=130, lo=95, hi=170),
+    'welfare':   dict(label='Welfare & pensions (£bn)', short='Welfare & pensions', default=330, lo=100, hi=500),
+    'health':    dict(label='NHS & health (£bn)', short='NHS & health', default=215, lo=50, hi=350),
+    'education': dict(label='Education (£bn)', short='Education', default=125, lo=30, hi=200),
+    'defence':   dict(label='Defence (£bn)', short='Defence', default=62, lo=10, hi=120),
+    'transport': dict(label='Transport & infrastructure (£bn)', short='Transport & infrastructure', default=48, lo=10, hi=100),
+    'justice':   dict(label='Policing, courts & prisons (£bn)', short='Policing, courts & prisons', default=45, lo=10, hi=90),
+    'housing':   dict(label='Housing & local government (£bn)', short='Housing & local government', default=60, lo=10, hi=120),
+    'climate':   dict(label='Climate, energy & industry (£bn)', short='Climate, energy & industry', default=35, lo=0, hi=100),
+    'other':     dict(label='Other departments & admin (£bn)', short='Other departments & admin', default=130, lo=30, hi=200),
 }
-BASE_INTEREST = 105.4  # with the other defaults this gives the game's starting £5.4B deficit
+
+BASE_INTEREST = 105.4 
 
 PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7fb8b0', '#c4c46f', '#8aa0a0', '#d98cb3']
-
 
 def defaults():
     return {'tax': {k: v['default'] for k, v in TAXES.items()},
             'spend': {k: v['default'] for k, v in SPEND.items()}}
-
 
 def ensure():
     s = st.session_state
@@ -45,11 +44,10 @@ def ensure():
     for k, v in s.budget_applied['spend'].items():
         s.setdefault(f'bs_{k}', v)
 
-
 def read():
     s = st.session_state
-    return {'tax': {k: s[f'bt_{k}'] for k in TAXES}, 'spend': {k: s[f'bs_{k}'] for k in SPEND}}
-
+    return {'tax': {k: s[f'bt_{k}'] for k in TAXES},
+            'spend': {k: s[f'bs_{k}'] for k in SPEND}}
 
 def revenues(b):
     out = {}
@@ -58,11 +56,9 @@ def revenues(b):
         out[k] = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
     return out
 
-
 def interest():
     s = st.session_state
     return BASE_INTEREST * (1 + 0.4 * (s.gilt_yield / 4.7 - 1) + (s.debt / 98.2 - 1))
-
 
 def revenue_pie(b):
     r = revenues(b)
@@ -70,35 +66,36 @@ def revenue_pie(b):
     data['Fuel, alcohol & other'] = OTHER_RECEIPTS
     return data
 
-
 def spending_pie(b):
     data = {SPEND[k]['short']: v for k, v in b['spend'].items()}
     data['Debt interest'] = interest()
     return data
 
-
 def impact(old, new):
-    """What switching from budget `old` to `new` does to the game, in game units."""
     ro, rn = revenues(old), revenues(new)
     d = {k: rn[k] - ro[k] for k in ro}
     ds = {k: new['spend'][k] - old['spend'][k] for k in SPEND}
     bal = sum(d.values()) - sum(ds.values())
+
     household = d['income'] + d['ni'] + d['vat']
     vat_pts = new['tax']['vat'] - old['tax']['vat']
-    approval = (-0.10 * household - 0.03 * d['property'] + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
+
+    approval = (-0.10 * household - 0.03 * d['property']
+                + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
                 + 0.02 * (ds['justice'] + ds['housing'] + ds['transport']) + 0.01 * ds['defence'])
     market = max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
     growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income']
               + 0.008 * (ds['transport'] + ds['housing'] + ds['climate'])
-              + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare']) + 0.001 * ds['defence'])
+              + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'])
+              + 0.001 * ds['defence'])
     inflation = 0.12 * vat_pts + 0.003 * sum(ds.values())
-    return dict(headroom=bal, deficit=-bal, approval=approval, market=market, growth=growth, inflation=inflation,
-                real_wages=-0.010 * d['income'] - 0.006 * d['ni'], unemployment=0.010 * d['ni'] + 0.004 * d['corp'])
 
+    return dict(headroom=bal, deficit=-bal, approval=approval, market=market,
+                growth=growth, inflation=inflation, real_wages=-0.010 * d['income'] - 0.006 * d['ni'],
+                unemployment=0.010 * d['ni'] + 0.004 * d['corp'])
 
 def _clip(v):
     return max(0, min(100, v))
-
 
 def _apply():
     s = st.session_state
@@ -107,8 +104,10 @@ def _apply():
         s.message = 'Budget unchanged.'
         return
     imp = impact(old, new)
+    
     s.prev_approval, s.prev_market, s.prev_growth = s.approval, s.market_conf, s.growth
     s.prev_headroom, s.prev_debt = s.headroom, s.debt
+    
     s.headroom = round(s.headroom + imp['headroom'], 1)
     s.deficit = round(s.deficit + imp['deficit'], 1)
     s.approval = round(_clip(s.approval + imp['approval']), 1)
@@ -120,7 +119,6 @@ def _apply():
     verb = 'improves' if imp['headroom'] >= 0 else 'worsens'
     s.message = f"Budget delivered. It {verb} the public finances by £{abs(imp['headroom']):.1f}B a year."
 
-
 def _reset():
     s = st.session_state
     for k, v in s.budget_applied['tax'].items():
@@ -128,19 +126,22 @@ def _reset():
     for k, v in s.budget_applied['spend'].items():
         s[f'bs_{k}'] = v
 
-
 def apply_ongoing():
-    """Called once per decision block: spending levels slowly move the nation's stats, and the fiscal rules bite."""
     s = st.session_state
     ensure()
     sp = s.budget_applied['spend']
     dv = {k: sp[k] - SPEND[k]['default'] for k in SPEND}
     country.nudge({
-        'nhs_waiting': -0.004 * dv['health'], 'nhs_morale': 0.05 * dv['health'],
+        'nhs_waiting': -0.004 * dv['health'],
+        'nhs_morale': 0.05 * dv['health'],
         'schools': 0.04 * dv['education'],
-        'child_poverty': -0.012 * dv['welfare'], 'homeless': -0.03 * dv['welfare'] - 0.02 * dv['housing'],
-        'homes_built': 0.6 * dv['housing'], 'prisons': -0.05 * dv['justice'],
-        'rail': 0.08 * dv['transport'], 'netzero': 0.06 * dv['climate'], 'energy_bills': -1.5 * dv['climate'],
+        'child_poverty': -0.012 * dv['welfare'],
+        'homeless': -0.03 * dv['welfare'] - 0.02 * dv['housing'],
+        'homes_built': 0.6 * dv['housing'],
+        'prisons': -0.05 * dv['justice'],
+        'rail': 0.08 * dv['transport'],
+        'netzero': 0.06 * dv['climate'],
+        'energy_bills': -1.5 * dv['climate'],
     }, snapshot=False)
 
     new_interest = interest()
@@ -148,12 +149,10 @@ def apply_ongoing():
     if abs(drift) > 0.05:
         s.deficit = round(s.deficit + drift, 1)
         s.headroom = round(s.headroom - drift, 1)
-    s.budget_interest = new_interest
-
+        s.budget_interest = new_interest
     if s.headroom < 0:
         s.market_conf = round(_clip(s.market_conf - min(4, 0.15 * -s.headroom)), 1)
         s.message = f"{s.message} ⚠️ Negative OBR headroom: markets punish the breach of your fiscal rules."
-
 
 def _pie(data):
     import altair as alt
@@ -162,23 +161,21 @@ def _pie(data):
             for k, v in data.items() if v > 0]
     df = pd.DataFrame(rows)
     domain = list(df['label'])
-    chart = (
-        alt.Chart(df)
-        .mark_arc(innerRadius=70, stroke='#0d1f17', strokeWidth=2)
-        .encode(
-            theta=alt.Theta('value:Q', stack=True),
-            color=alt.Color('label:N', scale=alt.Scale(domain=domain, range=PALETTE[:len(domain)]),
-                            legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=13, symbolType='square')),
-            tooltip=[alt.Tooltip('name:N', title='Item'), alt.Tooltip('amount:N', title='Amount'), alt.Tooltip('label:N', title='Share')],
-        )
-        .properties(height=300, background='transparent')
-        .configure_view(strokeWidth=0)
-    )
+    chart = (alt.Chart(df)
+             .mark_arc(innerRadius=70, stroke='#0d1f17', strokeWidth=2)
+             .encode(
+                 theta=alt.Theta('value:Q', stack=True),
+                 color=alt.Color('label:N', scale=alt.Scale(domain=domain, range=PALETTE[:len(domain)]),
+                                 legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=13, symbolType='square')),
+                 tooltip=[alt.Tooltip('name:N', title='Item'), alt.Tooltip('amount:N', title='Amount'), alt.Tooltip('label:N', title='Share')],
+             )
+             .properties(height=300, background='transparent')
+             .configure_view(strokeWidth=0)
+             )
     try:
         st.altair_chart(chart, width='stretch')
     except TypeError:
         st.altair_chart(chart, use_container_width=True)
-
 
 def render():
     ensure()
@@ -201,12 +198,13 @@ def render():
     with left:
         st.markdown('#### Taxes')
         for k, t in TAXES.items():
-            st.slider(t['label'], t['lo'], t['hi'], step=t['step'], key=f'bt_{k}')
+            st.slider(t['label'], t['lo'], t['hi'], value=int(s[f'bt_{k}']), step=t['step'], key=f'bt_{k}')
     with right:
         st.markdown('#### Spending')
         for k, sp in SPEND.items():
-            st.slider(sp['label'], sp['lo'], sp['hi'], step=1, key=f'bs_{k}')
-        st.caption(f'Debt interest (£{interest():,.1f}bn) is set by gilt yields and the size of the debt, not by you.')
+            st.slider(sp['label'], sp['lo'], sp['hi'], value=int(s[f'bs_{k}']), step=1, key=f'bs_{k}')
+
+    st.caption(f'Debt interest (£{interest():,.1f}bn) is set by gilt yields and the size of the debt, not by you.')
 
     imp = impact(applied, cur)
     st.markdown('#### Projected impact' if changed else '#### Impact of your current budget')
@@ -221,6 +219,7 @@ def render():
     b1, b2, _ = st.columns([1, 1, 3])
     b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed)
     b2.button('Reset sliders', on_click=_reset, disabled=not changed)
+
     st.caption('Spending levels also keep working on the State of the Nation every turn (NHS, schools, housing, rail and more), '
                'and very low or high settings can trigger budget fallout scenarios.')
 
