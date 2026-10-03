@@ -9,6 +9,7 @@ PARTY_COLOURS = {
     'Green Party': '#6AB023',
     'SNP': '#FDF38E',
     'Plaid Cymru': '#005B54',
+    'Others': '#777777',
 }
 
 CSS = """
@@ -49,7 +50,7 @@ h2, h3 {
 [data-testid="stRadio"] label p { color: var(--paper) !important; }
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
 
-/* Beautiful Radio Buttons (Policy Choices) */
+/* Radio Buttons (Policy Choices) */
 [data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
   background: linear-gradient(145deg, var(--leather), #10261c) !important;
   border: 1px solid #2b5440;
@@ -72,7 +73,7 @@ h2, h3 {
   box-shadow: inset 4px 0 0 var(--brass), 0 4px 8px rgba(0,0,0,0.3);
 }
 
-/* Polished Buttons */
+/* Buttons */
 div.stButton > button {
   border-radius: 6px; font-weight: 600; padding: 0.6rem 1.5rem;
   background: linear-gradient(145deg, var(--leather), #10261c); 
@@ -90,7 +91,7 @@ div.stButton > button[kind="primary"] {
   background: var(--brass); color: var(--bench); 
 }
 
-/* Native Tooltips */
+/* Tooltips */
 [data-testid="stTooltipContent"], [data-testid="stTooltipContent"] *,
 div[data-baseweb="tooltip"], div[data-baseweb="tooltip"] * {
   background-color: #0b1712 !important;
@@ -98,7 +99,7 @@ div[data-baseweb="tooltip"], div[data-baseweb="tooltip"] * {
 }
 div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-radius: 6px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; }
 
-/* Custom Stat Cards (The Country/Economy Metrics) */
+/* Custom Stat Cards */
 .sc-card { 
   position: relative; 
   background: linear-gradient(145deg, var(--leather), #10261c); 
@@ -113,7 +114,7 @@ div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-
 .sc-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .85rem; line-height: 1.2; }
 .sc-info { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none; border: 1px solid var(--muted); border-radius: 50%; font-size: .68rem; font-style: normal; cursor: help; color: var(--muted); transition: all 0.2s ease; }
 .sc-card:hover .sc-info, .sc-card:focus-within .sc-info { border-color: var(--brass); color: var(--brass); }
-.sc-value { font-family: 'Newsreader', serif; font-size: 1.9rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 4px 0 6px; }
+.sc-value { font-family: 'Newsreader', serif; font-size: 1.85rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 4px 0 6px; }
 .sc-delta { display: inline-block; font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
 .sc-good { color: #6fbf8a; background: rgba(111,191,138,.14); }
 .sc-bad  { color: #e0705d; background: rgba(224,112,93,.14); }
@@ -122,13 +123,13 @@ div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-
 .sc-card:hover .sc-tip, .sc-card:focus-within .sc-tip { opacity: 1; visibility: visible; }
 div[data-testid="stColumn"]:has(.sc-card:hover), div[data-testid="stElementContainer"]:has(.sc-card:hover) { position: relative; z-index: 1000; }
 
-/* Custom HTML Data Tables (Fixes the ugly white Streamlit Dataframe) */
+/* Custom Tables */
 .ch-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: linear-gradient(145deg, var(--leather), #10261c); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #2b5440; }
 .ch-table th { background: #0b1712; color: var(--brass); font-family: 'Newsreader', serif; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--brass); font-size: 1.1rem; font-weight: 700; }
 .ch-table td { padding: 12px 16px; border-bottom: 1px solid #1a3a2a; color: var(--paper); font-variant-numeric: tabular-nums; }
 .ch-table tr:last-child td { border-bottom: none; }
 
-/* Banner & Misc Elements */
+/* Banner */
 .ch-banner { border-left: 6px solid var(--brass); background: linear-gradient(145deg, var(--leather), #10261c); padding: 18px 22px; border-radius: 8px; margin-bottom: 14px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 .ch-banner h1 { margin: 0; font-size: 2.2rem; }
 .ch-banner .sub { color: var(--muted); margin-top: 4px; font-weight: 500; }
@@ -220,7 +221,7 @@ def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
     else:
         good = (delta_num > 0) != inverse
         cls = 'sc-good' if good else 'sc-bad'
-        arrow = '\u25b2 ' if delta_num > 0 else '\u25bc '
+        arrow = '▲ ' if delta_num > 0 else '▼ '
     return (f"<div class='sc-card' tabindex='0'>"
             f"<div class='sc-label'><span>{label}</span><span class='sc-info'>i</span></div>"
             f"<div class='sc-value'>{value}</div>"
@@ -228,7 +229,6 @@ def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
             f"<div class='sc-tip'>{desc}</div></div>")
 
 def render_imf_table(df):
-    """Converts a pandas DataFrame into our beautiful custom HTML table."""
     html = "<table class='ch-table'><thead><tr>"
     for col in df.columns:
         html += f"<th>{col}</th>"
@@ -240,3 +240,38 @@ def render_imf_table(df):
         html += "</tr>"
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
+
+def render_parliament_bar(seats, gov_party):
+    total = sum(seats.values()) or 650
+    gov_seats = seats.get(gov_party, 0)
+    majority = gov_seats - 326
+    
+    if majority >= 0:
+        badge = f"<span style='color:#6fbf8a; background:rgba(111,191,138,0.15); padding:3px 10px; border-radius:12px; font-size:0.85rem; font-weight:600;'>Working Majority: +{majority}</span>"
+    else:
+        badge = f"<span style='color:#e0705d; background:rgba(224,112,93,0.15); padding:3px 10px; border-radius:12px; font-size:0.85rem; font-weight:600;'>Minority: {abs(majority)} short of 326</span>"
+        
+    bar_html = "<div style='display:flex; height:20px; border-radius:6px; overflow:hidden; border:1px solid #2b5440; margin:10px 0; background:#0b1712;'>"
+    for party, count in seats.items():
+        if count > 0:
+            pct = (count / total) * 100
+            c = PARTY_COLOURS.get(party, '#888888')
+            bar_html += f"<div style='width:{pct}%; background-color:{c};' title='{party}: {count} seats'></div>"
+    bar_html += "</div>"
+    
+    badges_html = "<div style='display:flex; flex-wrap:wrap; gap:8px; font-size:0.82rem;'>"
+    for party, count in sorted(seats.items(), key=lambda x: x[1], reverse=True):
+        c = PARTY_COLOURS.get(party, '#888888')
+        badges_html += f"<span style='background:#142e22; border-left:3px solid {c}; padding:3px 8px; border-radius:4px;'><b>{party}</b>: {count}</span>"
+    badges_html += "</div>"
+    
+    st.markdown(f"""
+    <div style='background:linear-gradient(145deg, #142e22, #10261c); border:1px solid #2b5440; border-radius:8px; padding:14px; margin-bottom:14px; box-shadow:0 4px 8px rgba(0,0,0,0.2);'>
+        <div style='display:flex; justify-content:space-between; align-items:center;'>
+            <span style='font-family:"Newsreader",serif; font-size:1.15rem; font-weight:700;'>House of Commons ({gov_seats}/650 seats)</span>
+            {badge}
+        </div>
+        {bar_html}
+        {badges_html}
+    </div>
+    """, unsafe_allow_html=True)
