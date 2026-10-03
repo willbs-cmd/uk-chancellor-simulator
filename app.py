@@ -32,7 +32,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.growth = 0.8
     st.session_state.headroom = 8.5
 
-    # New Political Capital Stats
+    # Political Capital Stats
     st.session_state.pm_opinion = 75.0
     st.session_state.cab_opinion = 65.0
     st.session_state.party_opinion = 70.0
@@ -56,8 +56,93 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
         'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]
     }
 
-    st.session_state.message = 'Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching.'
+    st.session_state.message = "Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching."
     st.session_state.initialized = True
+
+# ==================== LOGIC FUNCTIONS ====================
+def _clip(val, minimum=0.0, maximum=100.0):
+    return max(minimum, min(maximum, val))
+
+def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
+    s = st.session_state
+    s.prev_pm = s.pm_opinion; s.prev_cab = s.cab_opinion
+    s.prev_party = s.party_opinion; s.prev_backbench = s.backbench_opinion
+    s.prev_media = s.media_opinion
+
+    purity_map = {
+        'Labour': ['Social Democratic', 'Hard Left'],
+        'Conservative': ['Free-Market', 'Fiscal Austerity'],
+        'Liberal Democrats': ['Centric', 'Social Democratic'],
+        'Reform UK': ['Free-Market'],
+        'Green Party': ['Hard Left', 'Social Democratic'],
+        'SNP': ['Social Democratic', 'Centric'],
+        'Plaid Cymru': ['Social Democratic', 'Hard Left']
+    }
+    
+    core = purity_map.get(s.party, ['Centric'])
+    
+    if ideology_chosen in core:
+        s.backbench_opinion += random.uniform(2, 6)
+        s.party_opinion += random.uniform(1, 4)
+    else:
+        s.backbench_opinion -= random.uniform(4, 9)
+        s.party_opinion -= random.uniform(2, 5)
+
+    s.pm_opinion += (approval_diff * 1.5) + (headroom_diff * 0.5)
+    s.cab_opinion += approval_diff + random.uniform(-2, 3)
+    s.media_opinion += (approval_diff * 0.8) + ((s.market_conf - s.prev_market) * 0.5)
+
+    s.pm_opinion = _clip(s.pm_opinion)
+    s.cab_opinion = _clip(s.cab_opinion)
+    s.party_opinion = _clip(s.party_opinion)
+    s.backbench_opinion = _clip(s.backbench_opinion)
+    s.media_opinion = _clip(s.media_opinion)
+
+def update_polling_data(current_year):
+    gov_party = st.session_state.party
+    approval_boost = (st.session_state.approval - 50) * 0.35
+
+    if current_year not in st.session_state.poll_history['Year']:
+        st.session_state.poll_history['Year'].append(current_year)
+        base_shares = {p: st.session_state.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
+        
+        if gov_party in ['SNP', 'Plaid Cymru']: base_shares[gov_party] += (approval_boost * 0.2)
+        else: base_shares[gov_party] += approval_boost
+
+        for p in base_shares:
+            if p != gov_party: base_shares[p] -= (approval_boost / 5) + random.uniform(-1, 1)
+            else: base_shares[p] += random.uniform(-1, 1)
+            floor = 1 if p in ['SNP', 'Plaid Cymru'] else 4
+            base_shares[p] = max(floor, round(base_shares[p], 1))
+
+        total = sum(base_shares.values())
+        for p in base_shares:
+            base_shares[p] = round((base_shares[p] / total) * 100, 1)
+            st.session_state.poll_history[p].append(base_shares[p])
+
+def snapshot_metrics():
+    s = st.session_state
+    s.prev_approval = s.approval
+    s.prev_market = s.market_conf
+    s.prev_growth = s.growth
+    s.prev_headroom = s.headroom
+    s.prev_debt = s.debt
+
+def process_block_execution(next_year, next_block, chosen_ideology):
+    snapshot_metrics()
+    st.session_state.last_ideology = chosen_ideology
+    country.apply_decision(chosen_ideology)
+
+    if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
+    if st.session_state.inflation > 3.0: st.session_state.approval = round(st.session_state.approval - 1.5, 1)
+
+    update_political_capital(chosen_ideology, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+    update_polling_data(next_year)
+    
+    st.session_state.active_crisis = scen.pick_next(st.session_state.year, st.session_state.block, chosen_ideology)
+    st.session_state.year = next_year
+    st.session_state.block = next_block
+    st.rerun()
 
 # ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
@@ -71,7 +156,6 @@ if st.session_state.step == 'setup':
         if st.button('Enter Number 11', type='primary'):
             st.session_state.party = party_choice
             
-            # Setup initial state based on party
             if party_choice == 'Conservative':
                 st.session_state.approval = 46; st.session_state.market_conf = 70
                 st.session_state.poll_history = {'Year': [1], 'Labour': [32], 'Conservative': [38], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
@@ -103,16 +187,22 @@ if st.session_state.step == 'setup':
             st.rerun()
     st.stop()
 
-# ==================== MAIN DASHBOARD ====================
+# ==================== MAIN HEADER & DASHBOARD ====================
 header(st.session_state.party, st.session_state.term, st.session_state.year, st.session_state.block)
 
 # Row 1: Economic Dashboard
+d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
+d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
+d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
+d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1)
+d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
+
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{st.session_state.approval - st.session_state.prev_approval:+.1f}%")
-c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{st.session_state.market_conf - st.session_state.prev_market:+.1f}%")
-c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{st.session_state.growth - st.session_state.prev_growth:+.1f}%")
-c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{st.session_state.headroom - st.session_state.prev_headroom:+.1f}B")
-c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{st.session_state.debt - st.session_state.prev_debt:+.1f}%", delta_color='inverse')
+c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%')
+c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%')
+c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%')
+c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B')
+c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', delta_color='inverse')
 
 # Row 2: Political Capital Dashboard
 st.markdown("#### 🏛️ Political Capital")
@@ -123,209 +213,63 @@ p3.metric('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.sess
 p4.metric('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}")
 p5.metric('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}")
 
-st.write('')
-
-tab_econ, tab_nation, tab_budget = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation', '💷 The Budget'])
-with tab_econ:
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
-    m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
-    m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%')
-    m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
-
-    st.markdown('### 📈 Voting Intention Tracker (% Share)')
-    df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
-    render_polls(df_polls)
-
-with tab_nation:
-    country.render()
-    
-with tab_budget:
-    if st.session_state.block == 4:
-        budget.render()
-    else:
-        st.info("💷 The Chancellor's Budget is only delivered in Block 4 (The Autumn Statement) of each year.")
-
-st.write('')
-if st.button('← Back to Party Selection'):
-    st.session_state.step = 'setup'
-    st.rerun()
-
-# ==================== CORE LOGIC FUNCTIONS ====================
-def _clip(val, minimum=0.0, maximum=100.0):
-    return max(minimum, min(maximum, val))
-
-def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
-    s = st.session_state
-    
-    # Save previous state
-    s.prev_pm = s.pm_opinion; s.prev_cab = s.cab_opinion
-    s.prev_party = s.party_opinion; s.prev_backbench = s.backbench_opinion
-    s.prev_media = s.media_opinion
-
-    # Ideological Purity Map
-    purity_map = {
-        'Labour': ['Social Democratic', 'Hard Left'],
-        'Conservative': ['Free-Market', 'Fiscal Austerity'],
-        'Liberal Democrats': ['Centric', 'Social Democratic'],
-        'Reform UK': ['Free-Market'],
-        'Green Party': ['Hard Left', 'Social Democratic'],
-        'SNP': ['Social Democratic', 'Centric'],
-        'Plaid Cymru': ['Social Democratic', 'Hard Left']
-    }
-    
-    core = purity_map.get(s.party, ['Centric'])
-    
-    # Backbenchers & Party care about ideological purity
-    if ideology_chosen in core:
-        s.backbench_opinion += random.uniform(2, 6)
-        s.party_opinion += random.uniform(1, 4)
-    else:
-        s.backbench_opinion -= random.uniform(4, 9)
-        s.party_opinion -= random.uniform(2, 5)
-
-    # PM & Cabinet care about results (Approval & Money)
-    s.pm_opinion += (approval_diff * 1.5) + (headroom_diff * 0.5)
-    s.cab_opinion += approval_diff + random.uniform(-2, 3)
-
-    # Media cares about the markets and public mood
-    s.media_opinion += (approval_diff * 0.8) + ((s.market_conf - s.prev_market) * 0.5)
-
-    # Clamp all between 0 and 100
-    s.pm_opinion = _clip(s.pm_opinion)
-    s.cab_opinion = _clip(s.cab_opinion)
-    s.party_opinion = _clip(s.party_opinion)
-    s.backbench_opinion = _clip(s.backbench_opinion)
-    s.media_opinion = _clip(s.media_opinion)
-
-def update_polling_data(current_year):
-    gov_party = st.session_state.party
-    approval_boost = (st.session_state.approval - 50) * 0.35
-
-    if current_year not in st.session_state.poll_history['Year']:
-        st.session_state.poll_history['Year'].append(current_year)
-        
-        # Pull last known polls
-        base_shares = {p: st.session_state.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
-        
-        # Apply boost (Regionals are capped naturally by population size)
-        if gov_party in ['SNP', 'Plaid Cymru']:
-            base_shares[gov_party] += (approval_boost * 0.2)
-        else:
-            base_shares[gov_party] += approval_boost
-
-        # Drain/feed other parties
-        for p in base_shares:
-            if p != gov_party: base_shares[p] -= (approval_boost / 5) + random.uniform(-1, 1)
-            else: base_shares[p] += random.uniform(-1, 1)
-            
-            floor = 1 if p in ['SNP', 'Plaid Cymru'] else 4
-            base_shares[p] = max(floor, round(base_shares[p], 1))
-
-        # Normalize to ~100% just in case
-        total = sum(base_shares.values())
-        for p in base_shares:
-            base_shares[p] = round((base_shares[p] / total) * 100, 1)
-            st.session_state.poll_history[p].append(base_shares[p])
-
-def snapshot_metrics():
-    s = st.session_state
-    s.prev_approval = s.approval
-    s.prev_market = s.market_conf
-    s.prev_growth = s.growth
-    s.prev_headroom = s.headroom
-    s.prev_debt = s.debt
-
-def process_block_execution(next_year, next_block, chosen_ideology):
-    snapshot_metrics()
-    st.session_state.last_ideology = chosen_ideology
-    country.apply_decision(chosen_ideology)
-
-    if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
-    if st.session_state.inflation > 3.0: st.session_state.approval = round(st.session_state.approval - 1.5, 1)
-
-    # Process new political opinions
-    update_political_capital(chosen_ideology, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
-
-    update_polling_data(next_year)
-    st.session_state.active_crisis = scen.pick_next(st.session_state.year, st.session_state.block, chosen_ideology)
-
-    st.session_state.year = next_year
-    st.session_state.block = next_block
-    st.rerun()
+st.divider()
 
 # ==================== ELECTION NIGHT ENGINE ====================
 if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
 
-    # Convert latest polls into a projected 650 seat Parliament
     latest_polls = {p: st.session_state.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
     
-    # Simple FPTP distortion (benefits big parties, punishes small dispersed ones)
     seats = {}
     seats['Labour'] = int((latest_polls['Labour'] / 100) * 650 * (1.1 if latest_polls['Labour'] > 30 else 0.8))
     seats['Conservative'] = int((latest_polls['Conservative'] / 100) * 650 * (1.1 if latest_polls['Conservative'] > 30 else 0.8))
     seats['Liberal Democrats'] = int(max(5, (latest_polls['Liberal Democrats'] / 100) * 650 * 0.6))
     seats['Reform UK'] = int(max(0, (latest_polls['Reform UK'] / 100) * 650 * 0.3))
     seats['Green Party'] = int(max(1, (latest_polls['Green Party'] / 100) * 650 * 0.2))
-    seats['SNP'] = int(min(57, max(4, (latest_polls['SNP'] / 100) * 650 * 3.5))) # High regional concentration
+    seats['SNP'] = int(min(57, max(4, (latest_polls['SNP'] / 100) * 650 * 3.5))) 
     seats['Plaid Cymru'] = int(min(32, max(2, (latest_polls['Plaid Cymru'] / 100) * 650 * 3.0)))
 
-    # Normalize to exactly 650
     total_alloc = sum(seats.values())
     diff = 650 - total_alloc
-    # Give remaining discrepancy to largest party
     largest = max(seats, key=seats.get)
     seats[largest] += diff
 
     player_seats = seats[st.session_state.party]
     is_regional = st.session_state.party in ['SNP', 'Plaid Cymru']
     
-    # 1. Did you get sacked?
     sacked = False
     sacked_msg = ""
     if st.session_state.pm_opinion < 40 or st.session_state.party_opinion < 35:
         sacked = True
         sacked_msg = "Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the election result, you have been sacked and banished to the backbenches."
 
-    # 2. Government Formation Logic
     coalition_formed = False
     coalition_partner = None
     minority_gov = False
     win = False
 
     if is_regional:
-        # Regionals win if they dominate their region and hold balance of power
         target = 40 if st.session_state.party == 'SNP' else 15
         max_reg = 57 if st.session_state.party == 'SNP' else 32
         if player_seats >= target:
             result_title = f"{st.session_state.party} Regional Dominance ({player_seats}/{max_reg})"
             win = True
-            if seats[largest] < 326:
-                gov_type = "Holding the Balance of Power in Westminster"
-            else:
-                gov_type = "Strong Regional Opposition"
+            gov_type = "Holding the Balance of Power in Westminster" if seats[largest] < 326 else "Strong Regional Opposition"
         else:
             result_title = f"{st.session_state.party} Regional Defeat ({player_seats} seats)"
             gov_type = "Loss of Regional Mandate"
-    
     else:
-        # National Parties
         if player_seats >= 326:
             result_title = f"{st.session_state.party} Majority Government"
             gov_type = f"Working Majority of {player_seats - 326}"
             win = True
         else:
-            # Hung Parliament! Try to form a coalition
             result_title = "Hung Parliament"
-            
-            # Left Wing Coalition pool vs Right Wing Coalition pool
             left_bloc = ['Labour', 'Liberal Democrats', 'Green Party', 'SNP', 'Plaid Cymru']
             right_bloc = ['Conservative', 'Reform UK', 'Liberal Democrats']
-            
             my_bloc = left_bloc if st.session_state.party in left_bloc else right_bloc
             
-            # Find best partner
             for partner in my_bloc:
                 if partner != st.session_state.party:
                     if player_seats + seats[partner] >= 326:
@@ -343,7 +287,6 @@ if st.session_state.year > 5:
             else:
                 gov_type = "Sent to the Opposition Benches"
 
-    # 3. Final Render
     box_color = '#111111'
     if win and not sacked: box_color = '#2b5440'
     elif sacked: box_color = '#8b0000'
@@ -356,7 +299,6 @@ if st.session_state.year > 5:
     </div>
     ''', unsafe_allow_html=True)
 
-    # Show full Parliament breakdown
     st.markdown("### 🏛️ The New Parliament")
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     col1.metric("LAB", seats['Labour'])
@@ -393,75 +335,20 @@ if st.session_state.year > 5:
     st.stop()
 
 
-# ==================== ACTIVE CRISIS SCREEN ====================
-if st.session_state.active_crisis is not None:
-    crisis = scen.get(st.session_state.active_crisis)
-    if crisis is None:
-        st.session_state.active_crisis = None
-        st.rerun()
-    crisis_card(crisis['title'])
-    humphrey_message(crisis['humphrey'])
-    if st.session_state.get('crisis_reason'): st.caption(st.session_state.crisis_reason)
-        
-    labels = scen.option_labels(crisis)
-    crisis_choice = st.radio('Choose emergency response:', labels)
-    
-    if st.button('Resolve Crisis'):
-        snapshot_metrics()
-        idx = labels.index(crisis_choice)
-        st.session_state.message = scen.resolve(crisis, idx)
-        
-        # Quick political drift for crises:
-        ideology_proxy = ['Hard Left', 'Centric', 'Free-Market'] # Rough proxy map for crisis choices
-        proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
-        update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+# ==================== MAIN GAMEPLAY LAYOUT ====================
 
-        st.session_state.active_crisis = None
-        st.rerun()
-    st.stop()
-
-# ==================== DYNAMIC BLOCK PROGRESSION ====================
-if st.session_state.block < 4:
-    decision_data = decisions.DECISIONS.get((st.session_state.year, st.session_state.block))
-    
-    if decision_data:
-        st.subheader(f"Year {st.session_state.year} - Block {st.session_state.block}: {decision_data['title']}")
-        st.write(decision_data['text'])
-        humphrey_message(decision_data['humphrey'])
-        
-        choice = st.radio('Select strategy:', decision_data['options'])
-        
-        if st.button(f'Execute Block {st.session_state.block}'):
-            idx = decision_data['options'].index(choice)
-            effect = decision_data['effects'][idx]
-            
-            st.session_state.message = effect.get('message', 'Decision applied.')
-            if 'headroom' in effect: st.session_state.headroom = round(st.session_state.headroom + effect['headroom'], 1)
-            if 'approval' in effect: st.session_state.approval = round(st.session_state.approval + effect['approval'], 1)
-            if 'market_conf' in effect: st.session_state.market_conf = round(st.session_state.market_conf + effect['market_conf'], 1)
-            if 'deficit' in effect: st.session_state.deficit = round(st.session_state.deficit + effect['deficit'], 1)
-            if 'growth' in effect: st.session_state.growth = round(st.session_state.growth + effect['growth'], 2)
-            if 'inflation' in effect: st.session_state.inflation = round(st.session_state.inflation + effect['inflation'], 2)
-            if 'gilt_yield' in effect: st.session_state.gilt_yield = round(st.session_state.gilt_yield + effect['gilt_yield'], 2)
-
-            ideologies = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
-            selected_type = ideologies[idx]
-            
-            process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
-    else:
-        st.write("No decision data found for this block.")
-        if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
-
-elif st.session_state.block == 4:
+# If it's budget time, let it take up the full width.
+if st.session_state.block == 4:
     st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
     humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
-    st.info("Head to the '💷 The Budget' tab above to finalize your tax and spending plans for the year.")
     
+    budget.render()
+    
+    st.divider()
     if st.button('End Year & Advance to Spring', type='primary'):
         snapshot_metrics() 
         budget.apply_ongoing()
         
-        # Minor bump to PM confidence if budget goes smoothly
         if st.session_state.headroom > 0: st.session_state.pm_opinion = min(100, st.session_state.pm_opinion + 5)
         else: st.session_state.pm_opinion -= 5
         
@@ -469,4 +356,90 @@ elif st.session_state.block == 4:
         st.session_state.block = 1
         st.rerun()
 
-news_box(st.session_state.message)
+# Otherwise, split the screen! (Left = Gameplay, Right = Dashboard Tabs)
+else:
+    col_game, col_dash = st.columns([1.4, 1.0], gap="large")
+    
+    with col_dash:
+        tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
+        with tab_econ:
+            m1, m2 = st.columns(2)
+            m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
+            m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
+            m3, m4 = st.columns(2)
+            m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%')
+            m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
+
+            st.markdown('### 📈 Voting Intention')
+            df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
+            render_polls(df_polls)
+            
+            st.write('')
+            st.caption("Press 'Resign' below to clear your save data and select a new party.")
+            if st.button('Resign & Start New Career'):
+                st.session_state.clear()
+                st.rerun()
+                
+        with tab_nation:
+            country.render()
+            
+    with col_game:
+        # Display the news from the last turn at the top of the desk
+        if st.session_state.get('message'):
+            news_box(st.session_state.message)
+            
+        if st.session_state.active_crisis is not None:
+            crisis = scen.get(st.session_state.active_crisis)
+            if crisis is None:
+                st.session_state.active_crisis = None
+                st.rerun()
+                
+            crisis_card(crisis['title'])
+            humphrey_message(crisis['humphrey'])
+            if st.session_state.get('crisis_reason'): st.caption(st.session_state.crisis_reason)
+                
+            labels = scen.option_labels(crisis)
+            crisis_choice = st.radio('Choose emergency response:', labels)
+            
+            if st.button('Resolve Crisis', type="primary"):
+                snapshot_metrics()
+                idx = labels.index(crisis_choice)
+                st.session_state.message = scen.resolve(crisis, idx)
+                
+                ideology_proxy = ['Hard Left', 'Centric', 'Free-Market', 'Centric'] 
+                proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
+                update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+
+                st.session_state.active_crisis = None
+                st.rerun()
+
+        else:
+            decision_data = decisions.DECISIONS.get((st.session_state.year, st.session_state.block))
+            
+            if decision_data:
+                st.subheader(f"Block {st.session_state.block}: {decision_data['title']}")
+                st.write(decision_data['text'])
+                humphrey_message(decision_data['humphrey'])
+                
+                choice = st.radio('Select strategy:', decision_data['options'])
+                
+                if st.button(f'Execute Policy', type="primary"):
+                    idx = decision_data['options'].index(choice)
+                    effect = decision_data['effects'][idx]
+                    
+                    st.session_state.message = effect.get('message', 'Decision applied.')
+                    if 'headroom' in effect: st.session_state.headroom = round(st.session_state.headroom + effect['headroom'], 1)
+                    if 'approval' in effect: st.session_state.approval = round(st.session_state.approval + effect['approval'], 1)
+                    if 'market_conf' in effect: st.session_state.market_conf = round(st.session_state.market_conf + effect['market_conf'], 1)
+                    if 'deficit' in effect: st.session_state.deficit = round(st.session_state.deficit + effect['deficit'], 1)
+                    if 'growth' in effect: st.session_state.growth = round(st.session_state.growth + effect['growth'], 2)
+                    if 'inflation' in effect: st.session_state.inflation = round(st.session_state.inflation + effect['inflation'], 2)
+                    if 'gilt_yield' in effect: st.session_state.gilt_yield = round(st.session_state.gilt_yield + effect['gilt_yield'], 2)
+
+                    ideologies = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
+                    selected_type = ideologies[idx]
+                    
+                    process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
+            else:
+                st.write("No decision data found for this block.")
+                if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
