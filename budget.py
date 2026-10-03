@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import country
 
-# Expanded bounds (lo) so you can deeply cut taxes and spending
+# Expanded bounds (lo) so you can deeply cut taxes
 TAXES = {
     'income':   dict(label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02),
     'ni':       dict(label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
@@ -13,17 +13,17 @@ TAXES = {
 
 OTHER_RECEIPTS = 290.0  
 
-# Minimum limits (lo) set to 0 so you can slash budgets completely if desired
+# Default baseline values in £bn. Sliders will now control the % change from these defaults.
 SPEND = {
-    'welfare':   dict(label='Welfare & pensions (£bn)', short='Welfare & pensions', default=330, lo=0, hi=500),
-    'health':    dict(label='NHS & health (£bn)', short='NHS & health', default=215, lo=0, hi=350),
-    'education': dict(label='Education (£bn)', short='Education', default=125, lo=0, hi=200),
-    'defence':   dict(label='Defence (£bn)', short='Defence', default=62, lo=0, hi=120),
-    'transport': dict(label='Transport & infrastructure (£bn)', short='Transport & infrastructure', default=48, lo=0, hi=100),
-    'justice':   dict(label='Policing, courts & prisons (£bn)', short='Policing, courts & prisons', default=45, lo=0, hi=90),
-    'housing':   dict(label='Housing & local government (£bn)', short='Housing & local government', default=60, lo=0, hi=120),
-    'climate':   dict(label='Climate, energy & industry (£bn)', short='Climate, energy & industry', default=35, lo=0, hi=100),
-    'other':     dict(label='Other departments & admin (£bn)', short='Other departments & admin', default=130, lo=0, hi=200),
+    'welfare':   dict(label='Welfare & pensions', short='Welfare & pensions', default=330.0),
+    'health':    dict(label='NHS & health', short='NHS & health', default=215.0),
+    'education': dict(label='Education', short='Education', default=125.0),
+    'defence':   dict(label='Defence', short='Defence', default=62.0),
+    'transport': dict(label='Transport & infrastructure', short='Transport & infrastructure', default=48.0),
+    'justice':   dict(label='Policing, courts & prisons', short='Policing, courts & prisons', default=45.0),
+    'housing':   dict(label='Housing & local government', short='Housing & local government', default=60.0),
+    'climate':   dict(label='Climate, energy & industry', short='Climate, energy & industry', default=35.0),
+    'other':     dict(label='Other departments & admin', short='Other departments & admin', default=130.0),
 }
 
 BASE_INTEREST = 105.4 
@@ -31,14 +31,20 @@ BASE_INTEREST = 105.4
 PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7fb8b0', '#c4c46f', '#8aa0a0', '#d98cb3']
 
 def defaults():
+    # Tax defaults are absolute numbers. Spend defaults are 0 (% change).
     return {'tax': {k: v['default'] for k, v in TAXES.items()},
-            'spend': {k: v['default'] for k, v in SPEND.items()}}
+            'spend': {k: 0 for k in SPEND.items()}}
 
 def ensure():
     s = st.session_state
     if 'budget_applied' not in s:
         s.budget_applied = defaults()
         s.budget_interest = BASE_INTEREST
+        
+    # Failsafe: if an old session state had absolute values instead of percentages, reset it
+    if s.budget_applied['spend'].get('welfare', 0) > 100:
+        s.budget_applied = defaults()
+        
     for k, v in s.budget_applied['tax'].items():
         s.setdefault(f'bt_{k}', v)
     for k, v in s.budget_applied['spend'].items():
@@ -67,14 +73,17 @@ def revenue_pie(b):
     return data
 
 def spending_pie(b):
-    data = {SPEND[k]['short']: v for k, v in b['spend'].items()}
+    # Convert percentages back to absolute £bn for the pie chart
+    data = {SPEND[k]['short']: SPEND[k]['default'] * (1 + v / 100.0) for k, v in b['spend'].items()}
     data['Debt interest'] = interest()
     return data
 
 def impact(old, new):
     ro, rn = revenues(old), revenues(new)
     d = {k: rn[k] - ro[k] for k in ro}
-    ds = {k: new['spend'][k] - old['spend'][k] for k in SPEND}
+    
+    # Calculate difference in absolute £bn based on the percentage change
+    ds = {k: SPEND[k]['default'] * ((new['spend'][k] - old['spend'][k]) / 100.0) for k in SPEND}
     bal = sum(d.values()) - sum(ds.values())
 
     household = d['income'] + d['ni'] + d['vat']
@@ -130,7 +139,10 @@ def apply_ongoing():
     s = st.session_state
     ensure()
     sp = s.budget_applied['spend']
-    dv = {k: sp[k] - SPEND[k]['default'] for k in SPEND}
+    
+    # Calculate absolute £bn difference from baseline to impact state of the nation
+    dv = {k: SPEND[k]['default'] * (sp[k] / 100.0) for k in SPEND}
+    
     country.nudge({
         'nhs_waiting': -0.004 * dv['health'],
         'nhs_morale': 0.05 * dv['health'],
@@ -183,9 +195,12 @@ def render():
     applied, cur = s.budget_applied, read()
     changed = cur != applied
 
-    rev_now, rev_app = sum(revenues(cur).values()) + OTHER_RECEIPTS, sum(revenues(applied).values()) + OTHER_RECEIPTS
-    spend_now = sum(cur['spend'].values()) + interest()
-    spend_app = sum(applied['spend'].values()) + interest()
+    rev_now = sum(revenues(cur).values()) + OTHER_RECEIPTS
+    rev_app = sum(revenues(applied).values()) + OTHER_RECEIPTS
+    
+    spend_now = sum(SPEND[k]['default'] * (1 + cur['spend'][k] / 100.0) for k in SPEND) + interest()
+    spend_app = sum(SPEND[k]['default'] * (1 + applied['spend'][k] / 100.0) for k in SPEND) + interest()
+    
     bal_now, bal_app = rev_now - spend_now, rev_app - spend_app
 
     m1, m2, m3 = st.columns(3)
@@ -199,10 +214,22 @@ def render():
         st.markdown('#### Taxes')
         for k, t in TAXES.items():
             st.slider(t['label'], t['lo'], t['hi'], value=int(s[f'bt_{k}']), step=t['step'], key=f'bt_{k}')
+            
     with right:
-        st.markdown('#### Spending')
+        st.markdown('#### Department Spending (% Change)')
         for k, sp in SPEND.items():
-            st.slider(sp['label'], sp['lo'], sp['hi'], value=int(s[f'bs_{k}']), step=1, key=f'bs_{k}')
+            st.markdown(f"**{sp['label']}** (Base: £{sp['default']}bn)")
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                # Value is now the percentage
+                st.slider(f"{sp['label']} slider", -100, 100, value=int(s[f'bs_{k}']), step=1, key=f'bs_{k}', format="%d%%", label_visibility="collapsed")
+            with c2:
+                # Calculate absolute numbers to display next to the slider
+                pct = s[f'bs_{k}']
+                new_val = sp['default'] * (1 + pct / 100.0)
+                diff = new_val - sp['default']
+                color = '#e0705d' if diff < 0 else '#6fbf8a' if diff > 0 else '#9fb3a6'
+                st.markdown(f"<div style='text-align:right; font-size:1.1rem; line-height:1.2;'><b>£{new_val:,.1f}b</b><br><span style='color:{color}; font-size:0.85rem;'>{diff:+,.1f}b</span></div>", unsafe_allow_html=True)
 
     st.caption(f'Debt interest (£{interest():,.1f}bn) is set by gilt yields and the size of the debt, not by you.')
 
