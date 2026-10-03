@@ -4,6 +4,8 @@ import pandas as pd
 
 from theme import apply_theme, header, crisis_card, news_box, render_polls
 import country
+import budget
+import scenarios as scen
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
@@ -114,7 +116,8 @@ col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP', f'{d_
 st.write('')
 
 # ==================== MACROECONOMIC STATS & POLLS ====================
-with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
+tab_econ, tab_nation, tab_budget = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation', '💷 The Budget'])
+with tab_econ:
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
     m2.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
@@ -127,9 +130,10 @@ with st.expander('📊 Macroeconomic Dashboard & Voting Intentions'):
     render_polls(df_polls)
     st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
-country.ensure_state()
-with st.expander('🇬🇧 State of the Nation', expanded=True):
+with tab_nation:
     country.render()
+with tab_budget:
+    budget.render()
 
 st.write('')
 
@@ -140,7 +144,7 @@ if st.button('← Back to Party Selection'):
 if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
 
-    score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (st.session_state.deficit * 1.5)
+    score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (max(-5, min(15, st.session_state.deficit)) * 1.5)
     multiplier = 4.5
     if st.session_state.party in ['Reform UK', 'Green Party']:
         multiplier = 3.5
@@ -232,35 +236,8 @@ def process_block_execution(next_year, next_block, chosen_ideology):
 
     update_polling_data(next_year)
 
-    crises_pool = [
-        ('🚨 BREAKING: Severe Gilt Market Revolt! Foreign investors dump UK debt as yields surge past 5.5%.',
-         'Deploy emergency Bank of England intervention (-£7B Headroom, +8 Market Conf)', 'Refuse intervention and let bond vigilantes feast (-18 Market Conf, +2.5 Debt)'),
-        ('🚨 BREAKING: National Health Service Staff Walkout! Nurses and junior doctors launch coordinated strikes.',
-         'Meet pay demands in full to avoid collapse (-£6B Headroom, +10 Approval, +0.4 Inflation)', 'Stand firm and invoke emergency service minimums (-12 Approval, -3 Growth)'),
-        ('🚨 BREAKING: Major Energy Retailer Bankruptcy! State bailout required to keep lights on.',
-         'Absorb company liabilities into public balance sheet (-£5B Headroom, +6 Approval)', 'Let customers scatter to higher tariffs (-9 Approval, +0.5 Inflation)'),
-        ('🚨 BREAKING: Public Sector Pension Black Hole Discovered! OBR mandates immediate funding correction.',
-         'Inject emergency cash reserves to plug shortfall (-£5.5B Headroom, +5 Market Conf)', 'Cut departmental budgets across the board (-10 Approval, +4 Market Conf)')
-    ]
-
-    if st.session_state.last_ideology == 'Hard Left' and random.random() < 0.50:
-        linked_crisis = ('🔗 LINKED REACTION (Capital Flight): Your aggressive socialist policies have sparked a sudden flight of millionaires and corporate HQs to Dublin and Frankfurt!',
-                         'Offer tax exemptions for multinational executives (-£4B Headroom, +10 Market Conf)',
-                         'Double down with emergency capital export controls (-15 Market Conf, +6 Approval)')
-        crises_pool.insert(0, linked_crisis)
-    elif st.session_state.last_ideology == 'Free-Market' and random.random() < 0.50:
-        linked_crisis = ('🔗 LINKED REACTION (Private Utility Failure): Your recent deregulation has caused private water and energy providers to suffer major infrastructure leaks and sewage scandals!',
-                         'Bail out the private operators with state emergency grants (-£5B Headroom, -6 Approval)',
-                         'Threaten forcible public receivership (-12 Market Conf, +8 Approval)')
-        crises_pool.insert(0, linked_crisis)
-    elif st.session_state.last_ideology == 'Fiscal Austerity' and random.random() < 0.50:
-        linked_crisis = ('🔗 LINKED REACTION (Public Service Collapse): Your deep departmental spending cuts have resulted in crumbling school roofs and prison overcrowding emergencies!',
-                         'Issue emergency capital grants to patch facilities (-£4.5B Headroom, +5 Approval)',
-                         'Maintain strict budget caps and ride out the public backlash (-10 Approval, +5 Market Conf)')
-        crises_pool.insert(0, linked_crisis)
-
-    if random.random() < 0.45 and st.session_state.year < 5:
-        st.session_state.active_crisis = random.choice(crises_pool)
+    budget.apply_ongoing()
+    st.session_state.active_crisis = scen.pick_next(st.session_state.year, st.session_state.block, chosen_ideology)
 
     st.session_state.year = next_year
     st.session_state.block = next_block
@@ -268,24 +245,18 @@ def process_block_execution(next_year, next_block, chosen_ideology):
 
 # ==================== ACTIVE CRISIS SCREEN ====================
 if st.session_state.active_crisis is not None:
-    c_title, c_opt1, c_opt2 = st.session_state.active_crisis
-    crisis_card(c_title)
-    crisis_choice = st.radio('Choose emergency response:', [c_opt1, c_opt2])
+    crisis = scen.get(st.session_state.active_crisis)
+    if crisis is None:
+        st.session_state.active_crisis = None
+        st.rerun()
+    crisis_card(crisis['title'])
+    if st.session_state.get('crisis_reason'):
+        news_box(st.session_state.crisis_reason)
+    labels = scen.option_labels(crisis)
+    crisis_choice = st.radio('Choose emergency response:', labels)
     if st.button('Resolve Crisis'):
         snapshot_metrics()
-        country.apply_crisis(c_title, c_opt1 in crisis_choice)
-        if c_opt1 in crisis_choice:
-            st.session_state.headroom = round(st.session_state.headroom - 6.0, 1)
-            st.session_state.approval = round(st.session_state.approval + 5, 1)
-            st.session_state.market_conf = round(st.session_state.market_conf + 5, 1)
-            st.session_state.gilt_yield = round(st.session_state.gilt_yield - 0.3, 1)
-            st.session_state.message = 'Crisis Handled: Expensive intervention stabilized markets.'
-        else:
-            st.session_state.approval = round(st.session_state.approval - 12, 1)
-            st.session_state.market_conf = round(st.session_state.market_conf - 12, 1)
-            st.session_state.gilt_yield = round(st.session_state.gilt_yield + 0.7, 1)
-            st.session_state.deficit = round(st.session_state.deficit + 0.8, 1)
-            st.session_state.message = 'Crisis Handled: Ignored warning signs. Markets and public punish you.'
+        st.session_state.message = scen.resolve(crisis, labels.index(crisis_choice))
         st.session_state.active_crisis = None
         st.rerun()
     st.stop()
