@@ -12,19 +12,15 @@ st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide
 apply_theme()
 
 # ==================== INITIALIZATION & SAFETY RESET ====================
-# Aggressively wipe old saves to prevent KeyErrors
 if 'initialized' in st.session_state:
     needs_reset = False
-    
-    # Check for missing new variables
     required_keys = ['pm_opinion', 'prev_pm', 'imf_bailout', 'seats', 'pledges']
     if not all(k in st.session_state for k in required_keys):
         needs_reset = True
         
-    # Check if the save file is using the old tax system
     if 'budget_applied' in st.session_state:
         tax_dict = st.session_state.budget_applied.get('tax', {})
-        if 'income' in tax_dict or 'inc_basic' not in tax_dict:
+        if 'income' in tax_dict or 'inc_basic' not in tax_dict or 'cgt' not in tax_dict:
             needs_reset = True
 
     if needs_reset:
@@ -50,7 +46,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.approval_cap = 100
     st.session_state.macro_cycle = 'Stagnation'
 
-    # Economic Stats (Deficit represents actual £ Billions)
+    # Economic Stats
     st.session_state.approval = 48.0
     st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
@@ -604,13 +600,76 @@ else:
             st.subheader(f"Year {st.session_state.year} - Block 3: The Chancellor's Budget")
             humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. Shall we proceed to the dispatch box?")
             
+            # Initialize budget state safely before rendering
+            if 'budget_applied' not in st.session_state:
+                budget.ensure()
+
             budget.render()
             
+            st.markdown("---")
+            st.markdown("### 🏛️ The Whips' Office: Parliamentary Arithmetic")
+            
+            # Check for ideological triggers in the CURRENT draft budget
+            draft = budget.read()
+            party = st.session_state.party
+            corp_change = draft['tax']['corp'] - budget.TAXES['corp']['default']
+            welfare_change = float(draft['spend']['welfare'])
+            climate_change = float(draft['spend']['climate'])
+            other_change = float(draft['spend']['other'])
+
+            revolt_warning = ""
+            if party in ['Conservative', 'Reform UK'] and corp_change > 0:
+                revolt_warning = "🚨 **WHIP WARNING:** Your MPs are threatening to rebel over Corporation Tax hikes! Expect a massive drop in support on the floor."
+            if party in ['Labour', 'Green Party'] and welfare_change < 0:
+                revolt_warning = "🚨 **WHIP WARNING:** The left wing is preparing to rebel over your welfare cuts! Expect massive defections."
+            if party == 'Liberal Democrats' and climate_change < 0:
+                revolt_warning = "🚨 **WHIP WARNING:** Your base will revolt over cuts to climate spending!"
+            if party in ['SNP', 'Plaid Cymru'] and other_change < 0:
+                revolt_warning = "🚨 **WHIP WARNING:** Your regional MPs will rebel over cuts to devolved block grants!"
+            
+            if revolt_warning:
+                st.error(revolt_warning)
+
+            bb = st.session_state.backbench_opinion
+            base_ayes = 326 if st.session_state.party not in ['SNP', 'Plaid Cymru'] else 300
+            commons_ayes = int(base_ayes + (bb / 1.5) - 20 + (st.session_state.year * 2))
+            
+            # If there's an active revolt warning, subtract estimated rebel votes
+            if revolt_warning:
+                commons_ayes -= 35
+
+            commons_ayes = min(650, max(0, commons_ayes))
+            
+            if commons_ayes < 326:
+                st.error(f"🚨 **PROJECTED DEFEAT:** The Chief Whip projects only {commons_ayes} votes in favour. You need 326. The government will collapse if you submit this!")
+            elif commons_ayes < 340:
+                st.warning(f"⚠️ **PROJECTED PASS (TIGHT):** The Chief Whip projects {commons_ayes} votes. It will pass, but you are dangerously close to a rebellion.")
+            else:
+                st.success(f"✅ **PROJECTED PASS:** The Chief Whip projects {commons_ayes} votes in favour. You have the numbers.")
+
+            st.markdown("If you lack the votes, you must appease your MPs before submitting:")
+            col_w1, col_w2, col_w3 = st.columns(3)
+            with col_w1:
+                if st.button("🥓 Offer Pork-Barrel Funds\n(-£2.0B Headroom, +15 Backbench)", disabled=st.session_state.headroom < 2.0):
+                    st.session_state.headroom -= 2.0
+                    st.session_state.backbench_opinion = min(100, st.session_state.backbench_opinion + 15)
+                    st.rerun()
+            with col_w2:
+                if st.button("🗡️ Threaten Rebels with Deselection\n(-15 Party Unity, +10 Backbench)"):
+                    st.session_state.party_opinion -= 15
+                    st.session_state.backbench_opinion = min(100, st.session_state.backbench_opinion + 10)
+                    st.rerun()
+            with col_w3:
+                if st.button("🤝 Water Down Controversial Reforms\n(+10 Backbench, -2 Market Conf)"):
+                    st.session_state.market_conf = max(0, st.session_state.market_conf - 2.0)
+                    st.session_state.backbench_opinion = min(100, st.session_state.backbench_opinion + 10)
+                    st.rerun()
+
             st.divider()
             if st.button('Submit Budget to the Commons & Lords', type='primary'):
-                if st.session_state.backbench_opinion < 20:
+                if commons_ayes < 326:
                     st.session_state.sacked = True
-                    st.session_state.sacked_reason = "Your backbenchers completely revolted and voted down your Budget! Losing a budget is treated as an automatic vote of no confidence. The Government has collapsed."
+                    st.session_state.sacked_reason = "You failed to secure the votes. The budget was defeated in the House of Commons, which is an automatic vote of no confidence. The Government has collapsed."
                     st.rerun()
                 else:
                     if st.session_state.approval < 40: st.session_state.market_conf -= 1.0
