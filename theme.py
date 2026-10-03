@@ -110,18 +110,35 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 [data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
 [data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
 
-/* FIX FOR STREAMLIT NATIVE TOOLTIPS */
-div[data-baseweb="tooltip"] > div {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid var(--brass) !important;
-  border-radius: 6px !important;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.5) !important;
+/* READABLE NATIVE TOOLTIPS (any remaining help= icons) */
+[data-testid="stTooltipContent"], [data-testid="stTooltipContent"] *,
+div[data-baseweb="tooltip"], div[data-baseweb="tooltip"] * {
+  background-color: #0b1712 !important;
+  color: #efe9da !important;
 }
-div[data-baseweb="tooltip"] > div * {
-  color: #000000 !important;
-  background-color: transparent !important;
-}
+div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-radius: 6px !important; }
+
+/* STAT CARDS WITH HOVER TOOLTIP (one at a time: only the hovered card shows its tip) */
+.sc-card { position: relative; background: var(--leather); border: 1px solid #2b5440; border-top: 3px solid var(--brass);
+  border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; min-height: 108px; }
+.sc-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .85rem; line-height: 1.2; }
+.sc-info { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none;
+  border: 1px solid var(--muted); border-radius: 50%; font-size: .68rem; font-style: normal; cursor: help; color: var(--muted); }
+.sc-card:hover .sc-info, .sc-card:focus-within .sc-info { border-color: var(--brass); color: var(--brass); }
+.sc-value { font-family: 'Newsreader', serif; font-size: 1.8rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 2px 0 6px; }
+.sc-delta { display: inline-block; font-size: .8rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
+.sc-good { color: #6fbf8a; background: rgba(111,191,138,.14); }
+.sc-bad  { color: #e0705d; background: rgba(224,112,93,.14); }
+.sc-flat { color: var(--muted); background: rgba(159,179,166,.12); }
+.sc-tip { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 9999;
+  background: #0b1712; color: #efe9da; border: 1px solid var(--brass); border-radius: 6px; padding: 10px 12px;
+  font-family: 'IBM Plex Sans', sans-serif; font-size: .88rem; font-weight: 400; line-height: 1.45;
+  box-shadow: 0 6px 16px rgba(0,0,0,.6); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s; }
+.sc-card:hover .sc-tip, .sc-card:focus-within .sc-tip { opacity: 1; visibility: visible; }
+/* lift the hovered card's wrappers above everything below it so the tip is never covered */
+div[data-testid="stColumn"]:has(.sc-card:hover), div[data-testid="stElementContainer"]:has(.sc-card:hover),
+div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stElementContainer"]:has(.sc-card:focus-within) {
+  position: relative; z-index: 1000; }
 
 .ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
 .ch-banner h1 { margin: 0; font-size: 2.1rem; }
@@ -214,3 +231,18 @@ def render_newspapers(left_hl, centre_hl, right_hl):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
+    """HTML stat card with a hover tooltip. delta_num sets the colour; inverse=True means lower is better."""
+    if abs(delta_num) < 1e-9:
+        cls = 'sc-flat'; arrow = ''
+    else:
+        good = (delta_num > 0) != inverse
+        cls = 'sc-good' if good else 'sc-bad'
+        arrow = '\u25b2 ' if delta_num > 0 else '\u25bc '
+    return (f"<div class='sc-card' tabindex='0'>"
+            f"<div class='sc-label'><span>{label}</span><span class='sc-info'>i</span></div>"
+            f"<div class='sc-value'>{value}</div>"
+            f"<span class='sc-delta {cls}'>{arrow}{delta_text}</span>"
+            f"<div class='sc-tip'>{desc}</div></div>")
