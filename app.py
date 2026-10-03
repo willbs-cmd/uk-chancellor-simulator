@@ -12,10 +12,16 @@ st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide
 apply_theme()
 
 # ==================== INITIALIZATION ====================
+# SAFETY RESET: If your save file is missing new variables or uses the old tax system, wipe it!
 required_keys = ['pm_opinion', 'prev_pm', 'imf_bailout', 'seats']
-if 'initialized' in st.session_state and not all(k in st.session_state for k in required_keys):
-    st.session_state.clear()
-    st.rerun()
+
+if 'initialized' in st.session_state:
+    # Check if the save file has the old single 'income' tax band instead of 'inc_basic'
+    using_old_taxes = 'budget_applied' in st.session_state and 'income' in st.session_state.budget_applied.get('tax', {})
+    
+    if using_old_taxes or not all(k in st.session_state for k in required_keys):
+        st.session_state.clear()
+        st.rerun()
 
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
@@ -266,9 +272,11 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     if st.session_state.country['nhs_waiting'] > 7.5:
         st.session_state.growth = round(st.session_state.growth - 0.15, 2)
         st.session_state.message += " The massive NHS backlog is dragging down economic growth."
+        
     if st.session_state.country['rail'] < 70:
         st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
         st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
+
     if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
         st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
         st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
@@ -647,6 +655,7 @@ else:
                 
                 st.write('')
                 
+                # The Reshuffle Button!
                 if st.button("🔄 Reshuffle Cabinet", help="Spend 15 PM Opinion and 20 Cabinet Support to purge rebels, restoring 25 Party Unity and 25 Backbench Morale."):
                     if st.session_state.pm_opinion > 30:
                         st.session_state.pm_opinion -= 15
