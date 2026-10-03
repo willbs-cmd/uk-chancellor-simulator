@@ -12,6 +12,11 @@ st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide
 apply_theme()
 
 # ==================== INITIALIZATION ====================
+# SAFETY RESET: If your save file is from an older version, wipe it to prevent crashes!
+if 'initialized' in st.session_state and 'pm_opinion' not in st.session_state:
+    st.session_state.clear()
+    st.rerun()
+
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
     st.session_state.party = 'Labour'
@@ -19,6 +24,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.block = 1
     st.session_state.term = 1
     st.session_state.active_crisis = None
+    st.session_state.last_ideology = None
     st.session_state.headlines = None
     st.session_state.budget_passed = False
     st.session_state.sacked = False
@@ -29,7 +35,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.approval_cap = 100
     st.session_state.macro_cycle = 'Stagnation'
 
-    # Economic Stats (Will be overwritten by Scenario choice)
+    # Economic Stats
     st.session_state.approval = 48.0
     st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
@@ -40,24 +46,38 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.growth = 0.8
     st.session_state.headroom = 8.5
 
+    # Political Capital Stats
     st.session_state.pm_opinion = 75.0
     st.session_state.cab_opinion = 65.0
     st.session_state.party_opinion = 70.0
     st.session_state.backbench_opinion = 60.0
     st.session_state.media_opinion = 50.0
 
+    # Deltas
+    st.session_state.prev_approval = 48.0
+    st.session_state.prev_market = 65.0
+    st.session_state.prev_growth = 0.8
+    st.session_state.prev_headroom = 8.5
+    st.session_state.prev_debt = 98.2
+    st.session_state.prev_pm = 75.0
+    st.session_state.prev_cab = 65.0
+    st.session_state.prev_party = 70.0
+    st.session_state.prev_backbench = 60.0
+    st.session_state.prev_media = 50.0
+
     st.session_state.poll_history = {
         'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 
         'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]
     }
+
     st.session_state.message = ""
     st.session_state.initialized = True
 
+# ==================== LOGIC FUNCTIONS ====================
 def _clip(val, minimum=0.0, maximum=None):
     cap = maximum if maximum else st.session_state.get('approval_cap', 100)
     return max(minimum, min(cap, val))
 
-# ==================== PLEDGES & MACRO CYCLES ====================
 def check_pledges():
     s = st.session_state
     if 'budget_applied' not in s: return
@@ -79,7 +99,7 @@ def check_pledges():
         s.broken_pledges.append(p)
         s.approval_cap -= 15
         s.approval = _clip(s.approval - 15)
-        s.media_opinion = _clip(s.media_opinion - 25)
+        s.media_opinion = _clip(s.media_opinion - 25, 0, 100)
         s.message += f" 🚨 U-TURN SCANDAL: You broke your manifesto pledge: '{p}'. The press is tearing you apart!"
 
 def shift_macro_cycle():
@@ -132,8 +152,10 @@ def generate_headlines(ideology, is_budget=False, headroom=0):
 
 def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
     s = st.session_state
-    s.prev_pm = s.pm_opinion; s.prev_cab = s.cab_opinion
-    s.prev_party = s.party_opinion; s.prev_backbench = s.backbench_opinion
+    s.prev_pm = s.pm_opinion
+    s.prev_cab = s.cab_opinion
+    s.prev_party = s.party_opinion
+    s.prev_backbench = s.backbench_opinion
     s.prev_media = s.media_opinion
 
     purity_map = {
@@ -167,7 +189,6 @@ def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
 
 def update_polling_data(current_year):
     gov_party = st.session_state.party
-    
     nation_score = country._overall(st.session_state.country) * 100
     nation_bonus = (nation_score - 50) * 0.15 
     approval_boost = ((st.session_state.approval - 50) * 0.35) + nation_bonus
@@ -200,6 +221,7 @@ def snapshot_metrics():
 
 def process_block_execution(next_year, next_block, chosen_ideology, effect=None):
     snapshot_metrics()
+    st.session_state.last_ideology = chosen_ideology
     st.session_state.headlines = generate_headlines(chosen_ideology)
     country.apply_decision(chosen_ideology)
 
@@ -214,9 +236,11 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     if st.session_state.country['nhs_waiting'] > 7.5:
         st.session_state.growth = round(st.session_state.growth - 0.15, 2)
         st.session_state.message += " The massive NHS backlog is dragging down economic growth."
+        
     if st.session_state.country['rail'] < 70:
         st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
         st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
+
     if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
         st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
         st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
@@ -486,7 +510,7 @@ else:
 
     if st.session_state.block == 3:
         if st.session_state.get('budget_passed'):
-            st.subheader("🏛️ Parliamentary Vote Results")
+            st.subheader("🏛️️ Parliamentary Vote Results")
             bb = st.session_state.backbench_opinion
             
             base_ayes = 326 if st.session_state.party not in ['SNP', 'Plaid Cymru'] else 300
