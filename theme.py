@@ -68,6 +68,46 @@ div.stButton > button:hover { background: var(--brass); color: var(--bench); bor
 div.stButton > button[kind="primary"] { background: var(--brass); color: var(--bench); }
 div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 
+/* Force readable text everywhere (works even if config.toml is missing) */
+.stApp, .stApp p, .stApp li, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+[data-testid="stMarkdownContainer"] p, [data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label, [data-testid="stRadio"] label p,
+[data-testid="stSelectbox"] div, [data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span { color: var(--paper) !important; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
+[data-testid="stMetricLabel"] p { color: var(--muted) !important; }
+[data-testid="stMetricDelta"] svg { fill: currentColor; }
+
+/* Expander header was rendering white */
+[data-testid="stExpander"] details, [data-testid="stExpander"] details > summary {
+  background: var(--leather) !important; border-radius: 6px;
+}
+[data-testid="stExpander"] details > summary:hover { background: var(--leather-2) !important; }
+[data-testid="stExpander"] summary svg { fill: var(--brass); color: var(--brass); }
+
+/* Radio cards, targeting both old and new Streamlit markup */
+[data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
+  background: var(--leather) !important; border: 1px solid #2b5440; border-radius: 6px;
+  padding: 12px 16px; width: 100%; margin-bottom: 6px; transition: border-color .15s, background .15s;
+}
+[data-testid="stRadio"] label:hover { border-color: var(--brass); background: var(--leather-2) !important; }
+[data-testid="stRadio"] label:has(input:checked) {
+  border-color: var(--brass); background: var(--leather-2) !important; box-shadow: inset 4px 0 0 var(--brass);
+}
+[data-testid="stRadio"] label p { font-size: 1rem; line-height: 1.45; }
+[data-testid="stRadio"] label > div:first-child { border-color: var(--brass) !important; }
+[data-testid="stRadio"] label:has(input:checked) > div:first-child { background-color: var(--brass) !important; }
+
+/* Select boxes and inputs on the setup screen */
+[data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
+[data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
+
+/* Long metric values (e.g. "98.2% of GDP") wrap instead of truncating */
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] > div {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  font-size: 1.7rem !important; line-height: 1.15;
+}
+
 /* Custom components */
 .ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
 .ch-banner h1 { margin: 0; font-size: 2.1rem; }
