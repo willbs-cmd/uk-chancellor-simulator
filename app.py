@@ -11,11 +11,19 @@ import scenarios as scen
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
 
+# ==================== INITIALIZATION ====================
 if 'initialized' not in st.session_state or st.session_state.get('step') is None:
     st.session_state.step = 'setup'
     st.session_state.party = 'Labour'
-    st.session_state.approval = 48
-    st.session_state.market_conf = 65
+    st.session_state.year = 1
+    st.session_state.block = 1
+    st.session_state.term = 1
+    st.session_state.active_crisis = None
+    st.session_state.last_ideology = None
+
+    # Economic Stats
+    st.session_state.approval = 48.0
+    st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
     st.session_state.deficit = 5.4
     st.session_state.inflation = 3.2
@@ -23,19 +31,26 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.gilt_yield = 4.7
     st.session_state.growth = 0.8
     st.session_state.headroom = 8.5
-    st.session_state.year = 1
-    st.session_state.block = 1
-    st.session_state.term = 1
-    st.session_state.active_crisis = None
-    st.session_state.last_ideology = None
 
-    st.session_state.prev_approval = 48
-    st.session_state.prev_market = 65
+    # New Political Capital Stats
+    st.session_state.pm_opinion = 75.0
+    st.session_state.cab_opinion = 65.0
+    st.session_state.party_opinion = 70.0
+    st.session_state.backbench_opinion = 60.0
+    st.session_state.media_opinion = 50.0
+
+    # Deltas
+    st.session_state.prev_approval = 48.0
+    st.session_state.prev_market = 65.0
     st.session_state.prev_growth = 0.8
     st.session_state.prev_headroom = 8.5
     st.session_state.prev_debt = 98.2
+    st.session_state.prev_pm = 75.0
+    st.session_state.prev_cab = 65.0
+    st.session_state.prev_party = 70.0
+    st.session_state.prev_backbench = 60.0
+    st.session_state.prev_media = 50.0
 
-    # Poll history now includes the regional parties!
     st.session_state.poll_history = {
         'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 
         'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]
@@ -44,11 +59,11 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.message = 'Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching.'
     st.session_state.initialized = True
 
+# ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
     st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Choose Your Government')
-    st.write('Economic headroom is tight (£8.5B) and debt is nearly 100% of GDP. Select which party is forming the government:')
-
+    
     party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru'])
 
     col_a, col_b = st.columns([1, 4])
@@ -56,7 +71,7 @@ if st.session_state.step == 'setup':
         if st.button('Enter Number 11', type='primary'):
             st.session_state.party = party_choice
             
-            # Setup initial state based on party chosen
+            # Setup initial state based on party
             if party_choice == 'Conservative':
                 st.session_state.approval = 46; st.session_state.market_conf = 70
                 st.session_state.poll_history = {'Year': [1], 'Labour': [32], 'Conservative': [38], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
@@ -79,10 +94,8 @@ if st.session_state.step == 'setup':
                 st.session_state.approval = 48; st.session_state.market_conf = 65
                 st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
 
-            st.session_state.prev_approval = st.session_state.approval
-            st.session_state.prev_market = st.session_state.market_conf
             st.session_state.step = 'game'
-            st.session_state.message = "Good morning, Chancellor. I am Sir Humphrey Appleby, your Permanent Secretary. I am here to ensure that your radical new policies cause as little disruption to the smooth running of the Treasury as possible."
+            st.session_state.message = "Good morning, Chancellor. I am Sir Humphrey Appleby. My job is to protect you from the press, the public, and most importantly, your own backbenchers."
             st.rerun()
     with col_b:
         if st.button('Reset Session Cache'):
@@ -90,36 +103,39 @@ if st.session_state.step == 'setup':
             st.rerun()
     st.stop()
 
+# ==================== MAIN DASHBOARD ====================
 header(st.session_state.party, st.session_state.term, st.session_state.year, st.session_state.block)
 
-d_approval = round(st.session_state.approval - st.session_state.prev_approval, 1)
-d_market = round(st.session_state.market_conf - st.session_state.prev_market, 1)
-d_growth = round(st.session_state.growth - st.session_state.prev_growth, 1)
-d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1)
-d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
+# Row 1: Economic Dashboard
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{st.session_state.approval - st.session_state.prev_approval:+.1f}%")
+c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{st.session_state.market_conf - st.session_state.prev_market:+.1f}%")
+c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{st.session_state.growth - st.session_state.prev_growth:+.1f}%")
+c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{st.session_state.headroom - st.session_state.prev_headroom:+.1f}B")
+c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{st.session_state.debt - st.session_state.prev_debt:+.1f}%", delta_color='inverse')
 
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric('Public Approval', f'{round(st.session_state.approval, 1)}%', f'{d_approval:+}%' if d_approval != 0 else '0%')
-col2.metric('Market Confidence', f'{round(st.session_state.market_conf, 1)}%', f'{d_market:+}%' if d_market != 0 else '0%')
-col3.metric('Economic Growth', f'{round(st.session_state.growth, 1)}%', f'{d_growth:+}%' if d_growth != 0 else '0%')
-col4.metric('OBR Headroom', f'£{round(st.session_state.headroom, 1)}B', f'£{d_headroom:+}B' if d_headroom != 0 else '£0B')
-col5.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP', f'{d_debt:+}%' if d_debt != 0 else '0%', delta_color='inverse')
+# Row 2: Political Capital Dashboard
+st.markdown("#### 🏛️ Political Capital")
+p1, p2, p3, p4, p5 = st.columns(5)
+p1.metric("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}")
+p2.metric('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}")
+p3.metric('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}")
+p4.metric('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}")
+p5.metric('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}")
 
 st.write('')
 
 tab_econ, tab_nation, tab_budget = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation', '💷 The Budget'])
 with tab_econ:
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric('National Debt', f'{round(st.session_state.debt, 1)}% of GDP')
-    m2.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
-    m3.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
-    m4.metric('Bank Rate (Interest)', f'{round(st.session_state.interest_rate, 1)}%')
-    m5.metric('10-Year Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
+    m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
+    m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%')
+    m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
 
     st.markdown('### 📈 Voting Intention Tracker (% Share)')
     df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
     render_polls(df_polls)
-    st.caption('Track how public opinion shifts across years based on your economic performance and policy choices.')
 
 with tab_nation:
     country.render()
@@ -131,143 +147,94 @@ with tab_budget:
         st.info("💷 The Chancellor's Budget is only delivered in Block 4 (The Autumn Statement) of each year.")
 
 st.write('')
-
 if st.button('← Back to Party Selection'):
     st.session_state.step = 'setup'
     st.rerun()
 
-# ==================== ELECTION NIGHT ENGINE ====================
-if st.session_state.year > 5:
-    st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
+# ==================== CORE LOGIC FUNCTIONS ====================
+def _clip(val, minimum=0.0, maximum=100.0):
+    return max(minimum, min(maximum, val))
 
-    score = (st.session_state.approval * 0.65) + (st.session_state.market_conf * 0.35) - (max(-5, min(15, st.session_state.deficit)) * 1.5)
-    is_regional = st.session_state.party in ['SNP', 'Plaid Cymru']
+def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
+    s = st.session_state
     
-    # Calculate Seats based on party type!
-    if st.session_state.party == 'SNP':
-        gov_seats = int(max(9, min(57, 35 + (score - 45) * 1.5)))
-        target_seats = 40
-        max_possible = 57
-        box_color = '#FDF38E'
-        text_color = '#000000'
-    elif st.session_state.party == 'Plaid Cymru':
-        gov_seats = int(max(2, min(32, 10 + (score - 45) * 1.0)))
-        target_seats = 15
-        max_possible = 32
-        box_color = '#005B54'
-        text_color = 'white'
-    else:
-        multiplier = 4.5
-        if st.session_state.party in ['Reform UK', 'Green Party']: multiplier = 3.5
-        gov_seats = int(max(40, min(450, 326 + (score - 50) * multiplier)))
-        target_seats = 326
-        max_possible = 650
-        
-        if st.session_state.party == 'Labour': box_color = '#e4003b'
-        elif st.session_state.party == 'Conservative': box_color = '#0087dc'
-        elif st.session_state.party == 'Liberal Democrats': box_color = '#faa61a'
-        elif st.session_state.party == 'Reform UK': box_color = '#12B6CF'
-        else: box_color = '#6AB023'
-        text_color = 'white'
+    # Save previous state
+    s.prev_pm = s.pm_opinion; s.prev_cab = s.cab_opinion
+    s.prev_party = s.party_opinion; s.prev_backbench = s.backbench_opinion
+    s.prev_media = s.media_opinion
 
-    opp_seats = 650 - gov_seats
+    # Ideological Purity Map
+    purity_map = {
+        'Labour': ['Social Democratic', 'Hard Left'],
+        'Conservative': ['Free-Market', 'Fiscal Austerity'],
+        'Liberal Democrats': ['Centric', 'Social Democratic'],
+        'Reform UK': ['Free-Market'],
+        'Green Party': ['Hard Left', 'Social Democratic'],
+        'SNP': ['Social Democratic', 'Centric'],
+        'Plaid Cymru': ['Social Democratic', 'Hard Left']
+    }
     
-    # Different win conditions for Regional vs National parties
-    if is_regional:
-        if gov_seats >= target_seats:
-            result_text = f'{st.session_state.party} Regional Dominance ({gov_seats}/{max_possible} seats)'
-            success_msg = f'Incredible feat! You dominated your region with {gov_seats} seats and hold the balance of power in Westminster.'
-            won = True
-        else:
-            result_text = f'{st.session_state.party} Regional Defeat (Only {gov_seats} seats)'
-            box_color = '#555555'
-            text_color = 'white'
-            won = False
-            
-        st.markdown(f'''
-        <div style='background-color: {box_color}; padding: 20px; border-radius: 10px; color: {text_color}; text-align: center;'>
-            <h2>{result_text}</h2>
-            <p style='font-size: 18px;'>Your Seats: <b>{gov_seats}</b> | Other UK Seats: <b>{opp_seats}</b> (Regional Target: {target_seats})</p>
-        </div>
-        ''', unsafe_allow_html=True)
+    core = purity_map.get(s.party, ['Centric'])
     
+    # Backbenchers & Party care about ideological purity
+    if ideology_chosen in core:
+        s.backbench_opinion += random.uniform(2, 6)
+        s.party_opinion += random.uniform(1, 4)
     else:
-        majority = gov_seats - 326
-        if majority >= 0:
-            result_text = f'{st.session_state.party} Majority of {majority}'
-            success_msg = 'Incredible feat! You survived Hardcore Mode and kept your majority.'
-            won = True
-        else:
-            result_text = f'Hung Parliament (Short by {abs(majority)} seats)'
-            box_color = '#555555'
-            text_color = 'white'
-            won = False
+        s.backbench_opinion -= random.uniform(4, 9)
+        s.party_opinion -= random.uniform(2, 5)
 
-        st.markdown(f'''
-        <div style='background-color: {box_color}; padding: 20px; border-radius: 10px; color: {text_color}; text-align: center;'>
-            <h2>{result_text}</h2>
-            <p style='font-size: 18px;'>Government Seats: <b>{gov_seats}</b> | Opposition Seats: <b>{opp_seats}</b> (Majority needed: 326)</p>
-        </div>
-        ''', unsafe_allow_html=True)
+    # PM & Cabinet care about results (Approval & Money)
+    s.pm_opinion += (approval_diff * 1.5) + (headroom_diff * 0.5)
+    s.cab_opinion += approval_diff + random.uniform(-2, 3)
 
-    st.write('')
-    c1, c2, c3 = st.columns(3)
-    if is_regional:
-        c1.metric('Your Regional Seats', gov_seats)
-        c2.metric('Target Seats', target_seats)
-    else:
-        c1.metric('Governing Party Seats', gov_seats)
-        c2.metric('Opposition Seats', opp_seats)
-    c3.metric('Final OBR Headroom', f'£{round(st.session_state.headroom, 1)}B')
+    # Media cares about the markets and public mood
+    s.media_opinion += (approval_diff * 0.8) + ((s.market_conf - s.prev_market) * 0.5)
 
-    if won:
-        st.success(success_msg)
-        if st.button('Continue to Next Term'):
-            st.session_state.term += 1
-            st.session_state.year = 1
-            st.session_state.block = 1
-            st.session_state.step = 'game'
-            st.rerun()
-    else:
-        st.error('The markets and electorate punished your economic management. You lost your mandate.')
-        if st.button('Start New Career'):
-            st.session_state.clear()
-            st.rerun()
-    st.stop()
-
+    # Clamp all between 0 and 100
+    s.pm_opinion = _clip(s.pm_opinion)
+    s.cab_opinion = _clip(s.cab_opinion)
+    s.party_opinion = _clip(s.party_opinion)
+    s.backbench_opinion = _clip(s.backbench_opinion)
+    s.media_opinion = _clip(s.media_opinion)
 
 def update_polling_data(current_year):
     gov_party = st.session_state.party
-    approval_boost = (st.session_state.approval - 50) * 0.4
+    approval_boost = (st.session_state.approval - 50) * 0.35
 
     if current_year not in st.session_state.poll_history['Year']:
         st.session_state.poll_history['Year'].append(current_year)
-        base_shares = {'Labour': 32, 'Conservative': 30, 'Liberal Democrats': 14, 'Reform UK': 14, 'Green Party': 6, 'SNP': 3, 'Plaid Cymru': 1}
         
-        # If the user is a regional party, their national vote share stays small, so we dampen the boost
+        # Pull last known polls
+        base_shares = {p: st.session_state.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
+        
+        # Apply boost (Regionals are capped naturally by population size)
         if gov_party in ['SNP', 'Plaid Cymru']:
-            base_shares[gov_party] += approval_boost * 0.3
+            base_shares[gov_party] += (approval_boost * 0.2)
         else:
             base_shares[gov_party] += approval_boost
 
+        # Drain/feed other parties
         for p in base_shares:
             if p != gov_party: base_shares[p] -= (approval_boost / 5) + random.uniform(-1, 1)
             else: base_shares[p] += random.uniform(-1, 1)
             
-            # Floor limits: Regionals bottom out at 1, Nationals at 5
-            floor = 1 if p in ['SNP', 'Plaid Cymru'] else 5
+            floor = 1 if p in ['SNP', 'Plaid Cymru'] else 4
             base_shares[p] = max(floor, round(base_shares[p], 1))
 
-        for p, val in base_shares.items():
-            if len(st.session_state.poll_history[p]) < len(st.session_state.poll_history['Year']):
-                st.session_state.poll_history[p].append(val)
+        # Normalize to ~100% just in case
+        total = sum(base_shares.values())
+        for p in base_shares:
+            base_shares[p] = round((base_shares[p] / total) * 100, 1)
+            st.session_state.poll_history[p].append(base_shares[p])
 
 def snapshot_metrics():
-    st.session_state.prev_approval = st.session_state.approval
-    st.session_state.prev_market = st.session_state.market_conf
-    st.session_state.prev_growth = st.session_state.growth
-    st.session_state.prev_headroom = st.session_state.headroom
-    st.session_state.prev_debt = st.session_state.debt
+    s = st.session_state
+    s.prev_approval = s.approval
+    s.prev_market = s.market_conf
+    s.prev_growth = s.growth
+    s.prev_headroom = s.headroom
+    s.prev_debt = s.debt
 
 def process_block_execution(next_year, next_block, chosen_ideology):
     snapshot_metrics()
@@ -277,12 +244,154 @@ def process_block_execution(next_year, next_block, chosen_ideology):
     if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
     if st.session_state.inflation > 3.0: st.session_state.approval = round(st.session_state.approval - 1.5, 1)
 
+    # Process new political opinions
+    update_political_capital(chosen_ideology, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+
     update_polling_data(next_year)
     st.session_state.active_crisis = scen.pick_next(st.session_state.year, st.session_state.block, chosen_ideology)
 
     st.session_state.year = next_year
     st.session_state.block = next_block
     st.rerun()
+
+# ==================== ELECTION NIGHT ENGINE ====================
+if st.session_state.year > 5:
+    st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
+
+    # Convert latest polls into a projected 650 seat Parliament
+    latest_polls = {p: st.session_state.poll_history[p][-1] for p in ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']}
+    
+    # Simple FPTP distortion (benefits big parties, punishes small dispersed ones)
+    seats = {}
+    seats['Labour'] = int((latest_polls['Labour'] / 100) * 650 * (1.1 if latest_polls['Labour'] > 30 else 0.8))
+    seats['Conservative'] = int((latest_polls['Conservative'] / 100) * 650 * (1.1 if latest_polls['Conservative'] > 30 else 0.8))
+    seats['Liberal Democrats'] = int(max(5, (latest_polls['Liberal Democrats'] / 100) * 650 * 0.6))
+    seats['Reform UK'] = int(max(0, (latest_polls['Reform UK'] / 100) * 650 * 0.3))
+    seats['Green Party'] = int(max(1, (latest_polls['Green Party'] / 100) * 650 * 0.2))
+    seats['SNP'] = int(min(57, max(4, (latest_polls['SNP'] / 100) * 650 * 3.5))) # High regional concentration
+    seats['Plaid Cymru'] = int(min(32, max(2, (latest_polls['Plaid Cymru'] / 100) * 650 * 3.0)))
+
+    # Normalize to exactly 650
+    total_alloc = sum(seats.values())
+    diff = 650 - total_alloc
+    # Give remaining discrepancy to largest party
+    largest = max(seats, key=seats.get)
+    seats[largest] += diff
+
+    player_seats = seats[st.session_state.party]
+    is_regional = st.session_state.party in ['SNP', 'Plaid Cymru']
+    
+    # 1. Did you get sacked?
+    sacked = False
+    sacked_msg = ""
+    if st.session_state.pm_opinion < 40 or st.session_state.party_opinion < 35:
+        sacked = True
+        sacked_msg = "Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the election result, you have been sacked and banished to the backbenches."
+
+    # 2. Government Formation Logic
+    coalition_formed = False
+    coalition_partner = None
+    minority_gov = False
+    win = False
+
+    if is_regional:
+        # Regionals win if they dominate their region and hold balance of power
+        target = 40 if st.session_state.party == 'SNP' else 15
+        max_reg = 57 if st.session_state.party == 'SNP' else 32
+        if player_seats >= target:
+            result_title = f"{st.session_state.party} Regional Dominance ({player_seats}/{max_reg})"
+            win = True
+            if seats[largest] < 326:
+                gov_type = "Holding the Balance of Power in Westminster"
+            else:
+                gov_type = "Strong Regional Opposition"
+        else:
+            result_title = f"{st.session_state.party} Regional Defeat ({player_seats} seats)"
+            gov_type = "Loss of Regional Mandate"
+    
+    else:
+        # National Parties
+        if player_seats >= 326:
+            result_title = f"{st.session_state.party} Majority Government"
+            gov_type = f"Working Majority of {player_seats - 326}"
+            win = True
+        else:
+            # Hung Parliament! Try to form a coalition
+            result_title = "Hung Parliament"
+            
+            # Left Wing Coalition pool vs Right Wing Coalition pool
+            left_bloc = ['Labour', 'Liberal Democrats', 'Green Party', 'SNP', 'Plaid Cymru']
+            right_bloc = ['Conservative', 'Reform UK', 'Liberal Democrats']
+            
+            my_bloc = left_bloc if st.session_state.party in left_bloc else right_bloc
+            
+            # Find best partner
+            for partner in my_bloc:
+                if partner != st.session_state.party:
+                    if player_seats + seats[partner] >= 326:
+                        coalition_formed = True
+                        coalition_partner = partner
+                        break
+            
+            if coalition_formed:
+                gov_type = f"Formal Coalition with {coalition_partner}"
+                win = True
+            elif player_seats == seats[largest]:
+                minority_gov = True
+                gov_type = "Fragile Minority Government"
+                win = True
+            else:
+                gov_type = "Sent to the Opposition Benches"
+
+    # 3. Final Render
+    box_color = '#111111'
+    if win and not sacked: box_color = '#2b5440'
+    elif sacked: box_color = '#8b0000'
+
+    st.markdown(f'''
+    <div style='background-color: {box_color}; padding: 20px; border-radius: 10px; color: white; text-align: center; border: 2px solid #c9a45c;'>
+        <h2>{result_title}</h2>
+        <h4 style='color: #c9a45c;'>{gov_type}</h4>
+        <p style='font-size: 18px;'>Your Seats: <b>{player_seats}</b> | Target for UK Majority: 326</p>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Show full Parliament breakdown
+    st.markdown("### 🏛️ The New Parliament")
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+    col1.metric("LAB", seats['Labour'])
+    col2.metric("CON", seats['Conservative'])
+    col3.metric("LDEM", seats['Liberal Democrats'])
+    col4.metric("REF", seats['Reform UK'])
+    col5.metric("GRN", seats['Green Party'])
+    col6.metric("SNP", seats['SNP'])
+    col7.metric("PC", seats['Plaid Cymru'])
+
+    st.divider()
+
+    if sacked:
+        humphrey_message("I am so sorry, Chancellor. The Prime Minister feels that your continued presence at the Treasury is... politically sub-optimal. The removal van is waiting at the back door of Number 11.")
+        st.error(sacked_msg)
+        if st.button('Resign & Start New Career'):
+            st.session_state.clear()
+            st.rerun()
+    elif win:
+        humphrey_message(f"Congratulations, Chancellor. We have survived the electorate. {'Managing a coalition partner will be tedious' if coalition_formed else 'A minority government will be a legislative nightmare'}, but you remain at the Treasury.")
+        st.success("You retained power and survived the election!")
+        if st.button('Continue as Chancellor'):
+            st.session_state.term += 1
+            st.session_state.year = 1
+            st.session_state.block = 1
+            st.session_state.step = 'game'
+            st.rerun()
+    else:
+        humphrey_message("The electorate has spoken, Chancellor. Or rather, they have shouted. We have been thoroughly evicted. I shall miss our little chats.")
+        st.error('Your party lost power.')
+        if st.button('Start New Career'):
+            st.session_state.clear()
+            st.rerun()
+    st.stop()
+
 
 # ==================== ACTIVE CRISIS SCREEN ====================
 if st.session_state.active_crisis is not None:
@@ -291,17 +400,22 @@ if st.session_state.active_crisis is not None:
         st.session_state.active_crisis = None
         st.rerun()
     crisis_card(crisis['title'])
-    
     humphrey_message(crisis['humphrey'])
-    
-    if st.session_state.get('crisis_reason'):
-        st.caption(st.session_state.crisis_reason)
+    if st.session_state.get('crisis_reason'): st.caption(st.session_state.crisis_reason)
         
     labels = scen.option_labels(crisis)
     crisis_choice = st.radio('Choose emergency response:', labels)
+    
     if st.button('Resolve Crisis'):
         snapshot_metrics()
-        st.session_state.message = scen.resolve(crisis, labels.index(crisis_choice))
+        idx = labels.index(crisis_choice)
+        st.session_state.message = scen.resolve(crisis, idx)
+        
+        # Quick political drift for crises:
+        ideology_proxy = ['Hard Left', 'Centric', 'Free-Market'] # Rough proxy map for crisis choices
+        proxy = ideology_proxy[idx] if idx < len(ideology_proxy) else 'Centric'
+        update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
+
         st.session_state.active_crisis = None
         st.rerun()
     st.stop()
@@ -313,7 +427,6 @@ if st.session_state.block < 4:
     if decision_data:
         st.subheader(f"Year {st.session_state.year} - Block {st.session_state.block}: {decision_data['title']}")
         st.write(decision_data['text'])
-        
         humphrey_message(decision_data['humphrey'])
         
         choice = st.radio('Select strategy:', decision_data['options'])
@@ -337,18 +450,21 @@ if st.session_state.block < 4:
             process_block_execution(st.session_state.year, st.session_state.block + 1, selected_type)
     else:
         st.write("No decision data found for this block.")
-        if st.button("Skip Block"):
-            process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
+        if st.button("Skip Block"): process_block_execution(st.session_state.year, st.session_state.block + 1, 'Centric')
 
 elif st.session_state.block == 4:
     st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
     humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
-    
     st.info("Head to the '💷 The Budget' tab above to finalize your tax and spending plans for the year.")
     
     if st.button('End Year & Advance to Spring', type='primary'):
         snapshot_metrics() 
         budget.apply_ongoing()
+        
+        # Minor bump to PM confidence if budget goes smoothly
+        if st.session_state.headroom > 0: st.session_state.pm_opinion = min(100, st.session_state.pm_opinion + 5)
+        else: st.session_state.pm_opinion -= 5
+        
         st.session_state.year += 1
         st.session_state.block = 1
         st.rerun()
