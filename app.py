@@ -19,12 +19,17 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.block = 1
     st.session_state.term = 1
     st.session_state.active_crisis = None
-    st.session_state.last_ideology = None
     st.session_state.headlines = None
     st.session_state.budget_passed = False
     st.session_state.sacked = False
+    st.session_state.imf_bailout = False
+    
+    st.session_state.pledges = []
+    st.session_state.broken_pledges = []
+    st.session_state.approval_cap = 100
+    st.session_state.macro_cycle = 'Stagnation'
 
-    # Economic Stats
+    # Economic Stats (Will be overwritten by Scenario choice)
     st.session_state.approval = 48.0
     st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
@@ -35,36 +40,60 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.growth = 0.8
     st.session_state.headroom = 8.5
 
-    # Political Capital Stats
     st.session_state.pm_opinion = 75.0
     st.session_state.cab_opinion = 65.0
     st.session_state.party_opinion = 70.0
     st.session_state.backbench_opinion = 60.0
     st.session_state.media_opinion = 50.0
 
-    # Deltas
-    st.session_state.prev_approval = 48.0
-    st.session_state.prev_market = 65.0
-    st.session_state.prev_growth = 0.8
-    st.session_state.prev_headroom = 8.5
-    st.session_state.prev_debt = 98.2
-    st.session_state.prev_pm = 75.0
-    st.session_state.prev_cab = 65.0
-    st.session_state.prev_party = 70.0
-    st.session_state.prev_backbench = 60.0
-    st.session_state.prev_media = 50.0
-
     st.session_state.poll_history = {
         'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 
         'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]
     }
-
-    st.session_state.message = "Welcome to Number 11 Downing Street. The economy is fragile, inflation is sticky, and bond markets are watching."
+    st.session_state.message = ""
     st.session_state.initialized = True
 
-# ==================== LOGIC FUNCTIONS ====================
-def _clip(val, minimum=0.0, maximum=100.0):
-    return max(minimum, min(maximum, val))
+def _clip(val, minimum=0.0, maximum=None):
+    cap = maximum if maximum else st.session_state.get('approval_cap', 100)
+    return max(minimum, min(cap, val))
+
+# ==================== PLEDGES & MACRO CYCLES ====================
+def check_pledges():
+    s = st.session_state
+    if 'budget_applied' not in s: return
+    b = s.budget_applied
+    broken_this_turn = []
+    
+    if "Never raise Basic Income Tax" in s.pledges and b['tax']['inc_basic'] > 20 and "Never raise Basic Income Tax" not in s.broken_pledges:
+        broken_this_turn.append("Never raise Basic Income Tax")
+    if "Never raise VAT" in s.pledges and b['tax']['vat'] > 20 and "Never raise VAT" not in s.broken_pledges:
+        broken_this_turn.append("Never raise VAT")
+    if "Never raise Corporation Tax" in s.pledges and b['tax']['corp'] > 25 and "Never raise Corporation Tax" not in s.broken_pledges:
+        broken_this_turn.append("Never raise Corporation Tax")
+    if "Protect NHS Funding" in s.pledges and s.dept_spend['health'] < 215.0 and "Protect NHS Funding" not in s.broken_pledges:
+        broken_this_turn.append("Protect NHS Funding")
+    if "Eliminate the Deficit" in s.pledges and s.deficit > 0 and s.year == 5 and "Eliminate the Deficit" not in s.broken_pledges:
+        broken_this_turn.append("Eliminate the Deficit")
+        
+    for p in broken_this_turn:
+        s.broken_pledges.append(p)
+        s.approval_cap -= 15
+        s.approval = _clip(s.approval - 15)
+        s.media_opinion = _clip(s.media_opinion - 25)
+        s.message += f" 🚨 U-TURN SCANDAL: You broke your manifesto pledge: '{p}'. The press is tearing you apart!"
+
+def shift_macro_cycle():
+    s = st.session_state
+    cycles = ['Boom', 'Stagnation', 'Recession']
+    if random.random() < 0.20:
+        old = s.macro_cycle
+        s.macro_cycle = random.choice([c for c in cycles if c != old])
+        s.message += f" 🌍 GLOBAL MACRO SHIFT: The world economy has entered a {s.macro_cycle}."
+
+def check_imf_bailout():
+    s = st.session_state
+    if s.debt > 120 and s.market_conf < 15 and not s.imf_bailout:
+        s.imf_bailout = True
 
 def generate_headlines(ideology, is_budget=False, headroom=0):
     if is_budget:
@@ -130,19 +159,17 @@ def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
     s.cab_opinion += approval_diff + random.uniform(-2, 3)
     s.media_opinion += (approval_diff * 0.8) + ((s.market_conf - s.prev_market) * 0.5)
 
-    s.pm_opinion = _clip(s.pm_opinion)
-    s.cab_opinion = _clip(s.cab_opinion)
-    s.party_opinion = _clip(s.party_opinion)
-    s.backbench_opinion = _clip(s.backbench_opinion)
-    s.media_opinion = _clip(s.media_opinion)
+    s.pm_opinion = _clip(s.pm_opinion, 0, 100)
+    s.cab_opinion = _clip(s.cab_opinion, 0, 100)
+    s.party_opinion = _clip(s.party_opinion, 0, 100)
+    s.backbench_opinion = _clip(s.backbench_opinion, 0, 100)
+    s.media_opinion = _clip(s.media_opinion, 0, 100)
 
 def update_polling_data(current_year):
     gov_party = st.session_state.party
     
-    # LINK 1: State of the Nation score now directly impacts your polling!
     nation_score = country._overall(st.session_state.country) * 100
     nation_bonus = (nation_score - 50) * 0.15 
-    
     approval_boost = ((st.session_state.approval - 50) * 0.35) + nation_bonus
 
     if current_year not in st.session_state.poll_history['Year']:
@@ -173,11 +200,9 @@ def snapshot_metrics():
 
 def process_block_execution(next_year, next_block, chosen_ideology, effect=None):
     snapshot_metrics()
-    st.session_state.last_ideology = chosen_ideology
     st.session_state.headlines = generate_headlines(chosen_ideology)
     country.apply_decision(chosen_ideology)
 
-    # LINK 4: Direct decision effects hit the country state
     if effect:
         country_effects = {k: v for k, v in effect.items() if k in country.STATS}
         if country_effects:
@@ -186,21 +211,19 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     if st.session_state.gilt_yield > 4.5: st.session_state.headroom = round(st.session_state.headroom - 0.8, 1)
     if st.session_state.inflation > 3.0: st.session_state.approval = round(st.session_state.approval - 1.5, 1)
 
-    # LINK 2: The "Sick Workforce" & "Crumbling Infrastructure" Drags
     if st.session_state.country['nhs_waiting'] > 7.5:
         st.session_state.growth = round(st.session_state.growth - 0.15, 2)
         st.session_state.message += " The massive NHS backlog is dragging down economic growth."
-        
     if st.session_state.country['rail'] < 70:
         st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
         st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
-
     if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
         st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
         st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
 
     update_political_capital(chosen_ideology, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
     update_polling_data(next_year)
+    check_imf_bailout()
     
     st.session_state.active_crisis = scen.pick_next(st.session_state.year, st.session_state.block, chosen_ideology)
     st.session_state.year = next_year
@@ -210,44 +233,66 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
 # ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
     st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
-    st.markdown('### Step 1: Choose Your Government')
+    st.markdown('### Step 1: Form Your Government')
     
     party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru'])
+    scenario = st.selectbox('Historical Scenario:', ["2026: The Fragile Present", "2008: The Great Financial Crash", "1978: Winter of Discontent"])
+    pledge_choices = st.multiselect('Select 3 Core Manifesto Pledges (Breaking these will cap your approval permanently):', 
+                                    ["Never raise Basic Income Tax", "Never raise VAT", "Never raise Corporation Tax", "Protect NHS Funding", "Eliminate the Deficit"],
+                                    max_selections=3)
 
-    col_a, col_b = st.columns([1, 4])
-    with col_a:
-        if st.button('Enter Number 11', type='primary'):
-            st.session_state.party = party_choice
-            
-            if party_choice == 'Conservative':
-                st.session_state.approval = 46; st.session_state.market_conf = 70
-                st.session_state.poll_history = {'Year': [1], 'Labour': [32], 'Conservative': [38], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
-            elif party_choice == 'Liberal Democrats':
-                st.session_state.approval = 49; st.session_state.market_conf = 60
-                st.session_state.poll_history = {'Year': [1], 'Labour': [30], 'Conservative': [30], 'Liberal Democrats': [24], 'Reform UK': [8], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
-            elif party_choice == 'Reform UK':
-                st.session_state.approval = 42; st.session_state.market_conf = 55
-                st.session_state.poll_history = {'Year': [1], 'Labour': [28], 'Conservative': [28], 'Liberal Democrats': [10], 'Reform UK': [26], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
-            elif party_choice == 'Green Party':
-                st.session_state.approval = 45; st.session_state.market_conf = 50
-                st.session_state.poll_history = {'Year': [1], 'Labour': [28], 'Conservative': [26], 'Liberal Democrats': [12], 'Reform UK': [8], 'Green Party': [22], 'SNP': [3], 'Plaid Cymru': [1]}
-            elif party_choice == 'SNP':
-                st.session_state.approval = 45; st.session_state.market_conf = 50
-                st.session_state.poll_history = {'Year': [1], 'Labour': [34], 'Conservative': [30], 'Liberal Democrats': [10], 'Reform UK': [9], 'Green Party': [4], 'SNP': [12], 'Plaid Cymru': [1]}
-            elif party_choice == 'Plaid Cymru':
-                st.session_state.approval = 45; st.session_state.market_conf = 50
-                st.session_state.poll_history = {'Year': [1], 'Labour': [34], 'Conservative': [30], 'Liberal Democrats': [10], 'Reform UK': [9], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [10]}
-            else:
-                st.session_state.approval = 48; st.session_state.market_conf = 65
-                st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
+    if len(pledge_choices) != 3:
+        st.warning("⚠️ You must select exactly 3 Manifesto Pledges to enter Number 11.")
+    else:
+        col_a, col_b = st.columns([1, 4])
+        with col_a:
+            if st.button('Enter Number 11', type='primary'):
+                st.session_state.party = party_choice
+                st.session_state.pledges = pledge_choices
+                
+                # Apply Scenario Modifiers
+                if scenario == "2008: The Great Financial Crash":
+                    st.session_state.debt = 60.0; st.session_state.deficit = 12.5; st.session_state.inflation = 4.0; st.session_state.interest_rate = 0.5
+                    st.session_state.market_conf = 35.0; st.session_state.headroom = -35.0; st.session_state.growth = -2.5
+                    st.session_state.macro_cycle = 'Recession'
+                    msg = "Welcome to 2008, Chancellor. The global banking sector has collapsed, revenues are in freefall, and the deficit is terrifying. Good luck."
+                elif scenario == "1978: Winter of Discontent":
+                    st.session_state.debt = 55.0; st.session_state.deficit = 6.0; st.session_state.inflation = 15.5; st.session_state.interest_rate = 12.0
+                    st.session_state.gilt_yield = 14.0; st.session_state.approval = 35.0; st.session_state.market_conf = 40.0; st.session_state.growth = -1.0
+                    st.session_state.macro_cycle = 'Stagnation'
+                    msg = "Welcome to the 1970s, Chancellor. Inflation is rampant, borrowing costs are lethal, and the unions are preparing for war."
+                else:
+                    st.session_state.macro_cycle = 'Stagnation'
+                    msg = "Good morning, Chancellor. I am Sir Humphrey Appleby. The economy is fragile and the bond markets are watching closely."
 
-            st.session_state.step = 'game'
-            st.session_state.message = "Good morning, Chancellor. I am Sir Humphrey Appleby. My job is to protect you from the press, the public, and most importantly, your own backbenchers."
-            st.rerun()
-    with col_b:
-        if st.button('Reset Session Cache'):
-            st.session_state.clear()
-            st.rerun()
+                # Set Starting Polls
+                if party_choice == 'Conservative':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [32], 'Conservative': [38], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
+                elif party_choice == 'Liberal Democrats':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [30], 'Conservative': [30], 'Liberal Democrats': [24], 'Reform UK': [8], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
+                elif party_choice == 'Reform UK':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [28], 'Conservative': [28], 'Liberal Democrats': [10], 'Reform UK': [26], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
+                elif party_choice == 'Green Party':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [28], 'Conservative': [26], 'Liberal Democrats': [12], 'Reform UK': [8], 'Green Party': [22], 'SNP': [3], 'Plaid Cymru': [1]}
+                elif party_choice == 'SNP':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [34], 'Conservative': [30], 'Liberal Democrats': [10], 'Reform UK': [9], 'Green Party': [4], 'SNP': [12], 'Plaid Cymru': [1]}
+                elif party_choice == 'Plaid Cymru':
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [34], 'Conservative': [30], 'Liberal Democrats': [10], 'Reform UK': [9], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [10]}
+                else:
+                    st.session_state.poll_history = {'Year': [1], 'Labour': [38], 'Conservative': [32], 'Liberal Democrats': [12], 'Reform UK': [10], 'Green Party': [4], 'SNP': [3], 'Plaid Cymru': [1]}
+
+                # Legacy Trackers
+                st.session_state.start_debt = st.session_state.debt
+                st.session_state.start_growth = st.session_state.growth
+                
+                snapshot_metrics()
+                st.session_state.step = 'game'
+                st.session_state.message = msg
+                st.rerun()
+        with col_b:
+            if st.button('Reset Session Cache'):
+                st.session_state.clear()
+                st.rerun()
     st.stop()
 
 # ==================== MAIN HEADER & DASHBOARD ====================
@@ -260,23 +305,33 @@ d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1
 d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.markdown(stat_card('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%', "The percentage of the electorate that supports your government. High approval boosts PM confidence and helps win elections.", d_approval), unsafe_allow_html=True)
-c2.markdown(stat_card('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%', "How much the financial sector trusts your economic management. If this drops too low, borrowing costs spike and trigger a fiscal crisis.", d_market), unsafe_allow_html=True)
-c3.markdown(stat_card('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%', "The annual rate of GDP growth. Higher growth naturally increases tax revenues over time.", d_growth), unsafe_allow_html=True)
-c4.markdown(stat_card('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', "Your fiscal safety margin. Dropping into the negative breaks fiscal rules and panics the markets.", d_headroom), unsafe_allow_html=True)
-c5.markdown(stat_card('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', "Total government debt as a % of GDP. High debt massively increases annual interest payments, eating into your budget.", d_debt, inverse=True), unsafe_allow_html=True)
+c1.markdown(stat_card('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%', "The percentage of the electorate that supports your government.", d_approval), unsafe_allow_html=True)
+c2.markdown(stat_card('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%', "How much the financial sector trusts your economic management. If this hits 0 and Debt >120%, the IMF takes over.", d_market), unsafe_allow_html=True)
+c3.markdown(stat_card('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%', "The annual rate of GDP growth.", d_growth), unsafe_allow_html=True)
+c4.markdown(stat_card('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', "Your fiscal safety margin. Dropping into the negative breaks fiscal rules.", d_headroom), unsafe_allow_html=True)
+c5.markdown(stat_card('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', "Total government debt as a % of GDP. High debt triggers IMF bailouts.", d_debt, inverse=True), unsafe_allow_html=True)
 
 st.markdown("#### 🏛️ Political Capital")
 p1, p2, p3, p4, p5 = st.columns(5)
 p1.markdown(stat_card("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}", "The Prime Minister's trust in you. If this drops below 40, you will be sacked!", (st.session_state.pm_opinion - st.session_state.prev_pm)), unsafe_allow_html=True)
 p2.markdown(stat_card('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}", "The backing of your fellow ministers. Kept high by good public approval and generous budgets.", (st.session_state.cab_opinion - st.session_state.prev_cab)), unsafe_allow_html=True)
-p3.markdown(stat_card('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}", "Overall harmony within your party. If this drops below 35, you will face a leadership crisis and be sacked.", (st.session_state.party_opinion - st.session_state.prev_party)), unsafe_allow_html=True)
-p4.markdown(stat_card('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}", "The mood of your MPs. Keep them happy by making decisions that align with your party's core ideology.", (st.session_state.backbench_opinion - st.session_state.prev_backbench)), unsafe_allow_html=True)
-p5.markdown(stat_card('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}", "How the press is reporting on you. Driven by a mix of public approval and market stability.", (st.session_state.media_opinion - st.session_state.prev_media)), unsafe_allow_html=True)
+p3.markdown(stat_card('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}", "Overall harmony within your party. Below 40 triggers Leadership Challenges.", (st.session_state.party_opinion - st.session_state.prev_party)), unsafe_allow_html=True)
+p4.markdown(stat_card('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}", "The mood of your MPs. Below 20 causes them to vote down your budget and collapse the government.", (st.session_state.backbench_opinion - st.session_state.prev_backbench)), unsafe_allow_html=True)
+p5.markdown(stat_card('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}", "How the press is reporting on you. Below 30 triggers Tabloid Scandals.", (st.session_state.media_opinion - st.session_state.prev_media)), unsafe_allow_html=True)
 
 st.divider()
 
-# ==================== ELECTION NIGHT ENGINE ====================
+# ==================== ELECTION NIGHT ENGINE & IMF BAILOUT ====================
+
+if st.session_state.get('imf_bailout'):
+    st.subheader('🚨 IMF BAILOUT TRIGGERED: GAME OVER')
+    humphrey_message("Chancellor, the markets have completely lost faith in our ability to govern. The Pound is in freefall, we cannot sell our gilts, and the National Debt is unsustainable. The Prime Minister has just signed an emergency bailout package with the International Monetary Fund. They are now dictating our fiscal policy. You have been relieved of your duties.")
+    st.error("You bankrupted the country. The IMF has forced massive austerity and your government is expected to be wiped out at the next election.")
+    if st.button('Start New Career'):
+        st.session_state.clear()
+        st.rerun()
+    st.stop()
+
 if st.session_state.year > 5:
     st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
 
@@ -307,7 +362,6 @@ if st.session_state.year > 5:
 
     coalition_formed = False
     coalition_partner = None
-    minority_gov = False
     win = False
     majority_margin = 0
 
@@ -346,7 +400,6 @@ if st.session_state.year > 5:
                 majority_margin = (player_seats + seats[coalition_partner]) - 326
                 win = True
             elif player_seats == seats[largest]:
-                minority_gov = True
                 gov_type = "Fragile Minority Government"
                 majority_margin = 0
                 win = True
@@ -374,6 +427,16 @@ if st.session_state.year > 5:
     col5.metric("GRN", seats['Green Party'])
     col6.metric("SNP", seats['SNP'])
     col7.metric("PC", seats['Plaid Cymru'])
+
+    # LEGACY REPORT CARD
+    st.markdown("### 📜 The Treasury Record (Legacy Report)")
+    l1, l2, l3, l4 = st.columns(4)
+    debt_diff = st.session_state.debt - st.session_state.start_debt
+    growth_diff = st.session_state.growth - st.session_state.start_growth
+    l1.metric("Debt Inherited vs Now", f"{st.session_state.debt:.1f}%", f"{debt_diff:+.1f}%", delta_color='inverse')
+    l2.metric("Growth Inherited vs Now", f"{st.session_state.growth:.1f}%", f"{growth_diff:+.1f}%")
+    l3.metric("Total Homes Built", f"{st.session_state.country['homes_built'] * 5:.0f}k")
+    l4.metric("Manifesto U-Turns", f"{len(st.session_state.broken_pledges)}")
 
     st.divider()
 
@@ -452,6 +515,8 @@ else:
             if st.button('Proceed to Spring', type='primary'):
                 snapshot_metrics() 
                 budget.apply_ongoing()
+                check_pledges()
+                shift_macro_cycle()
                 
                 if st.session_state.headroom > 0: st.session_state.pm_opinion = min(100, st.session_state.pm_opinion + 5)
                 else: st.session_state.pm_opinion -= 5
@@ -460,6 +525,7 @@ else:
                 st.session_state.block = 1
                 st.session_state.budget_passed = False
                 st.session_state.headlines = None
+                check_imf_bailout()
                 st.rerun()
         else:
             st.subheader(f"Year {st.session_state.year} - Block 3: The Chancellor's Budget")
@@ -485,6 +551,12 @@ else:
         with col_dash:
             tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
             with tab_econ:
+                
+                # Active Pledges & Macro Cycle Display
+                st.markdown(f"**🌍 Global Macro Cycle:** {st.session_state.macro_cycle}")
+                if st.session_state.broken_pledges:
+                    st.markdown(f"**🚨 Broken Pledges (U-Turns):** {', '.join(st.session_state.broken_pledges)}")
+                
                 m1, m2 = st.columns(2)
                 m1.markdown(stat_card('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', 'current', "Shortfall between revenues and spending."), unsafe_allow_html=True)
                 m2.markdown(stat_card('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', 'current', "Rate at which prices are rising."), unsafe_allow_html=True)
@@ -495,6 +567,20 @@ else:
                 st.markdown('### 📈 Voting Intention')
                 df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
                 render_polls(df_polls)
+                
+                st.write('')
+                
+                # The Reshuffle Button!
+                if st.button("🔄 Reshuffle Cabinet", help="Spend 15 PM Opinion and 20 Cabinet Support to purge rebels, restoring 25 Party Unity and 25 Backbench Morale."):
+                    if st.session_state.pm_opinion > 30:
+                        st.session_state.pm_opinion -= 15
+                        st.session_state.cab_opinion -= 20
+                        st.session_state.party_opinion = min(100, st.session_state.party_opinion + 25)
+                        st.session_state.backbench_opinion = min(100, st.session_state.backbench_opinion + 25)
+                        st.session_state.message = "🔄 The Prime Minister has brutally reshuffled the Cabinet! Rebels have been purged to the backbenches. Party Unity is restored, but the Cabinet is terrified."
+                        st.rerun()
+                    else:
+                        st.error("The PM is too weak to survive a reshuffle!")
                 
                 st.write('')
                 if st.button('Resign & Start New Career'):
@@ -536,6 +622,7 @@ else:
                     update_political_capital(proxy, st.session_state.approval - st.session_state.prev_approval, st.session_state.headroom - st.session_state.prev_headroom)
 
                     st.session_state.active_crisis = None
+                    check_imf_bailout()
                     st.rerun()
 
             else:
