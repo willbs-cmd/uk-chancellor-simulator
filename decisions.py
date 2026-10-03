@@ -1,9 +1,10 @@
-"""Policy decisions: 2 blocks per year, followed by the Budget."""
+import random
 
 BLOCKS_PER_YEAR = 3   
 BUDGET_BLOCK = 3
 IDEOLOGIES = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
 
+# --- Term 1 Narrative Arc ---
 DECISIONS = {
     (1, 1): dict(
         title='The First Hundred Days',
@@ -196,3 +197,113 @@ DECISIONS = {
         ],
     ),
 }
+
+# --- Endless Replayability: Term 2+ Random Scenarios ---
+RANDOM_POOL = [
+    dict(
+        title='Universal Basic Income Trial',
+        text='Automation is accelerating, and pilot schemes for Universal Basic Income are gaining massive public traction.',
+        humphrey="Giving people money for simply existing, Chancellor. It defies every principle of the Treasury. Next they will expect us to smile at them.",
+        options=[
+            '1. (Hard Left) Roll out full UBI funded by massive wealth taxes.',
+            '2. (Social Democratic) Launch a generous targeted UBI for lower-income brackets.',
+            '3. (Centric) Run a small, fully-costed regional trial.',
+            '4. (Free-Market) Replace all existing welfare with a flat, meager UBI.',
+            '5. (Fiscal Austerity) Cancel the trial and cut existing welfare to force people into work.',
+        ],
+        effects=[
+            dict(approval=12, market_conf=-15, headroom=-10.0, child_poverty=-8.0, inflation=0.6, message='Full UBI enacted! Markets panic.'),
+            dict(approval=8, headroom=-6.0, child_poverty=-4.0, message='Targeted UBI launched.'),
+            dict(approval=3, headroom=-1.5, message='Regional UBI trial commences.'),
+            dict(market_conf=6, approval=-8, child_poverty=3.0, headroom=4.0, message='Welfare replaced by flat UBI.'),
+            dict(approval=-14, market_conf=8, headroom=5.5, child_poverty=4.0, message='Welfare slashed. Major protests erupt.'),
+        ],
+    ),
+    dict(
+        title='Nuclear Power & Energy Independence',
+        text='The energy grid is vulnerable. A proposal is on your desk to rapidly expand nuclear power generation.',
+        humphrey="Nuclear power, Chancellor. It guarantees energy independence in thirty years, which handily means the cost overruns will be the next government's problem.",
+        options=[
+            '1. (Hard Left) Fully nationalise the energy sector to build state-owned reactors.',
+            '2. (Social Democratic) Co-fund reactors with unionised labor guarantees.',
+            '3. (Centric) Offer moderate state subsidies for private SMR development.',
+            '4. (Free-Market) Deregulate safety standards to speed up private construction.',
+            '5. (Fiscal Austerity) Refuse state funding; rely entirely on foreign capital.',
+        ],
+        effects=[
+            dict(approval=5, market_conf=-12, headroom=-8.0, netzero=5, energy_bills=-50, message='Energy sector nationalised.'),
+            dict(approval=6, headroom=-5.0, growth=0.2, netzero=4, message='State co-funds nuclear plants.'),
+            dict(approval=3, headroom=-2.0, netzero=2, message='Subsidies granted for private SMRs.'),
+            dict(market_conf=8, approval=-6, netzero=4, message='Nuclear safety deregulated. Fast builds approved.'),
+            dict(approval=-4, market_conf=-2, netzero=-2, message='State refuses to fund nuclear power.'),
+        ],
+    ),
+    dict(
+        title='The Four-Day Work Week',
+        text='Trade unions and progressive think tanks are pushing hard for a mandated 4-day working week with no loss of pay.',
+        humphrey="A four-day week, Chancellor? I assume the civil service is exempt. We barely manage to stretch our work across five days as it is.",
+        options=[
+            '1. (Hard Left) Mandate a 4-day week across all sectors by law.',
+            '2. (Social Democratic) Subsidise public sector trials and encourage private adoption.',
+            '3. (Centric) Issue voluntary guidelines for flexible working.',
+            '4. (Free-Market) Ban 4-day mandates and scrap working time directives.',
+            '5. (Fiscal Austerity) Force the public sector back to 5 days and cut holiday allowances.',
+        ],
+        effects=[
+            dict(approval=15, market_conf=-18, growth=-0.5, inflation=0.8, message='4-Day Week mandated! Corporate chaos ensues.'),
+            dict(approval=7, headroom=-3.0, growth=-0.1, message='Public sector 4-day trials begin.'),
+            dict(approval=2, message='Voluntary flexible working guidelines issued.'),
+            dict(market_conf=8, approval=-7, growth=0.3, real_wages=-0.2, message='Working time directives scrapped.'),
+            dict(approval=-12, market_conf=5, nhs_morale=-10, message='Public sector holidays cut.'),
+        ],
+    ),
+    dict(
+        title='University Tuition Fee Crisis',
+        text='Universities are going bankrupt, and student debt is suppressing the housing market for young adults.',
+        humphrey="The universities have run out of money, Chancellor. They assumed they could infinitely charge students for degrees in Media Studies. A classic pyramid scheme.",
+        options=[
+            '1. (Hard Left) Abolish fees entirely and forgive all existing student debt.',
+            '2. (Social Democratic) Halve fees and restore maintenance grants.',
+            '3. (Centric) Link repayment thresholds to inflation.',
+            '4. (Free-Market) Lift the fee cap entirely and let universities compete on price.',
+            '5. (Fiscal Austerity) Raise fees and increase the interest rate on student loans.',
+        ],
+        effects=[
+            dict(approval=12, market_conf=-14, headroom=-9.0, schools=5, message='Tuition fees abolished! Massive state cost.'),
+            dict(approval=8, headroom=-5.0, schools=3, message='Fees halved and grants restored.'),
+            dict(approval=3, headroom=-1.5, message='Repayment thresholds adjusted.'),
+            dict(market_conf=6, approval=-10, schools=-2, message='Fee caps lifted. Education marketized.'),
+            dict(approval=-15, headroom=4.0, schools=-4, message='Fees and interest rates hiked. Students riot.'),
+        ],
+    ),
+    dict(
+        title='The AI Automation Crisis',
+        text='Artificial Intelligence is rapidly displacing white-collar jobs in the City, leading to a spike in sudden unemployment.',
+        humphrey="The algorithms are writing reports faster than we are, Chancellor. If they learn how to leak them to the press, the civil service is doomed.",
+        options=[
+            '1. (Hard Left) Impose a crippling 50% "Robot Tax" to fund displaced workers.',
+            '2. (Social Democratic) Create a state retraining fund paid for by a moderate tech levy.',
+            '3. (Centric) Form a committee to study AI impacts.',
+            '4. (Free-Market) Offer massive R&D tax credits to companies replacing staff with AI.',
+            '5. (Fiscal Austerity) Do nothing; let displaced workers claim standard universal credit.',
+        ],
+        effects=[
+            dict(approval=8, market_conf=-12, headroom=4.0, unemployment=-0.1, message='Robot Tax imposed! Tech sector furious.'),
+            dict(approval=6, headroom=-1.0, growth=0.1, unemployment=-0.2, message='AI retraining fund established.'),
+            dict(approval=1, message='AI Committee formed. Impact deferred.'),
+            dict(market_conf=10, approval=-8, growth=0.4, unemployment=0.5, message='AI automation subsidized. Jobs lost, profits soar.'),
+            dict(approval=-6, market_conf=2, unemployment=0.3, message='AI displacement ignored.'),
+        ],
+    ),
+]
+
+def get_decision(term, year, block):
+    """Returns narrative decisions for Term 1, and randomized pool scenarios for Term 2+."""
+    if term == 1:
+        return DECISIONS.get((year, block))
+    else:
+        # Seed the random choice so it doesn't change every time a slider is moved
+        random.seed(f"{term}-{year}-{block}")
+        choice = random.choice(RANDOM_POOL)
+        random.seed() # reset seed
+        return choice
