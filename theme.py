@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 PARTY_COLOURS = {
     'Labour': '#e4003b',
@@ -12,152 +13,140 @@ PARTY_COLOURS = {
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700;6..72,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 :root {
-  --bench: #0d1f17;      
-  --leather: #163326;    
-  --leather-2: #1d4130;  
+  --bench: #0b1712;      
+  --leather: #142e22;    
+  --leather-2: #1b3d2d;  
   --brass: #c9a45c;      
   --paper: #efe9da;      
   --muted: #9fb3a6;
-  --alarm: #c8412f;
+  --alarm: #d6604f;
 }
 
+/* Global Background & Typography */
 html, body, [class*="css"], .stApp { font-family: 'IBM Plex Sans', sans-serif; }
 .stApp { background: var(--bench); color: var(--paper); }
 .block-container { max-width: 1250px; padding-top: 1.5rem; }
 header[data-testid="stHeader"] { background: transparent; }
 
-h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper); letter-spacing: -0.01em; }
+/* Elegant Headers */
+h1, h2, h3, h4 { 
+    font-family: 'Newsreader', serif !important; 
+    color: var(--paper); 
+    letter-spacing: -0.01em; 
+}
+h2, h3 { 
+    border-bottom: 1px solid #2b5440; 
+    padding-bottom: 8px; 
+    margin-bottom: 16px; 
+}
 
-/* METRIC CARDS */
-[data-testid="stMetric"] {
-  background: var(--leather);
+/* Base text forces */
+.stApp, .stApp p, .stApp li, .stApp label, [data-testid="stMarkdownContainer"] p, 
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, 
+[data-testid="stRadio"] label p { color: var(--paper) !important; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
+
+/* Beautiful Radio Buttons (Policy Choices) */
+[data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
+  background: linear-gradient(145deg, var(--leather), #10261c) !important;
   border: 1px solid #2b5440;
-  border-top: 3px solid var(--brass);
-  border-radius: 6px;
-  padding: 10px 12px 10px;
-  overflow: visible !important;
-}
-
-[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] > div, [data-testid="stMetricLabel"] p {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  color: var(--muted) !important; 
-  font-size: 0.85rem !important;
-  line-height: 1.2 !important;
-}
-
-[data-testid="stMetricValue"] { 
-  font-family: 'Newsreader', serif; 
-  font-size: 1.8rem !important; 
-  font-weight: 700; 
-  color: var(--paper); 
-  white-space: normal !important;
-}
-
-[data-testid="stMetricDelta"] { font-size: 0.8rem; }
-
-[data-testid="stExpander"] { background: var(--leather); border: 1px solid #2b5440; border-radius: 6px; }
-[data-testid="stExpander"] summary p { font-family: 'Newsreader', serif; font-size: 1.1rem; }
-
-div[role="radiogroup"] { gap: 0.5rem; }
-div[role="radiogroup"] > label {
-  background: var(--leather);
-  border: 1px solid #2b5440;
-  border-radius: 6px;
-  padding: 12px 16px;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
   width: 100%;
-  transition: border-color .15s, background .15s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
 }
-div[role="radiogroup"] > label:hover { border-color: var(--brass); background: var(--leather-2); }
-div[role="radiogroup"] > label:has(input:checked) { border-color: var(--brass); background: var(--leather-2); box-shadow: inset 4px 0 0 var(--brass); }
-div[role="radiogroup"] > label p { font-size: 1rem; line-height: 1.45; }
+[data-testid="stRadio"] label:hover { 
+  border-color: var(--brass); 
+  background: linear-gradient(145deg, var(--leather-2), #142e22) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+[data-testid="stRadio"] label:has(input:checked) {
+  border-color: var(--brass); 
+  background: linear-gradient(145deg, var(--leather-2), var(--leather)) !important; 
+  box-shadow: inset 4px 0 0 var(--brass), 0 4px 8px rgba(0,0,0,0.3);
+}
 
+/* Polished Buttons */
 div.stButton > button {
   border-radius: 6px; font-weight: 600; padding: 0.6rem 1.5rem;
-  background: transparent; color: var(--paper); border: 1px solid var(--brass);
+  background: linear-gradient(145deg, var(--leather), #10261c); 
+  color: var(--paper); border: 1px solid var(--brass);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
 }
-div.stButton > button:hover { background: var(--brass); color: var(--bench); border-color: var(--brass); }
-div.stButton > button[kind="primary"] { background: var(--brass); color: var(--bench); }
-div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
-
-.stApp, .stApp p, .stApp li, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
-[data-testid="stMarkdownContainer"] p, [data-testid="stWidgetLabel"] p,
-[data-testid="stWidgetLabel"] label, [data-testid="stRadio"] label p,
-[data-testid="stSelectbox"] div, [data-testid="stExpander"] summary p,
-[data-testid="stExpander"] summary span { color: var(--paper) !important; }
-[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
-[data-testid="stMetricDelta"] svg { fill: currentColor; }
-
-[data-testid="stExpander"] details, [data-testid="stExpander"] details > summary {
-  background: var(--leather) !important; border-radius: 6px;
+div.stButton > button:hover { 
+  background: var(--brass); color: var(--bench); 
+  border-color: var(--brass); 
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
-[data-testid="stExpander"] details > summary:hover { background: var(--leather-2) !important; }
-[data-testid="stExpander"] summary svg { fill: var(--brass); color: var(--brass); }
-
-[data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
-  background: var(--leather) !important; border: 1px solid #2b5440; border-radius: 6px;
-  padding: 12px 16px; width: 100%; margin-bottom: 6px; transition: border-color .15s, background .15s;
-}
-[data-testid="stRadio"] label:hover { border-color: var(--brass); background: var(--leather-2) !important; }
-[data-testid="stRadio"] label:has(input:checked) {
-  border-color: var(--brass); background: var(--leather-2) !important; box-shadow: inset 4px 0 0 var(--brass);
+div.stButton > button[kind="primary"] { 
+  background: var(--brass); color: var(--bench); 
 }
 
-[data-baseweb="select"] > div { background: var(--leather) !important; border-color: #2b5440 !important; }
-[data-baseweb="popover"] li, [data-baseweb="menu"] li { background: var(--leather) !important; color: var(--paper) !important; }
-
-/* READABLE NATIVE TOOLTIPS (any remaining help= icons) */
+/* Native Tooltips */
 [data-testid="stTooltipContent"], [data-testid="stTooltipContent"] *,
 div[data-baseweb="tooltip"], div[data-baseweb="tooltip"] * {
   background-color: #0b1712 !important;
   color: #efe9da !important;
 }
-div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-radius: 6px !important; }
+div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-radius: 6px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; }
 
-/* STAT CARDS WITH HOVER TOOLTIP (one at a time: only the hovered card shows its tip) */
-.sc-card { position: relative; background: var(--leather); border: 1px solid #2b5440; border-top: 3px solid var(--brass);
-  border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; min-height: 108px; }
+/* Custom Stat Cards (The Country/Economy Metrics) */
+.sc-card { 
+  position: relative; 
+  background: linear-gradient(145deg, var(--leather), #10261c); 
+  border: 1px solid #2b5440; 
+  border-top: 3px solid var(--brass);
+  border-radius: 8px; 
+  padding: 12px 16px; 
+  margin-bottom: 12px; 
+  min-height: 108px; 
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 .sc-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .85rem; line-height: 1.2; }
-.sc-info { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none;
-  border: 1px solid var(--muted); border-radius: 50%; font-size: .68rem; font-style: normal; cursor: help; color: var(--muted); }
+.sc-info { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none; border: 1px solid var(--muted); border-radius: 50%; font-size: .68rem; font-style: normal; cursor: help; color: var(--muted); transition: all 0.2s ease; }
 .sc-card:hover .sc-info, .sc-card:focus-within .sc-info { border-color: var(--brass); color: var(--brass); }
-.sc-value { font-family: 'Newsreader', serif; font-size: 1.8rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 2px 0 6px; }
-.sc-delta { display: inline-block; font-size: .8rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
+.sc-value { font-family: 'Newsreader', serif; font-size: 1.9rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 4px 0 6px; }
+.sc-delta { display: inline-block; font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
 .sc-good { color: #6fbf8a; background: rgba(111,191,138,.14); }
 .sc-bad  { color: #e0705d; background: rgba(224,112,93,.14); }
 .sc-flat { color: var(--muted); background: rgba(159,179,166,.12); }
-.sc-tip { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 9999;
-  background: #0b1712; color: #efe9da; border: 1px solid var(--brass); border-radius: 6px; padding: 10px 12px;
-  font-family: 'IBM Plex Sans', sans-serif; font-size: .88rem; font-weight: 400; line-height: 1.45;
-  box-shadow: 0 6px 16px rgba(0,0,0,.6); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s; }
+.sc-tip { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 9999; background: #0b1712; color: #efe9da; border: 1px solid var(--brass); border-radius: 6px; padding: 10px 12px; font-family: 'IBM Plex Sans', sans-serif; font-size: .88rem; font-weight: 400; line-height: 1.45; box-shadow: 0 6px 16px rgba(0,0,0,.6); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s; }
 .sc-card:hover .sc-tip, .sc-card:focus-within .sc-tip { opacity: 1; visibility: visible; }
-/* lift the hovered card's wrappers above everything below it so the tip is never covered */
-div[data-testid="stColumn"]:has(.sc-card:hover), div[data-testid="stElementContainer"]:has(.sc-card:hover),
-div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stElementContainer"]:has(.sc-card:focus-within) {
-  position: relative; z-index: 1000; }
+div[data-testid="stColumn"]:has(.sc-card:hover), div[data-testid="stElementContainer"]:has(.sc-card:hover) { position: relative; z-index: 1000; }
 
-.ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
-.ch-banner h1 { margin: 0; font-size: 2.1rem; }
-.ch-banner .sub { color: var(--muted); margin-top: 4px; }
-.ch-pips { display: flex; gap: 5px; margin-top: 14px; }
-.ch-pip { height: 6px; flex: 1; border-radius: 3px; background: #2b5440; }
+/* Custom HTML Data Tables (Fixes the ugly white Streamlit Dataframe) */
+.ch-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: linear-gradient(145deg, var(--leather), #10261c); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #2b5440; }
+.ch-table th { background: #0b1712; color: var(--brass); font-family: 'Newsreader', serif; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--brass); font-size: 1.1rem; font-weight: 700; }
+.ch-table td { padding: 12px 16px; border-bottom: 1px solid #1a3a2a; color: var(--paper); font-variant-numeric: tabular-nums; }
+.ch-table tr:last-child td { border-bottom: none; }
+
+/* Banner & Misc Elements */
+.ch-banner { border-left: 6px solid var(--brass); background: linear-gradient(145deg, var(--leather), #10261c); padding: 18px 22px; border-radius: 8px; margin-bottom: 14px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+.ch-banner h1 { margin: 0; font-size: 2.2rem; }
+.ch-banner .sub { color: var(--muted); margin-top: 4px; font-weight: 500; }
+.ch-pips { display: flex; gap: 6px; margin-top: 14px; }
+.ch-pip { height: 6px; flex: 1; border-radius: 3px; background: #1a3a2a; }
 .ch-pip.done { background: var(--brass); }
-.ch-pip.now { background: var(--paper); }
+.ch-pip.now { background: var(--paper); box-shadow: 0 0 5px rgba(239, 233, 218, 0.5); }
 
-.ch-crisis { background: #3a1511; border: 1px solid var(--alarm); border-left: 6px solid var(--alarm); border-radius: 6px; padding: 16px 20px; margin: 8px 0 14px; font-family: 'Newsreader', serif; font-size: 1.25rem; }
+.ch-crisis { background: #2a1111; border: 1px solid var(--alarm); border-left: 6px solid var(--alarm); border-radius: 8px; padding: 16px 20px; margin: 8px 0 14px; font-family: 'Newsreader', serif; font-size: 1.3rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
 .ch-crisis small { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: .9rem; color: #e3b3ab; margin-top: 6px; }
 
-.ch-news { background: var(--leather); border-left: 4px solid var(--muted); padding: 10px 16px; border-radius: 4px; color: var(--paper); margin-bottom: 14px; }
+.ch-news { background: linear-gradient(145deg, var(--leather), #10261c); border-left: 4px solid var(--muted); padding: 12px 18px; border-radius: 6px; color: var(--paper); margin-bottom: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
-.ch-bar { display: flex; align-items: center; gap: 12px; margin: 7px 0; }
-.ch-bar .name { width: 150px; color: var(--paper); }
-.ch-bar .track { flex: 1; background: #10281d; border-radius: 4px; height: 20px; overflow: hidden; }
-.ch-bar .fill { height: 100%; border-radius: 4px; }
-.ch-bar .val { width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.ch-bar { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.ch-bar .name { width: 150px; color: var(--paper); font-weight: 500; }
+.ch-bar .track { flex: 1; background: #0b1712; border-radius: 6px; height: 22px; overflow: hidden; border: 1px solid #1a3a2a; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.ch-bar .fill { height: 100%; border-radius: 5px; background-image: linear-gradient(90deg, rgba(255,255,255,0.1), transparent); }
+.ch-bar .val { width: 52px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 </style>
 """
 
@@ -180,10 +169,7 @@ def header(party, term, year, block):
     )
 
 def crisis_card(title):
-    st.markdown(
-        f"<div class='ch-crisis'>{title}<small>Emergency intervention required immediately.</small></div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(f"<div class='ch-crisis'>{title}<small>Emergency intervention required immediately.</small></div>", unsafe_allow_html=True)
 
 def news_box(text):
     st.markdown(f"<div class='ch-news'>{text}</div>", unsafe_allow_html=True)
@@ -194,21 +180,17 @@ def render_polls(df):
     for party, val in latest.sort_values(ascending=False).items():
         c = PARTY_COLOURS.get(party, '#888')
         rows += (f"<div class='ch-bar'><div class='name'>{party}</div>"
-                 f"<div class='track'><div class='fill' style='width:{min(val * 2.2, 100)}%;background:{c}'></div></div>"
+                 f"<div class='track'><div class='fill' style='width:{min(val * 2.2, 100)}%;background-color:{c}'></div></div>"
                  f"<div class='val'>{val:.0f}%</div></div>")
     st.markdown(rows, unsafe_allow_html=True)
-    if len(df) >= 2:
-        plot = df.copy()
-        plot.index = plot.index.astype(int)
-        st.line_chart(plot, color=[PARTY_COLOURS[c] for c in plot.columns])
 
 def humphrey_message(text):
     st.markdown(f"""
-    <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 18px; margin: 15px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: bold; font-size: 1.2rem; margin-bottom: 8px; display: flex; align-items: center;'>
+    <div style='background: linear-gradient(145deg, #16241e, #0e1713); border-left: 5px solid #c9a45c; padding: 18px; margin: 15px 0px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);'>
+        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: 800; font-size: 1.25rem; margin-bottom: 8px; display: flex; align-items: center;'>
             <span style='font-size: 1.4rem; margin-right: 8px;'>💼</span> Memo from Sir Humphrey Appleby
         </div>
-        <div style='font-style: italic; color: #efe9da; font-size: 1.05rem; line-height: 1.5;'>
+        <div style='font-style: italic; color: #efe9da; font-size: 1.05rem; line-height: 1.6;'>
             "{text}"
         </div>
     </div>
@@ -217,24 +199,22 @@ def humphrey_message(text):
 def render_newspapers(left_hl, centre_hl, right_hl):
     st.markdown(f"""
     <div style='display: flex; gap: 15px; margin: 20px 0;'>
-        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #e4003b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 6px; border-top: 6px solid #e4003b; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column;'>
             <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>The Clarion (Left)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{left_hl}"</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.15rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{left_hl}"</div>
         </div>
-        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #faa61a; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 6px; border-top: 6px solid #faa61a; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column;'>
             <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>The Statesman (Centre)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{centre_hl}"</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.15rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{centre_hl}"</div>
         </div>
-        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 4px; border-top: 6px solid #0087dc; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;'>
+        <div style='flex: 1; background: #efe9da; color: #111; padding: 15px; border-radius: 6px; border-top: 6px solid #0087dc; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column;'>
             <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 1.1rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase;'>Daily Standard (Right)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.1rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{right_hl}"</div>
+            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1.15rem; text-align: center; line-height: 1.3; flex-grow: 1; display: flex; align-items: center; justify-content: center;'>"{right_hl}"</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-
 def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
-    """HTML stat card with a hover tooltip. delta_num sets the colour; inverse=True means lower is better."""
     if abs(delta_num) < 1e-9:
         cls = 'sc-flat'; arrow = ''
     else:
@@ -246,3 +226,17 @@ def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
             f"<div class='sc-value'>{value}</div>"
             f"<span class='sc-delta {cls}'>{arrow}{delta_text}</span>"
             f"<div class='sc-tip'>{desc}</div></div>")
+
+def render_imf_table(df):
+    """Converts a pandas DataFrame into our beautiful custom HTML table."""
+    html = "<table class='ch-table'><thead><tr>"
+    for col in df.columns:
+        html += f"<th>{col}</th>"
+    html += "</tr></thead><tbody>"
+    for _, row in df.iterrows():
+        html += "<tr>"
+        for val in row:
+            html += f"<td>{val}</td>"
+        html += "</tr>"
+    html += "</tbody></table>"
+    st.markdown(html, unsafe_allow_html=True)
