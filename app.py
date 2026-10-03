@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import pandas as pd
 
-from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message, render_newspapers, stat_card
+from theme import apply_theme, header, crisis_card, news_box, render_polls, humphrey_message, render_newspapers, stat_card, render_imf_table
 import country
 import budget
 import decisions
@@ -36,11 +36,11 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.approval_cap = 100
     st.session_state.macro_cycle = 'Stagnation'
 
-    # Economic Stats
+    # Economic Stats (Deficit adjusted to represent actual £ Billions for a ~£2.3T economy)
     st.session_state.approval = 48.0
     st.session_state.market_conf = 65.0
     st.session_state.debt = 98.2
-    st.session_state.deficit = 5.4
+    st.session_state.deficit = 125.4
     st.session_state.inflation = 3.2
     st.session_state.interest_rate = 5.0
     st.session_state.gilt_yield = 4.7
@@ -130,8 +130,9 @@ def get_imf_projections():
     y2_i = max(0.1, round(s.inflation + i_mod + random.uniform(-0.2, 0.2), 1))
     y3_i = max(0.1, round(s.inflation + (i_mod * 1.5) + random.uniform(-0.3, 0.3), 1))
     
-    y2_d = round(s.debt + s.deficit + d_mod, 1)
-    y3_d = round(y2_d + s.deficit + (d_mod * 1.5), 1)
+    # Approx convert £B cash deficit back to % GDP for the projection
+    y2_d = round(s.debt + (s.deficit / 23.0) + d_mod, 1)
+    y3_d = round(y2_d + (s.deficit / 23.0) + (d_mod * 1.5), 1)
 
     data = {
         "Metric": ["GDP Growth", "Inflation (CPI)", "National Debt (% GDP)"],
@@ -262,9 +263,11 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     if st.session_state.country['nhs_waiting'] > 7.5:
         st.session_state.growth = round(st.session_state.growth - 0.15, 2)
         st.session_state.message += " The massive NHS backlog is dragging down economic growth."
+        
     if st.session_state.country['rail'] < 70:
         st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
         st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
+
     if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
         st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
         st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
@@ -298,14 +301,14 @@ if st.session_state.step == 'setup':
                 st.session_state.party = party_choice
                 st.session_state.pledges = pledge_choices
                 
-                # Apply Scenario Modifiers
+                # Apply Scenario Modifiers (Fixed cash deficits)
                 if scenario == "2008: The Great Financial Crash":
-                    st.session_state.debt = 60.0; st.session_state.deficit = 12.5; st.session_state.inflation = 4.0; st.session_state.interest_rate = 0.5
+                    st.session_state.debt = 60.0; st.session_state.deficit = 153.0; st.session_state.inflation = 4.0; st.session_state.interest_rate = 0.5
                     st.session_state.market_conf = 35.0; st.session_state.headroom = -35.0; st.session_state.growth = -2.5
                     st.session_state.macro_cycle = 'Recession'
                     msg = "Welcome to 2008, Chancellor. The global banking sector has collapsed, revenues are in freefall, and the deficit is terrifying. Good luck."
                 elif scenario == "1978: Winter of Discontent":
-                    st.session_state.debt = 55.0; st.session_state.deficit = 6.0; st.session_state.inflation = 15.5; st.session_state.interest_rate = 12.0
+                    st.session_state.debt = 55.0; st.session_state.deficit = 45.0; st.session_state.inflation = 15.5; st.session_state.interest_rate = 12.0
                     st.session_state.gilt_yield = 14.0; st.session_state.approval = 35.0; st.session_state.market_conf = 40.0; st.session_state.growth = -1.0
                     st.session_state.macro_cycle = 'Stagnation'
                     msg = "Welcome to the 1970s, Chancellor. Inflation is rampant, borrowing costs are lethal, and the unions are preparing for war."
@@ -563,7 +566,7 @@ else:
             st.write('')
             st.markdown('### 🌐 IMF Article IV Projections')
             st.caption(f"The IMF's baseline forecast for the UK economy, factoring in the current **{st.session_state.macro_cycle}** global cycle.")
-            st.dataframe(get_imf_projections(), use_container_width=True, hide_index=True)
+            render_imf_table(get_imf_projections())
             
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
@@ -622,7 +625,7 @@ else:
                 st.write('')
                 st.markdown('### 🌐 IMF Article IV Projections')
                 st.caption(f"The IMF's baseline forecast for the UK economy, factoring in the current **{st.session_state.macro_cycle}** global cycle.")
-                st.dataframe(get_imf_projections(), use_container_width=True, hide_index=True)
+                render_imf_table(get_imf_projections())
 
                 st.markdown('### 📈 Voting Intention')
                 df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
