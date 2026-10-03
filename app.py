@@ -12,8 +12,9 @@ st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide
 apply_theme()
 
 # ==================== INITIALIZATION ====================
-# SAFETY RESET: If your save file is from an older version, wipe it to prevent crashes!
-if 'initialized' in st.session_state and 'pm_opinion' not in st.session_state:
+# SAFETY RESET: If your save file is missing new variables, wipe it to prevent crashes!
+required_keys = ['pm_opinion', 'prev_pm', 'imf_bailout']
+if 'initialized' in st.session_state and not all(k in st.session_state for k in required_keys):
     st.session_state.clear()
     st.rerun()
 
@@ -114,6 +115,31 @@ def check_imf_bailout():
     s = st.session_state
     if s.debt > 120 and s.market_conf < 15 and not s.imf_bailout:
         s.imf_bailout = True
+
+def get_imf_projections():
+    s = st.session_state
+    cycle = s.macro_cycle
+    
+    g_mod = 1.2 if cycle == 'Boom' else (-1.5 if cycle == 'Recession' else 0.1)
+    i_mod = 0.8 if cycle == 'Boom' else (-1.0 if cycle == 'Recession' else -0.2)
+    d_mod = -1.5 if cycle == 'Boom' else (3.0 if cycle == 'Recession' else 0.5)
+    
+    y2_g = round(s.growth + g_mod + random.uniform(-0.2, 0.2), 1)
+    y3_g = round(s.growth + (g_mod * 1.5) + random.uniform(-0.3, 0.3), 1)
+    
+    y2_i = max(0.1, round(s.inflation + i_mod + random.uniform(-0.2, 0.2), 1))
+    y3_i = max(0.1, round(s.inflation + (i_mod * 1.5) + random.uniform(-0.3, 0.3), 1))
+    
+    y2_d = round(s.debt + s.deficit + d_mod, 1)
+    y3_d = round(y2_d + s.deficit + (d_mod * 1.5), 1)
+
+    data = {
+        "Metric": ["GDP Growth", "Inflation (CPI)", "National Debt (% GDP)"],
+        f"Year {s.year} (Current)": [f"{s.growth}%", f"{s.inflation}%", f"{s.debt}%"],
+        f"Year {s.year + 1}": [f"{y2_g}%", f"{y2_i}%", f"{y2_d}%"],
+        f"Year {s.year + 2}": [f"{y3_g}%", f"{y3_i}%", f"{y3_d}%"]
+    }
+    return pd.DataFrame(data)
 
 def generate_headlines(ideology, is_budget=False, headroom=0):
     if is_budget:
@@ -236,11 +262,9 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     if st.session_state.country['nhs_waiting'] > 7.5:
         st.session_state.growth = round(st.session_state.growth - 0.15, 2)
         st.session_state.message += " The massive NHS backlog is dragging down economic growth."
-        
     if st.session_state.country['rail'] < 70:
         st.session_state.market_conf = round(st.session_state.market_conf - 2.0, 1)
         st.session_state.message += " Crumbling rail infrastructure is frustrating investors."
-
     if st.session_state.country['child_poverty'] > 33.0 or st.session_state.country['homeless'] > 150:
         st.session_state.headroom = round(st.session_state.headroom - 1.0, 1)
         st.session_state.message += " Spiking poverty has forced unbudgeted emergency welfare spending."
@@ -510,7 +534,7 @@ else:
 
     if st.session_state.block == 3:
         if st.session_state.get('budget_passed'):
-            st.subheader("🏛️️ Parliamentary Vote Results")
+            st.subheader("🏛 Parliamentary Vote Results")
             bb = st.session_state.backbench_opinion
             
             base_ayes = 326 if st.session_state.party not in ['SNP', 'Plaid Cymru'] else 300
@@ -534,6 +558,12 @@ else:
                 
             if st.session_state.get('headlines'):
                 render_newspapers(*st.session_state.headlines)
+            
+            # --- IMF PROJECTIONS ON BUDGET TURN ---
+            st.write('')
+            st.markdown('### 🌐 IMF Article IV Projections')
+            st.caption(f"The IMF's baseline forecast for the UK economy, factoring in the current **{st.session_state.macro_cycle}** global cycle.")
+            st.dataframe(get_imf_projections(), use_container_width=True, hide_index=True)
             
             st.divider()
             if st.button('Proceed to Spring', type='primary'):
@@ -587,6 +617,12 @@ else:
                 m3, m4 = st.columns(2)
                 m3.markdown(stat_card('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', 'current', "BoE base interest rate."), unsafe_allow_html=True)
                 m4.markdown(stat_card('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', 'current', "Government borrowing cost."), unsafe_allow_html=True)
+
+                # --- IMF PROJECTIONS ON NORMAL TURNS ---
+                st.write('')
+                st.markdown('### 🌐 IMF Article IV Projections')
+                st.caption(f"The IMF's baseline forecast for the UK economy, factoring in the current **{st.session_state.macro_cycle}** global cycle.")
+                st.dataframe(get_imf_projections(), use_container_width=True, hide_index=True)
 
                 st.markdown('### 📈 Voting Intention')
                 df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
