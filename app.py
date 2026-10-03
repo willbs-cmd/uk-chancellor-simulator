@@ -43,6 +43,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.broken_pledges = []
     st.session_state.approval_cap = 100
     st.session_state.macro_cycle = 'Stagnation'
+    st.session_state.whip_votes = 0
 
     st.session_state.approval, st.session_state.market_conf = 48.0, 65.0
     st.session_state.debt, st.session_state.deficit = 98.2, 125.4
@@ -254,6 +255,7 @@ if st.session_state.step == 'setup':
                 s = st.session_state
                 s.party = party_choice
                 s.pledges = pledge_choices
+                s.whip_votes = 0
                 
                 if scenario == "2008: The Great Financial Crash":
                     s.debt, s.deficit, s.inflation, s.interest_rate = 60.0, 153.0, 4.0, 0.5
@@ -383,9 +385,13 @@ if s.year > 5:
 if s.block == 3:
     if s.get('budget_passed'):
         st.subheader("🏛 Parliamentary Vote Results")
-        commons_ayes = min(650, max(0, int(326 + (s.backbench_opinion / 1.5) - 20 + (s.year * 2))))
-        if s.backbench_opinion > 70: st.success(f"**House of Commons:** Passed with a thumping majority! (Ayes: {commons_ayes})")
-        elif s.backbench_opinion > 40: st.info(f"**House of Commons:** Passed with some grumbling. (Ayes: {commons_ayes})")
+        
+        # Calculate votes including any bribes used!
+        bb = s.backbench_opinion
+        commons_ayes = min(650, max(0, int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.get('whip_votes', 0))))
+        
+        if bb > 70: st.success(f"**House of Commons:** Passed with a thumping majority! (Ayes: {commons_ayes})")
+        elif bb > 40: st.info(f"**House of Commons:** Passed with some grumbling. (Ayes: {commons_ayes})")
         else: st.warning(f"**House of Commons:** Barely scraped through! (Ayes: {commons_ayes})")
             
         humphrey_message("As for the House of Lords, they supported the bill. Though the Parliament Act of 1911 means they cannot vote down a Money Bill anyway.")
@@ -401,6 +407,7 @@ if s.block == 3:
             shift_macro_cycle()
             s.pm_opinion = min(100, s.pm_opinion + (5 if s.headroom > 0 else -5))
             s.year += 1; s.block = 1; s.budget_passed = False; s.headlines = None
+            s.whip_votes = 0 # Reset whip votes for next year
             check_imf_bailout()
             st.rerun()
     else:
@@ -412,24 +419,41 @@ if s.block == 3:
         st.markdown("---")
         st.markdown("### 🏛️ The Whips' Office: Parliamentary Arithmetic")
         draft = budget.read()
+        
+        # Initialize whip votes for this budget round
+        s.whip_votes = s.get('whip_votes', 0)
+        
         revolt_warning = ""
         if s.party in ['Conservative', 'Reform UK'] and (draft['tax']['corp'] - budget.TAXES['corp']['default']) > 0: revolt_warning = "🚨 WHIP WARNING: MPs threatening to rebel over Corp Tax hikes!"
         if s.party in ['Labour', 'Green Party'] and float(draft['spend']['welfare']) < 0: revolt_warning = "🚨 WHIP WARNING: Left wing preparing to rebel over welfare cuts!"
         if revolt_warning: st.error(revolt_warning)
 
-        commons_ayes = min(650, max(0, int(326 + (s.backbench_opinion / 1.5) - 20 + (s.year * 2))))
+        # Calculate ayes factoring in direct whip votes!
+        bb = s.backbench_opinion
+        commons_ayes = min(650, max(0, int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.whip_votes)))
         if revolt_warning: commons_ayes -= 35
         
         if commons_ayes < 326: st.error(f"🚨 PROJECTED DEFEAT: Only {commons_ayes} votes in favour. You need 326.")
         else: st.success(f"✅ PROJECTED PASS: {commons_ayes} votes in favour.")
 
+        st.markdown(f"**Current Backbench Morale:** {bb:.0f}/100 &nbsp;|&nbsp; **Whip Interventions Applied:** +{s.whip_votes} Votes")
+
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
-            if st.button("🥓 Offer Pork-Barrel Funds (-£2B)", disabled=s.headroom < 2.0, use_container_width=True): s.headroom -= 2.0; s.backbench_opinion = min(100, s.backbench_opinion + 15); st.rerun()
+            if st.button("🥓 Offer Pork-Barrel Funds\n(-£2B Headroom, +15 Votes)", disabled=s.headroom < 2.0, use_container_width=True): 
+                st.session_state.headroom -= 2.0
+                st.session_state.whip_votes += 15
+                st.rerun()
         with col_w2:
-            if st.button("🗡️ Threaten Rebels (-15 Unity)", use_container_width=True): s.party_opinion -= 15; s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
+            if st.button("🗡️ Threaten Rebels\n(-15 Unity, +15 Votes)", use_container_width=True, disabled=s.party_opinion < 15): 
+                st.session_state.party_opinion = max(0, st.session_state.party_opinion - 15)
+                st.session_state.whip_votes += 15
+                st.rerun()
         with col_w3:
-            if st.button("🤝 Water Down Reforms (-2 Market)", use_container_width=True): s.market_conf = max(0, s.market_conf - 2.0); s.backbench_opinion = min(100, s.backbench_opinion + 10); st.rerun()
+            if st.button("🤝 Water Down Reforms\n(-2 Market Conf, +10 Votes)", use_container_width=True, disabled=s.market_conf < 2): 
+                st.session_state.market_conf = max(0, st.session_state.market_conf - 2.0)
+                st.session_state.whip_votes += 10
+                st.rerun()
 
         st.divider()
         if st.button('Submit Budget to the Commons & Lords', type='primary'):
@@ -447,14 +471,16 @@ if s.block == 3:
 else:
     col_game, col_dash = st.columns([1.3, 1.0], gap="large")
     with col_dash:
-        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛️ Politics', '🇬🇧 Nation'])
+        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛️️ Politics', '🇬🇧 Nation'])
         with tab_econ:
             st.markdown(f"**🌍 Global Macro Cycle:** `{s.macro_cycle}`")
             if s.broken_pledges: st.markdown(f"**🚨 Broken Pledges:** {', '.join(s.broken_pledges)}")
             
             debt_servicing = round(budget.interest(), 1)
             gbp_usd = round(1.27 * (1.0 + 0.15 * (s.market_conf / 65.0 - 1.0) - 0.05 * (s.inflation / 3.0 - 1.0)), 2)
-            tax_burden = round(36.8 + 0.1 * (s.get('budget_applied', {}).get('tax', {}).get('inc_basic', 20) - 20), 1)
+            
+            b_tax = s.get('budget_applied', {}).get('tax', {})
+            tax_burden = round(36.8 + 0.1 * (b_tax.get('inc_basic', 20) - 20) + 0.08 * (b_tax.get('corp', 25) - 25), 1)
 
             e1, e2 = st.columns(2)
             e1.markdown(stat_card('Annual Deficit', f'£{round(s.deficit, 1)}B', 'current', "Shortfall this year."), unsafe_allow_html=True)
@@ -467,6 +493,8 @@ else:
             e5, e6 = st.columns(2)
             e5.markdown(stat_card('10-Yr Gilt Yield', f'{round(s.gilt_yield, 1)}%', 'current', "Government borrowing cost."), unsafe_allow_html=True)
             e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbp_usd - 1.27), unsafe_allow_html=True)
+
+            st.markdown(f"<div style='text-align:right; font-size:0.85rem; color:#a3b8ad; margin-bottom:12px;'>Overall UK Tax Burden: <b>{tax_burden}% of GDP</b></div>", unsafe_allow_html=True)
 
             st.markdown('### 🌐 IMF Article IV Projections')
             render_imf_table(get_imf_projections())
@@ -503,11 +531,11 @@ else:
                     else: st.error("The Cabinet refuses to endorse a broadcast.")
 
             with col_pa2:
-                if st.button("🍷 Court Media Barons", help="Schmooze newspaper owners (+20 Media Sentiment, -15 Party Unity).", use_container_width=True):
+                if st.button("🍷 Court Media Barons", help="Schmooze newspaper owners (+20 Media Sentiment, -15 Party Unity).", use_container_width=True, disabled=s.party_opinion < 15):
                     s.media_opinion = min(100, s.media_opinion + 20); s.party_opinion = max(0, s.party_opinion - 15)
                     s.message = "🍷 You attended private dinners with media barons. Fleet Street is glowing, but your grassroots are disgusted by the sleaze."
                     st.rerun()
-                if st.button("💰 Solicit Mega-Donors", help="Secure funding to pacify the party machine (+20 Party Unity, -10 Approval).", use_container_width=True):
+                if st.button("💰 Solicit Mega-Donors", help="Secure funding to pacify the party machine (+20 Party Unity, -10 Approval).", use_container_width=True, disabled=s.approval < 10):
                     s.party_opinion = min(100, s.party_opinion + 20); s.approval = max(0, s.approval - 10)
                     s.message = "💰 You secured massive donations. The party machine is well-oiled, but the public sees it as cash-for-access."
                     st.rerun()
