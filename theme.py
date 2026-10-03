@@ -113,14 +113,14 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 
 /* FIX FOR STREAMLIT NATIVE TOOLTIPS (help parameter) */
 div[data-baseweb="tooltip"] > div {
-  background-color: var(--leather) !important;
-  color: var(--paper) !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
   border: 1px solid var(--brass) !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 8px rgba(0,0,0,0.5) !important;
 }
 div[data-baseweb="tooltip"] > div * {
-  color: var(--paper) !important;
+  color: #000000 !important;
   background-color: transparent !important;
 }
 
