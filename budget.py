@@ -13,17 +13,17 @@ TAXES = {
 
 OTHER_RECEIPTS = 290.0  
 
-# Expanded bounds (lo) so you can slash departmental budgets deeply
+# Minimum limits (lo) set to 0 so you can slash budgets completely if desired
 SPEND = {
-    'welfare':   dict(label='Welfare & pensions (£bn)', short='Welfare & pensions', default=330, lo=100, hi=500),
-    'health':    dict(label='NHS & health (£bn)', short='NHS & health', default=215, lo=50, hi=350),
-    'education': dict(label='Education (£bn)', short='Education', default=125, lo=30, hi=200),
-    'defence':   dict(label='Defence (£bn)', short='Defence', default=62, lo=10, hi=120),
-    'transport': dict(label='Transport & infrastructure (£bn)', short='Transport & infrastructure', default=48, lo=10, hi=100),
-    'justice':   dict(label='Policing, courts & prisons (£bn)', short='Policing, courts & prisons', default=45, lo=10, hi=90),
-    'housing':   dict(label='Housing & local government (£bn)', short='Housing & local government', default=60, lo=10, hi=120),
+    'welfare':   dict(label='Welfare & pensions (£bn)', short='Welfare & pensions', default=330, lo=0, hi=500),
+    'health':    dict(label='NHS & health (£bn)', short='NHS & health', default=215, lo=0, hi=350),
+    'education': dict(label='Education (£bn)', short='Education', default=125, lo=0, hi=200),
+    'defence':   dict(label='Defence (£bn)', short='Defence', default=62, lo=0, hi=120),
+    'transport': dict(label='Transport & infrastructure (£bn)', short='Transport & infrastructure', default=48, lo=0, hi=100),
+    'justice':   dict(label='Policing, courts & prisons (£bn)', short='Policing, courts & prisons', default=45, lo=0, hi=90),
+    'housing':   dict(label='Housing & local government (£bn)', short='Housing & local government', default=60, lo=0, hi=120),
     'climate':   dict(label='Climate, energy & industry (£bn)', short='Climate, energy & industry', default=35, lo=0, hi=100),
-    'other':     dict(label='Other departments & admin (£bn)', short='Other departments & admin', default=130, lo=30, hi=200),
+    'other':     dict(label='Other departments & admin (£bn)', short='Other departments & admin', default=130, lo=0, hi=200),
 }
 
 BASE_INTEREST = 105.4 
@@ -157,14 +157,17 @@ def apply_ongoing():
 def _pie(data):
     import altair as alt
     total = sum(data.values())
-    rows = [{'label': f'{k} · {v / total * 100:.1f}%', 'name': k, 'value': v, 'amount': f'£{v:,.0f}bn'}
+    
+    # Fixed invisible pie charts by casting values to float and defining an explicit outerRadius
+    rows = [{'label': f'{k} · {v / total * 100:.1f}%', 'name': k, 'value': float(v), 'amount': f'£{v:,.0f}bn'}
             for k, v in data.items() if v > 0]
     df = pd.DataFrame(rows)
     domain = list(df['label'])
+    
     chart = (alt.Chart(df)
-             .mark_arc(innerRadius=70, stroke='#0d1f17', strokeWidth=2)
+             .mark_arc(innerRadius=70, outerRadius=130, stroke='#0d1f17', strokeWidth=2)
              .encode(
-                 theta=alt.Theta('value:Q', stack=True),
+                 theta=alt.Theta('value:Q'),
                  color=alt.Color('label:N', scale=alt.Scale(domain=domain, range=PALETTE[:len(domain)]),
                                  legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=13, symbolType='square')),
                  tooltip=[alt.Tooltip('name:N', title='Item'), alt.Tooltip('amount:N', title='Amount'), alt.Tooltip('label:N', title='Share')],
@@ -172,10 +175,7 @@ def _pie(data):
              .properties(height=300, background='transparent')
              .configure_view(strokeWidth=0)
              )
-    try:
-        st.altair_chart(chart, width='stretch')
-    except TypeError:
-        st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
 def render():
     ensure()
