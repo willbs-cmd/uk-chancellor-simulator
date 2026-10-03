@@ -198,20 +198,20 @@ d_headroom = round(st.session_state.headroom - st.session_state.prev_headroom, 1
 d_debt = round(st.session_state.debt - st.session_state.prev_debt, 1)
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%')
-c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%')
-c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%')
-c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B')
-c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', delta_color='inverse')
+c1.metric('Public Approval', f"{st.session_state.approval:.1f}%", f"{d_approval:+}%" if d_approval != 0 else '0%', help="The percentage of the electorate that supports your government. High approval boosts PM confidence and helps win elections.")
+c2.metric('Market Confidence', f"{st.session_state.market_conf:.1f}%", f"{d_market:+}%" if d_market != 0 else '0%', help="How much the financial sector trusts your economic management. If this drops too low, borrowing costs spike and trigger a fiscal crisis.")
+c3.metric('Economic Growth', f"{st.session_state.growth:.1f}%", f"{d_growth:+}%" if d_growth != 0 else '0%', help="The annual rate of GDP growth. Higher growth naturally increases tax revenues over time.")
+c4.metric('OBR Headroom', f"£{st.session_state.headroom:.1f}B", f"£{d_headroom:+}B" if d_headroom != 0 else '£0B', help="Your fiscal safety margin. Dropping into the negative breaks fiscal rules and panics the markets.")
+c5.metric('National Debt', f"{st.session_state.debt:.1f}%", f"{d_debt:+}%" if d_debt != 0 else '0%', delta_color='inverse', help="Total government debt as a % of GDP. High debt massively increases annual interest payments, eating into your budget.")
 
 # Row 2: Political Capital Dashboard
 st.markdown("#### 🏛️ Political Capital")
 p1, p2, p3, p4, p5 = st.columns(5)
-p1.metric("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}")
-p2.metric('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}")
-p3.metric('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}")
-p4.metric('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}")
-p5.metric('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}")
+p1.metric("PM's Confidence", f"{st.session_state.pm_opinion:.0f}/100", f"{st.session_state.pm_opinion - st.session_state.prev_pm:+.0f}", help="The Prime Minister's trust in you. If this drops below 40, you will be sacked!")
+p2.metric('Cabinet Support', f"{st.session_state.cab_opinion:.0f}/100", f"{st.session_state.cab_opinion - st.session_state.prev_cab:+.0f}", help="The backing of your fellow ministers. Kept high by good public approval and generous budgets.")
+p3.metric('Party Unity', f"{st.session_state.party_opinion:.0f}/100", f"{st.session_state.party_opinion - st.session_state.prev_party:+.0f}", help="Overall harmony within your party. If this drops below 35, you will face a leadership crisis and be sacked.")
+p4.metric('Backbench Morale', f"{st.session_state.backbench_opinion:.0f}/100", f"{st.session_state.backbench_opinion - st.session_state.prev_backbench:+.0f}", help="The mood of your MPs. Keep them happy by making decisions that align with your party's core ideology.")
+p5.metric('Media Sentiment', f"{st.session_state.media_opinion:.0f}/100", f"{st.session_state.media_opinion - st.session_state.prev_media:+.0f}", help="How the press is reporting on you. Driven by a mix of public approval and market stability.")
 
 st.divider()
 
@@ -337,7 +337,6 @@ if st.session_state.year > 5:
 
 # ==================== MAIN GAMEPLAY LAYOUT ====================
 
-# If it's budget time, let it take up the full width.
 if st.session_state.block == 4:
     st.subheader(f"Year {st.session_state.year} - Block 4: The Chancellor's Budget")
     humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. I have taken the liberty of drafting some 'Special Schemes' to distract the press. Shall we proceed?")
@@ -356,7 +355,6 @@ if st.session_state.block == 4:
         st.session_state.block = 1
         st.rerun()
 
-# Otherwise, split the screen! (Left = Gameplay, Right = Dashboard Tabs)
 else:
     col_game, col_dash = st.columns([1.4, 1.0], gap="large")
     
@@ -364,11 +362,11 @@ else:
         tab_econ, tab_nation = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation'])
         with tab_econ:
             m1, m2 = st.columns(2)
-            m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B')
-            m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%')
+            m1.metric('Annual Deficit', f'£{round(st.session_state.deficit, 1)}B', help="The shortfall between tax revenues and government spending this year. Adds directly to the National Debt.")
+            m2.metric('Inflation Rate', f'{round(st.session_state.inflation, 1)}%', help="The rate at which prices are rising. High inflation severely damages Public Approval and forces Bank Rates up.")
             m3, m4 = st.columns(2)
-            m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%')
-            m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%')
+            m3.metric('Bank Rate', f'{round(st.session_state.interest_rate, 1)}%', help="The Bank of England's base interest rate. High rates cool inflation but strangle Economic Growth.")
+            m4.metric('10-Yr Gilt Yield', f'{round(st.session_state.gilt_yield, 1)}%', help="The interest rate the government pays to borrow money. Spikes when markets lose confidence, destroying your budget.")
 
             st.markdown('### 📈 Voting Intention')
             df_polls = pd.DataFrame(st.session_state.poll_history).set_index('Year')
@@ -384,7 +382,6 @@ else:
             country.render()
             
     with col_game:
-        # Display the news from the last turn at the top of the desk
         if st.session_state.get('message'):
             news_box(st.session_state.message)
             
