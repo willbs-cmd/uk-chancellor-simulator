@@ -263,6 +263,9 @@ if st.session_state.step == 'setup':
         ]
         spad_choice = st.selectbox('Hire a Special Advisor (SpAd):', spad_options)
         
+        # Game Seed input field
+        game_seed = st.number_input('Seed (same seed, same crises):', value=68739, step=1)
+        
     with col2:
         pledge_options = [
             "Never raise Basic Income Tax", 
@@ -283,6 +286,7 @@ if st.session_state.step == 'setup':
         col_btn, _ = st.columns([1, 4])
         with col_btn:
             if st.button('Enter Number 11', type='primary', use_container_width=True):
+                random.seed(int(game_seed))
                 s = st.session_state
                 s.party = party_choice
                 s.pledges = pledge_choices
@@ -590,7 +594,7 @@ else:
             
             e5, e6 = st.columns(2)
             e5.markdown(stat_card('10-Yr Gilt Yield', f'{round(s.gilt_yield, 1)}%', 'current', "Government borrowing cost."), unsafe_allow_html=True)
-            e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbp_usd - 1.27), unsafe_allow_html=True)
+            e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbpi_usd if 'gbpi_usd' in locals() else gbp_usd - 1.27), unsafe_allow_html=True)
 
             st.markdown(f"<div style='text-align:right; font-size:0.85rem; color:#a3b8ad; margin-bottom:12px;'>Overall UK Tax Burden: <b>{tax_burden}% of GDP</b></div>", unsafe_allow_html=True)
             render_parliament_bar(s.seats, s.party)
