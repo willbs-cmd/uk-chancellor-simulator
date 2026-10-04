@@ -609,7 +609,7 @@ else:
             
             st.markdown(stat_card('Media Sentiment', f"{s.media_opinion:.0f}/100", f"{s.media_opinion - s.prev_media:+.0f}", "Below 30 = Scandals", (s.media_opinion - s.prev_media)), unsafe_allow_html=True)
 
-            st.markdown('### 🏛️️ Political Actions')
+            st.markdown('### 🏛️ Political Actions')
             col_pa1, col_pa2 = st.columns(2)
             with col_pa1:
                 if st.button("🔄 Reshuffle Cabinet", help="Spend 15 PM Opinion and 20 Cabinet Support to purge rebels, restoring 25 Party Unity and 25 Backbench Morale.", use_container_width=True):
@@ -672,7 +672,7 @@ else:
                 check_imf_bailout()
                 st.rerun()
         else:
-            decision_data = decisions.get_decision(s.term, s.year, s.block)
+            decision_data = decisions.DECISIONS.get((s.year, s.block))
             if decision_data:
                 st.subheader(f"Block {s.block}: {decision_data['title']}")
                 st.write(decision_data['text'])
