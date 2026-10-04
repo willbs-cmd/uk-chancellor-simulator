@@ -1157,4 +1157,3 @@ else:
         else:
 
             decision_screen()
-```
