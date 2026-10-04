@@ -247,7 +247,7 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
 
 # ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
-    st.title('🏛️️ The UK Chancellor Simulator (Hardcore Mode)')
+    st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
     st.markdown('### Step 1: Form Your Government')
     
     col1, col2 = st.columns([1, 1])
@@ -263,7 +263,6 @@ if st.session_state.step == 'setup':
         ]
         spad_choice = st.selectbox('Hire a Special Advisor (SpAd):', spad_options)
         
-        # Game Seed input field
         game_seed = st.number_input('Seed (same seed, same crises):', value=68739, step=1)
         
     with col2:
@@ -521,7 +520,7 @@ if s.block == 3:
         budget.render()
         
         st.markdown("---")
-        st.markdown("### 🏛️️ The Whips' Office: Parliamentary Arithmetic")
+        st.markdown("### 🏛️ The Whips' Office: Parliamentary Arithmetic")
         draft = budget.read()
         
         s.whip_votes = s.get('whip_votes', 0)
@@ -594,7 +593,7 @@ else:
             
             e5, e6 = st.columns(2)
             e5.markdown(stat_card('10-Yr Gilt Yield', f'{round(s.gilt_yield, 1)}%', 'current', "Government borrowing cost."), unsafe_allow_html=True)
-            e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbpi_usd if 'gbpi_usd' in locals() else gbp_usd - 1.27), unsafe_allow_html=True)
+            e6.markdown(stat_card('GBP/USD', f'${gbp_usd:.2f}', f'{gbp_usd - 1.27:+.2f}', "Strength of Sterling.", gbp_usd - 1.27), unsafe_allow_html=True)
 
             st.markdown(f"<div style='text-align:right; font-size:0.85rem; color:#a3b8ad; margin-bottom:12px;'>Overall UK Tax Burden: <b>{tax_burden}% of GDP</b></div>", unsafe_allow_html=True)
             render_parliament_bar(s.seats, s.party)
