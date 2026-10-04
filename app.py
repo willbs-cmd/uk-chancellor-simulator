@@ -348,7 +348,7 @@ with st.sidebar:
     m_color = "#6fbf8a" if s.macro_cycle == "Boom" else ("#e65c4f" if s.macro_cycle == "Recession" else "#a3b8ad")
     st.markdown(f"<span style='color:{m_color}; font-weight:bold; font-size:1.1rem;'>{s.macro_cycle.upper()}</span>", unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown(f"**🕵️️ Special Advisor:**")
+    st.markdown(f"**🕵️ Special Advisor:**")
     st.markdown(f"<span>{s.spad.split(' (')[0] if s.spad else 'None'}</span>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown(f"**💷 Sleaze Level:** {s.sleaze}%")
@@ -471,7 +471,7 @@ if s.year > 5:
 # ==================== BUDGET BLOCK ====================
 if s.block == 3:
     if s.get('budget_passed'):
-        st.subheader("🏛 Parliamentary Vote Results")
+        st.subheader("🏛️ Parliamentary Vote Results")
         
         bb = s.backbench_opinion
         commons_ayes = int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.get('whip_votes', 0))
@@ -520,7 +520,7 @@ if s.block == 3:
         budget.render()
         
         st.markdown("---")
-        st.markdown("### 🏛️ The Whips' Office: Parliamentary Arithmetic")
+        st.markdown("### 🏛️️ The Whips' Office: Parliamentary Arithmetic")
         draft = budget.read()
         
         s.whip_votes = s.get('whip_votes', 0)
@@ -576,7 +576,7 @@ if s.block == 3:
 else:
     col_game, col_dash = st.columns([1.3, 1.0], gap="large")
     with col_dash:
-        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛 Politics', '🇬🇧 Nation'])
+        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛️ Politics', '🇬🇧 Nation'])
         with tab_econ:
             debt_servicing = round(budget.interest(), 1)
             gbp_usd = round(1.27 * (1.0 + 0.15 * (s.market_conf / 65.0 - 1.0) - 0.05 * (s.inflation / 3.0 - 1.0)), 2)
