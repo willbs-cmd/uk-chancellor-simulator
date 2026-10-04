@@ -11,10 +11,20 @@ import scenarios as scen
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', initial_sidebar_state="expanded")
 apply_theme()
 
+# ==================== CABINET REQUESTS POOL ====================
+CABINET_REQUESTS = [
+    {"minister": "Health Secretary", "text": "The NHS is facing a severe winter crisis. We need an emergency cash injection to open temporary wards.", "cost": 2.5, "accept": {"approval": 3, "cab_opinion": 5, "nhs_waiting": -0.4}, "refuse": {"approval": -4, "cab_opinion": -8, "nhs_morale": -10}},
+    {"minister": "Defence Secretary", "text": "The Armed Forces are desperately short on ammunition reserves. We need immediate procurement funding.", "cost": 1.5, "accept": {"market_conf": 2, "cab_opinion": 5, "approval": 1}, "refuse": {"cab_opinion": -6, "media_opinion": -5}},
+    {"minister": "Education Secretary", "text": "Concrete is crumbling in 50 schools. We need emergency capital funding to prevent immediate closures.", "cost": 1.0, "accept": {"approval": 2, "cab_opinion": 4, "schools": -5}, "refuse": {"approval": -5, "cab_opinion": -5, "media_opinion": -10, "schools": 5}},
+    {"minister": "Transport Secretary", "text": "A major rail operator is on the verge of bankruptcy. We must bail them out to keep the trains running.", "cost": 2.0, "accept": {"rail": 8, "cab_opinion": 2}, "refuse": {"rail": -15, "market_conf": -3, "approval": -4}},
+    {"minister": "Home Secretary", "text": "Prison overcrowding has reached critical levels. We need to rapidly lease private facilities.", "cost": 1.2, "accept": {"prisons": -15, "cab_opinion": 5}, "refuse": {"prisons": 15, "media_opinion": -8, "approval": -3}},
+    {"minister": "Foreign Secretary", "text": "We need to pledge additional foreign aid to secure a crucial international trade deal.", "cost": 1.8, "accept": {"market_conf": 5, "growth": 0.1, "cab_opinion": 4}, "refuse": {"market_conf": -4, "cab_opinion": -5}}
+]
+
 # ==================== INITIALIZATION & SAFETY RESET ====================
 if 'initialized' in st.session_state:
     needs_reset = False
-    req_keys = ['pm_opinion', 'imf_bailout', 'seats', 'pledges', 'spad', 'sleaze']
+    req_keys = ['pm_opinion', 'imf_bailout', 'seats', 'pledges', 'spad', 'sleaze', 'active_request']
     if not all(k in st.session_state for k in req_keys):
         needs_reset = True
         
@@ -33,6 +43,7 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.party = 'Labour'
     st.session_state.year, st.session_state.block, st.session_state.term = 1, 1, 1
     st.session_state.active_crisis = None
+    st.session_state.active_request = None
     st.session_state.last_ideology = None
     st.session_state.headlines = None
     st.session_state.budget_passed = False
@@ -241,9 +252,27 @@ def process_block_execution(next_year, next_block, chosen_ideology, effect=None)
     enforce_spad_passives()
     check_imf_bailout()
     
+    # 40% Chance for a new Cabinet Request on standard blocks
+    if next_block != 3 and random.random() < 0.4:
+        import copy
+        s.active_request = copy.deepcopy(random.choice(CABINET_REQUESTS))
+    else:
+        s.active_request = None
+        
     s.year, s.block = next_year, next_block
     s.active_crisis = scen.pick_next(s.year, s.block, chosen_ideology)
     st.rerun()
+
+# ==================== HELPER TO APPLY REQUEST EFFECTS ====================
+def apply_req_effect(eff_dict):
+    s = st.session_state
+    for k, v in eff_dict.items():
+        if k in ['approval', 'market_conf', 'pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion', 'media_opinion']:
+            s[k] = max(0.0, min(100.0, s[k] + v))
+        elif k in ['growth', 'inflation', 'gilt_yield']:
+            s[k] = round(s[k] + v, 2)
+        else:
+            country.nudge({k: v}, snapshot=False)
 
 # ==================== SETUP SCREEN ====================
 if st.session_state.step == 'setup':
@@ -292,6 +321,7 @@ if st.session_state.step == 'setup':
                 s.spad = spad_choice
                 s.whip_votes = 0
                 s.sleaze = 0
+                s.active_request = None
                 
                 if scenario == "2008: The Great Financial Crash":
                     s.debt, s.deficit, s.inflation, s.interest_rate = 60.0, 153.0, 4.0, 0.5
@@ -499,6 +529,7 @@ if s.block == 3:
                 s.message = "🦅 Your Fiscal Hawk SpAd magically found £2.0B in 'efficiency savings'."
             s.year += 1; s.block = 1; s.budget_passed = False; s.headlines = None
             s.whip_votes = 0
+            s.active_request = None
             enforce_spad_passives()
             check_imf_bailout()
             st.rerun()
@@ -672,6 +703,27 @@ else:
                 check_imf_bailout()
                 st.rerun()
         else:
+            # Render active Cabinet Request if it exists
+            if s.get('active_request'):
+                req = s.active_request
+                st.markdown(f"### 🗂️ Urgent Request: {req['minister']}")
+                st.info(req['text'])
+                col_req1, col_req2 = st.columns(2)
+                with col_req1:
+                    if st.button(f"✅ Approve Funding (-£{req['cost']}B)", use_container_width=True):
+                        s.headroom -= req['cost']
+                        apply_req_effect(req['accept'])
+                        s.message = f"Funding approved for the {req['minister']}."
+                        s.active_request = None
+                        st.rerun()
+                with col_req2:
+                    if st.button("❌ Refuse Request", use_container_width=True):
+                        apply_req_effect(req['refuse'])
+                        s.message = f"You refused the {req['minister']}'s request."
+                        s.active_request = None
+                        st.rerun()
+                st.divider()
+                
             decision_data = decisions.DECISIONS.get((s.year, s.block))
             if decision_data:
                 st.subheader(f"Block {s.block}: {decision_data['title']}")
@@ -679,7 +731,9 @@ else:
                 humphrey_message(decision_data['humphrey'])
                 choice = st.radio('Select strategy:', decision_data['options'])
                 
-                if st.button(f'Execute Policy', type="primary"):
+                # Disable Execute Policy button until the minister request is handled!
+                btn_disabled = s.get('active_request') is not None
+                if st.button(f'Execute Policy', type="primary", disabled=btn_disabled):
                     idx = decision_data['options'].index(choice)
                     effect = decision_data['effects'][idx]
                     s.message = effect.get('message', 'Decision applied.')
@@ -688,4 +742,6 @@ else:
                     process_block_execution(s.year, s.block + 1, ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity'][idx], effect)
             else:
                 st.write("No decision data found for this block.")
-                if st.button("Skip Block"): process_block_execution(s.year, s.block + 1, 'Centric')
+                btn_disabled = s.get('active_request') is not None
+                if st.button("Skip Block", disabled=btn_disabled): 
+                    process_block_execution(s.year, s.block + 1, 'Centric')
