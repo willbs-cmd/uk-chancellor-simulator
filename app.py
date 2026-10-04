@@ -1,4 +1,3 @@
-```python
 """UK Chancellor Simulator (Hardcore Mode): the Streamlit UI.
 All game rules live in engine.py.
 
