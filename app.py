@@ -348,7 +348,7 @@ with st.sidebar:
     m_color = "#6fbf8a" if s.macro_cycle == "Boom" else ("#e65c4f" if s.macro_cycle == "Recession" else "#a3b8ad")
     st.markdown(f"<span style='color:{m_color}; font-weight:bold; font-size:1.1rem;'>{s.macro_cycle.upper()}</span>", unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown(f"**🕵️ Special Advisor:**")
+    st.markdown(f"**🕵️️ Special Advisor:**")
     st.markdown(f"<span>{s.spad.split(' (')[0] if s.spad else 'None'}</span>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown(f"**💷 Sleaze Level:** {s.sleaze}%")
