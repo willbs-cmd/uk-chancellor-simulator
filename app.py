@@ -471,7 +471,7 @@ if s.year > 5:
 # ==================== BUDGET BLOCK ====================
 if s.block == 3:
     if s.get('budget_passed'):
-        st.subheader("🏛️ Parliamentary Vote Results")
+        st.subheader("🏛 Parliamentary Vote Results")
         
         bb = s.backbench_opinion
         commons_ayes = int(326 + (bb / 1.5) - 20 + (s.year * 2) + s.get('whip_votes', 0))
@@ -520,7 +520,7 @@ if s.block == 3:
         budget.render()
         
         st.markdown("---")
-        st.markdown("### 🏛️️ The Whips' Office: Parliamentary Arithmetic")
+        st.markdown("### 🏛 The Whips' Office: Parliamentary Arithmetic")
         draft = budget.read()
         
         s.whip_votes = s.get('whip_votes', 0)
@@ -576,7 +576,7 @@ if s.block == 3:
 else:
     col_game, col_dash = st.columns([1.3, 1.0], gap="large")
     with col_dash:
-        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛️ Politics', '🇬🇧 Nation'])
+        tab_econ, tab_pol, tab_nation = st.tabs(['📊 Economy', '🏛 Politics', '🇬🇧 Nation'])
         with tab_econ:
             debt_servicing = round(budget.interest(), 1)
             gbp_usd = round(1.27 * (1.0 + 0.15 * (s.market_conf / 65.0 - 1.0) - 0.05 * (s.inflation / 3.0 - 1.0)), 2)
@@ -609,7 +609,7 @@ else:
             
             st.markdown(stat_card('Media Sentiment', f"{s.media_opinion:.0f}/100", f"{s.media_opinion - s.prev_media:+.0f}", "Below 30 = Scandals", (s.media_opinion - s.prev_media)), unsafe_allow_html=True)
 
-            st.markdown('### 🏛️ Political Actions')
+            st.markdown('### 🏛️️ Political Actions')
             col_pa1, col_pa2 = st.columns(2)
             with col_pa1:
                 if st.button("🔄 Reshuffle Cabinet", help="Spend 15 PM Opinion and 20 Cabinet Support to purge rebels, restoring 25 Party Unity and 25 Backbench Morale.", use_container_width=True):
