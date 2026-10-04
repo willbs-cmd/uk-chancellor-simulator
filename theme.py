@@ -194,6 +194,34 @@ div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stEleme
 .ch-bar .track { flex: 1; background: #10281d; border-radius: 4px; height: 20px; overflow: hidden; }
 .ch-bar .fill { height: 100%; border-radius: 4px; }
 .ch-bar .val { width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ================= CHANCELLOR'S OFFICE OVERHAUL ================= */
+.stApp { background: radial-gradient(circle at 50% -20%, #234b39 0%, #0d1f17 48%, #08130e 100%); }
+.block-container { max-width: 1380px; padding-top: 1rem; padding-bottom: 3rem; }
+[data-testid="stSidebar"] { background: #0a1811 !important; border-right: 1px solid #2b5440; }
+[data-testid="stSidebar"] > div:first-child { padding-top: 1.2rem; }
+[data-testid="stSidebar"] .stMarkdown h3 { color: var(--brass) !important; text-transform: uppercase; letter-spacing: .08em; font-size: .8rem; }
+.office-crest { text-align:center; padding: 8px 4px 18px; border-bottom:1px solid #2b5440; margin-bottom:14px; }
+.office-crest .crown { font-size:2.1rem; }
+.office-crest .title { font-family:'Newsreader',serif; font-size:1.35rem; color:var(--paper); }
+.office-crest .sub { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; }
+.office-section { background:rgba(22,51,38,.72); border:1px solid #2b5440; border-left:3px solid var(--brass); border-radius:7px; padding:14px 16px; margin:10px 0 16px; }
+.office-kicker { color:var(--brass); text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; font-weight:700; margin-bottom:4px; }
+.office-title { font-family:'Newsreader',serif; color:var(--paper); font-size:1.55rem; line-height:1.1; }
+.office-rule { height:1px; background:linear-gradient(90deg,var(--brass),transparent); margin:10px 0 16px; }
+.office-note { background:#111d18; border:1px solid #294637; border-radius:6px; padding:11px 13px; color:var(--muted); font-size:.88rem; }
+.menu-label { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; margin:12px 0 5px; }
+[data-testid="stSidebar"] div.stButton > button { width:100%; justify-content:flex-start; border-color:#294637; background:#10281d; }
+[data-testid="stSidebar"] div.stButton > button:hover { background:var(--leather-2); }
+[data-testid="stTabs"] [role="tablist"] { gap:3px; border-bottom:1px solid #2b5440; }
+[data-testid="stTabs"] button[role="tab"] { color:var(--muted); background:#10281d; border:1px solid #2b5440; border-bottom:none; border-radius:6px 6px 0 0; padding:9px 16px; }
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color:var(--paper); background:#1d4130; border-color:var(--brass); box-shadow:inset 0 -3px 0 var(--brass); }
+.office-decision { background:linear-gradient(135deg,#17392a,#10271d); border:1px solid #3a624e; border-top:3px solid var(--brass); border-radius:8px; padding:18px 20px; margin:8px 0 16px; box-shadow:0 10px 28px rgba(0,0,0,.18); }
+.office-decision h2 { margin:0 0 5px; }
+.office-alert { background:#321814; border:1px solid #9b4436; border-left:5px solid var(--alarm); border-radius:7px; padding:14px 16px; margin:10px 0 16px; }
+.office-alert .kicker { color:#e0705d; text-transform:uppercase; letter-spacing:.1em; font-size:.72rem; font-weight:700; }
+@media (max-width: 900px) { .block-container { padding-left:1rem; padding-right:1rem; } }
+
 </style>
 """
 

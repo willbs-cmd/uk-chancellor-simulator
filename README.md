@@ -42,3 +42,15 @@ python tests/test_engine.py      # engine tests
 python tests/test_ui_smoke.py    # (via pytest) drives app.py end to end with a mocked Streamlit
 ```
 Tuning knobs: `state.DIFFICULTY`, `engine.CRED_*`, `country.APPROVAL_FEEDBACK`, and the numbers in `decisions.py`.
+
+
+## IMF economic outlook
+
+The simulator includes a three-year IMF baseline based on the IMF's July 2026
+United Kingdom Article IV consultation. The in-game **IMF Outlook** tab shows
+real GDP growth, CPI inflation, unemployment, the public balance and PSNFL for
+2026–2028. The annual macro tick gently anchors growth and inflation toward
+that baseline while preserving player-driven divergence.
+
+The IMF figures are an external baseline, not a forecast of an individual
+playthrough.

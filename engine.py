@@ -6,6 +6,7 @@ import streamlit as st
 import achievements
 import budget
 import country
+import imf_outlook
 import decisions
 import scenarios as scen
 import state
@@ -282,6 +283,15 @@ def economy_tick():
     gilt_target = s.interest_rate - 0.3 + (65 - s.market_conf) * 0.03 + (s.debt - 98.2) * 0.02
     s.gilt_yield = round(_clip(s.gilt_yield + 0.5 * (gilt_target - s.gilt_yield), 1, 9), 2)
     s.growth = round(s.growth + 0.2 * (1.2 - s.growth) - 0.08 * (s.interest_rate - 4.5), 2)
+
+    # IMF baseline anchor: the player's decisions still dominate, but the
+    # underlying economy gently converges toward a current external forecast.
+    # This avoids the simulator becoming detached from the real-world UK cycle.
+    imf = imf_outlook.get(s.year)
+    if imf:
+        s.growth = round(s.growth + 0.20 * (imf['gdp'] - s.growth), 2)
+        s.inflation = round(s.inflation + 0.15 * (imf['inflation'] - s.inflation), 2)
+
     s.debt = round(s.debt + 0.034 * (s.deficit + max(0.0, -s.headroom) * 0.5) - 0.25 * (s.growth - 1.0), 1)
     s.headroom = round(s.headroom + 2.0 * (s.growth - 1.0), 1)
 
