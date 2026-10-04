@@ -1,8 +1,10 @@
 import random
 import streamlit as st
 
+from theme import sparkline_svg
+
 # How strongly the state of the nation feeds back into public approval each turn.
-APPROVAL_FEEDBACK = 60
+APPROVAL_FEEDBACK = 20
 
 # label, start value, bar range (lo..hi), higher_is_better, display format, decimals, and the tooltip description
 STATS = {
@@ -156,7 +158,7 @@ CSS = """
 </style>
 """
 
-def _card(key, state, prev):
+def _card(key, state, prev, series=None):
     s = STATS[key]
     v, p = state[key], prev.get(key, state[key])
     d = v - p
@@ -174,7 +176,8 @@ def _card(key, state, prev):
             f"<div class='tooltiptext'>{s.get('desc', '')}</div>"
             f"<div class='cs-label'><span>{s['label']}</span> <span class='cs-icon'>ⓘ</span></div>"
             f"<div class='cs-value'>{s['fmt'].format(v)}{delta}</div>"
-            f"<div class='cs-track'><div class='cs-fill' style='width:{width:.0f}%;background:{colour}'></div></div></div>")
+            f"<div class='cs-track'><div class='cs-fill' style='width:{width:.0f}%;background:{colour}'></div></div>"
+            f"{sparkline_svg(series, colour)}</div>")
 
 def render():
     ensure_state()
@@ -197,7 +200,8 @@ def render():
     for title, keys in GROUPS:
         st.markdown(f'#### {title}')
         for col, key in zip(st.columns(len(keys)), keys):
-            col.markdown(_card(key, state, prev), unsafe_allow_html=True)
+            hist = [h[key] for h in st.session_state.get('country_hist', []) if key in h]
+            col.markdown(_card(key, state, prev, hist), unsafe_allow_html=True)
 
     if APPROVAL_FEEDBACK:
         st.caption('A rising or falling state of the nation also nudges public approval after each decision.')

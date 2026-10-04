@@ -1,10 +1,14 @@
+"""Policy decisions: 2 blocks per year, followed by the Budget.
+
+Each decision lists five options in a fixed ideology order (see IDEOLOGIES). The game shuffles them and
+hides the ideology tags unless the player turns them on. Some options also queue a DELAYED consequence."""
 import random
+import re
 
 BLOCKS_PER_YEAR = 3   
 BUDGET_BLOCK = 3
 IDEOLOGIES = ['Hard Left', 'Social Democratic', 'Centric', 'Free-Market', 'Fiscal Austerity']
 
-# --- Term 1 Narrative Arc ---
 DECISIONS = {
     (1, 1): dict(
         title='The First Hundred Days',
@@ -18,11 +22,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Announce an emergency freeze on all public sector hiring.',
         ],
         effects=[
-            dict(headroom=-8.5, approval=6, market_conf=-18, gilt_yield=0.5, energy_bills=-200, rail=10, message='Nationalisation rattles the markets!'),
-            dict(headroom=-5.0, approval=7, deficit=1.2, growth=0.2, unemployment=-0.3, netzero=5, message='Green jobs guarantee launched.'),
-            dict(headroom=-2.5, approval=3, homes_built=15, rail=5, message='Pragmatic infrastructure pledged.'),
-            dict(market_conf=10, approval=-6, growth=0.3, real_wages=-0.3, unemployment=-0.2, message='Employment regulations scrapped.'),
-            dict(headroom=4.0, approval=-10, deficit=-0.7, nhs_morale=-10, schools=-5, message='Public sector hiring frozen.'),
+            dict(headroom=-9.77, approval=5.1, market_conf=-18, gilt_yield=0.5, energy_bills=-200, rail=10, message='Nationalisation rattles the markets!'),
+            dict(headroom=-4.67, approval=7.56, deficit=1.2, growth=0.2, unemployment=-0.3, netzero=5, message='Green jobs guarantee launched.'),
+            dict(headroom=-2.5, approval=1.35, homes_built=15, rail=5, message='Pragmatic infrastructure pledged.'),
+            dict(market_conf=12, approval=-2.4, growth=0.36, real_wages=-0.3, unemployment=-0.2, headroom=1, message='Employment regulations scrapped.'),
+            dict(headroom=4.4, approval=-4, deficit=-0.7, nhs_morale=-10, schools=-5, market_conf=4, message='Public sector hiring frozen.'),
         ],
     ),
     (1, 2): dict(
@@ -37,11 +41,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Enforce a strict statutory pay cap and invoke anti-strike laws.',
         ],
         effects=[
-            dict(headroom=-8.0, approval=10, deficit=1.4, inflation=0.4, nhs_morale=15, message='Unions appeased, but inflation ticks upward.'),
-            dict(headroom=-4.5, approval=6, nhs_morale=5, message='Fair pay settlement reached.'),
-            dict(approval=-4, nhs_morale=0, message='Compromise struck with minor disruption.'),
-            dict(market_conf=9, approval=-10, nhs_morale=-15, message='Private contracting introduced.'),
-            dict(approval=-14, market_conf=10, inflation=-0.3, nhs_morale=-20, message='Pay cap enforced. Markets pleased, workforce furious.'),
+            dict(headroom=-9.2, approval=8.5, deficit=1.4, inflation=0.4, nhs_morale=15, message='Unions appeased, but inflation ticks upward.'),
+            dict(headroom=-5.47, approval=4.86, nhs_morale=5, message='Fair pay settlement reached.'),
+            dict(approval=-2.4, nhs_morale=0, message='Compromise struck with minor disruption.'),
+            dict(market_conf=10.8, approval=-4, nhs_morale=-15, headroom=1, message='Private contracting introduced.'),
+            dict(approval=-5.6, market_conf=10, inflation=-0.3, nhs_morale=-20, message='Pay cap enforced. Markets pleased, workforce furious.'),
         ],
     ),
     (2, 1): dict(
@@ -56,11 +60,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Severely restrict disability benefits to achieve immediate savings.',
         ],
         effects=[
-            dict(headroom=-6.0, approval=7, child_poverty=-3.0, homeless=-20, message='Welfare expanded.'),
-            dict(growth=0.3, headroom=-3.5, approval=5, unemployment=-0.2, message='Health coaching deployed.'),
-            dict(headroom=2.0, child_poverty=0.5, message='Moderate welfare checks.'),
-            dict(headroom=3.5, market_conf=4, approval=-7, unemployment=-0.3, child_poverty=1.5, message='Employment support outsourced.'),
-            dict(headroom=7.5, approval=-16, deficit=-1.1, child_poverty=3.5, homeless=30, message='Benefits slashed. Massive public backlash.'),
+            dict(headroom=-6.9, approval=6, child_poverty=-3, homeless=-20, message='Welfare expanded.'),
+            dict(growth=0.24, headroom=-4.25, approval=4.06, unemployment=-0.2, message='Health coaching deployed.'),
+            dict(headroom=2, child_poverty=0.5, message='Moderate welfare checks.'),
+            dict(headroom=3.5, market_conf=4.8, approval=-2.8, unemployment=-0.3, child_poverty=1.5, message='Employment support outsourced.'),
+            dict(headroom=8.25, approval=-6.4, deficit=-1.1, child_poverty=3.5, homeless=30, market_conf=4, message='Benefits slashed. Massive public backlash.'),
         ],
     ),
     (2, 2): dict(
@@ -75,11 +79,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Use the controversy to quietly raise VAT on digital goods instead.',
         ],
         effects=[
-            dict(market_conf=-12, headroom=6.0, approval=8, message='Tech giants hit with massive tax!'),
-            dict(market_conf=2, approval=5, message='OECD tax floor negotiated.'),
-            dict(market_conf=-2, headroom=2.0, approval=3, message='Minor domestic loopholes closed.'),
-            dict(market_conf=8, approval=-9, growth=0.2, message='Tech giants offered more incentives.'),
-            dict(headroom=4.5, approval=-12, inflation=0.2, message='Digital VAT quietly raised.'),
+            dict(market_conf=-12, headroom=6, approval=6.8, message='Tech giants hit with massive tax!'),
+            dict(headroom=-1.7, market_conf=1, approval=4.06, message='OECD tax floor negotiated.'),
+            dict(market_conf=-2, headroom=2, approval=1.35, message='Minor domestic loopholes closed.'),
+            dict(market_conf=9.6, approval=-3.6, growth=0.24, headroom=1, message='Tech giants offered more incentives.'),
+            dict(headroom=4.95, approval=-4.8, inflation=0.2, market_conf=4, message='Digital VAT quietly raised.'),
         ],
     ),
     (3, 1): dict(
@@ -94,11 +98,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Protect greenbelt land and offer no state housing intervention.',
         ],
         effects=[
-            dict(approval=9, market_conf=-12, headroom=-5.5, homeless=-30, homes_built=20, message='Rent controls enacted.'),
-            dict(approval=7, growth=0.2, homeless=-15, house_ratio=-0.2, message='Social housing quotas mandated.'),
-            dict(growth=0.3, approval=5, homes_built=25, house_ratio=-0.1, message='Planning laws streamlined.'),
-            dict(growth=0.5, approval=-9, homes_built=50, house_ratio=-0.5, netzero=-5, message='Greenbelt abolished.'),
-            dict(approval=-6, homes_built=-20, house_ratio=0.3, message='Greenbelt protected.'),
+            dict(approval=7.7, market_conf=-12, headroom=-6.32, homeless=-30, homes_built=20, message='Rent controls enacted.'),
+            dict(approval=5.66, growth=0.16, homeless=-15, house_ratio=-0.2, message='Social housing quotas mandated.'),
+            dict(growth=0.3, approval=2.25, homes_built=25, house_ratio=-0.1, message='Planning laws streamlined.'),
+            dict(growth=0.6, approval=-3.6, homes_built=50, house_ratio=-0.5, netzero=-5, headroom=1, message='Greenbelt abolished.'),
+            dict(approval=-2.4, homes_built=-20, house_ratio=0.3, market_conf=4, message='Greenbelt protected.'),
         ],
     ),
     (3, 2): dict(
@@ -113,11 +117,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Force the MoD to scrap a major aircraft carrier to save money.',
         ],
         effects=[
-            dict(headroom=6.5, approval=2, market_conf=-5, message='Defence budget slashed!'),
-            dict(approval=3, message='Military focus shifted to cyber.'),
-            dict(headroom=-4.0, approval=4, market_conf=2, message='NATO 2.5% target met.'),
-            dict(market_conf=6, approval=-6, headroom=2.0, message='Military logistics privatised.'),
-            dict(headroom=5.0, approval=-8, market_conf=-4, message='Aircraft carrier scrapped.'),
+            dict(headroom=6.5, approval=1.7, market_conf=-5, message='Defence budget slashed!'),
+            dict(approval=2.44, message='Military focus shifted to cyber.'),
+            dict(headroom=-4, approval=1.8, market_conf=2, message='NATO 2.5% target met.'),
+            dict(market_conf=7.2, approval=-2.4, headroom=2, message='Military logistics privatised.'),
+            dict(headroom=5.5, approval=-3.2, market_conf=-4, message='Aircraft carrier scrapped.'),
         ],
     ),
     (4, 1): dict(
@@ -132,11 +136,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Refuse all subsidies and let the market dictate energy prices.',
         ],
         effects=[
-            dict(headroom=-9.0, approval=8, market_conf=-15, netzero=10, energy_bills=-150, message='Energy grid nationalised.'),
-            dict(headroom=-5.5, approval=6, growth=0.2, netzero=5, energy_bills=-100, message='Insulation subsidies launched.'),
-            dict(approval=2, market_conf=3, netzero=-5, energy_bills=-50, message='Green targets delayed.'),
-            dict(market_conf=10, approval=-5, growth=0.3, netzero=-15, energy_bills=-100, message='North Sea drilling approved.'),
-            dict(approval=-14, market_conf=-2, inflation=0.4, energy_bills=200, message='Energy prices left to soar.'),
+            dict(headroom=-10.35, approval=6.8, market_conf=-15, netzero=10, energy_bills=-150, message='Energy grid nationalised.'),
+            dict(headroom=-6.69, approval=4.86, growth=0.16, netzero=5, energy_bills=-100, message='Insulation subsidies launched.'),
+            dict(approval=0.9, market_conf=3, netzero=-5, energy_bills=-50, message='Green targets delayed.'),
+            dict(market_conf=12, approval=-2, growth=0.36, netzero=-15, energy_bills=-100, headroom=1, message='North Sea drilling approved.'),
+            dict(approval=-5.6, market_conf=-2, inflation=0.4, energy_bills=200, message='Energy prices left to soar.'),
         ],
     ),
     (4, 2): dict(
@@ -151,11 +155,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Absorb trade friction without policy or budget changes.',
         ],
         effects=[
-            dict(approval=4, market_conf=-12, inflation=0.5, message='Protectionist tariffs applied.'),
-            dict(market_conf=7, growth=0.2, message='Trade pact secured.'),
+            dict(approval=3.4, market_conf=-12, inflation=0.5, message='Protectionist tariffs applied.'),
+            dict(market_conf=7, growth=0.16, message='Trade pact secured.'),
             dict(growth=0.1, message='Diplomatic trade talks held.'),
-            dict(market_conf=10, growth=0.3, approval=-6, message='Unilateral free trade adopted.'),
-            dict(growth=-0.2, message='Trade friction ignored.'),
+            dict(market_conf=12, growth=0.36, approval=-2.4, headroom=1, message='Unilateral free trade adopted.'),
+            dict(growth=-0.2, market_conf=4, message='Trade friction ignored.'),
         ],
     ),
     (5, 1): dict(
@@ -170,11 +174,11 @@ DECISIONS = {
             '5. (Fiscal Austerity) Rely on existing NHS efficiencies with no extra funding.',
         ],
         effects=[
-            dict(approval=7, headroom=-5.5, nhs_waiting=-0.2, message='Private contractors banned.'),
-            dict(approval=8, headroom=-4.5, nhs_waiting=-0.4, nhs_morale=5, message='Staff recruitment funded.'),
-            dict(approval=5, headroom=-3.5, nhs_waiting=-0.5, message='Private capacity utilized.'),
-            dict(market_conf=9, approval=-16, nhs_waiting=-0.8, nhs_morale=-15, message='Insurance model introduced. Major backlash.'),
-            dict(approval=-7, nhs_waiting=0.3, message='No extra NHS funds.'),
+            dict(approval=6, headroom=-6.32, nhs_waiting=-0.2, message='Private contractors banned.'),
+            dict(approval=6.48, headroom=-5.47, nhs_waiting=-0.4, nhs_morale=5, message='Staff recruitment funded.'),
+            dict(approval=2.25, headroom=-3.5, nhs_waiting=-0.5, message='Private capacity utilized.'),
+            dict(market_conf=10.8, approval=-6.4, nhs_waiting=-0.8, nhs_morale=-15, headroom=1, message='Insurance model introduced. Major backlash.'),
+            dict(approval=-2.8, nhs_waiting=0.3, market_conf=4, message='No extra NHS funds.'),
         ],
     ),
     (5, 2): dict(
@@ -189,121 +193,154 @@ DECISIONS = {
             '5. (Fiscal Austerity) Hold firm on spending caps and protect fiscal rules.',
         ],
         effects=[
-            dict(approval=8, headroom=-4.5, child_poverty=-1.0, message='Wealth taxes pledged.'),
-            dict(approval=9, headroom=-4.5, real_wages=0.3, message='Cost-of-living support delivered.'),
-            dict(approval=5, headroom=-3.5, message='Defense and pensions secured.'),
-            dict(approval=7, market_conf=7, headroom=-5.5, message='Taxes abolished.'),
+            dict(approval=6.8, headroom=-5.17, child_poverty=-1, message='Wealth taxes pledged.'),
+            dict(approval=7.28, headroom=-5.47, real_wages=0.24, message='Cost-of-living support delivered.'),
+            dict(approval=2.25, headroom=-3.5, message='Defense and pensions secured.'),
+            dict(approval=7, market_conf=8.4, headroom=-5.5, message='Taxes abolished.'),
             dict(market_conf=9, message='Spending caps held firm.'),
         ],
     ),
 }
 
-# --- Endless Replayability: Term 2+ Random Scenarios ---
-RANDOM_POOL = [
-    dict(
-        title='Universal Basic Income Trial',
-        text='Automation is accelerating, and pilot schemes for Universal Basic Income are gaining massive public traction.',
-        humphrey="Giving people money for simply existing, Chancellor. It defies every principle of the Treasury. Next they will expect us to smile at them.",
-        options=[
-            '1. (Hard Left) Roll out full UBI funded by massive wealth taxes.',
-            '2. (Social Democratic) Launch a generous targeted UBI for lower-income brackets.',
-            '3. (Centric) Run a small, fully-costed regional trial.',
-            '4. (Free-Market) Replace all existing welfare with a flat, meager UBI.',
-            '5. (Fiscal Austerity) Cancel the trial and cut existing welfare to force people into work.',
-        ],
-        effects=[
-            dict(approval=12, market_conf=-15, headroom=-10.0, child_poverty=-8.0, inflation=0.6, message='Full UBI enacted! Markets panic.'),
-            dict(approval=8, headroom=-6.0, child_poverty=-4.0, message='Targeted UBI launched.'),
-            dict(approval=3, headroom=-1.5, message='Regional UBI trial commences.'),
-            dict(market_conf=6, approval=-8, child_poverty=3.0, headroom=4.0, message='Welfare replaced by flat UBI.'),
-            dict(approval=-14, market_conf=8, headroom=5.5, child_poverty=4.0, message='Welfare slashed. Major protests erupt.'),
-        ],
-    ),
-    dict(
-        title='Nuclear Power & Energy Independence',
-        text='The energy grid is vulnerable. A proposal is on your desk to rapidly expand nuclear power generation.',
-        humphrey="Nuclear power, Chancellor. It guarantees energy independence in thirty years, which handily means the cost overruns will be the next government's problem.",
-        options=[
-            '1. (Hard Left) Fully nationalise the energy sector to build state-owned reactors.',
-            '2. (Social Democratic) Co-fund reactors with unionised labor guarantees.',
-            '3. (Centric) Offer moderate state subsidies for private SMR development.',
-            '4. (Free-Market) Deregulate safety standards to speed up private construction.',
-            '5. (Fiscal Austerity) Refuse state funding; rely entirely on foreign capital.',
-        ],
-        effects=[
-            dict(approval=5, market_conf=-12, headroom=-8.0, netzero=5, energy_bills=-50, message='Energy sector nationalised.'),
-            dict(approval=6, headroom=-5.0, growth=0.2, netzero=4, message='State co-funds nuclear plants.'),
-            dict(approval=3, headroom=-2.0, netzero=2, message='Subsidies granted for private SMRs.'),
-            dict(market_conf=8, approval=-6, netzero=4, message='Nuclear safety deregulated. Fast builds approved.'),
-            dict(approval=-4, market_conf=-2, netzero=-2, message='State refuses to fund nuclear power.'),
-        ],
-    ),
-    dict(
-        title='The Four-Day Work Week',
-        text='Trade unions and progressive think tanks are pushing hard for a mandated 4-day working week with no loss of pay.',
-        humphrey="A four-day week, Chancellor? I assume the civil service is exempt. We barely manage to stretch our work across five days as it is.",
-        options=[
-            '1. (Hard Left) Mandate a 4-day week across all sectors by law.',
-            '2. (Social Democratic) Subsidise public sector trials and encourage private adoption.',
-            '3. (Centric) Issue voluntary guidelines for flexible working.',
-            '4. (Free-Market) Ban 4-day mandates and scrap working time directives.',
-            '5. (Fiscal Austerity) Force the public sector back to 5 days and cut holiday allowances.',
-        ],
-        effects=[
-            dict(approval=15, market_conf=-18, growth=-0.5, inflation=0.8, message='4-Day Week mandated! Corporate chaos ensues.'),
-            dict(approval=7, headroom=-3.0, growth=-0.1, message='Public sector 4-day trials begin.'),
-            dict(approval=2, message='Voluntary flexible working guidelines issued.'),
-            dict(market_conf=8, approval=-7, growth=0.3, real_wages=-0.2, message='Working time directives scrapped.'),
-            dict(approval=-12, market_conf=5, nhs_morale=-10, message='Public sector holidays cut.'),
-        ],
-    ),
-    dict(
-        title='University Tuition Fee Crisis',
-        text='Universities are going bankrupt, and student debt is suppressing the housing market for young adults.',
-        humphrey="The universities have run out of money, Chancellor. They assumed they could infinitely charge students for degrees in Media Studies. A classic pyramid scheme.",
-        options=[
-            '1. (Hard Left) Abolish fees entirely and forgive all existing student debt.',
-            '2. (Social Democratic) Halve fees and restore maintenance grants.',
-            '3. (Centric) Link repayment thresholds to inflation.',
-            '4. (Free-Market) Lift the fee cap entirely and let universities compete on price.',
-            '5. (Fiscal Austerity) Raise fees and increase the interest rate on student loans.',
-        ],
-        effects=[
-            dict(approval=12, market_conf=-14, headroom=-9.0, schools=5, message='Tuition fees abolished! Massive state cost.'),
-            dict(approval=8, headroom=-5.0, schools=3, message='Fees halved and grants restored.'),
-            dict(approval=3, headroom=-1.5, message='Repayment thresholds adjusted.'),
-            dict(market_conf=6, approval=-10, schools=-2, message='Fee caps lifted. Education marketized.'),
-            dict(approval=-15, headroom=4.0, schools=-4, message='Fees and interest rates hiked. Students riot.'),
-        ],
-    ),
-    dict(
-        title='The AI Automation Crisis',
-        text='Artificial Intelligence is rapidly displacing white-collar jobs in the City, leading to a spike in sudden unemployment.',
-        humphrey="The algorithms are writing reports faster than we are, Chancellor. If they learn how to leak them to the press, the civil service is doomed.",
-        options=[
-            '1. (Hard Left) Impose a crippling 50% "Robot Tax" to fund displaced workers.',
-            '2. (Social Democratic) Create a state retraining fund paid for by a moderate tech levy.',
-            '3. (Centric) Form a committee to study AI impacts.',
-            '4. (Free-Market) Offer massive R&D tax credits to companies replacing staff with AI.',
-            '5. (Fiscal Austerity) Do nothing; let displaced workers claim standard universal credit.',
-        ],
-        effects=[
-            dict(approval=8, market_conf=-12, headroom=4.0, unemployment=-0.1, message='Robot Tax imposed! Tech sector furious.'),
-            dict(approval=6, headroom=-1.0, growth=0.1, unemployment=-0.2, message='AI retraining fund established.'),
-            dict(approval=1, message='AI Committee formed. Impact deferred.'),
-            dict(market_conf=10, approval=-8, growth=0.4, unemployment=0.5, message='AI automation subsidized. Jobs lost, profits soar.'),
-            dict(approval=-6, market_conf=2, unemployment=0.3, message='AI displacement ignored.'),
-        ],
-    ),
-]
 
-def get_decision(term, year, block):
-    """Returns narrative decisions for Term 1, and randomized pool scenarios for Term 2+."""
-    if term == 1:
-        return DECISIONS.get((year, block))
-    else:
-        # Seed the random choice so it doesn't change every time a slider is moved
-        random.seed(f"{term}-{year}-{block}")
-        choice = random.choice(RANDOM_POOL)
-        random.seed() # reset seed
-        return choice
+# ---------------------------------------------------------------------------------------------
+# Delayed consequences: (year, block) -> {option index: spec}. 'after' counts player actions
+# (decisions, crises, budgets) before it lands. Not every option has one; some are rewards.
+# ---------------------------------------------------------------------------------------------
+DELAYED = {
+    (1, 1): {
+        0: dict(after=2, title='Compensation bill arrives', text='Shareholders of the nationalised utilities are owed their compensation.',
+                warn='Shareholders will, naturally, expect to be paid for what we have taken.',
+                fx=dict(headroom=-4.0, gilt_yield=0.2, market_conf=-3)),
+        3: dict(after=2, title='Tribunal chaos', text='Scrapping employment protections floods the tribunals and sours the mood at work.',
+                warn='Workers tend to notice when their rights vanish.',
+                fx=dict(approval=-3, unemployment=0.1)),
+        4: dict(after=2, title='Staff exodus', text='Experienced public sector staff quietly leave and agency bills soar.',
+                warn='A hiring freeze is rarely a free lunch.',
+                fx=dict(nhs_waiting=0.3, nhs_morale=-5, schools=-2)),
+    },
+    (1, 2): {
+        0: dict(after=2, title='Pay deal precedent', text='Every other sector now wants the same deal, and the Treasury is footing the bill.',
+                warn='Precedents have a way of travelling.', fx=dict(inflation=0.3, headroom=-2.0)),
+        3: dict(after=2, title='Contractor cost overruns', text='Private contractors turn out to cost rather more than the public sector did.',
+                warn='Contractors do not work for free.', fx=dict(headroom=-3.0, approval=-2)),
+        4: dict(after=2, title='Recruitment crisis', text='With pay capped, vacancies stack up across frontline services.',
+                warn='Capped pay and vacant posts often go together.', fx=dict(nhs_waiting=0.3, nhs_morale=-5)),
+    },
+    (2, 1): {
+        0: dict(after=2, title='Claimant numbers surge', text='Looser rules and no sanctions send claimant numbers climbing.',
+                warn='Generosity is popular until the OBR publishes its forecast.', fx=dict(headroom=-3.0, deficit=0.5)),
+        1: dict(after=2, title='Health coaching pays off', text='More people return to work and the savings start to show.',
+                warn='Some investments take a little while to mature.', fx=dict(growth=0.2, headroom=2.0, unemployment=-0.2)),
+        4: dict(after=2, title='Cuts hit local councils', text='Councils pick up the pieces of the benefit cuts, and temporary housing grows.',
+                warn='Savings made in one place tend to appear as costs in another.',
+                fx=dict(homeless=10, child_poverty=1.0, approval=-3)),
+    },
+    (2, 2): {
+        0: dict(after=2, title='Tech firms relocate', text='The retroactive tax drives several firms to reconsider where they are headquartered.',
+                warn='Mobile capital is rather good at leaving.', fx=dict(market_conf=-4, growth=-0.2)),
+        1: dict(after=2, title='OECD floor yields revenue', text='The minimum tax floor starts to bring in money.',
+                warn='Diplomacy is slow, but occasionally profitable.', fx=dict(headroom=3.0)),
+    },
+    (3, 1): {
+        2: dict(after=2, title='Planning reform bears fruit', text='Streamlined approvals translate into cranes on the skyline.',
+                warn='Planning reform takes time to turn into bricks.', fx=dict(homes_built=10, growth=0.1)),
+        4: dict(after=2, title='Housing pressure builds', text='With supply frozen, younger voters feel the squeeze harder than ever.',
+                warn='Doing nothing on housing has a way of showing up in polls.', fx=dict(house_ratio=0.2, approval=-2)),
+    },
+    (3, 2): {
+        0: dict(after=2, title='Allies notice the gap', text='NATO partners publicly question Britain\'s commitment.',
+                warn='Allies keep long memories about spending.', fx=dict(approval=-3, market_conf=-3)),
+        4: dict(after=2, title='Carrier gap exposed', text='A crisis abroad exposes the hole where the carrier used to be.',
+                warn='Capabilities are easier to scrap than to rebuild.', fx=dict(approval=-3, market_conf=-3)),
+    },
+    (4, 1): {
+        0: dict(after=2, title='Grid takeover costs mount', text='Nationalising the grid is proving expensive to run.',
+                warn='Ownership also means the bills are yours.', fx=dict(headroom=-3.0, gilt_yield=0.1)),
+        3: dict(after=2, title='Drilling dividend', text='North Sea output and licence revenues arrive on schedule.',
+                warn='Some policies pay back handsomely, in time.', fx=dict(headroom=3.0, energy_bills=-50)),
+        4: dict(after=2, title='Winter price spike', text='Unsubsidised, bills surge when the cold arrives.',
+                warn='Markets are not always gentle in winter.', fx=dict(energy_bills=80, approval=-4)),
+    },
+    (4, 2): {
+        0: dict(after=2, title='Counter-tariffs bite', text='Partners retaliate and exporters feel it first.',
+                warn='Tariffs are a two-way street.', fx=dict(approval=-3, growth=-0.2, market_conf=-5)),
+        3: dict(after=2, title='Cheap imports hit manufacturers', text='Domestic producers struggle against unprotected competition.',
+                warn='Free trade makes winners and losers; the losers vote.', fx=dict(unemployment=0.2, approval=-2)),
+    },
+    (5, 1): {
+        1: dict(after=2, title='Recruitment drive delivers', text='New frontline staff start work and lists begin to shift.',
+                warn='Recruitment takes a while, then it shows.', fx=dict(nhs_waiting=-0.2)),
+        3: dict(after=2, title='Premium row', text='The first insurance premiums land and the public is unamused.',
+                warn='Insurance models tend to meet resistance at the bill.', fx=dict(approval=-4)),
+    },
+    (5, 2): {
+        0: dict(after=1, title='Avoidance schemes', text='The wealthy find ways around the new tax faster than HMRC can close them.',
+                warn='Wealth is rather good at moving.', fx=dict(headroom=-2.0, market_conf=-4)),
+        3: dict(after=1, title='Hole in the forecast', text='The OBR notes the abolished taxes leave a hole in the numbers.',
+                warn='Tax cuts are fully costed until somebody checks.', fx=dict(headroom=-3.0)),
+    },
+}
+
+REACTIONS = {
+    'Hard Left': ["Radical, Chancellor. I shall alert the gilt desk and the Bank's emergency line.",
+                  "Bold, Chancellor. 'Bold' being the word we use in the Service when we mean 'unprecedented'.",
+                  "The Cabinet Secretary asked me to convey his... interest, Chancellor."],
+    'Social Democratic': ["A decent, sensible approach, Chancellor. The Treasury will merely ask who is paying for it.",
+                          "I find this entirely defensible, Chancellor, provided nobody asks for the arithmetic.",
+                          "The Opposition will call it tax and spend. The Treasury will call it 'investment'."],
+    'Centric': ["A masterpiece of moderation, Chancellor. Nobody will love it and nobody will resign.",
+                "Admirably cautious, Chancellor. The headline writers will be inconsolable.",
+                "I could not have chosen better myself, Chancellor, and I have chosen precisely that for thirty years."],
+    'Free-Market': ["The Treasury is reassured; the public less so. We shall brief that this was 'market-led'.",
+                    "A confident move, Chancellor. I am told the City is delighted. The rest of the country has not yet been asked.",
+                    "I shall prepare a note on 'managing expectations among the electorate', Chancellor."],
+    'Fiscal Austerity': ["Firm, Chancellor. I shall have the Press Office describe it as 'responsible'.",
+                         "The numbers look splendid, Chancellor. I will not ask how the people feel about them.",
+                         "Prudent. Painfully prudent. Rather like a dentist, Chancellor."],
+    'triumph': ["That went rather better than anyone expected, Chancellor. Do try to look surprised.",
+                "A triumph, Chancellor. Enjoy it; they are very short-lived in Whitehall."],
+    'disaster': ["That, Chancellor, was what we in the Service call 'a learning experience'.",
+                 "I have seen worse. Admittedly, only once, and it ended an administration."],
+}
+
+_TAG = re.compile(r'^\d+\.\s*\(([^)]+)\)\s*')
+
+
+def strip_tag(text):
+    """Remove the leading '1. (Hard Left) ' from an option."""
+    return _TAG.sub('', text)
+
+
+def get_options(decision, shuffle_key, show_tags=False):
+    """Return the decision's options as dicts, shuffled deterministically by ``shuffle_key``.
+
+    Each dict has: label (what the player reads), ideology, effect, delayed (spec or None).
+    """
+    key = decision.get('_key')
+    delayed = DELAYED.get(key, {})
+    options = []
+    for i, (text, fx) in enumerate(zip(decision['options'], decision['effects'])):
+        body = strip_tag(text)
+        ideology = IDEOLOGIES[i]
+        options.append(dict(label=f'({ideology}) {body}' if show_tags else body, ideology=ideology,
+                            effect=fx, delayed=delayed.get(i)))
+    random.Random(shuffle_key).shuffle(options)
+    return options
+
+
+def reaction(ideology, d_approval, d_market, delayed=None):
+    """Sir Humphrey's comment on what the player just did."""
+    pool = REACTIONS.get(ideology, REACTIONS['Centric'])
+    if d_approval + 0.5 * d_market >= 8:
+        pool = REACTIONS['triumph']
+    elif d_approval + 0.5 * d_market <= -10:
+        pool = REACTIONS['disaster']
+    text = random.choice(pool)
+    if delayed:
+        text += f" (A word of caution, Chancellor: {delayed['warn']})"
+    return text
+
+
+for _k, _d in DECISIONS.items():
+    _d['_key'] = _k

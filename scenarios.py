@@ -1,6 +1,8 @@
 import random
 import streamlit as st
+import budget
 import country
+import state
 
 def C(title, humphrey, *args):
     opts = [(args[i], args[i+1]) for i in range(0, len(args), 2)]
@@ -249,6 +251,16 @@ def pick_next(year, block, ideology):
         s.last_crisis = 'tabloid_scandal'
         return 'tabloid_scandal'
 
+    if s.get('market_conf', 100) < 35 and last != 'gilt_revolt' and random.random() < 0.6:
+        s.crisis_reason = '🚨 Investors have lost faith in your fiscal credibility!'
+        s.last_crisis = 'gilt_revolt'
+        return 'gilt_revolt'
+
+    if s.get('headroom', 0) < -10 and last != 'rating_warning' and random.random() < 0.5:
+        s.crisis_reason = '🚨 Your fiscal rules are in tatters and the agencies have noticed.'
+        s.last_crisis = 'rating_warning'
+        return 'rating_warning'
+
     link = DECISION_LINKS.get((year, block, ideology))
     if link and random.random() < link[1]:
         s.crisis_reason = f'🔗 This follows directly from your last decision ({ideology}).'
@@ -260,17 +272,25 @@ def pick_next(year, block, ideology):
         s.last_crisis = IDEOLOGY_LINKS[ideology]
         return IDEOLOGY_LINKS[ideology]
 
-    budget = s.get('budget_applied')
-    if budget:
+    applied = s.get('budget_applied')
+    done = s.setdefault('fallout_done', [])
+    if applied and s.get('dept_spend'):
         for cid, section, item, op, limit, chance in BUDGET_LINKS:
-            value = budget[section][item]
+            if cid in done:
+                continue
+            if section == 'spend':
+                # cumulative change in this department's baseline since the start, in %
+                value = (s.dept_spend[item] / budget.SPEND_DEFAULTS[item]['default'] - 1) * 100
+            else:
+                value = applied[section][item]
             hit = value <= limit if op == '<=' else value >= limit
             if hit and random.random() < chance:
+                done.append(cid)
                 s.crisis_reason = '📒 Your budget choices have consequences.'
                 s.last_crisis = cid
                 return cid
 
-    if year < 5 and random.random() < 0.25:
+    if year < 5 and random.random() < state.diff()['crisis']:
         options = [c for c in RANDOM_POOL if c != last] or RANDOM_POOL
         s.last_crisis = random.choice(options)
         s.crisis_reason = "🚨 Events, dear boy, events. An unforeseen crisis has struck!"
@@ -282,7 +302,9 @@ def _fmt(fx):
     parts = []
     if 'headroom' in fx: parts.append(f"{'-' if fx['headroom'] < 0 else '+'}£{abs(fx['headroom']):g}B Headroom")
     for key, name in (('approval', 'Approval'), ('market', 'Market Conf'), ('growth', 'Growth'),
-                      ('inflation', 'Inflation'), ('deficit', 'Deficit'), ('debt', 'Debt')):
+                      ('inflation', 'Inflation'), ('deficit', 'Deficit'), ('debt', 'Debt'),
+                      ('pm_opinion', 'PM'), ('cab_opinion', 'Cabinet'), ('party_opinion', 'Party'),
+                      ('backbench_opinion', 'Backbench'), ('media_opinion', 'Media')):
         if key in fx: parts.append(f'{fx[key]:+g} {name}')
     return ', '.join(parts)
 
@@ -294,17 +316,35 @@ def _clip(v):
 
 def apply_fx(fx):
     s = st.session_state
-    if 'headroom' in fx: s.headroom = round(s.headroom + fx['headroom'], 1)
-    if 'approval' in fx: s.approval = round(_clip(s.approval + fx['approval']), 1)
-    if 'market' in fx: s.market_conf = round(_clip(s.market_conf + fx['market']), 1)
+    sc = state.scale
+    if 'headroom' in fx: s.headroom = round(s.headroom + sc(fx['headroom']), 1)
+    if 'approval' in fx: s.approval = round(_clip(s.approval + sc(fx['approval'])), 1)
+    if 'market' in fx: s.market_conf = round(_clip(s.market_conf + sc(fx['market'])), 1)
     if 'growth' in fx: s.growth = round(s.growth + fx['growth'], 2)
     if 'inflation' in fx: s.inflation = round(s.inflation + fx['inflation'], 2)
     if 'deficit' in fx: s.deficit = round(s.deficit + fx['deficit'], 1)
     if 'debt' in fx: s.debt = round(s.debt + fx['debt'], 1)
     if 'gilt' in fx: s.gilt_yield = round(s.gilt_yield + fx['gilt'], 2)
-    
+    # political capital (these keys were previously ignored)
+    for key in ('pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion', 'media_opinion'):
+        if key in fx:
+            s[key] = round(_clip(s[key] + fx[key]), 1)
+
     # Pass direct effects down to the country file too!
-    country.nudge({k: v for k, v in fx.items() if k in country.STATS})
+    country.nudge({k: v for k, v in fx.items() if k in country.STATS}, snapshot=False)
+
+
+def proxy_ideology(fx):
+    """Rough ideological flavour of a crisis response, judged by what it does."""
+    head, app, mkt = fx.get('headroom', 0), fx.get('approval', 0), fx.get('market', 0)
+    if head <= -3 and app > 0:
+        return 'Social Democratic' if mkt >= -4 else 'Hard Left'
+    if head > 0 and app < 0:
+        return 'Fiscal Austerity'
+    if mkt > 0 and app < 0:
+        return 'Free-Market'
+    return 'Centric'
+
 
 def resolve(crisis, index):
     label, fx = crisis['opts'][index]
@@ -332,4 +372,4 @@ def resolve(crisis, index):
     chosen_quote = random.choice(available_replies)
     st.session_state.last_humphrey_quote = chosen_quote
     
-    return f"**Crisis handled: {label}**<br><br>*Sir Humphrey Appleby adds:* \"{chosen_quote}\""
+    return f"<b>Crisis handled: {label}</b><br><br><i>Sir Humphrey Appleby adds:</i> &ldquo;{chosen_quote}&rdquo;"
