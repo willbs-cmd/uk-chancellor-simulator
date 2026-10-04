@@ -8,13 +8,13 @@ import budget
 import decisions
 import scenarios as scen
 
-st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', initial_sidebar_state="expanded")
+st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide')
 apply_theme()
 
 # ==================== INITIALIZATION & SAFETY RESET ====================
 if 'initialized' in st.session_state:
     needs_reset = False
-    req_keys = ['pm_opinion', 'imf_bailout', 'seats', 'pledges', 'spad', 'sleaze', 'pink_theme']
+    req_keys = ['pm_opinion', 'imf_bailout', 'seats', 'pledges', 'spad', 'sleaze']
     if not all(k in st.session_state for k in req_keys):
         needs_reset = True
         
@@ -46,7 +46,6 @@ if 'initialized' not in st.session_state or st.session_state.get('step') is None
     st.session_state.whip_votes = 0
     st.session_state.sleaze = 0
     st.session_state.spad = None
-    st.session_state.pink_theme = False
 
     st.session_state.approval, st.session_state.market_conf = 48.0, 65.0
     st.session_state.debt, st.session_state.deficit = 98.2, 125.4
@@ -83,6 +82,7 @@ def check_pledges():
     if 'budget_applied' not in s: return
     b = s.budget_applied
     broken = []
+    
     if "Never raise Basic Income Tax" in s.pledges and b['tax']['inc_basic'] > 20 and "Never raise Basic Income Tax" not in s.broken_pledges: broken.append("Never raise Basic Income Tax")
     if "Never raise VAT" in s.pledges and b['tax']['vat'] > 20 and "Never raise VAT" not in s.broken_pledges: broken.append("Never raise VAT")
     if "Never raise Corporation Tax" in s.pledges and b['tax']['corp'] > 25 and "Never raise Corporation Tax" not in s.broken_pledges: broken.append("Never raise Corporation Tax")
@@ -253,7 +253,7 @@ if st.session_state.step == 'setup':
     col1, col2 = st.columns([1, 1])
     with col1:
         party_choice = st.selectbox('Select Governing Party:', ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru'])
-        scenario = st.selectbox('Historical Scenario:', ["2026: The Fragile Present", "2008: The Great Financial Crash", "1978: Winter of Discontent", "1453: The Pink Fantasy Kingdom 🌸"])
+        scenario = st.selectbox('Historical Scenario:', ["2026: The Fragile Present", "2008: The Great Financial Crash", "1978: Winter of Discontent"])
         
         spad_options = [
             "The Spin Doctor (Halves penalties from broken pledges/scandals)",
@@ -289,7 +289,6 @@ if st.session_state.step == 'setup':
                 s.spad = spad_choice
                 s.whip_votes = 0
                 s.sleaze = 0
-                s.pink_theme = False
                 
                 if scenario == "2008: The Great Financial Crash":
                     s.debt, s.deficit, s.inflation, s.interest_rate = 60.0, 153.0, 4.0, 0.5
@@ -301,14 +300,6 @@ if st.session_state.step == 'setup':
                     s.gilt_yield, s.approval, s.market_conf, s.growth = 14.0, 35.0, 40.0, -1.0
                     s.macro_cycle = 'Stagnation'
                     msg = "Welcome to the 1970s, Chancellor. Inflation is rampant, and the unions are preparing for war."
-                elif scenario == "1453: The Pink Fantasy Kingdom 🌸":
-                    s.debt, s.deficit, s.inflation, s.interest_rate = 5.0, -50.0, 1.5, 2.0
-                    s.gilt_yield, s.approval, s.market_conf, s.growth = 1.0, 95.0, 100.0, 12.5
-                    s.headroom = 999.9
-                    s.pm_opinion, s.cab_opinion, s.party_opinion, s.backbench_opinion = 100.0, 100.0, 100.0, 100.0
-                    s.macro_cycle = 'Boom'
-                    s.pink_theme = True
-                    msg = "Welcome, Royal Treasurer, to the Pink Fantasy Kingdom! 🌸 🦄 The unicorns are grazing, the dragon's hoard has been secured, and the treasury is overflowing with sparkling pink jewels. Your only task is to keep the realm happy, pretty, and prosperous!"
                 else:
                     s.macro_cycle = 'Stagnation'
                     msg = "Good morning, Chancellor. I am Sir Humphrey Appleby. The economy is fragile."
@@ -344,77 +335,6 @@ if st.session_state.step == 'setup':
         st.session_state.clear()
         st.rerun()
     st.stop()
-
-
-# ==================== THE PINK THEME CSS INJECTION ====================
-if st.session_state.get('pink_theme'):
-    st.markdown("""
-    <style>
-    /* Base Backgrounds */
-    .stApp, [data-testid="stSidebar"], header { background-color: #ffe6f2 !important; background-image: none !important; }
-    
-    /* Typography Default */
-    h1, h2, h3, h4, p, span, label, td, th, li { color: #5c0033 !important; }
-    
-    /* Fix Stat Cards */
-    .sc-card { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border: 1px solid #ff99cc !important; border-top: 3px solid #ff1493 !important; }
-    .sc-value, .sc-label, .sc-delta, .sc-info { color: #5c0033 !important; }
-    .sc-info { border-color: #ff1493 !important; }
-    .sc-good { color: #008000 !important; background: rgba(0,255,0,0.15) !important; }
-    .sc-bad { color: #cc0000 !important; background: rgba(255,0,0,0.15) !important; }
-    .sc-flat { color: #5c0033 !important; }
-    
-    /* Fix Humphrey Memo (Override inline dark green) */
-    div[style*="linear-gradient(145deg, #162a20, #0b1712)"] {
-        background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important;
-        border-left: 5px solid #ff1493 !important;
-        box-shadow: 0 6px 12px rgba(255,105,180,0.3) !important;
-    }
-    div[style*="color: #f4f0e6;"] { color: #5c0033 !important; }
-    div[style*="color: #d4af37;"] { color: #ff1493 !important; }
-    span[style*="color: #d4af37;"] { color: #ff1493 !important; }
-    
-    /* Fix Parliament Bar (Override inline dark green) */
-    div[style*="linear-gradient(145deg, #10261c, #0b1a13)"] {
-        background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important;
-        border: 1px solid #ff99cc !important;
-    }
-    div[style*="background:#07100c;"] { background: #ffe6f2 !important; border-color: #ff99cc !important; }
-    span[style*="background:#10261c;"] { background: #ffb3d9 !important; border-color: #ff99cc !important; color: #5c0033 !important; }
-    
-    /* Fix Banners & News */
-    .ch-banner { background: linear-gradient(145deg, #ffb3d9, #ff99cc) !important; border-left: 6px solid #ff1493 !important; }
-    .ch-banner .sub { color: #ff1493 !important; }
-    .ch-news { background: linear-gradient(145deg, #ffcce6, #ffb3d9) !important; border-left: 4px solid #ff1493 !important; color: #5c0033 !important; }
-    
-    /* Fix Poll Bars */
-    .ch-bar .name, .ch-bar .val { color: #5c0033 !important; }
-    .ch-bar .track { background: #ffe6f2 !important; border-color: #ff99cc !important; }
-    
-    /* Fix Radio Buttons */
-    [data-testid="stRadio"] label { background: linear-gradient(145deg, #ffe6f2, #ffcce6) !important; border: 1px solid #ff99cc !important; }
-    [data-testid="stRadio"] label:hover { border-color: #ff1493 !important; }
-    [data-testid="stRadio"] label:has(input:checked) { background: linear-gradient(145deg, #ffb3d9, #ff99cc) !important; border-color: #ff1493 !important; box-shadow: inset 4px 0 0 #ff1493 !important; }
-    
-    /* Fix Main Buttons */
-    div.stButton > button { background: linear-gradient(145deg, #ff66b2, #ff3399) !important; border: 1px solid #ff1493 !important; }
-    div.stButton > button p, div.stButton > button span, div.stButton > button div { color: #ffffff !important; }
-    div.stButton > button:hover { background: #ff1493 !important; }
-    
-    /* Fix Tables */
-    .ch-table { background: linear-gradient(145deg, #ffe6f2, #ffcce6) !important; border: 1px solid #ff99cc !important; }
-    .ch-table th { background: #ff99cc !important; border-bottom: 2px solid #ff1493 !important; color: #5c0033 !important; }
-    .ch-table td { border-bottom: 1px solid #ffb3d9 !important; color: #5c0033 !important; }
-    
-    /* Fix Pledges (Override inline dark green/red) */
-    div[style*="background:#10261c;"] { background: #ffcce6 !important; border-color: #008000 !important; color: #008000 !important; }
-    div[style*="background:#2a1111;"] { background: #ffb3d9 !important; border-color: #cc0000 !important; color: #cc0000 !important; }
-    
-    /* UI Elements */
-    hr { border-bottom: 1px solid #ff99cc !important; }
-    [data-testid="stSidebar"] { border-right: 1px solid #ff99cc !important; }
-    </style>
-    """, unsafe_allow_html=True)
 
 
 # ==================== PERSISTENT SIDEBAR ====================
@@ -525,7 +445,7 @@ if s.year > 5:
         elif player_seats == seats[max(seats, key=seats.get)]: result_title, gov_type, win = "Hung Parliament", "Minority Government", True
         else: result_title, gov_type, win = "Hung Parliament", "Sent to Opposition", False
 
-    st.markdown(f"<div style='background-color: {'#ff66b2' if s.get('pink_theme') else ('#2b5440' if win else '#8b0000')}; padding: 20px; border-radius: 10px; color: white; text-align: center; border: 2px solid #ff1493;'><h2>{result_title}</h2><h4 style='color: {'#4a0e2e' if s.get('pink_theme') else '#c9a45c'};'>{gov_type}</h4><p style='font-size: 18px;'>Your Seats: <b>{player_seats}</b></p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: {'#2b5440' if win else '#8b0000'}; padding: 20px; border-radius: 10px; color: white; text-align: center; border: 2px solid #c9a45c;'><h2>{result_title}</h2><h4 style='color: #c9a45c;'>{gov_type}</h4><p style='font-size: 18px;'>Your Seats: <b>{player_seats}</b></p></div>", unsafe_allow_html=True)
     render_parliament_bar(seats, s.party)
 
     st.markdown("### 📜 The Treasury Record (Legacy Report)")
@@ -611,8 +531,7 @@ if is_budget_block or is_mini_budget:
                 if p in s.broken_pledges:
                     p_cols[i%3].markdown(f"<div style='background:#2a1111; border:1px solid #e65c4f; padding:10px; border-radius:6px; color:#e3b3ab; text-align:center;'>❌ <s>{p}</s></div>", unsafe_allow_html=True)
                 else:
-                    success_color = "#008000" if s.get('pink_theme') else "#6fbf8a"
-                    p_cols[i%3].markdown(f"<div style='background:#10261c; border:1px solid {success_color}; padding:10px; border-radius:6px; color:{success_color}; text-align:center; font-weight:bold;'>✅ {p}</div>", unsafe_allow_html=True)
+                    p_cols[i%3].markdown(f"<div style='background:#10261c; border:1px solid #6fbf8a; padding:10px; border-radius:6px; color:#6fbf8a; text-align:center; font-weight:bold;'>✅ {p}</div>", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
             
         if 'budget_applied' not in s: budget.ensure()
@@ -649,13 +568,13 @@ if is_budget_block or is_mini_budget:
                 st.rerun()
         with col_w2:
             if st.button("🗡️ Threaten Rebels\n(-15 Unity, +15 Votes, +10 Sleaze)", use_container_width=True, disabled=s.party_opinion < 15): 
-                st.session_state.party_opinion = max(0, st.session_state.party_opinion - 15)
+                st.session_state.party_opinion = max(0, s.party_opinion - 15)
                 st.session_state.whip_votes += 15
                 st.session_state.sleaze += 10
                 st.rerun()
         with col_w3:
             if st.button("🤝 Water Down Reforms\n(-2 Market Conf, +10 Votes)", use_container_width=True, disabled=s.market_conf < 2): 
-                st.session_state.market_conf = max(0, st.session_state.market_conf - 2.0)
+                st.session_state.market_conf = max(0, s.market_conf - 2.0)
                 st.session_state.whip_votes += 10
                 st.rerun()
 
