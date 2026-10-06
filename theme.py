@@ -76,6 +76,15 @@ div.stButton > button:hover * { color: #07100c !important; }
 .ch-news { background: linear-gradient(145deg, #10261c, #0b1a13) !important; border-left: 4px solid #a3b8ad !important; padding: 10px 15px; border-radius: 6px; font-size: 0.95rem; margin-bottom: 12px; color: #f4f0e6 !important; }
 .ch-crisis { background: #2a1111 !important; border: 1px solid #e65c4f !important; border-left: 5px solid #e65c4f !important; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; font-family: 'Newsreader', serif !important; font-size: 1.2rem; color: #f4f0e6 !important; }
 
+/* NEWSPAPERS: class-based so the global 'div { color: cream !important }' rule can't wash out the ink */
+.np-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 15px 0; }
+.np-paper { flex: 1 1 200px; background: #f4f0e6 !important; border-radius: 3px; box-shadow: 0 6px 14px rgba(0,0,0,0.55); display: flex; flex-direction: column; overflow: hidden; }
+.np-paper .np-mast { background: var(--np); padding: 7px 10px 5px; text-align: center; border-bottom: 3px double rgba(0,0,0,0.45); }
+.np-paper .np-name { font-family: 'Newsreader', serif !important; font-weight: 800; font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; color: #ffffff !important; }
+.np-paper .np-lean { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.85) !important; }
+.np-paper .np-body { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 18px 12px; min-height: 90px; }
+.np-paper .np-hl { font-family: 'Newsreader', serif !important; font-weight: 800; font-size: 1.15rem; line-height: 1.2; text-align: center; text-transform: uppercase; color: #15110a !important; }
+
 hr { border-bottom: 1px solid #1f3b2d !important; margin: 1rem 0; }
 </style>
 """
@@ -111,22 +120,19 @@ def humphrey_message(text):
     st.markdown(f"""<div class='memo-box'><div class='memo-title'>💼 Memo from Sir Humphrey Appleby</div><div class='memo-text'>"{text}"</div></div>""", unsafe_allow_html=True)
 
 def render_newspapers(left_hl, centre_hl, right_hl):
-    st.markdown(f"""
-    <div style='display: flex; gap: 12px; margin: 15px 0;'>
-        <div style='flex: 1; background: #f4f0e6; color: #111 !important; padding: 12px; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column; border-top: 5px solid #e4003b;'>
-            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 0.85rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 8px; padding-bottom: 4px; text-transform: uppercase; color: #111 !important;'>The Clarion (Left)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1rem; text-align: center; line-height: 1.2; display: flex; align-items: center; justify-content: center; flex-grow: 1; color: #111 !important;'>"{left_hl}"</div>
-        </div>
-        <div style='flex: 1; background: #f4f0e6; color: #111 !important; padding: 12px; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column; border-top: 5px solid #faa61a;'>
-            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 0.85rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 8px; padding-bottom: 4px; text-transform: uppercase; color: #111 !important;'>The Statesman (Centre)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1rem; text-align: center; line-height: 1.2; display: flex; align-items: center; justify-content: center; flex-grow: 1; color: #111 !important;'>"{centre_hl}"</div>
-        </div>
-        <div style='flex: 1; background: #f4f0e6; color: #111 !important; padding: 12px; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; flex-direction: column; border-top: 5px solid #0087dc;'>
-            <div style='font-family: "Newsreader", serif; font-weight: 900; font-size: 0.85rem; text-align: center; border-bottom: 2px solid #111; margin-bottom: 8px; padding-bottom: 4px; text-transform: uppercase; color: #111 !important;'>Daily Standard (Right)</div>
-            <div style='font-family: "IBM Plex Sans", sans-serif; font-weight: 800; font-size: 1rem; text-align: center; line-height: 1.2; display: flex; align-items: center; justify-content: center; flex-grow: 1; color: #111 !important;'>"{right_hl}"</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    from html import escape
+    papers = [
+        ('The Clarion', 'Left', '#b3002d', left_hl),
+        ('The Statesman', 'Centre', '#b8730a', centre_hl),
+        ('Daily Standard', 'Right', '#0b5cab', right_hl),
+    ]
+    html = "<div class='np-row'>"
+    for name, lean, colour, hl in papers:
+        html += (f"<div class='np-paper' style='--np:{colour}'>"
+                 f"<div class='np-mast'><div class='np-name'>{escape(name)}</div><div class='np-lean'>{lean}</div></div>"
+                 f"<div class='np-body'><div class='np-hl'>{escape(str(hl))}</div></div></div>")
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False):
     if abs(delta_num) < 1e-9:
