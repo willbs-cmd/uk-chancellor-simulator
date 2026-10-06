@@ -520,8 +520,8 @@ if s.block == 3:
         
         if st.button('Proceed to Spring', type='primary', use_container_width=True):
             snapshot_metrics() 
+            check_pledges()   # must run BEFORE apply_ongoing(), which resets the spending % to 0
             budget.apply_ongoing()
-            check_pledges()
             shift_macro_cycle()
             s.pm_opinion = min(100, s.pm_opinion + (5 if s.headroom > 0 else -5))
             if s.spad and s.spad.startswith('The Fiscal Hawk'):
@@ -595,6 +595,7 @@ if s.block == 3:
                 s.sacked_reason = "You failed to secure the votes. The budget was defeated in the House of Commons, collapsing the Government."
                 st.rerun()
             else:
+                if budget.read() != s.budget_applied: budget._apply()   # don't silently drop un-applied slider changes
                 if s.approval < 40: s.market_conf -= 1.0
                 s.budget_passed = True
                 s.headlines = generate_headlines(None, True, s.headroom)
