@@ -29,8 +29,10 @@ if 'initialized' in st.session_state:
         needs_reset = True
         
     if 'budget_applied' in st.session_state:
-        tax_d = st.session_state.budget_applied.get('tax', {})
-        if 'income' in tax_d or 'inc_basic' not in tax_d or 'cgt' not in tax_d:
+        applied_d = st.session_state.budget_applied
+        if (set(applied_d.get('tax', {})) != set(budget.TAXES)
+                or set(applied_d.get('spend', {})) != set(budget.SPEND_DEFAULTS)
+                or 'tax_pol' not in applied_d or 'spend_pol' not in applied_d):
             needs_reset = True
 
     if needs_reset:
@@ -94,10 +96,10 @@ def check_pledges():
     b = s.budget_applied
     broken = []
     
-    if "Never raise Basic Income Tax" in s.pledges and b['tax']['inc_basic'] > 20 and "Never raise Basic Income Tax" not in s.broken_pledges: broken.append("Never raise Basic Income Tax")
+    if "Never raise Basic Income Tax" in s.pledges and b['tax']['income'] > budget.TAXES['income']['default'] and "Never raise Basic Income Tax" not in s.broken_pledges: broken.append("Never raise Basic Income Tax")
     if "Never raise VAT" in s.pledges and b['tax']['vat'] > 20 and "Never raise VAT" not in s.broken_pledges: broken.append("Never raise VAT")
     if "Never raise Corporation Tax" in s.pledges and b['tax']['corp'] > 25 and "Never raise Corporation Tax" not in s.broken_pledges: broken.append("Never raise Corporation Tax")
-    if "Never raise Capital Gains Tax" in s.pledges and b['tax']['cgt'] > 20 and "Never raise Capital Gains Tax" not in s.broken_pledges: broken.append("Never raise Capital Gains Tax")
+    if "Never raise Capital Gains Tax" in s.pledges and b['tax']['property'] > budget.TAXES['property']['default'] and "Never raise Capital Gains Tax" not in s.broken_pledges: broken.append("Never raise Capital Gains Tax")
     if "Protect NHS Funding (No Cuts)" in s.pledges and float(b['spend']['health']) < 0 and "Protect NHS Funding (No Cuts)" not in s.broken_pledges: broken.append("Protect NHS Funding (No Cuts)")
     if "Protect Education (No Cuts)" in s.pledges and float(b['spend']['education']) < 0 and "Protect Education (No Cuts)" not in s.broken_pledges: broken.append("Protect Education (No Cuts)")
     if "Never increase Welfare Spending" in s.pledges and float(b['spend']['welfare']) > 0 and "Never increase Welfare Spending" not in s.broken_pledges: broken.append("Never increase Welfare Spending")
@@ -607,7 +609,7 @@ else:
             debt_servicing = round(budget.interest(), 1)
             gbp_usd = round(1.27 * (1.0 + 0.15 * (s.market_conf / 65.0 - 1.0) - 0.05 * (s.inflation / 3.0 - 1.0)), 2)
             b_tax = s.get('budget_applied', {}).get('tax', {})
-            tax_burden = round(36.8 + 0.1 * (b_tax.get('inc_basic', 20) - 20) + 0.08 * (b_tax.get('corp', 25) - 25), 1)
+            tax_burden = round(36.8 + 0.1 * (b_tax.get('income', 20) - 20) + 0.08 * (b_tax.get('corp', 25) - 25), 1)
 
             e1, e2 = st.columns(2)
             e1.markdown(stat_card('Annual Deficit', f'£{round(s.deficit, 1)}B', 'current', "Shortfall this year."), unsafe_allow_html=True)
