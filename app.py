@@ -55,8 +55,8 @@ with st.sidebar:
 
 # ==================== SETUP SCREEN ====================
 def setup_screen():
-    st.title('🏛️ The UK Chancellor Simulator (Hardcore Mode)')
-    st.markdown('### Step 1: Choose Your Government')
+    st.markdown("""<div class='setup-hero'><div class='seal'>HM Treasury · Cabinet Office Simulation</div><h1>🏛️ The Chancellor's Office</h1><p>Take the red box, manage the economy, survive Parliament and shape Britain's next five years. Every decision has a price.</p><span class='stamp'>Official business · Start a new term</span></div>""", unsafe_allow_html=True)
+    st.markdown('### Step 1 · Form your government')
     party = st.selectbox('Select Governing Party:', state.PARTIES)
     c1, c2 = st.columns([2, 1])
     with c1:

@@ -25,7 +25,7 @@ CSS = """
 }
 
 html, body, [class*="css"], .stApp { font-family: 'IBM Plex Sans', sans-serif; }
-.stApp { background: var(--bench); color: var(--paper); }
+.stApp { background: radial-gradient(ellipse at 50% -18%, #244a36 0%, var(--bench) 54%); color: var(--paper); }
 .block-container { max-width: 1600px; padding-top: .65rem; padding-bottom: 1rem; padding-left: clamp(1rem, 2vw, 2rem); padding-right: clamp(1rem, 2vw, 2rem); }
 [data-testid='stVerticalBlock'] { gap: .65rem; }
 [data-testid='stHorizontalBlock'] { gap: 1rem; }
@@ -186,9 +186,34 @@ div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stEleme
 .sk-badge { display: inline-block; background: #10281d; border: 1px solid var(--brass); border-radius: 14px; padding: 3px 12px; margin: 3px 6px 3px 0; font-size: .85rem; }
 .sk-grade { font-family: 'Newsreader', serif; font-size: 3.2rem; font-weight: 700; line-height: 1; }
 
-.ch-banner { border-left: 5px solid var(--brass); background: var(--leather); padding: 10px 16px; border-radius: 6px; margin-bottom: 8px; }
-.ch-banner h1 { margin: 0; font-size: 1.7rem; }
-.ch-banner .sub { color: var(--muted); margin-top: 4px; }
+.ch-banner { position: relative; overflow: hidden; border: 1px solid #355a45; border-left: 5px solid var(--brass); background: linear-gradient(110deg, rgba(29,65,48,.98), rgba(13,31,23,.97)); padding: 15px 20px 13px; border-radius: 10px; margin: 0 0 12px; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.ch-banner:after { content: 'TREASURY'; position: absolute; right: 18px; top: 10px; color: rgba(201,164,92,.13); font-family: 'Newsreader', serif; font-size: clamp(2.8rem, 6vw, 5.5rem); font-weight: 700; letter-spacing: .08em; pointer-events: none; }
+.ch-banner .eyebrow { color: var(--brass); font-size: .7rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 3px; }
+.ch-banner h1 { position: relative; z-index: 1; margin: 0; font-size: clamp(1.45rem, 2.4vw, 2.05rem); }
+.ch-banner .sub { position: relative; z-index: 1; color: #bdcabe; margin-top: 5px; font-size: .88rem; }
+.ch-banner .ch-pips { position: relative; z-index: 1; max-width: 760px; }
+
+.setup-hero { position: relative; overflow: hidden; padding: 26px 28px 24px; border: 1px solid #355a45; border-radius: 12px; background: linear-gradient(115deg, #1d4130 0%, #10271c 62%, #0d1f17 100%); box-shadow: 0 12px 30px rgba(0,0,0,.2); margin-bottom: 18px; }
+.setup-hero .seal { color: var(--brass); font-size: .72rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+.setup-hero h1 { margin: 7px 0 8px; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.05; }
+.setup-hero p { max-width: 720px; color: #bdcabe; margin: 0; line-height: 1.55; }
+.setup-hero .stamp { display: inline-block; margin-top: 16px; border: 1px solid rgba(201,164,92,.6); border-radius: 4px; padding: 5px 9px; color: var(--brass); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+/* Cabinet Office finish: quiet borders, clear surfaces, consistent controls. */
+[data-testid='stSidebar'] { background: linear-gradient(180deg, #10271c, #0b1912); border-right: 1px solid #2b5440; }
+[data-testid='stSidebar'] [data-testid='stMarkdownContainer'] h3 { color: var(--brass) !important; }
+[data-testid='stTabs'] [role='tablist'] { gap: 5px; border-bottom: 1px solid #2b5440; }
+[data-testid='stTabs'] button[role='tab'] { border-radius: 7px 7px 0 0; padding: .55rem .9rem; color: var(--muted) !important; }
+[data-testid='stTabs'] button[role='tab'][aria-selected='true'] { color: var(--paper) !important; background: #1a3b2a; border-bottom: 2px solid var(--brass); }
+[data-testid='stTextInput'] input, [data-testid='stNumberInput'] input, [data-testid='stTextArea'] textarea { background: #10271c !important; color: var(--paper) !important; border-color: #355a45 !important; border-radius: 7px !important; }
+[data-testid='stSelectbox'] [data-baseweb='select'] > div, [data-testid='stMultiSelect'] [data-baseweb='select'] > div { border-radius: 7px !important; }
+[data-testid='stAlert'] { border-radius: 8px; }
+hr { border-color: #2b5440 !important; }
+[data-testid='stProgress'] > div > div { background: var(--brass) !important; }
+.stButton > button, [data-testid='stDownloadButton'] button { min-height: 2.5rem; border-radius: 7px; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.stButton > button:hover, [data-testid='stDownloadButton'] button:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(0,0,0,.18); }
+[data-testid='stMetric'] { border-radius: 9px; box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+[data-testid='stExpander'] { border-radius: 9px; }
+@media (max-width: 650px) { .ch-banner { padding: 12px 14px; } .ch-banner:after { right: 8px; top: 15px; font-size: 2rem; } .ch-banner .sub { max-width: 80%; font-size: .78rem; } }
 .ch-pips { display: flex; gap: 4px; margin-top: 8px; }
 .ch-pip { height: 6px; flex: 1; border-radius: 3px; background: #2b5440; }
 .ch-pip.done { background: var(--brass); }
@@ -219,8 +244,9 @@ def header(party, term, year, block):
     colour = PARTY_COLOURS.get(party, '#c9a45c')
     st.markdown(
         f"""<div class='ch-banner' style='border-left-color:{colour}'>
+        <div class='eyebrow'>HM Treasury &nbsp;·&nbsp; Chancellor's Office</div>
         <h1>🏛️ {party} Government</h1>
-        <div class='sub'>Chancellor Simulator, Hardcore Mode &nbsp;|&nbsp; Term {term} &nbsp;|&nbsp; Year {min(year, 5)} of 5, decision {block} of 3</div>
+        <div class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; DECISION {block} OF 3</div>
         <div class='ch-pips'>{pips}</div></div>""",
         unsafe_allow_html=True,
     )
