@@ -26,7 +26,9 @@ CSS = """
 
 html, body, [class*="css"], .stApp { font-family: 'IBM Plex Sans', sans-serif; }
 .stApp { background: var(--bench); color: var(--paper); }
-.block-container { max-width: 1250px; padding-top: 1.5rem; }
+.block-container { max-width: 1600px; padding-top: .65rem; padding-bottom: 1rem; padding-left: clamp(1rem, 2vw, 2rem); padding-right: clamp(1rem, 2vw, 2rem); }
+[data-testid='stVerticalBlock'] { gap: .65rem; }
+[data-testid='stHorizontalBlock'] { gap: 1rem; }
 header[data-testid="stHeader"] { background: transparent; }
 
 h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper); letter-spacing: -0.01em; }
@@ -63,18 +65,26 @@ h1, h2, h3, h4 { font-family: 'Newsreader', serif !important; color: var(--paper
 [data-testid="stExpander"] { background: var(--leather); border: 1px solid #2b5440; border-radius: 6px; }
 [data-testid="stExpander"] summary p { font-family: 'Newsreader', serif; font-size: 1.1rem; }
 
-div[role="radiogroup"] { gap: 0.5rem; }
+div[role="radiogroup"] { gap: 0.35rem; }
+/* Policy options form a compact two-column grid on desktop. */
+@media (min-width: 900px) {
+  [data-testid="stRadio"] div[role="radiogroup"] { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+}
+@media (max-width: 899px) {
+  .block-container { padding-top: .5rem; }
+  .ch-banner h1 { font-size: 1.45rem; }
+}
 div[role="radiogroup"] > label {
   background: var(--leather);
   border: 1px solid #2b5440;
   border-radius: 6px;
-  padding: 12px 16px;
+  padding: 8px 10px;
   width: 100%;
   transition: border-color .15s, background .15s;
 }
 div[role="radiogroup"] > label:hover { border-color: var(--brass); background: var(--leather-2); }
 div[role="radiogroup"] > label:has(input:checked) { border-color: var(--brass); background: var(--leather-2); box-shadow: inset 4px 0 0 var(--brass); }
-div[role="radiogroup"] > label p { font-size: 1rem; line-height: 1.45; }
+div[role="radiogroup"] > label p { font-size: .9rem; line-height: 1.3; margin-bottom: 0; }
 
 div.stButton > button {
   border-radius: 6px; font-weight: 600; padding: 0.6rem 1.5rem;
@@ -100,7 +110,7 @@ div.stButton > button:focus-visible { outline: 2px solid var(--paper); outline-o
 
 [data-testid="stRadio"] label, [data-testid="stRadio"] label[data-baseweb="radio"] {
   background: var(--leather) !important; border: 1px solid #2b5440; border-radius: 6px;
-  padding: 12px 16px; width: 100%; margin-bottom: 6px; transition: border-color .15s, background .15s;
+  padding: 8px 10px; width: 100%; margin-bottom: 3px; transition: border-color .15s, background .15s;
 }
 [data-testid="stRadio"] label:hover { border-color: var(--brass); background: var(--leather-2) !important; }
 [data-testid="stRadio"] label:has(input:checked) {
@@ -120,17 +130,17 @@ div[data-baseweb="tooltip"] { border: 1px solid var(--brass) !important; border-
 
 /* STAT CARDS WITH HOVER TOOLTIP (one at a time: only the hovered card shows its tip) */
 .sc-card { position: relative; background: var(--leather); border: 1px solid #2b5440; border-top: 3px solid var(--brass);
-  border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; min-height: 108px; }
+  border-radius: 6px; padding: 8px 10px; margin-bottom: 4px; min-height: 82px; }
 .sc-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .85rem; line-height: 1.2; }
 .sc-info { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none;
   border: 1px solid var(--muted); border-radius: 50%; font-size: .68rem; font-style: normal; cursor: help; color: var(--muted); }
 .sc-card:hover .sc-info, .sc-card:focus-within .sc-info { border-color: var(--brass); color: var(--brass); }
-.sc-value { font-family: 'Newsreader', serif; font-size: 1.8rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 2px 0 6px; }
+.sc-value { font-family: 'Newsreader', serif; font-size: 1.55rem; font-weight: 700; color: var(--paper); line-height: 1.25; margin: 2px 0 6px; }
 .sc-delta { display: inline-block; font-size: .8rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
 .sc-good { color: #6fbf8a; background: rgba(111,191,138,.14); }
 .sc-bad  { color: #e0705d; background: rgba(224,112,93,.14); }
 .sc-flat { color: var(--muted); background: rgba(159,179,166,.12); }
-.sc-spark { display: block; width: 100%; height: 22px; margin-top: 8px; opacity: .9; }
+.sc-spark { display: block; width: 100%; height: 16px; margin-top: 4px; opacity: .9; }
 .sc-tip { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 9999;
   background: #0b1712; color: #efe9da; border: 1px solid var(--brass); border-radius: 6px; padding: 10px 12px;
   font-family: 'IBM Plex Sans', sans-serif; font-size: .88rem; font-weight: 400; line-height: 1.45;
@@ -176,10 +186,10 @@ div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stEleme
 .sk-badge { display: inline-block; background: #10281d; border: 1px solid var(--brass); border-radius: 14px; padding: 3px 12px; margin: 3px 6px 3px 0; font-size: .85rem; }
 .sk-grade { font-family: 'Newsreader', serif; font-size: 3.2rem; font-weight: 700; line-height: 1; }
 
-.ch-banner { border-left: 6px solid var(--brass); background: var(--leather); padding: 18px 22px; border-radius: 6px; margin-bottom: 14px; }
-.ch-banner h1 { margin: 0; font-size: 2.1rem; }
+.ch-banner { border-left: 5px solid var(--brass); background: var(--leather); padding: 10px 16px; border-radius: 6px; margin-bottom: 8px; }
+.ch-banner h1 { margin: 0; font-size: 1.7rem; }
 .ch-banner .sub { color: var(--muted); margin-top: 4px; }
-.ch-pips { display: flex; gap: 5px; margin-top: 14px; }
+.ch-pips { display: flex; gap: 4px; margin-top: 8px; }
 .ch-pip { height: 6px; flex: 1; border-radius: 3px; background: #2b5440; }
 .ch-pip.done { background: var(--brass); }
 .ch-pip.now { background: var(--paper); }

@@ -102,9 +102,8 @@ if s.step == 'setup':
 # ==================== MAIN HEADER & DASHBOARD ====================
 header(s.party, s.term, s.year, s.block)
 render_cards(CARDS_TOP)
-st.markdown('#### 🏛️ Political Capital')
-render_cards(CARDS_POLITICAL)
-st.divider()
+with st.expander('🏛️ Political Capital · Cabinet, party and media support', expanded=False):
+    render_cards(CARDS_POLITICAL)
 
 
 def scorecard_block(show_share=True):
@@ -228,9 +227,9 @@ def dashboard():
         icon = {'Boom': '📈', 'Stagnation': '➖', 'Recession': '📉'}.get(s.get('macro_cycle'), '➖')
         st.caption(f"🌍 Global economic cycle: {icon} **{s.get('macro_cycle', 'Stagnation')}**. It nudges growth every year it lasts, and can shift each spring.")
         render_cards(CARDS_ECON, per_row=2)
-        st.markdown('### 📈 Voting Intention')
-        df = pd.DataFrame(s.poll_history).set_index('Period')
-        render_polls(df)
+        with st.expander('📈 Voting intention and polling history', expanded=False):
+            df = pd.DataFrame(s.poll_history).set_index('Period')
+            render_polls(df)
     with tab_nation:
         country.render()
     with tab_imf:
@@ -253,7 +252,8 @@ def crisis_screen():
         s.active_crisis = None
         st.rerun()
     crisis_card(crisis['title'])
-    humphrey_message(crisis['humphrey'])
+    with st.expander('💼 Memo from Sir Humphrey Appleby', expanded=False):
+        humphrey_message(crisis['humphrey'])
     if s.get('crisis_reason'):
         st.caption(s.crisis_reason)
     labels = scen.option_labels(crisis)
@@ -267,8 +267,9 @@ def request_screen():
     req = s.active_request
     st.subheader(f"🗂️ Urgent request from the {req['minister']}")
     st.info(req['text'])
-    humphrey_message('A Cabinet colleague with their hand out, Chancellor. Refuse, and they will remember it. '
-                     'Approve, and every other minister will notice that you can be persuaded.')
+    with st.expander('💼 Advice from Sir Humphrey', expanded=False):
+        humphrey_message('A Cabinet colleague with their hand out, Chancellor. Refuse, and they will remember it. '
+                         'Approve, and every other minister will notice that you can be persuaded.')
     c1, c2 = st.columns(2)
     with c1:
         if st.button(f"Approve (-£{req['cost']:.1f}B headroom)", type='primary'):
@@ -288,7 +289,8 @@ def decision_screen():
     options = engine.current_options()
     st.subheader(f"Block {s.block}: {decision['title']}")
     st.write(decision['text'])
-    humphrey_message(decision['humphrey'])
+    with st.expander('💼 Memo from Sir Humphrey Appleby', expanded=False):
+        humphrey_message(decision['humphrey'])
     labels = [o['label'] for o in options]
     choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}')
     if st.button('Execute Policy', type='primary', disabled=choice is None):
@@ -303,14 +305,18 @@ else:
     with col_dash:
         dashboard()
     with col_game:
-        for ev in s.event_cards:
-            event_card(ev['title'], ev['text'], ev['summary'])
-        if s.get('message'):
-            news_box(s.message)
-        if s.get('humphrey_note'):
-            humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
-        if s.get('headlines'):
-            render_newspapers(*s.headlines)
+        # Keep the action and choices prominent; supporting news is available on demand.
+        has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
+        if has_briefing:
+            with st.expander('📰 Briefing, headlines and recent consequences', expanded=False):
+                for ev in s.event_cards:
+                    event_card(ev['title'], ev['text'], ev['summary'])
+                if s.get('message'):
+                    news_box(s.message)
+                if s.get('humphrey_note'):
+                    humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
+                if s.get('headlines'):
+                    render_newspapers(*s.headlines)
         if s.active_crisis is not None:
             crisis_screen()
         elif s.get('active_request'):
