@@ -203,6 +203,239 @@ DECISIONS = {
 }
 
 
+# Extra policy bank: each new term draws a fresh, non-repeating set of weekly topics.
+# Effects deliberately use the same five-ideology order as the original decisions.
+EXTRA_POLICY_DECISIONS = [
+    dict(title='NHS Waiting Lists Emergency', text='Waiting lists remain politically toxic. The Health Secretary wants a plan before the next set of figures lands.', humphrey='The NHS would like more money, more staff and fewer patients, Chancellor. In the circumstances, I fear they may be asking for a miracle.', options=[
+        '1. (Hard Left) Bring private hospitals into public ownership and fund a major staffing drive.',
+        '2. (Social Democratic) Fund extra evening and weekend clinics and expand NHS recruitment.',
+        '3. (Centric) Target the longest waits and publish monthly performance dashboards.',
+        '4. (Free-Market) Expand independent-provider contracts for routine procedures.',
+        '5. (Fiscal Austerity) Freeze administrative hiring and require productivity savings.',
+    ], effects=[
+        dict(headroom=-7.0, approval=5.0, nhs_waiting=-0.7, nhs_morale=7, market_conf=-3, message='A public-sector NHS expansion begins.'),
+        dict(headroom=-5.0, approval=4.0, nhs_waiting=-0.9, nhs_morale=8, message='Extra clinics and recruitment funded.'),
+        dict(headroom=-1.5, approval=1.5, nhs_waiting=-0.4, message='Targeted waiting-list plan launched.'),
+        dict(headroom=-2.5, approval=-1.0, nhs_waiting=-0.6, market_conf=3, message='Independent-provider capacity contracted.'),
+        dict(headroom=2.0, approval=-4.0, nhs_morale=-7, message='NHS savings drive announced.'),
+    ]),
+    dict(title='The Skills and Universities Settlement', text='Universities warn that finances are deteriorating while employers say they cannot find skilled workers.', humphrey='The universities say they are underfunded; the Treasury says they should diversify. Both sides have produced glossy reports. Neither has produced a cheaper solution.', options=[
+        '1. (Hard Left) Make university tuition free and restore maintenance grants.',
+        '2. (Social Democratic) Expand grants for disadvantaged students and technical colleges.',
+        '3. (Centric) Reform student finance and fund courses tied to skills shortages.',
+        '4. (Free-Market) Let universities set fees and compete for students.',
+        '5. (Fiscal Austerity) Cut teaching grants and consolidate struggling institutions.',
+    ], effects=[
+        dict(headroom=-7.0, approval=5.5, growth=0.15, child_poverty=-0.5, message='Free tuition promised; the bill lands at the Treasury.'),
+        dict(headroom=-4.0, approval=4.0, growth=0.2, unemployment=-0.1, message='Skills and student-support package announced.'),
+        dict(headroom=-1.5, approval=1.0, growth=0.15, message='Student finance reform agreed.'),
+        dict(headroom=1.0, market_conf=3, approval=-2.5, growth=0.1, message='Universities gain pricing freedom.'),
+        dict(headroom=3.0, approval=-4.0, growth=-0.1, message='Higher education savings imposed.'),
+    ]),
+    dict(title='Rail Fares and Commuter Chaos', text='Commuters face rising fares and repeated disruption. Business groups say unreliable transport is holding back growth.', humphrey='The railways are currently too expensive, too unreliable and too complicated. Naturally, several departments have proposed adding a new regulator.', options=[
+        '1. (Hard Left) Renationalise passenger rail and freeze fares.',
+        '2. (Social Democratic) Cap fare rises and invest in reliable local services.',
+        '3. (Centric) Tie fare rises to service standards and upgrade bottlenecks.',
+        '4. (Free-Market) Open more routes to competition and dynamic pricing.',
+        '5. (Fiscal Austerity) Allow fares to rise and cut low-use subsidies.',
+    ], effects=[
+        dict(headroom=-5.0, approval=4.5, rail=8, growth=0.1, market_conf=-3, message='Rail brought under public control.'),
+        dict(headroom=-3.5, approval=4.0, rail=6, message='Fare cap and local-service investment announced.'),
+        dict(headroom=-2.0, approval=1.5, rail=4, growth=0.1, message='Performance-linked rail reform begins.'),
+        dict(headroom=0.5, approval=-1.5, rail=2, market_conf=3, message='Rail competition expanded.'),
+        dict(headroom=2.5, approval=-4.0, rail=-3, message='Rail subsidies cut; fares rise.'),
+    ]),
+    dict(title='AI, Automation and British Jobs', text='Employers are adopting AI rapidly. Unions want protections, while firms warn against rules that could slow investment.', humphrey='Artificial intelligence promises to make work more efficient. The civil service is studying whether this means it can produce the same report in half the time.', options=[
+        '1. (Hard Left) Introduce a robot tax and a public AI service.',
+        '2. (Social Democratic) Fund retraining and require worker consultation on major automation.',
+        '3. (Centric) Create a light-touch AI code with targeted retraining grants.',
+        '4. (Free-Market) Keep regulation minimal and offer AI investment allowances.',
+        '5. (Fiscal Austerity) End new grants and let firms fund their own transition.',
+    ], effects=[
+        dict(headroom=-3.5, approval=2.5, growth=-0.1, unemployment=0.2, message='AI levy and public technology programme proposed.'),
+        dict(headroom=-3.0, approval=3.5, growth=0.2, unemployment=-0.2, message='Worker retraining package launched.'),
+        dict(headroom=-1.0, approval=1.0, growth=0.2, message='Practical AI framework published.'),
+        dict(headroom=-1.5, market_conf=4, growth=0.45, approval=0.5, message='AI investment incentives announced.'),
+        dict(headroom=1.0, approval=-2.5, growth=0.05, message='Public support for AI transition withdrawn.'),
+    ]),
+    dict(title='Small Business Rates Revolt', text='High-street businesses say business rates and energy costs are making local shops unviable.', humphrey='The high street would like lower taxes, cheaper energy and more customers. The Treasury has discovered that the first two are expensive and the third is difficult to legislate for.', options=[
+        '1. (Hard Left) Replace business rates with a tax on large commercial property owners.',
+        '2. (Social Democratic) Expand small-business relief and provide targeted energy support.',
+        '3. (Centric) Simplify rates and offer time-limited relief to struggling shops.',
+        '4. (Free-Market) Permanently cut business rates and loosen trading rules.',
+        '5. (Fiscal Austerity) Keep rates unchanged and remove temporary reliefs.',
+    ], effects=[
+        dict(headroom=-3.0, approval=3.5, growth=0.1, message='Business-rates overhaul targets large property owners.'),
+        dict(headroom=-2.5, approval=4.0, growth=0.2, unemployment=-0.1, message='High-street support package launched.'),
+        dict(headroom=-1.0, approval=1.5, growth=0.1, message='Temporary rates relief agreed.'),
+        dict(headroom=-4.0, approval=2.0, market_conf=3, growth=0.35, message='Permanent rates cuts announced.'),
+        dict(headroom=2.0, approval=-3.5, growth=-0.1, message='Business reliefs withdrawn.'),
+    ]),
+    dict(title='Flood Defences and Climate Resilience', text='Flooding has damaged homes and infrastructure. Local leaders demand long-term prevention rather than emergency clean-ups.', humphrey='The Environment Agency would like to prevent floods before they happen. The Treasury traditionally prefers to evaluate the value of prevention after the flooding has occurred.', options=[
+        '1. (Hard Left) Launch a national public flood-defence and home-retrofit programme.',
+        '2. (Social Democratic) Prioritise vulnerable communities and resilient infrastructure.',
+        '3. (Centric) Co-fund local defences using risk-based assessments.',
+        '4. (Free-Market) Incentivise private insurance and property-level protection.',
+        '5. (Fiscal Austerity) Restrict new spending to emergency repairs only.',
+    ], effects=[
+        dict(headroom=-5.0, approval=3.5, netzero=3, growth=0.1, message='National resilience programme begins.'),
+        dict(headroom=-3.5, approval=3.0, netzero=2, homeless=-5, message='Flood protection prioritised for high-risk communities.'),
+        dict(headroom=-1.5, approval=1.0, netzero=1, message='Risk-based local flood funds allocated.'),
+        dict(headroom=-0.5, approval=-1.0, market_conf=2, message='Private resilience incentives introduced.'),
+        dict(headroom=1.5, approval=-3.0, netzero=-2, message='Only emergency flood repairs will be funded.'),
+    ]),
+    dict(title='Childcare and Parental Employment', text='Parents say childcare costs are keeping them out of work, while providers warn that funding does not cover their costs.', humphrey='Childcare is simultaneously an economic growth policy, a family policy and a very expensive invoice. The Treasury would prefer it to be just one of those things.', options=[
+        '1. (Hard Left) Provide universal free childcare funded by the state.',
+        '2. (Social Democratic) Expand funded hours and raise support for low-income families.',
+        '3. (Centric) Target subsidies at working parents and childcare shortages.',
+        '4. (Free-Market) Offer tax credits and encourage new private providers.',
+        '5. (Fiscal Austerity) Tighten eligibility and reduce childcare subsidies.',
+    ], effects=[
+        dict(headroom=-7.0, approval=5.0, growth=0.3, unemployment=-0.3, message='Universal childcare pledge announced.'),
+        dict(headroom=-4.0, approval=4.0, growth=0.3, unemployment=-0.25, message='Funded childcare hours expanded.'),
+        dict(headroom=-2.0, approval=1.5, growth=0.2, unemployment=-0.15, message='Targeted childcare support launched.'),
+        dict(headroom=-1.5, approval=1.0, growth=0.25, market_conf=2, message='Childcare tax credits introduced.'),
+        dict(headroom=2.0, approval=-4.0, unemployment=0.2, child_poverty=1.0, message='Childcare support eligibility tightened.'),
+    ]),
+    dict(title='Local Councils on the Brink', text='Councils warn that social care, libraries and local roads are competing for an increasingly thin budget.', humphrey='Local government has reached the stage where it can no longer afford to empty the bins, let alone discuss the future of civilisation. The bins, regrettably, are not optional.', options=[
+        '1. (Hard Left) Create a central grant to reverse years of council cuts.',
+        '2. (Social Democratic) Stabilise council finances and protect social care.',
+        '3. (Centric) Reward councils that share services and improve delivery.',
+        '4. (Free-Market) Expand outsourcing and give councils greater tax flexibility.',
+        '5. (Fiscal Austerity) Require deeper savings and allow service consolidation.',
+    ], effects=[
+        dict(headroom=-6.0, approval=4.0, homeless=-5, message='Emergency council grant announced.'),
+        dict(headroom=-4.0, approval=3.0, homeless=-3, message='Social care and council finances stabilised.'),
+        dict(headroom=-1.0, approval=1.0, growth=0.1, message='Shared-services programme launched.'),
+        dict(headroom=0.5, approval=-1.5, market_conf=2, message='Outsourcing and local tax flexibility expanded.'),
+        dict(headroom=3.0, approval=-4.0, schools=-2, message='Council savings targets imposed.'),
+    ]),
+    dict(title='A Fair Deal for Farmers', text='Farmers face volatile input costs, environmental rules and uncertainty over food security.', humphrey='Farmers would like certainty, fair prices and fewer forms. The department has prepared a consultation document on the forms.', options=[
+        '1. (Hard Left) Establish a public food board and guarantee minimum farm prices.',
+        '2. (Social Democratic) Fund sustainable farming and rural infrastructure.',
+        '3. (Centric) Offer targeted resilience grants and simplify compliance.',
+        '4. (Free-Market) Remove trade barriers and loosen agricultural regulation.',
+        '5. (Fiscal Austerity) End most farm subsidies and prioritise market competition.',
+    ], effects=[
+        dict(headroom=-4.0, approval=2.5, growth=-0.05, message='Food board and price guarantees proposed.'),
+        dict(headroom=-3.0, approval=3.0, netzero=2, growth=0.1, message='Sustainable farming support funded.'),
+        dict(headroom=-1.5, approval=1.0, growth=0.1, message='Targeted farm resilience grants introduced.'),
+        dict(headroom=0.5, approval=-1.0, growth=0.2, netzero=-1, message='Agricultural market rules loosened.'),
+        dict(headroom=2.5, approval=-3.5, netzero=-2, message='Farm subsidy reductions announced.'),
+    ]),
+    dict(title='Energy Security After a Price Shock', text='Wholesale energy prices have jumped again. Ministers must balance household bills, energy security and the transition to cleaner power.', humphrey='Energy security is essential, Chancellor. Unfortunately, the cheapest energy, the cleanest energy and the energy available tomorrow are not always the same energy.', options=[
+        '1. (Hard Left) Take major energy suppliers into public ownership and cap household bills.',
+        '2. (Social Democratic) Expand renewables and provide targeted bill support.',
+        '3. (Centric) Diversify supply and accelerate grid upgrades.',
+        '4. (Free-Market) Offer tax incentives for private energy investment and new generation.',
+        '5. (Fiscal Austerity) End bill support and let prices reduce demand.',
+    ], effects=[
+        dict(headroom=-6.0, approval=5.0, energy_bills=-250, market_conf=-4, netzero=2, message='Public energy intervention caps household bills.'),
+        dict(headroom=-3.5, approval=3.5, energy_bills=-120, netzero=4, message='Renewables and targeted bill support expanded.'),
+        dict(headroom=-2.0, approval=1.0, energy_bills=-50, netzero=2, message='Grid resilience and supply diversification funded.'),
+        dict(headroom=-1.0, market_conf=4, growth=0.2, netzero=1, message='Private energy investment incentives announced.'),
+        dict(headroom=2.0, approval=-4.5, energy_bills=150, inflation=0.2, message='Energy support withdrawn as bills rise.'),
+    ]),
+    dict(title='Productivity and Planning the Next Decade', text='Productivity growth is weak. The OBR wants credible measures that can raise output without permanently inflating public spending.', humphrey='Productivity is the art of producing more with less. Whitehall has generally specialised in producing more paperwork with more people.', options=[
+        '1. (Hard Left) Launch a public investment bank for strategic industries.',
+        '2. (Social Democratic) Invest in skills, R&D and regional growth partnerships.',
+        '3. (Centric) Reform planning and focus investment on high-return projects.',
+        '4. (Free-Market) Cut corporation tax and remove barriers to investment.',
+        '5. (Fiscal Austerity) Prioritise debt reduction over new investment.',
+    ], effects=[
+        dict(headroom=-5.0, growth=0.35, approval=2.0, message='Public investment bank established.'),
+        dict(headroom=-4.0, growth=0.4, unemployment=-0.1, approval=3.0, message='Skills and innovation package launched.'),
+        dict(headroom=-1.5, growth=0.3, homes_built=8, message='Planning and high-return investment reforms agreed.'),
+        dict(headroom=-3.0, growth=0.45, market_conf=5, approval=0.5, message='Business investment tax cuts announced.'),
+        dict(headroom=3.0, growth=-0.1, approval=-2.0, message='Investment deferred in favour of debt reduction.'),
+    ]),
+    dict(title='Immigration, Skills and Public Services', text='Employers report shortages in key sectors while communities want confidence that public services can keep up.', humphrey='The country requires skilled workers, tighter controls, faster processing and a system that is both humane and inexpensive. The department assures me these aims are entirely compatible.', options=[
+        '1. (Hard Left) Expand safe routes and fund local integration services.',
+        '2. (Social Democratic) Link work visas to shortage sectors and invest in integration.',
+        '3. (Centric) Reform processing, enforcement and skills planning together.',
+        '4. (Free-Market) Expand employer-led visas and streamline recruitment.',
+        '5. (Fiscal Austerity) Tighten eligibility and reduce migration-related service spending.',
+    ], effects=[
+        dict(headroom=-2.5, approval=2.0, growth=0.15, homeless=-2, message='Safe routes and local integration funding expanded.'),
+        dict(headroom=-2.0, approval=2.5, growth=0.25, unemployment=-0.1, message='Shortage-sector visas and integration investment aligned.'),
+        dict(headroom=-0.5, approval=1.0, market_conf=1, growth=0.1, message='Processing and workforce planning reforms launched.'),
+        dict(headroom=-0.5, approval=-1.0, growth=0.3, market_conf=3, message='Employer-led migration route expanded.'),
+        dict(headroom=1.5, approval=-3.0, growth=-0.15, message='Migration and related service spending tightened.'),
+    ]),
+    dict(title='The Cost of Living and Household Debt', text='Households are struggling with food, rent and borrowing costs. Ministers want visible help without reigniting inflation.', humphrey='The cost of living is the price of living, Chancellor. The public would prefer it to be lower. The Treasury has been asked to investigate whether this is feasible.', options=[
+        '1. (Hard Left) Introduce a broad essentials price cap funded by borrowing.',
+        '2. (Social Democratic) Provide targeted payments and expand social tariffs.',
+        '3. (Centric) Focus help on low-income households and debt advice.',
+        '4. (Free-Market) Cut selected indirect taxes and encourage competition.',
+        '5. (Fiscal Austerity) End temporary support to limit borrowing and demand.',
+    ], effects=[
+        dict(headroom=-6.0, approval=5.0, inflation=0.3, child_poverty=-1.0, message='Essentials price cap announced; supply concerns emerge.'),
+        dict(headroom=-3.5, approval=4.0, child_poverty=-1.0, message='Targeted household support extended.'),
+        dict(headroom=-1.5, approval=1.5, child_poverty=-0.5, message='Debt advice and focused support funded.'),
+        dict(headroom=-2.0, approval=1.0, inflation=-0.1, growth=0.1, message='Selected consumption taxes reduced.'),
+        dict(headroom=2.5, approval=-4.5, child_poverty=1.0, message='Temporary cost-of-living support ends.'),
+    ]),
+    dict(title='Tourism, Culture and the Night-Time Economy', text='Tourism and cultural venues want support, but the Treasury questions which interventions generate lasting local growth.', humphrey='The arts sector says it contributes billions to the economy. The Treasury has asked whether it could contribute those billions while requiring slightly less Treasury money.', options=[
+        '1. (Hard Left) Create a public culture fund and subsidise community venues.',
+        '2. (Social Democratic) Support regional tourism, museums and creative apprenticeships.',
+        '3. (Centric) Target grants at projects with measurable local economic returns.',
+        '4. (Free-Market) Cut licensing red tape and promote private investment.',
+        '5. (Fiscal Austerity) End cultural grants and require venues to become self-funding.',
+    ], effects=[
+        dict(headroom=-3.5, approval=2.5, growth=0.1, message='Community culture fund created.'),
+        dict(headroom=-2.5, approval=2.5, growth=0.2, unemployment=-0.1, message='Regional tourism and creative skills supported.'),
+        dict(headroom=-1.0, approval=1.0, growth=0.15, message='Local-impact grants targeted.'),
+        dict(headroom=0.0, market_conf=2, growth=0.2, approval=0.5, message='Licensing rules simplified for venues.'),
+        dict(headroom=1.5, approval=-3.0, message='Cultural grants withdrawn.'),
+    ]),
+    dict(title='Digital Government and Civil Service Reform', text='Public services still rely on fragmented systems and paper-heavy processes. Ministers want savings without a collapse in service quality.', humphrey='Digital transformation is proceeding well, Chancellor. We have formed a taskforce to consider whether the existing taskforce can be moved to a digital platform.', options=[
+        '1. (Hard Left) Build shared public digital infrastructure in-house and protect public-service jobs.',
+        '2. (Social Democratic) Fund secure digital services and retrain civil servants.',
+        '3. (Centric) Consolidate legacy systems with staged delivery targets.',
+        '4. (Free-Market) Outsource major platforms to competing technology firms.',
+        '5. (Fiscal Austerity) Mandate rapid headcount reductions and freeze IT budgets.',
+    ], effects=[
+        dict(headroom=-3.5, approval=1.5, growth=0.1, message='Public digital infrastructure programme launched.'),
+        dict(headroom=-2.5, approval=2.0, growth=0.2, message='Secure services and staff retraining funded.'),
+        dict(headroom=-1.0, approval=1.0, market_conf=1, message='Legacy systems consolidation begins.'),
+        dict(headroom=0.5, market_conf=2, approval=-1.0, message='Technology outsourcing expanded.'),
+        dict(headroom=2.0, approval=-3.0, nhs_morale=-2, message='Rapid civil service savings imposed.'),
+    ]),
+    dict(title='Pensions and Intergenerational Fairness', text='Pension costs are rising as younger workers worry about housing, wages and whether the system will be there for them.', humphrey='Pensions are a promise made by politicians to people who vote reliably. Younger people are understandably curious about when they might receive a similar promise.', options=[
+        '1. (Hard Left) Expand the state pension and restore universal winter payments.',
+        '2. (Social Democratic) Protect the pension floor and improve support for low-income retirees.',
+        '3. (Centric) Review pension uprating alongside targeted help for poorer pensioners.',
+        '4. (Free-Market) Encourage private saving and gradually raise the retirement age.',
+        '5. (Fiscal Austerity) Means-test more pensioner benefits and restrain uprating.',
+    ], effects=[
+        dict(headroom=-5.5, approval=4.0, child_poverty=-0.2, message='Pension entitlements expanded.'),
+        dict(headroom=-3.5, approval=3.0, message='Pensioner poverty measures funded.'),
+        dict(headroom=-1.0, approval=0.5, message='Pension review and targeted help announced.'),
+        dict(headroom=1.0, approval=-2.0, growth=0.1, message='Private saving incentives and retirement-age review launched.'),
+        dict(headroom=3.0, approval=-4.5, message='Pensioner benefits means-tested more tightly.'),
+    ]),
+]
+
+# Give the extra topics stable keys so existing option and delayed-effect code can be reused.
+DECISIONS.update({(6 + i, 1): d for i, d in enumerate(EXTRA_POLICY_DECISIONS)})
+
+
+def get_weekly_decision(seed, term, year, block):
+    """Draw a varied, non-repeating set of 10 policy topics for each five-year term."""
+    if block not in (1, 2) or year < 1:
+        return None
+    slot = (year - 1) * 2 + (block - 1)
+    # Keep the opening policy as a reliable tutorial and preserve its delayed-consequence example.
+    opening = DECISIONS[(1, 1)]
+    if slot == 0:
+        return opening
+    pool = [d for d in DECISIONS.values() if d is not opening]
+    random.Random(f'{seed}-{term}-weekly-policy-variety').shuffle(pool)
+    if slot - 1 >= len(pool):
+        return None
+    return pool[slot - 1]
+
+
 # ---------------------------------------------------------------------------------------------
 # Delayed consequences: (year, block) -> {option index: spec}. 'after' counts player actions
 # (decisions, crises, budgets) before it lands. Not every option has one; some are rewards.

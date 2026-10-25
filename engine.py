@@ -173,7 +173,7 @@ def settle():
 # ================================================================ the decision loop
 def current_decision():
     s = st.session_state
-    return decisions.DECISIONS.get((s.year, s.block))
+    return decisions.get_weekly_decision(s.get('seed', 0), s.get('term', 1), s.get('year', 1), s.get('block', 1))
 
 
 def current_options():
