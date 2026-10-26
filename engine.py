@@ -388,9 +388,19 @@ def proceed_to_spring():
     s.setdefault('threshold_freeze_years', 0)
     s.setdefault('political_capital_points', 5)
     s.growth = round(s.growth + (s.longrun_productivity - 1.0) * 0.04, 2)
-    if s.threshold_freeze_years:
+    if s.get('thresholds_frozen', False):
+        s.threshold_freeze_years = float(s.get('threshold_freeze_years', 0)) + 1.0
         s.headroom = round(s.headroom + min(1.5, 0.35 * s.threshold_freeze_years), 1)
         s.approval = round(_clip(s.approval - min(2.0, 0.25 * s.threshold_freeze_years)), 1)
+        scope = s.get('threshold_freeze_scope', 'Personal allowance and all bands')
+        if scope == 'Higher and additional thresholds only':
+            s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
+    else:
+        s.threshold_freeze_years = 0
+        # In this simplified model thresholds rise with nominal earnings unless frozen.
+        s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
+        s.higher_rate_threshold = round(s.higher_rate_threshold * 1.025 / 10) * 10
+        s.additional_rate_threshold = round(s.additional_rate_threshold * 1.025 / 10) * 10
     if s.pension_pressure:
         s.headroom = round(s.headroom - 0.25 * s.pension_pressure, 1)
     s.political_capital_points = 5
