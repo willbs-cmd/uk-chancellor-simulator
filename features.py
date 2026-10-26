@@ -172,13 +172,13 @@ def render():
         t1.metric("Personal allowance", f"£{s.personal_allowance:,.0f}")
         t2.metric("Higher-rate threshold", f"£{s.higher_rate_threshold:,.0f}")
         t3.metric("Additional-rate threshold", f"£{s.additional_rate_threshold:,.0f}")
-        st.caption("Model starting points: 0% up to the £12,570 personal allowance, 20% basic rate to £50,270 total income, 40% higher rate above that, and 45% additional rate above £125,140. The game uses the main bands for England, Wales and Northern Ireland; Scotland has different bands.");
+        st.caption(f"Current model thresholds: 0% up to the £{s.personal_allowance:,.0f} personal allowance, 20% basic rate to £{s.higher_rate_threshold:,.0f} total income, 40% higher rate above that, and 45% above £{s.additional_rate_threshold:,.0f}. This simplifies the main bands for England, Wales and Northern Ireland; Scotland has different bands. See [GOV.UK](https://www.gov.uk/income-tax-rates) for official rates.")
         council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax", help="A simplified revaluation raises receipts but can anger households whose bills increase.")
         pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief", help="Raises revenue but makes pension saving less attractive to some higher-rate taxpayers.")
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock", help="Improves pensioner incomes but increases the long-run pension bill.")
         productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan", help="Costs £0.5bn of headroom now and improves the long-run productivity trend.")
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True,
-                      disabled=not any((freeze, council_tax, pension_relief, triple, productivity_plan))):
+                      disabled=(not any((freeze, council_tax, pension_relief, triple, productivity_plan)) and not bool(s.get("thresholds_frozen", False)))):
             def tax_fx(x):
                 x.thresholds_frozen = bool(freeze)
                 x.threshold_freeze_scope = freeze_scope
