@@ -9,6 +9,7 @@ import country
 import econ
 import decisions
 import politics
+import parliament
 import speech
 import scenarios as scen
 import state
@@ -195,13 +196,25 @@ def execute_decision(opt):
     ideology, effect = opt['ideology'], opt['effect']
     decision = current_decision()
 
+    vote = parliament.review_bill(decision, opt)
+    implementation = vote['factor']
+    applied_effect = parliament.scale_effect(effect, implementation)
     s.message = effect.get('message', 'Decision applied.')
     s.last_ideology = ideology
     s.headlines = generate_headlines(ideology)
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
-    country.apply_decision(ideology)
-    apply_effect(effect)
+    # Put each major proposal to a Commons vote before applying its full effects.
+    country.apply_decision(ideology, scale=implementation)
+    apply_effect(applied_effect)
+    parliament.apply_fallout(vote)
+    parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
+    s.message = (s.message + " " + parliament_note).strip()
+    s.event_cards.append({
+        'title': f"Commons vote · {vote['status']}",
+        'text': f"{decision['title']}: {opt['label']}",
+        'summary': f"{vote['ayes']} ayes · {vote['noes']} noes · {implementation:.0%} of the proposal implemented"
+    })
 
     d_app = s.approval - before['approval']
     d_head = s.headroom - before['headroom']
@@ -211,10 +224,11 @@ def execute_decision(opt):
 
     s.steps += 1
     if opt['delayed']:
-        spec = opt['delayed']
+        spec = dict(opt['delayed'])
+        spec['fx'] = parliament.scale_effect(spec['fx'], implementation)
         s.pending.append(dict(due=s.steps + spec['after'], title=spec['title'], text=spec['text'], fx=spec['fx']))
     state.log('decision', decision['title'], choice=opt['label'], ideology=ideology, before=before,
-              note=effect.get('message', ''))
+              note=f"{effect.get('message', '')} {parliament_note}")
 
     deliver_pending()
     settle()
