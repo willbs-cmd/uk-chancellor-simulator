@@ -554,6 +554,24 @@ hr { margin: .6rem 0 !important; }
   outline-offset: 1px;
 }
 
+
+[data-testid="stCheckbox"] input[type="checkbox"],
+[data-testid="stRadio"] input[type="radio"] {
+  accent-color: #c9a45c !important;
+}
+[data-testid="stCheckbox"] [role="checkbox"] {
+  background: #10271c !important;
+  border-color: #c9a45c !important;
+}
+[data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"] {
+  background: #c9a45c !important;
+  border-color: #c9a45c !important;
+}
+[data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"] svg {
+  color: #0d1f17 !important;
+  fill: #0d1f17 !important;
+}
+
 </style>
 """
 
