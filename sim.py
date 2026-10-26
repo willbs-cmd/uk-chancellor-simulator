@@ -246,9 +246,69 @@ def check(n=None, difficulty=None):
                     failures.append(f"Promotion {role_id} -> {target_role} uses unknown stat {stat_key}.")
                 if not math.isfinite(float(threshold)):
                     failures.append(f"Promotion {role_id} -> {target_role} has a non-finite threshold.")
-    test_profile = career.new_profile("Test MP", "Test Constituency", "policy_specialist")
+    constituency_data = load_json('constituencies_2024.json')
+    constituencies = constituency_data.get('constituencies', [])
+    seat_names = [row.get('name') for row in constituencies]
+    seat_codes = [row.get('code') for row in constituencies]
+    if len(constituencies) < contract.get('minimum_constituencies', 650):
+        failures.append(f"Only {len(constituencies)} constituencies; expected {contract.get('minimum_constituencies', 650)}.")
+    if len(set(seat_names)) != len(seat_names) or len(set(seat_codes)) != len(seat_codes):
+        failures.append("The constituency register contains duplicate names or codes.")
+    expected_nations = {'England': 543, 'Scotland': 57, 'Wales': 32, 'Northern Ireland': 18}
+    actual_nations = collections.Counter(row.get('nation') for row in constituencies)
+    if any(actual_nations.get(nation, 0) != expected for nation, expected in expected_nations.items()):
+        failures.append(f"Constituency nation counts do not match the official 2024 register: {dict(actual_nations)}.")
+
+    division_data = load_json('career_divisions.json')
+    divisions = division_data.get('divisions', [])
+    if len(divisions) < contract.get('minimum_divisions', 15):
+        failures.append(f"Only {len(divisions)} career divisions; expected at least {contract.get('minimum_divisions', 15)}.")
+    if set(division_data.get('party_names', [])) != set(state.PARTIES):
+        failures.append("Career division party names do not match the supported parties.")
+    seen_division_ids = set()
+    allowed_votes = {'Aye', 'No', 'Free vote'}
+    allowed_local_preferences = {'Aye', 'No', 'Free vote'}
+    for division in divisions:
+        division_id = division.get('id')
+        if not division_id or division_id in seen_division_ids:
+            failures.append("Career divisions contain a missing or duplicate ID.")
+        seen_division_ids.add(division_id)
+        if not division.get('title') or not division.get('description'):
+            failures.append(f"Career division {division_id} is missing its title or description.")
+        whip = division.get('whip', {})
+        if set(state.PARTIES) - set(whip):
+            failures.append(f"Career division {division_id} is missing a party-whip position.")
+        if any(value not in allowed_votes for value in whip.values()):
+            failures.append(f"Career division {division_id} has an invalid party-whip position.")
+        priority = division.get('priority')
+        if priority is not None and priority not in division_data.get('mandates', {}):
+            failures.append(f"Career division {division_id} references an unknown local-priority category.")
+        if division.get('local_preference') not in allowed_local_preferences:
+            failures.append(f"Career division {division_id} has an invalid local preference.")
+
+    test_profile = career.new_profile("Test MP", "Droitwich and Evesham", "policy_specialist", "public_services", "Labour")
     if test_profile.get('role') != 'mp' or len(test_profile.get('stats', {})) != len(career_data.get('attributes', {})):
         failures.append("Career mode does not initialise a complete MP profile.")
+    if test_profile.get('constituency') not in set(seat_names) or not test_profile.get('constituency_code'):
+        failures.append("Career mode does not initialise a profile with a real constituency and code.")
+    if test_profile.get('constituency_nation') != 'England':
+        failures.append("Constituency nation metadata is not correct for Droitwich and Evesham.")
+
+    # Exercise a real career-session division: it must be votable once, then locked.
+    st.session_state.clear()
+    st.session_state.seed = 12345
+    st.session_state.party = 'Labour'
+    test_division = career._division_for(test_profile)
+    test_vote = test_division.get('whip', {}).get('Labour', 'Aye')
+    if test_vote not in career.VOTE_OPTIONS:
+        test_vote = 'Aye'
+    if not career._cast_vote(test_profile, test_vote):
+        failures.append("A career division could not be cast.")
+    if career._cast_vote(test_profile, test_vote):
+        failures.append("The same parliamentary division could be voted on twice in one session.")
+    if len(test_profile.get('vote_history', [])) != 1:
+        failures.append("The career voting record was not persisted after a vote.")
+
     # Ensure Prime Minister is reachable from the MP start through the role graph.
     reachable, frontier = set(), ['mp']
     while frontier:
