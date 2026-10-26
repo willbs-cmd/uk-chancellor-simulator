@@ -25,5 +25,7 @@ jobs:
           python-version: "3.11"
       - name: Install headless test dependency
         run: python -m pip install --upgrade pip pandas
+      - name: Compile application modules
+        run: python -m py_compile app.py career.py state.py engine.py budget.py parliament.py sim.py
       - name: Validate content and strategy balance
         run: python sim.py check
