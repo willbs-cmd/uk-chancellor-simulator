@@ -11,7 +11,9 @@
     "minimum_tax_levers": 14,
     "minimum_spending_departments": 10,
     "minimum_tax_schemes": 10,
-    "minimum_spending_schemes": 5
+    "minimum_spending_schemes": 5,
+    "minimum_constituencies": 650,
+    "minimum_divisions": 15
   },
   "party_thresholds": {
     "Labour": {
