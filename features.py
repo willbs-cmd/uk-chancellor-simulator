@@ -66,6 +66,7 @@ def render():
     s.setdefault("political_capital_points", 5)
     s.setdefault("longrun_productivity", 1.0)
     s.setdefault("pension_pressure", 0.0)
+    s.setdefault("demographic_pressure", 0.0)
     s.setdefault("threshold_freeze_years", 0)
     s.setdefault("thresholds_frozen", False)
     s.setdefault("personal_allowance", 12570.0)
@@ -79,10 +80,11 @@ def render():
     st.caption("Choose when to spend political capital. Each action can be taken once per year; the same limited pool covers statements, the Bank, pay talks and constitutional bargaining.")
     if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Political capital", f"{s.political_capital_points}/5")
-    m2.metric("Productivity trend", f"{s.longrun_productivity:.1f}%")
-    m3.metric("Pension pressure", f"{s.pension_pressure:.1f} index")
+    m1, m2, m3, m4 = st.columns(4, gap="small")
+    m1.metric("Political capital", f"{s.political_capital_points}/5", help="Points available for this year’s political interventions.")
+    m2.metric("Productivity trend", f"{s.longrun_productivity:.2f} index", help="A long-run driver of growth. Skills, research and infrastructure spending can improve it.")
+    m3.metric("Ageing pressure", f"{s.demographic_pressure:.1f} index", help="Rises each year to represent an older population and greater demand for retirement-related spending.")
+    m4.metric("Pension pressure", f"{s.pension_pressure:.2f} index", help="A cumulative pressure on the public finances from demographic ageing and pension uprating decisions.")
     t1, t2, t3, t4 = st.tabs(["Statements", "Bank & gilts", "Pay & tax", "Devolution"])
     with t1:
         st.markdown("**Spring Statement**")
@@ -200,7 +202,7 @@ def render():
         st.markdown("**Political capital** is a limited annual resource for interventions; spend it on the most important priorities. **Market confidence** is a simplified investor sentiment score, not a direct market price.")
         st.markdown("**Quantitative easing (QE)** means a central bank buys assets to loosen financial conditions; it can support demand but may add inflation risk. **Gilts** are UK government bonds. Maturity is how long until they must be repaid; index-linked gilts rise with inflation.")
         st.markdown("**Fiscal drag** occurs when tax thresholds stay frozen while earnings rise, bringing more income into tax or higher bands. **Triple lock** means the state pension rises by the highest of earnings growth, inflation or 2.5%; this game uses an abstract pension-pressure index.")
-        st.markdown("**Productivity** is output per hour worked. **Pension pressure** represents long-run costs from an ageing population and pension commitments. **Block-grant bargaining** models negotiations between Westminster and devolved governments.")
+        st.markdown("**Productivity** is output per hour worked. **Ageing pressure** rises over time as the population gets older; **pension pressure** accumulates the resulting spending burden and the effect of pension uprating. **Block-grant bargaining** models negotiations between Westminster and devolved governments.")
         st.markdown("**Leadership challenge** is a simplified political gamble: success depends on party and Cabinet support; failure risks your job. These are game abstractions, not real economic forecasts.")
     with t4:
         if s.party in ("SNP", "Plaid Cymru"):
