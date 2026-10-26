@@ -197,7 +197,7 @@ def _defaults():
         macro_cycle='Stagnation', active_request=None, undos_left=0, checkpoint=None, budget_speech=None, budget_impact={},
         political_capital_points=5, longrun_productivity=1.0, pension_pressure=0.0,
         threshold_freeze_years=0, gilt_maturity_years=10, index_linked_share=25,
-        feature_actions={}, feature_notice='',
+        feature_actions={}, feature_notice='', feature_notice_phase=0,
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
     for k, v in base.items():
@@ -279,7 +279,7 @@ SAVE_KEYS = [
     'whip_ayes', 'whip_used', 'vote_ayes', 'scenario', 'spad', 'pledges', 'broken_pledges', 'macro_cycle', 'active_request',
     'undos_left', 'budget_speech', 'budget_impact', 'budget_last_pol', 'initialized',
     'political_capital_points', 'longrun_productivity', 'pension_pressure', 'threshold_freeze_years',
-    'feature_actions', 'feature_notice',
+    'feature_actions', 'feature_notice', 'feature_notice_phase',
     'gilt_maturity_years', 'index_linked_share', 'pay_settlement', 'is_prime_minister',
 ] + STAT_KEYS
 
