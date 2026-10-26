@@ -19,9 +19,9 @@ from theme import render_chips
 # group, label, short name, default rate, slider range, revenue at the default rate (£bn),
 # £bn per point of rate, and 'decay' (how fast higher rates stop paying: the Laffer effect)
 TAXES = {
-    'income':   dict(group='Income & consumption', label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02),
-    'income_higher': dict(group='Income & consumption', label='Income tax, higher rate (%)', short='Higher-rate income tax', default=40, lo=25, hi=60, step=1, base=80.0, per=3.0, decay=0.04),
-    'income_additional': dict(group='Income & consumption', label='Income tax, additional rate (%)', short='Additional-rate income tax', default=45, lo=30, hi=70, step=1, base=20.0, per=0.9, decay=0.05),
+    'income':   dict(group='Income & consumption', label='Income tax, basic rate (%)', short='Basic-rate income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02, help='Marginal rate applied to taxable income in the basic-rate band, not to all income.'),
+    'income_higher': dict(group='Income & consumption', label='Income tax, higher rate (%)', short='Higher-rate income tax', default=40, lo=25, hi=60, step=1, base=80.0, per=3.0, decay=0.04, help='Marginal rate for income above the basic-rate threshold and up to the additional-rate threshold.'),
+    'income_additional': dict(group='Income & consumption', label='Income tax, additional rate (%)', short='Additional-rate income tax', default=45, lo=30, hi=70, step=1, base=20.0, per=0.9, decay=0.05, help='Marginal rate applied to taxable income above the additional-rate threshold.'),
     'ni':       dict(group='Income & consumption', label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
     'vat':      dict(group='Income & consumption', label='VAT (%)', short='VAT', default=20, lo=5, hi=35, step=1, base=170.0, per=8.0, decay=0.04),
     'fuel':     dict(group='Income & consumption', label='Fuel duty (% change)', short='Fuel duty', default=0, lo=-50, hi=50, step=5, base=25.0, per=0.25, decay=0.004),
@@ -484,7 +484,8 @@ def _tax_row(k, t, s):
         st.markdown(f"<div class='lv'>{t['label']}</div>", unsafe_allow_html=True)
     with c2:
         # no value= here: the widget's value comes from session state via its key (passing both makes Streamlit warn)
-        st.slider(f"{t['label']} slider", t['lo'], t['hi'], step=t['step'], key=f'bt_{k}', label_visibility="collapsed")
+        st.slider(f"{t['label']} slider", t['lo'], t['hi'], step=t['step'], key=f'bt_{k}', label_visibility="collapsed",
+                  help=t.get('help', 'Changing this rate changes estimated annual receipts. Higher rates can reduce the tax base or discourage activity.'))
     with c3:
         d = s[f'bt_{k}'] - t['default']
         new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
@@ -638,6 +639,7 @@ def render(submit=None, after_summary=None):
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book', 'Fiscal tools'])
 
     with t_tax:
+        st.caption('Income tax rates are marginal: each rate applies only to the income in its band. The Fiscal tools tab shows the thresholds and explains fiscal drag. These Budget sliders change the rate, while threshold policy controls when the bands move.')
         groups = {}
         for k, tx in TAXES.items():
             groups.setdefault(tx['group'], []).append((k, tx))
