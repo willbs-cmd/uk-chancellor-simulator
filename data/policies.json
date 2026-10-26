@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates.",
+  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates. The other_receipts baseline is reduced to keep total model income unchanged when council tax, carbon levy and sugary-drinks duties are broken out into their own controls.",
   "taxes": {
     "income": {
       "group": "Income & consumption",
@@ -428,7 +428,7 @@
       "unemployment": -0.03
     }
   },
-  "other_receipts": 119,
+  "other_receipts": 63,
   "gdp_bn": 3125,
   "base_interest": 105.4
 }
