@@ -6,13 +6,14 @@ import achievements
 import budget
 import country
 import engine
+import features
 import imf_outlook
 import politics
 import scenarios as scen
 import state
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
-                   render_hud, render_newspapers, render_polls, render_scorecard, render_timeline)
+                   render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', page_icon='🏛️',
                    initial_sidebar_state='collapsed')
@@ -58,13 +59,10 @@ def setup_screen():
     st.markdown("""<div class='setup-hero'><div class='seal'>HM Treasury · Cabinet Office Simulation</div><h1>🏛️ The Chancellor's Office</h1><p>Take the red box, manage the economy, survive Parliament and shape Britain's next five years. Every decision has a price.</p><span class='stamp'>Official business · Start a new term</span></div>""", unsafe_allow_html=True)
     st.markdown('### Step 1 · Form your government')
     party = st.selectbox('Select Governing Party:', state.PARTIES)
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        difficulty = st.radio('Difficulty', list(state.DIFFICULTY), index=2, horizontal=True,
-                              captions=[d['blurb'] for d in state.DIFFICULTY.values()])
-    with c2:
-        seed = st.number_input('Seed (same seed, same crises)', min_value=1, max_value=999999, value=int(s.seed), step=1)
-    c3, c4 = st.columns(2)
+    difficulty = st.radio('Difficulty', list(state.DIFFICULTY), index=2, horizontal=True,
+                          captions=[d['blurb'] for d in state.DIFFICULTY.values()],
+                          help='Easy is forgiving; Normal is balanced; Hardcore has frequent crises and no undo.')
+    c3, c4, c5 = st.columns([1.4, 1.4, 1], gap='medium')
     with c3:
         scenario = st.selectbox('Starting scenario', list(state.SCENARIOS), format_func=lambda k: state.SCENARIOS[k]['label'])
         st.caption(state.SCENARIOS[scenario]['blurb'])
@@ -72,6 +70,9 @@ def setup_screen():
         spad = st.selectbox('Special Advisor', [None, *politics.SPADS],
                             format_func=lambda k: 'None' if k is None else politics.SPADS[k]['label'])
         st.caption(politics.SPADS[spad]['blurb'] if spad else 'Go it alone, with no help from anyone.')
+    with c5:
+        seed = st.number_input('Game seed', min_value=1, max_value=999999, value=int(s.seed), step=1,
+                               help='The same seed recreates the same random events, making runs comparable.')
     pledges = st.multiselect('Manifesto pledges (optional, up to 3)', list(politics.PLEDGES),
                              format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
                              help='Each pledge gives you +2 starting approval. Break one and you take a U-turn scandal: '
@@ -121,6 +122,15 @@ _hud = [('Political capital', CARDS_POLITICAL)]
 if not _on_budget_screen:
     _hud.insert(0, ('The economy', CARDS_TOP + CARDS_ECON))
 render_hud(_hud, note=hud_note())
+
+with st.expander('🗓️ How the annual cycle works', expanded=False):
+    g1, g2, g3 = st.columns(3, gap='medium')
+    for col, num in zip((g1, g2, g3), (1, 2, 3)):
+        phase = phase_info(num)
+        with col:
+            st.markdown(f"**Phase {num} · {phase['title']}**")
+            st.caption(phase['guide'])
+    st.caption('You get two major policy decisions per year and then a Budget vote. Political capital is limited: use it only for the interventions that matter most. The next financial year begins after the Budget passes and you proceed to spring.')
 
 
 def scorecard_block(show_share=True):
@@ -315,9 +325,12 @@ def decision_screen():
         return
     options = engine.current_options()
     title = decision['title']
-    st.markdown(f"<div class='dc-eyebrow'>Block {s.block} · Year {s.year}</div><div class='dc-title'>{title}</div>", unsafe_allow_html=True)
+    phase = phase_info(s.block)
+    st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase {s.block} · {phase['name']}</div><div class='dc-title'>{title}</div>", unsafe_allow_html=True)
     st.write(decision['text'])
+    st.caption(phase['guide'])
     humphrey_message(decision['humphrey'])
+    features.render_phase_action()
     labels = [o['label'] for o in options]
     choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}', label_visibility='collapsed')
     if st.button('Execute Policy', type='primary', disabled=choice is None):
