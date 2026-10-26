@@ -96,7 +96,9 @@ def render():
         st.write("Before delivering the Budget, publish an updated view of the economy and reassure markets. This is a forecast statement, not the full tax-and-spending package.")
         st.caption("If announced: +3 market confidence and +1 point public approval. Costs 1 political capital.")
         _, used = _used()
-        if "spring_statement" in used:
+        if s.block != 3:
+            st.info("Available in Phase 3 · Spring Budget. You can still use Bank, pay or devolution actions during the current phase.")
+        elif "spring_statement" in used:
             st.success("Spring Statement already delivered this year.")
         elif st.button("Deliver Spring Statement", key="feat_spring_statement", use_container_width=True, disabled=s.political_capital_points < 1):
             def spring_statement(x):
