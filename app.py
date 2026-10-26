@@ -258,8 +258,12 @@ def dashboard():
     with tab_nation:
         country.render()
     with tab_imf:
-        st.caption(f'External baseline: {imf_outlook.IMF_SOURCE}. The annual economy tick gently pulls growth and inflation '
-                   'towards these figures; it is not a forecast of your own playthrough.')
+        st.markdown(
+            f"**External baseline:** [{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · "
+            f"vintage published {imf_outlook.IMF_PUBLISHED}. These figures are from one fixed data-file vintage; "
+            "the annual economy tick gently nudges growth and inflation towards them, but does not forecast your playthrough."
+        )
+        st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
         st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
     with tab_hist:
         pending = sorted(s.pending, key=lambda p: p['due'])
