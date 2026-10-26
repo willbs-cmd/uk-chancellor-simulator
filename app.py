@@ -346,8 +346,8 @@ if s.block == 3 and s.active_crisis is None:
 else:
     # Focused workspace: keep the active decision uncluttered and put supporting
     # information behind clear tabs rather than squeezing it into a narrow column.
-    tab_decision, tab_dashboard, tab_briefing = st.tabs(
-        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences']
+    tab_decision, tab_dashboard, tab_briefing, tab_fiscal = st.tabs(
+        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences', '🏦 Fiscal toolkit']
     )
     with tab_decision:
         if s.active_crisis is not None:
@@ -371,3 +371,7 @@ else:
                 render_newspapers(*s.headlines)
         else:
             st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
+
+    with tab_fiscal:
+        st.caption('Use this toolkit in any phase to decide when to spend political capital on Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
+        features.render()
