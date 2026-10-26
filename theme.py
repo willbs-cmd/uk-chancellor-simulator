@@ -572,6 +572,47 @@ hr { margin: .6rem 0 !important; }
   fill: #0d1f17 !important;
 }
 
+
+/* Real spacing for nested fiscal-tool tabs and collapsed Budget sections. */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: stretch !important;
+  gap: .55rem !important;
+  padding: .25rem .1rem .55rem !important;
+}
+[data-testid="stTabs"] button[data-baseweb="tab"] {
+  flex: 0 1 auto !important;
+  min-width: max-content !important;
+  min-height: 2.55rem !important;
+  padding: .55rem .9rem !important;
+  margin: 0 .1rem .15rem 0 !important;
+  border-radius: 7px 7px 0 0 !important;
+  line-height: 1.25 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-panel"] {
+  padding-top: .8rem !important;
+}
+[data-testid="stExpander"] > details > summary {
+  min-height: 2.8rem !important;
+  padding: .65rem .9rem !important;
+}
+[data-testid="stExpander"] > details > summary p {
+  line-height: 1.25 !important;
+}
+[data-testid="stCaptionContainer"] p {
+  line-height: 1.3 !important;
+  margin-bottom: .15rem !important;
+}
+@media (max-width: 760px) {
+  [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .3rem !important; }
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    min-width: 0 !important;
+    padding: .45rem .6rem !important;
+    white-space: normal !important;
+  }
+}
+
 </style>
 """
 
