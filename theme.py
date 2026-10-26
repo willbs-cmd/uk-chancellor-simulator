@@ -509,6 +509,34 @@ hr { margin: .6rem 0 !important; }
   [data-testid="stTabs"] button[role="tab"] { padding: .4rem .55rem !important; }
 }
 
+
+/* Keep general radio choices responsive; only policy cards use a forced two-column grid. */
+[data-testid="stRadio"] div[role="radiogroup"] {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  gap: .45rem !important;
+}
+[data-testid="stRadio"] div[role="radiogroup"] > label {
+  flex: 1 1 190px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.st-key-policy_options div[role="radiogroup"] {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .5rem !important;
+}
+.st-key-policy_options div[role="radiogroup"] > label {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+@media (max-width: 620px) {
+  .st-key-policy_options div[role="radiogroup"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 </style>
 """
 
@@ -732,7 +760,7 @@ def render_timeline(entries, pending=()):
         tag = f" <span class='tl-when'>&middot; you chose: {h['ideology']}</span>" if h['ideology'] else ''
         choice = f"<div class='tl-choice'>{h['choice']}</div>" if h['choice'] else (f"<div class='tl-choice'>{h['note']}</div>" if h['note'] else '')
         rows += (f"<div class='tl-item'><div class='tl-dot {h['kind']}'></div><div>"
-                 f"<div class='tl-when'>Term {h['term']} &middot; Year {h['year']}, block {h['block']}{tag}</div>"
+                 f"<div class='tl-when'>Term {h['term']} &middot; Year {h['year']} &middot; {phase_info(h.get('block', 1))['name']}{tag}</div>"
                  f"<div class='tl-title'>{h['title']}</div>{choice}<div>{chips}</div></div></div>")
     st.markdown(rows, unsafe_allow_html=True)
 
