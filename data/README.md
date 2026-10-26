@@ -6,7 +6,7 @@ The game reads these JSON files at startup. You can change game content and bala
 
 - `decisions.json`: policy topics, their five player-facing options, effects, ideology order, Sir Humphrey reactions, and delayed consequences.
 - `crises.json`: crisis text and response options. Each response is a two-item array: `[label, effect_object]`.
-- `policies.json`: tax controls, tax schemes, spending departments, spending schemes, department nudges, and baseline fiscal parameters.
+- `policies.json`: tax controls, tax schemes, spending departments, spending schemes, department nudges, and baseline fiscal parameters. Tax sliders include basic/higher/additional income-tax rates, National Insurance, VAT, fuel and alcohol/tobacco duties, corporation tax, property/wealth taxes, capital gains, inheritance, council tax, land value tax, a financial transactions levy, carbon pricing and sugary-drinks duty.
 - `imf_uk_baseline.json`: the external IMF World Economic Outlook vintage, source metadata and UK macroeconomic baseline values.
 - `balance_thresholds.json`: required content counts and broad win/sacking-rate guardrails for regression checks.
 
