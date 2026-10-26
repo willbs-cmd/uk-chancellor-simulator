@@ -229,6 +229,78 @@ hr { border-color: #2b5440 !important; }
 .ch-bar .track { flex: 1; background: #10281d; border-radius: 4px; height: 20px; overflow: hidden; }
 .ch-bar .fill { height: 100%; border-radius: 4px; }
 .ch-bar .val { width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ================= COMPACT LAYOUT: see more, scroll less ================= */
+.block-container { padding-top: 3rem !important; padding-bottom: 1rem !important; }
+[data-testid='stVerticalBlock'] { gap: .55rem; }
+
+/* one slim banner line (the TREASURY watermark stays, but no longer sets the height) */
+.ch-banner { padding: 8px 16px 9px !important; margin-bottom: 2px !important; }
+.ch-banner:after { font-size: clamp(1.6rem, 3.2vw, 2.6rem) !important; top: 6px !important; }
+.ch-banner .eyebrow { display: none; }
+.ch-head { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 18px; }
+.ch-title { font-family: 'Newsreader', serif; font-size: 1.4rem; font-weight: 700; color: var(--paper); }
+.ch-banner .sub { margin-top: 0 !important; font-size: .78rem !important; letter-spacing: .07em; }
+.ch-banner .ch-pips { margin-top: 6px !important; gap: 3px !important; max-width: 420px !important; }
+.ch-pip { height: 4px !important; }
+@media (max-width: 650px) { .ch-banner:after { display: none !important; } }
+
+/* the dashboard strip: every headline number in two thin rows, always visible */
+.hud { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 10px; }
+.hud-title { color: var(--brass); font-size: .64rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 2px 0 1px 2px; }
+.hud-row { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.hud-note { grid-column: span 4; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; padding: 4px 12px;
+  border: 1px dashed #2b5440; border-radius: 6px; color: var(--muted); font-size: .8rem; line-height: 1.3; }
+.hud-note b { color: var(--paper); }
+@media (max-width: 1300px) { .hud-row { grid-template-columns: repeat(5, minmax(0, 1fr)); } .hud-note { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .hud-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.chip-row { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin: 2px 0 4px; }
+@media (max-width: 1300px) { .chip-row { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .chip-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* compact stat card: label on top, value and change on one line */
+.sc-card.compact { min-height: 0; padding: 5px 9px 6px; margin: 0; border-top-width: 2px; cursor: help; }
+.sc-card.compact .sc-label { font-size: .68rem; line-height: 1.15; display: block; }
+.sc-card.compact .sc-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 6px; }
+.sc-card.compact .sc-value { font-size: 1.25rem; line-height: 1.2; margin: 0; }
+.sc-card.compact .sc-delta { font-size: .66rem; padding: 0 6px; }
+.sc-card.compact .sc-tip { left: 0; right: auto; width: 230px; }
+.hud-row .sc-card.compact:nth-child(n+6) .sc-tip, .chip-row .sc-card.compact:nth-child(n+6) .sc-tip { left: auto; right: 0; }
+
+/* Budget screen: one line per slider */
+.lv { font-size: .86rem; line-height: 1.2; padding-top: .45rem; }
+.lv small { color: var(--muted); }
+.lv-val { text-align: right; font-size: .98rem; line-height: 1.15; padding-top: .15rem; }
+.lv-val span { font-size: .76rem; }
+
+/* manifesto pledge chips */
+.pl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; margin: 0; }
+.pl { border-radius: 12px; padding: 1px 10px; border: 1px solid; }
+.pl-ok { color: #6fbf8a; border-color: #2b5440; background: rgba(111,191,138,.10); }
+.pl-risk { color: #e6b14a; border-color: #8a6a22; background: rgba(230,177,74,.12); }
+.pl-broken { color: #e0705d; border-color: #7a2f25; background: rgba(224,112,93,.12); text-decoration: line-through; }
+
+/* decision card */
+.dc-eyebrow { color: var(--brass); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.dc-title { font-family: 'Newsreader', serif; font-size: 1.55rem; font-weight: 700; line-height: 1.15; margin: 1px 0 4px; color: var(--paper); }
+.pane-title { color: var(--brass); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 2px; }
+
+/* controls: the radio's own heading is no longer drawn as if it were an option */
+[data-testid="stRadio"] [data-testid="stWidgetLabel"] { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 0 2px !important; width: auto !important; }
+[data-testid="stExpander"] summary p { font-size: .95rem !important; }
+[data-testid="stExpander"] summary { padding: .4rem .8rem !important; }
+div.stButton > button { padding: .4rem 1.1rem; }
+
+/* tighter polls, papers, memos, feedback */
+.ch-bar { margin: 4px 0; gap: 10px; }
+.ch-bar .name { width: 125px; font-size: .9rem; }
+.ch-bar .track { height: 14px; }
+.np-strip { margin: 6px 0; gap: 8px; }
+.np-card { padding: 9px 10px; }
+.np-name { font-size: .9rem; margin-bottom: 6px; padding-bottom: 3px; }
+.np-head { font-size: .88rem; line-height: 1.25; }
+.ch-news { margin-bottom: 4px; padding: 8px 14px; }
+.ch-event { margin: 4px 0; padding: 8px 14px; }
 </style>
 """
 
@@ -244,9 +316,8 @@ def header(party, term, year, block):
     colour = PARTY_COLOURS.get(party, '#c9a45c')
     st.markdown(
         f"""<div class='ch-banner' style='border-left-color:{colour}'>
-        <div class='eyebrow'>HM Treasury &nbsp;·&nbsp; Chancellor's Office</div>
-        <h1>🏛️ {party} Government</h1>
-        <div class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; DECISION {block} OF 3</div>
+        <div class='ch-head'><span class='ch-title'>🏛️ {party} Government</span>
+        <span class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; DECISION {block} OF 3</span></div>
         <div class='ch-pips'>{pips}</div></div>""",
         unsafe_allow_html=True,
     )
@@ -260,7 +331,7 @@ def crisis_card(title):
 def news_box(text):
     st.markdown(f"<div class='ch-news'>{text}</div>", unsafe_allow_html=True)
 
-def polls_chart(df):
+def polls_chart(df, height=260):
     """Altair line chart in party colours with direct labels instead of a legend."""
     import altair as alt
     labels = [str(i) for i in df.index]
@@ -279,13 +350,13 @@ def polls_chart(df):
     last = long[(long['Period'] == labels[-1]) & (long['Share'] >= 3.5)]
     names = alt.Chart(last).mark_text(align='left', dx=8, fontSize=11, fontWeight='bold').encode(
         x=x, y=y, text='Party:N', color=colour)
-    chart = (lines + names).properties(height=260, background='transparent',
+    chart = (lines + names).properties(height=height, background='transparent',
                                        padding={'left': 5, 'right': 110, 'top': 10, 'bottom': 5}
                                        ).configure_view(strokeWidth=0)
     st.altair_chart(chart, use_container_width=True)
 
 
-def render_polls(df):
+def render_polls(df, chart_height=185, chart_in_expander=False):
     latest = df.iloc[-1]
     prev = df.iloc[-2] if len(df) >= 2 else latest
     top = max(float(latest.max()), 1.0)
@@ -300,21 +371,27 @@ def render_polls(df):
                  f"<div class='val'>{val:.0f}%</div><div style='width:48px;font-size:.78rem'>{arrow}</div></div>")
     st.markdown(rows, unsafe_allow_html=True)
     if len(df) >= 2:
-        try:
-            polls_chart(df)
-        except Exception:  # never let a chart problem break the game
-            plot = df.copy()
-            plot.index = [str(i) for i in plot.index]
-            st.line_chart(plot, color=[PARTY_COLOURS[c] for c in plot.columns])
+        def draw():
+            try:
+                polls_chart(df, chart_height)
+            except Exception:  # never let a chart problem break the game
+                plot = df.copy()
+                plot.index = [str(i) for i in plot.index]
+                st.line_chart(plot, color=[PARTY_COLOURS[c] for c in plot.columns])
+        if chart_in_expander:
+            with st.expander('📈 Poll history', expanded=False):
+                draw()
+        else:
+            draw()
 
 
 def humphrey_message(text, title='Memo from Sir Humphrey Appleby'):
     st.markdown(f"""
-    <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 18px; margin: 15px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: bold; font-size: 1.2rem; margin-bottom: 8px;'>
-            <span style='font-size: 1.4rem; margin-right: 8px;'>&#128188;</span>{title}
+    <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 10px 14px; margin: 4px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: bold; font-size: 1rem; margin-bottom: 3px;'>
+            <span style='font-size: 1.15rem; margin-right: 6px;'>&#128188;</span>{title}
         </div>
-        <div style='font-style: italic; color: #efe9da; font-size: 1.05rem; line-height: 1.5;'>
+        <div style='font-style: italic; color: #efe9da; font-size: .95rem; line-height: 1.4;'>
             "{text}"
         </div>
     </div>
@@ -347,14 +424,20 @@ def sparkline_svg(series, colour='#c9a45c', w=100, h=22):
             f"vector-effect='non-scaling-stroke' stroke-linejoin='round'/></svg>")
 
 
-def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False, series=None):
-    """HTML stat card with a hover tooltip. delta_num sets the colour; inverse=True means lower is better."""
+def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False, series=None, compact=False):
+    """HTML stat card with a hover tooltip. delta_num sets the colour; inverse=True means lower is better.
+    compact=True is the small version used in the dashboard strip and Budget summary (value and change share a line)."""
     if abs(delta_num) < 1e-9:
         cls, arrow = 'sc-flat', ''
     else:
         good = (delta_num > 0) != inverse
         cls = 'sc-good' if good else 'sc-bad'
         arrow = '\u25b2 ' if delta_num > 0 else '\u25bc '
+    tip = f"<div class='sc-tip'>{desc}</div>" if desc else ''
+    if compact:
+        return (f"<div class='sc-card compact' tabindex='0'><span class='sc-label'>{label}</span>"
+                f"<div class='sc-row'><span class='sc-value'>{value}</span>"
+                f"<span class='sc-delta {cls}'>{arrow}{delta_text}</span></div>{tip}</div>")
     return (f"<div class='sc-card' tabindex='0'>"
             f"<div class='sc-label'><span>{label}</span><span class='sc-info'>i</span></div>"
             f"<div class='sc-value'>{value}</div>"
@@ -363,20 +446,43 @@ def stat_card(label, value, delta_text, desc, delta_num=0.0, inverse=False, seri
             f"<div class='sc-tip'>{desc}</div></div>")
 
 
-def render_cards(defs, per_row=None):
-    """Draw a row (or rows) of stat cards from definitions in state.CARDS_*."""
+def _card_html(d, compact=False):
     s = st.session_state
+    key = d['key']
+    v = s[key]
+    delta = v - s.get('prev', {}).get(key, v)
+    flat = round(delta, d['dec']) == 0        # anything that would print as +0 / -0 counts as no change
+    text = ('\u2014' if compact else 'no change') if flat else d['dfmt'].format(delta)
+    return stat_card(d['label'], d['fmt'].format(v), text, d['desc'], 0.0 if flat else delta,
+                     d.get('inverse', False), s.get('stat_hist', {}).get(key), compact=compact)
+
+
+def render_cards(defs, per_row=None):
+    """Draw a row (or rows) of full-size stat cards (with sparklines) from definitions in state.CARDS_*."""
     per_row = per_row or len(defs)
     for i in range(0, len(defs), per_row):
         chunk = defs[i:i + per_row]
         for col, d in zip(st.columns(len(chunk)), chunk):
-            key = d['key']
-            v = s[key]
-            delta = v - s.get('prev', {}).get(key, v)
-            flat = abs(delta) < 0.5 * 10 ** -d['dec']
-            col.markdown(stat_card(d['label'], d['fmt'].format(v), 'no change' if flat else d['dfmt'].format(delta),
-                                   d['desc'], 0.0 if flat else delta, d.get('inverse', False),
-                                   s.get('stat_hist', {}).get(key)), unsafe_allow_html=True)
+            col.markdown(_card_html(d), unsafe_allow_html=True)
+
+
+def render_hud(groups, note=''):
+    """The dashboard strip: ``groups`` is a list of (title, card definitions), one thin row each. ``note`` (HTML) fills the
+    spare cells at the end of the last row. One markdown call, so it costs one element, not twenty."""
+    rows = []
+    for i, (title, defs) in enumerate(groups):
+        cards = ''.join(_card_html(d, compact=True) for d in defs)
+        extra = f"<div class='hud-note'>{note}</div>" if (note and i == len(groups) - 1) else ''
+        head = f"<div class='hud-title'>{title}</div>" if title else ''
+        rows.append(f"{head}<div class='hud-row'>{cards}{extra}</div>")
+    st.markdown(f"<div class='hud'>{''.join(rows)}</div>", unsafe_allow_html=True)
+
+
+def render_chips(items):
+    """A row of compact summary cards. Each item: label, value, delta (text), num (colour), inverse, desc."""
+    html = ''.join(stat_card(i['label'], i['value'], i.get('delta', '\u2014'), i.get('desc', ''),
+                             i.get('num', 0.0), i.get('inverse', False), compact=True) for i in items)
+    st.markdown(f"<div class='chip-row'>{html}</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------- event log, event cards, scorecard
