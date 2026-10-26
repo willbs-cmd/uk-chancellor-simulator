@@ -7,7 +7,7 @@ def _clip(x, lo=0, hi=100):
 def _used():
     s = st.session_state
     s.setdefault("feature_actions", {})
-    year_key = str(s.get("year", 1))
+    year_key = f"{s.get('term', 1)}:{s.get('year', 1)}"
     s["feature_actions"].setdefault(year_key, [])
     return year_key, s["feature_actions"][year_key]
 
@@ -116,19 +116,19 @@ def render():
         b1, b2 = st.columns(2, gap="medium")
         with b1:
             st.caption("QE costs 2 capital: it lowers gilt yields and may support markets, but can lift inflation and debt.")
-            if st.button("Coordinate quantitative easing", key="feat_qe", use_container_width=True):
+            if st.button("Coordinate quantitative easing", key="feat_qe", use_container_width=True, disabled=("qe" in _used()[1] or s.political_capital_points < 2)):
                 def qe(x):
                     x.gilt_yield = round(max(.1, x.gilt_yield - .3), 2); x.market_conf = _clip(x.market_conf + 2)
                     x.inflation = round(x.inflation + .2, 2); x.debt = round(x.debt + .3, 2)
                 _act("qe", 2, "Quantitative easing coordination", qe); st.rerun()
             st.caption("Rate pressure costs 2 capital: it may lift growth in the short term but damages confidence in Bank independence and market trust.")
-            if st.button("Pressure for lower rates", key="feat_rate", use_container_width=True):
+            if st.button("Pressure for lower rates", key="feat_rate", use_container_width=True, disabled=("rate_pressure" in _used()[1] or s.political_capital_points < 2)):
                 def rates(x):
                     x.interest_rate = round(max(.1, x.interest_rate - .25), 2); x.growth = round(x.growth + .15, 2)
                     x.market_conf = _clip(x.market_conf - 3); x.pm_opinion = _clip(x.pm_opinion - 2)
                 _act("rate_pressure", 2, "Rate-pressure intervention", rates); st.rerun()
             st.caption("Defending independence costs 1 capital and is designed to reassure investors.")
-            if st.button("Defend Bank independence", key="feat_independence", use_container_width=True):
+            if st.button("Defend Bank independence", key="feat_independence", use_container_width=True, disabled=("bank_independence" in _used()[1] or s.political_capital_points < 1)):
                 def defend(x):
                     x.market_conf = _clip(x.market_conf + 4); x.gilt_yield = round(max(.1, x.gilt_yield - .1), 2)
                 _act("bank_independence", 1, "Public defence of Bank independence", defend); st.rerun()
@@ -136,7 +136,7 @@ def render():
             st.caption("Choose how long the government borrows for. Long maturities lock in financing for longer; short maturities need refinancing sooner.")
             s.gilt_maturity_years = st.select_slider("New gilt maturity", options=[2, 5, 10, 20, 30], value=int(s.gilt_maturity_years))
             s.index_linked_share = st.slider("Index-linked share (%)", 0, 100, int(s.index_linked_share), 5)
-            if st.button("Hold gilt auction", key="feat_auction", use_container_width=True):
+            if st.button("Hold gilt auction", key="feat_auction", use_container_width=True, disabled=("gilt_auction" in _used()[1] or s.political_capital_points < 1)):
                 def auction(x):
                     maturity = int(x.gilt_maturity_years)
                     x.debt = round(x.debt + (0.2 if maturity >= 20 else 0.1), 2)
@@ -150,7 +150,7 @@ def render():
     with t3:
         st.markdown("**Public-sector pay round**")
         pay = st.radio("Negotiating position", ["Inflation-matching settlement", "Targeted compromise", "Pay cap and arbitration"], key="feature_pay_choice", horizontal=False, help="An inflation-matching deal costs more but improves morale; a pay cap saves money but increases strike and morale risks.")
-        if st.button("Conclude annual pay round", key="feat_pay", use_container_width=True):
+        if st.button("Conclude annual pay round", key="feat_pay", use_container_width=True, disabled=("pay_round" in _used()[1] or s.political_capital_points < 2)):
             def pay_fx(x):
                 if pay == "Inflation-matching settlement":
                     x.headroom = round(x.headroom - 2.0, 1); x.approval = _clip(x.approval + 3)
@@ -180,7 +180,7 @@ def render():
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock", help="Improves pensioner incomes but increases the long-run pension bill.")
         productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan", help="Costs £0.5bn of headroom now and improves the long-run productivity trend.")
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True,
-                      disabled=(not any((freeze, council_tax, pension_relief, triple, productivity_plan)) and not bool(s.get("thresholds_frozen", False)))):
+                      disabled=(("tax_pension" in _used()[1] or s.political_capital_points < 1) or (not any((freeze, council_tax, pension_relief, triple, productivity_plan)) and not bool(s.get("thresholds_frozen", False))))):
             def tax_fx(x):
                 x.thresholds_frozen = bool(freeze)
                 x.threshold_freeze_scope = freeze_scope
@@ -209,7 +209,7 @@ def render():
             st.markdown("**Devolution negotiation**")
             st.write("Negotiate a larger block grant using a Barnett-formula settlement, or accept a fiscal package from Westminster.")
             deal = st.radio("Negotiating stance", ["Demand a larger block grant", "Accept a compromise", "Reject Westminster's offer"], key="feature_devolution")
-            if st.button("Negotiate block grant", key="feat_devolution", use_container_width=True):
+            if st.button("Negotiate block grant", key="feat_devolution", use_container_width=True, disabled=("devolution" in _used()[1] or s.political_capital_points < 2)):
                 def dev(x):
                     if deal == "Demand a larger block grant":
                         x.headroom = round(x.headroom - 1.5, 1); x.approval = _clip(x.approval + 4)
@@ -223,7 +223,7 @@ def render():
             st.info("Choose SNP or Plaid Cymru at game setup to unlock the regional block-grant negotiation.")
         st.markdown("**Political ladder**")
         if st.button("Challenge a weakened Prime Minister", key="feat_challenge", use_container_width=True,
-                     disabled=(s.get("pm_opinion", 100) > 45 or s.get("political_capital_points", 5) < 3)):
+                     disabled=("leadership_challenge" in _used()[1] or s.get("pm_opinion", 100) > 45 or s.get("political_capital_points", 5) < 3)):
             def challenge(x):
                 if x.party_opinion >= 50 and x.cab_opinion >= 45:
                     x.pm_opinion = _clip(x.pm_opinion + 20)
