@@ -523,6 +523,9 @@ def continue_term():
     s.honeymoon = boost
     s.term += 1
     s.year, s.block = 1, 1
+    s.political_capital_points = 5
+    s.feature_notice = ''
+    s.feature_notice_phase = 0
     s.budget_passed = False
     s.election_result = None
     s.active_crisis = None
