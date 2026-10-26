@@ -80,8 +80,9 @@ def setup_screen():
     )
 
     career_name = "Alex Morgan"
-    career_constituency = "Riverside Central"
+    career_constituency = career.CONSTITUENCY_NAMES[0]
     career_ambition = "policy_specialist"
+    career_local_mandate = "public_services"
     scenario = "fragile"
     spad = None
     pledges = []
@@ -93,8 +94,13 @@ def setup_screen():
             career_name = st.text_input("Your MP's name", value="Alex Morgan", max_chars=70,
                                         help="Choose a name for your fictional MP.")
         with c2:
-            career_constituency = st.text_input("Constituency", value="Riverside Central", max_chars=70,
-                                                help="Fictional constituency name for your career save.")
+            career_constituency = st.selectbox(
+                "Your constituency",
+                career.CONSTITUENCY_NAMES,
+                index=0,
+                format_func=lambda name: f"{name} · {career.CONSTITUENCY_BY_NAME[name]['nation']}",
+                help="Choose from all 650 official Westminster constituencies using the July 2024 boundaries. Type part of a constituency name to search."
+            )
         with c3:
             career_ambition = st.selectbox(
                 "Career approach", list(career.DATA["ambitions"]),
@@ -105,7 +111,14 @@ def setup_screen():
         with c4:
             seed = st.number_input("Game seed", min_value=1, max_value=999999, value=int(s.seed), step=1,
                                    help="The same seed recreates the same election-result variation.")
-        st.info("You begin as a backbench MP. Each parliamentary session gives you two actions. Build your reputation and qualify for appointments.")
+        career_local_mandate = st.selectbox(
+            "Your local priorities",
+            list(career.MANDATES),
+            format_func=lambda key: career.MANDATES[key]["label"],
+            help="This is your chosen constituency campaign focus, not a claim about every voter's view in the real constituency."
+        )
+        st.caption(career.MANDATES[career_local_mandate]["description"])
+        st.info("You begin as a backbench MP. Each session includes one Commons vote plus two career actions. Build your reputation and qualify for appointments.")
     else:
         c1, c2, c3 = st.columns([1.4, 1.4, 1], gap='medium')
         with c1:
@@ -137,7 +150,8 @@ def setup_screen():
             game_mode='career' if career_mode else 'chancellor',
             career_name=career_name,
             career_constituency=career_constituency,
-            career_ambition=career_ambition
+            career_ambition=career_ambition,
+            career_local_mandate=career_local_mandate
         )
         st.rerun()
 
