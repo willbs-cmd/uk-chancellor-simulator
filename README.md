@@ -1,13 +1,22 @@
 # UK Chancellor Simulator
 
-A Streamlit political-economy game. Play the Chancellor's Office directly, or start as a backbench MP in Career Mode and work towards ministerial office, the Chancellorship or Prime Minister.
+A pair of Streamlit political games sharing data and common mechanics: the Chancellor's Office simulator and a separate MP Political Career game.
 
 ## Run locally
 
 ```bash
 python -m pip install -r requirements.txt
+
+# Game 1: Chancellor's Office simulator
 streamlit run app.py
+
+# Game 2: separate MP Political Career simulator
+streamlit run mp_career_app.py
 ```
+
+## Deploying the two games separately
+
+Streamlit Community Cloud can host these as two separate apps from the same repository. Create one app with **Main file path** set to `app.py`, then create another app pointing at `mp_career_app.py`. They will have separate app URLs, browser sessions and player saves. Each app has its own configured entry point.
 
 ## Edit or mod game content
 
@@ -19,6 +28,8 @@ The game loads player-facing content from `data/` files. You can add or rebalanc
 - `data/imf_uk_baseline.json` — fixed-vintage IMF UK baseline and source metadata.
 - `data/balance_thresholds.json` — schema requirements and balance-regression guardrails.
 - `data/career_content.json` — Career Mode roles, action choices, promotion requirements and ambition bonuses.
+- `data/constituencies_2024.json` — official names, nations and codes for all 650 Westminster constituencies.
+- `data/career_divisions.json` — simulated Commons divisions, party-whip positions and local-priority categories.
 - `data/README.md` — data structures, editing rules and instructions for updating the IMF baseline.
 
 The JSON is loaded at application startup. Restart the local app after changing data files. When using Streamlit Cloud, commit the changed file to the repository so the app can redeploy.
@@ -31,7 +42,7 @@ Run `python sim.py audit` to score policy options for potential balance outliers
 
 ## Career Mode
 
-At game setup, choose **Political Career** to begin as a fictional backbench MP. You choose a name, a fictional constituency and a starting ambition. Each parliamentary session gives you two actions; three sessions make a year, and a general election occurs after five years. Actions develop constituency support, party trust, parliamentary influence, public profile, policy expertise and integrity. Promotions depend on experience and those attributes, so you can pursue the Parliamentary Private Secretary route or the select-committee route before moving into ministerial office. Later roles unlock different actions for junior ministers, Ministers of State, Secretaries of State, the Chancellor and Prime Minister. Losing your constituency seat ends that career save.
+Open the separate **MP Political Career** app to begin as a fictional backbench MP. You choose a name, a real 2024 Westminster constituency, a local campaign priority and a starting ambition. Each parliamentary session gives you two actions; three sessions make a year, and a general election occurs after five years. Actions develop constituency support, party trust, parliamentary influence, public profile, policy expertise and integrity. Promotions depend on experience and those attributes, so you can pursue the Parliamentary Private Secretary route or the select-committee route before moving into ministerial office. Later roles unlock different actions for junior ministers, Ministers of State, Secretaries of State, the Chancellor and Prime Minister. Losing your constituency seat ends that career save.
 
 Career roles, actions and promotion thresholds are editable in `data/career_content.json`. Career Mode is an initial playable system with abstracted political outcomes; it does not yet simulate every real department or a full party leadership contest. Run `python sim.py run 100 Hardcore` for a broader strategy comparison.
 
