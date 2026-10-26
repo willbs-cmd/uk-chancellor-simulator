@@ -74,20 +74,22 @@ def check_pledges():
 
 
 def render_pledges(draft):
+    """One line of chips: green = kept so far, amber = this Budget would break it, red = already broken."""
     s = st.session_state
     pledges = [k for k in s.get('pledges', []) if k in PLEDGES]
     if not pledges:
         return
     risky, broken = set(broken_by(draft)), set(s.get('broken_pledges', []))
-    st.markdown('#### 📜 Manifesto pledges')
-    for col, k in zip(st.columns(len(pledges)), pledges):
+    chips = []
+    for k in pledges:
         label = PLEDGES[k]['label']
         if k in broken:
-            col.error(f'~~{label}~~\n\nBroken')
+            chips.append(f"<span class='pl pl-broken'>❌ {label}</span>")
         elif k in risky:
-            col.warning(f'{label}\n\n⚠️ This Budget breaks it')
+            chips.append(f"<span class='pl pl-risk'>⚠️ {label}: this Budget breaks it</span>")
         else:
-            col.success(f'{label}\n\n✅ Kept so far')
+            chips.append(f"<span class='pl pl-ok'>✅ {label}</span>")
+    st.markdown(f"<div class='pl-row'><b>📜 Pledges</b> {' '.join(chips)}</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------- cabinet requests
