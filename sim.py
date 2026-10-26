@@ -209,6 +209,16 @@ def check(n=None, difficulty=None):
     if len(budget.SPEND_POLICIES) < contract['minimum_spending_schemes']:
         failures.append(f"Only {len(budget.SPEND_POLICIES)} spending schemes; expected at least {contract['minimum_spending_schemes']}.")
 
+    # Streamlit sliders require compatible numeric types for min/max/step.
+    for tax_key, tax in budget.TAXES.items():
+        lo, hi, step = budget._tax_slider_spec(tax)
+        if not (type(lo) is type(hi) is type(step)):
+            failures.append(f"Tax slider {tax_key} has incompatible min/max/step types.")
+        if step <= 0 or lo >= hi:
+            failures.append(f"Tax slider {tax_key} has an invalid range or step.")
+        if not (lo <= float(tax['default']) <= hi):
+            failures.append(f"Tax slider {tax_key} default is outside its range.")
+
     for key, decision in decisions.DECISIONS.items():
         options = decision.get('options', [])
         effects = decision.get('effects', [])
