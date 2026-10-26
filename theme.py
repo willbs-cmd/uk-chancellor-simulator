@@ -301,6 +301,55 @@ div.stButton > button { padding: .4rem 1.1rem; }
 .np-head { font-size: .88rem; line-height: 1.25; }
 .ch-news { margin-bottom: 4px; padding: 8px 14px; }
 .ch-event { margin: 4px 0; padding: 8px 14px; }
+
+/* Focused, less cluttered workspace */
+.block-container {
+  max-width: 1540px;
+  padding-top: 1.25rem !important;
+  padding-bottom: .8rem !important;
+  padding-left: clamp(.8rem, 1.5vw, 1.5rem) !important;
+  padding-right: clamp(.8rem, 1.5vw, 1.5rem) !important;
+}
+[data-testid='stVerticalBlock'] { gap: .45rem !important; }
+[data-testid='stHorizontalBlock'] { gap: .75rem !important; }
+[data-testid='stTabs'] [role='tablist'] {
+  gap: .25rem;
+  border-bottom: 1px solid #2b5440;
+  margin-bottom: .25rem;
+}
+[data-testid='stTabs'] button[role='tab'] {
+  padding: .45rem .8rem !important;
+  min-height: 2.4rem;
+}
+[data-testid='stTabs'] [data-baseweb='tab-panel'] { padding-top: .65rem !important; }
+[data-testid='stMetric'] {
+  padding: 7px 10px 8px !important;
+  margin-bottom: 0 !important;
+}
+[data-testid='stMetricValue'] { font-size: clamp(1.25rem, 1.7vw, 1.65rem) !important; }
+.sc-card { min-height: 68px; padding: 7px 9px; margin-bottom: 0; }
+.sc-value { font-size: clamp(1.25rem, 1.7vw, 1.5rem); margin: 2px 0 4px; }
+.ch-banner { margin-bottom: 8px !important; }
+.dc-title { margin: .15rem 0 .35rem !important; line-height: 1.15 !important; }
+.dc-eyebrow { margin-bottom: .15rem !important; }
+[data-testid='stRadio'] div[role='radiogroup'] { gap: .45rem !important; }
+div[role='radiogroup'] > label,
+[data-testid='stRadio'] label {
+  padding: 8px 10px !important;
+  margin-bottom: 0 !important;
+}
+[data-testid='stRadio'] label p { font-size: .9rem !important; line-height: 1.28 !important; }
+[data-testid='stButton'] button { min-height: 2.45rem; padding: .45rem 1rem !important; }
+[data-testid='stDataFrame'] { margin-top: .2rem; }
+[data-testid='stAlert'] { padding: .65rem .85rem; }
+h1, h2, h3 { line-height: 1.15 !important; }
+hr { margin: .6rem 0 !important; }
+@media (max-width: 900px) {
+  .block-container { padding-top: .7rem !important; }
+  [data-testid='stTabs'] [role='tablist'] { flex-wrap: wrap; }
+  [data-testid='stTabs'] button[role='tab'] { padding: .35rem .5rem !important; }
+}
+
 </style>
 """
 
