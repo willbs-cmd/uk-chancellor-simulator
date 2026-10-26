@@ -394,6 +394,8 @@ def proceed_to_spring():
     if s.pension_pressure:
         s.headroom = round(s.headroom - 0.25 * s.pension_pressure, 1)
     s.political_capital_points = 5
+    s.feature_notice = ''
+    s.feature_notice_phase = 0
     s.year += 1
     s.block = 1
     s.budget_passed = False
