@@ -49,6 +49,7 @@ st.session_state = FakeState()
 import budget  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
+import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
 from content_store import load_json  # noqa: E402
@@ -226,6 +227,21 @@ def check(n=None, difficulty=None):
         for ix, opt in enumerate(opts):
             if len(opt) != 2 or not isinstance(opt[1], dict):
                 failures.append(f"Crisis {key} response {ix + 1} must be [label, effect-object].")
+
+    for cid in scen.RANDOM_POOL:
+        if cid not in scen.CRISES:
+            failures.append(f"Random crisis pool refers to missing crisis ID {cid}.")
+    for cid in scen.IDEOLOGY_LINKS.values():
+        if cid not in scen.CRISES:
+            failures.append(f"Ideology crisis link refers to missing crisis ID {cid}.")
+    for link in scen.DECISION_LINKS.values():
+        if link[0] not in scen.CRISES:
+            failures.append(f"Decision crisis link refers to missing crisis ID {link[0]}.")
+    for row in imf_outlook.OUTLOOK.values():
+        if any(not math.isfinite(float(v)) for v in row.values()):
+            failures.append("IMF baseline contains a non-finite numeric value.")
+    if not imf_outlook.OUTLOOK or min(imf_outlook.OUTLOOK) > 2026:
+        failures.append("IMF baseline must include 2026 and later projection years.")
 
     for key, delayed in decisions.DELAYED.items():
         if key not in decisions.DECISIONS:
