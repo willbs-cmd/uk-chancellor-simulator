@@ -586,34 +586,55 @@ def render(submit=None, after_summary=None):
 
     render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
+             desc='Estimated annual tax and other receipts received by the government.'
              desc='Total annual receipts under this draft.'),
         dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'), num=(spend_now - spend_app) if changed else 0,
-             inverse=True, desc='Total annual spending under this draft, including debt interest and pledges.'),
+             inverse=True, desc='Estimated annual outgoings across departments, welfare, pensions, debt interest and selected schemes.'),
         dict(label='Deficit' if deficit_now > 0 else 'Surplus', value=f'£{abs(deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
-             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The projected annual deficit (the running figure, adjusted for this draft).'),
-        dict(label='Approval', value=f"{_clip(s.approval + imp['approval']):.1f}%", delta=delta(imp['approval']), num=imp['approval'] if changed else 0),
-        dict(label='Market conf.', value=f"{_clip(s.market_conf + imp['market']):.1f}%", delta=delta(imp['market']), num=imp['market'] if changed else 0),
+             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The gap between annual spending and income. A surplus means income exceeds spending.'),
+        dict(label='Approval', value=f"{_clip(s.approval + imp['approval']):.1f}%", delta=delta(imp['approval']), num=imp['approval'] if changed else 0,
+             desc='Estimated public support for the government. It affects polling and political survival.'),
+        dict(label='Market conf.', value=f"{_clip(s.market_conf + imp['market']):.1f}%", delta=delta(imp['market']), num=imp['market'] if changed else 0,
+             desc='Investor confidence. Weak confidence can raise government borrowing costs and make new debt more expensive.'),
         dict(label='Growth', value=f"{s.growth + imp['growth']:.1f}%", delta=(f"{imp['growth']:+.2f}" if changed else '\u2014'),
-             num=imp['growth'] if changed else 0),
+             num=imp['growth'] if changed else 0, desc='The annual rate at which the economy produces more goods and services, after adjusting for inflation.'),
         dict(label='Inflation', value=f"{s.inflation + imp['inflation']:.1f}%", delta=(f"{imp['inflation']:+.2f}" if changed else '\u2014'),
-             num=imp['inflation'] if changed else 0, inverse=True),
+             num=imp['inflation'] if changed else 0, inverse=True, desc='How quickly prices are rising. High inflation squeezes household budgets and can keep interest rates elevated.'),
         dict(label='OBR headroom', value=f"£{s.headroom + imp['headroom']:.1f}B", delta=delta(imp['headroom']), num=imp['headroom'] if changed else 0,
-             desc='How far you are inside your fiscal rules. Below zero is a breach.'),
+             desc='The amount of fiscal room left before your chosen fiscal rule is breached. Negative headroom means the rule is missed.'),
         dict(label='Projected ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs {WIN}', num=ayes - WIN,
              desc='Votes for the Budget in the Commons. You need 326.'),
     ])
 
-    b1, b2, b3 = st.columns([1.05, 1.05, 2.6], gap='medium')
-    b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed, use_container_width=True)
-    b2.button('Reset sliders', on_click=_reset, disabled=not changed, use_container_width=True)
-    with b3:
-        if submit:
-            submit()
+    with st.expander('ℹ️ Budget glossary: what the figures mean', expanded=False):
+        g1, g2, g3 = st.columns(3, gap='medium')
+        with g1:
+            st.markdown('**Income** — money government expects to collect. **Spending** — money paid across services, benefits, pensions and debt interest.')
+            st.markdown('**Deficit / surplus** — deficit means spending is higher than income; surplus means income is higher.')
+            st.markdown('**Fiscal headroom** — the safety margin against the fiscal rule. Below £0B means the forecast breaks that rule.')
+        with g2:
+            st.markdown('**Public approval** — a simplified measure of voters’ support; it feeds into polls and political stability.')
+            st.markdown('**Market confidence** — a simplified investor-confidence score. Falling confidence can make government borrowing more expensive.')
+            st.markdown('**Growth** — change in real economic output. **Inflation** — the rate prices rise; high inflation reduces purchasing power.')
+        with g3:
+            st.markdown('**Projected ayes** — estimated MPs voting for the Budget. The model uses 326 as the majority threshold.')
+            st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
+            st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
+
+    with st.container(key="budget_actions"):
+        b1, b2, b3 = st.columns([0.8, 0.8, 1.5], gap='small')
+        b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed, use_container_width=True,
+                  help='Apply the current slider values to the draft forecast.')
+        b2.button('Reset sliders', on_click=_reset, disabled=not changed, use_container_width=True,
+                  help='Return tax rates, spending changes and schemes to the previous applied draft.')
+        with b3:
+            if submit:
+                submit()
     if after_summary:
         after_summary()
 
     t_tax, t_spend, t_schemes, t_whips, t_charts, t_features = st.tabs(
-        ['💷 Taxes', '🏥 Spending', '📜 Schemes', '🏛️ Whips & forecast', '📊 Charts & Red Book', '🏦 Fiscal calendar'])
+        ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book', 'Fiscal tools'])
 
     with t_tax:
         groups = {}
