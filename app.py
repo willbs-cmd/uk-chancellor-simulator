@@ -332,7 +332,10 @@ def decision_screen():
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
     labels = [o['label'] for o in options]
-    choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}', label_visibility='collapsed')
+    with st.container(key='policy_options'):
+        choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
+                          label_visibility='collapsed',
+                          help='Choose one of the five approaches. Each has a different trade-off between public approval, growth, market confidence and fiscal headroom.')
     if st.button('Execute Policy', type='primary', disabled=choice is None):
         engine.execute_decision(options[labels.index(choice)])
         st.rerun()
