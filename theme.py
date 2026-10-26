@@ -636,6 +636,13 @@ hr { margin: .6rem 0 !important; }
   [data-testid="stHorizontalBlock"] { gap: .6rem !important; }
 }
 
+
+.fiscal-section-gap { height: .45rem; width: 100%; }
+.st-key-budget_actions [data-testid="stButton"] button {
+  max-width: 100% !important;
+  text-overflow: clip !important;
+}
+
 </style>
 """
 
