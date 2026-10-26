@@ -182,7 +182,8 @@ _WIPE_PREFIXES = ('bt_', 'bs_', 'btp_', 'bsp_')
 def _defaults():
     s = st.session_state
     base = dict(
-        step='setup', party='Labour', year=1, block=1, term=1, steps=0,\n        game_mode='chancellor', career_profile=None,
+        step='setup', party='Labour', year=1, block=1, term=1, steps=0,
+        game_mode='chancellor', career_profile=None,
         active_crisis=None, last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
         budget_passed=False, sacked=False, sacked_reason='', game_over=None, election_result=None,
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
@@ -215,7 +216,9 @@ def ensure_init():
         _defaults()
 
 
-def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),\n             game_mode='chancellor', career_name='Alex Morgan',\n             career_constituency='Riverside Central', career_ambition='policy_specialist'):
+def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),
+             game_mode='chancellor', career_name='Alex Morgan',
+             career_constituency='Riverside Central', career_ambition='policy_specialist'):
     import budget
     import country
     import politics
@@ -239,6 +242,10 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.poll_history = {'Period': ['Start'], **{p: [float(v)] for p, v in polls.items()}}
     s.poll_anchor = {p: float(v) for p, v in polls.items()}
     s.step = 'game'
+    s.game_mode = game_mode if game_mode in ('career', 'chancellor') else 'chancellor'
+    if s.game_mode == 'career':
+        import career
+        s.career_profile = career.new_profile(career_name, career_constituency, career_ambition)
     s.message = (sc['msg'] + " My job is to protect you from the press, the public, and most importantly, your own "
                  "backbenchers.")
     country.ensure_state()
