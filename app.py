@@ -4,7 +4,6 @@ import streamlit as st
 
 import achievements
 import budget
-import career
 import country
 import engine
 import features
@@ -58,101 +57,40 @@ with st.sidebar:
 
 # ==================== SETUP SCREEN ====================
 def setup_screen():
-    st.markdown("""<div class='setup-hero'><div class='seal'>HM Treasury · Cabinet Office Simulation</div><h1>🏛️ The Chancellor's Office</h1><p>Manage the economy directly, or begin as an MP and work your way up through Parliament and government.</p><span class='stamp'>Choose your political career</span></div>""", unsafe_allow_html=True)
-    mode = st.radio(
-        "Choose your game mode",
-        ["Chancellor's Office", "Political Career"],
-        horizontal=True,
-        key="setup_game_mode",
-        captions=[
-            "Start as Chancellor and manage tax, spending, the economy and Parliament.",
-            "Start as a backbench MP. Build influence, earn promotions and try to reach Number 10."
-        ]
-    )
-    career_mode = mode == "Political Career"
-    st.markdown("### Step 1 · " + ("Start your political career" if career_mode else "Form your government"))
-    party_label = "Select your party:" if career_mode else "Select Governing Party:"
-    party = st.selectbox(party_label, state.PARTIES)
+    st.markdown("""<div class='setup-hero'><div class='seal'>HM Treasury · Cabinet Office Simulation</div><h1>🏛️ The Chancellor's Office</h1><p>Manage the economy, make policy choices and steer your government through Parliament.</p><span class='stamp'>The Chancellor's Office</span></div>""", unsafe_allow_html=True)
+    st.markdown("### Step 1 · Form your government")
+    party = st.selectbox("Select Governing Party:", state.PARTIES)
     difficulty = st.radio(
         "Difficulty", list(state.DIFFICULTY), index=2, horizontal=True,
         captions=[d['blurb'] for d in state.DIFFICULTY.values()],
         help='Easy is forgiving; Normal is balanced; Hardcore has frequent crises and no undo.'
     )
-
-    career_name = "Alex Morgan"
-    career_constituency = career.CONSTITUENCY_NAMES[0]
-    career_ambition = "policy_specialist"
-    career_local_mandate = "public_services"
-    scenario = "fragile"
-    spad = None
-    pledges = []
-    seed = int(s.seed)
-
-    if career_mode:
-        c1, c2, c3, c4 = st.columns([1.1, 1.2, 1.3, .8], gap="medium")
-        with c1:
-            career_name = st.text_input("Your MP's name", value="Alex Morgan", max_chars=70,
-                                        help="Choose a name for your fictional MP.")
-        with c2:
-            career_constituency = st.selectbox(
-                "Your constituency",
-                career.CONSTITUENCY_NAMES,
-                index=0,
-                format_func=lambda name: f"{name} · {career.CONSTITUENCY_BY_NAME[name]['nation']}",
-                help="Choose from all 650 official Westminster constituencies using the July 2024 boundaries. Type part of a constituency name to search."
-            )
-        with c3:
-            career_ambition = st.selectbox(
-                "Career approach", list(career.DATA["ambitions"]),
-                format_func=lambda k: career.DATA["ambitions"][k]["label"],
-                help="Your starting approach gives a small bonus to relevant attributes."
-            )
-            st.caption(career.DATA["ambitions"][career_ambition]["description"])
-        with c4:
-            seed = st.number_input("Game seed", min_value=1, max_value=999999, value=int(s.seed), step=1,
-                                   help="The same seed recreates the same election-result variation.")
-        career_local_mandate = st.selectbox(
-            "Your local priorities",
-            list(career.MANDATES),
-            format_func=lambda key: career.MANDATES[key]["label"],
-            help="This is your chosen constituency campaign focus, not a claim about every voter's view in the real constituency."
-        )
-        st.caption(career.MANDATES[career_local_mandate]["description"])
-        st.caption("The seat list uses official ONS Westminster constituency names and codes for the July 2024 boundaries; it does not imply that you are the current sitting MP. [ONS source](https://www.data.gov.uk/dataset/90293fcf-9268-4a1a-be3d-d4a20d314604/westminster-parliamentary-constituencies-july-2024-names-and-codes-in-the-uk-v2).")
-        st.info("You begin as a backbench MP. Each session includes one Commons vote plus two career actions. Build your reputation and qualify for appointments.")
-    else:
-        c1, c2, c3 = st.columns([1.4, 1.4, 1], gap='medium')
-        with c1:
-            scenario = st.selectbox('Starting scenario', list(state.SCENARIOS), format_func=lambda k: state.SCENARIOS[k]['label'])
-            st.caption(state.SCENARIOS[scenario]['blurb'])
-        with c2:
-            spad = st.selectbox('Special Advisor', [None, *politics.SPADS],
-                                format_func=lambda k: 'None' if k is None else politics.SPADS[k]['label'])
-            st.caption(politics.SPADS[spad]['blurb'] if spad else 'Go it alone, with no help from anyone.')
-        with c3:
-            seed = st.number_input('Game seed', min_value=1, max_value=999999, value=int(s.seed), step=1,
-                                   help='The same seed recreates the same random events, making runs comparable.')
-        pledges = st.multiselect(
-            'Manifesto pledges (optional, up to 3)', list(politics.PLEDGES),
-            format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
-            help='Each pledge gives you +2 starting approval. Break one and you take a U-turn scandal: approval, media and party support all fall.'
-        )
-
+    c1, c2, c3 = st.columns([1.4, 1.4, 1], gap='medium')
+    with c1:
+        scenario = st.selectbox('Starting scenario', list(state.SCENARIOS), format_func=lambda k: state.SCENARIOS[k]['label'])
+        st.caption(state.SCENARIOS[scenario]['blurb'])
+    with c2:
+        spad = st.selectbox('Special Advisor', [None, *politics.SPADS],
+                            format_func=lambda k: 'None' if k is None else politics.SPADS[k]['label'])
+        st.caption(politics.SPADS[spad]['blurb'] if spad else 'Go it alone, with no help from anyone.')
+    with c3:
+        seed = st.number_input('Game seed', min_value=1, max_value=999999, value=int(s.seed), step=1,
+                               help='The same seed recreates the same random events, making runs comparable.')
+    pledges = st.multiselect(
+        'Manifesto pledges (optional, up to 3)', list(politics.PLEDGES),
+        format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
+        help='Each pledge gives you +2 starting approval. Break one and you take a U-turn scandal: approval, media and party support all fall.'
+    )
     tags = st.checkbox(
         'Show ideology tags on policy options',
         value=(difficulty == 'Easy'), key=f'tags_{difficulty}',
         help='Off by default: read the policy, not the label. Your MPs still know what is and is not in your party tradition.'
     )
-    start_label = 'Start political career' if career_mode else 'Enter Number 11'
-    if st.button(start_label, type='primary', use_container_width=True):
+    if st.button('Enter Number 11', type='primary', use_container_width=True):
         state.new_game(
             party, difficulty, seed, tags,
             scenario=scenario, spad=spad, pledges=pledges,
-            game_mode='career' if career_mode else 'chancellor',
-            career_name=career_name,
-            career_constituency=career_constituency,
-            career_ambition=career_ambition,
-            career_local_mandate=career_local_mandate
+            game_mode='chancellor'
         )
         st.rerun()
 
@@ -168,11 +106,6 @@ def setup_screen():
 
 if s.step == 'setup':
     setup_screen()
-    st.stop()
-
-
-if s.get('game_mode') == 'career':
-    career.render()
     st.stop()
 
 
