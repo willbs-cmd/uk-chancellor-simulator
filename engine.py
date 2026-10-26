@@ -401,6 +401,9 @@ def proceed_to_spring():
         s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
         s.higher_rate_threshold = round(s.higher_rate_threshold * 1.025 / 10) * 10
         s.additional_rate_threshold = round(s.additional_rate_threshold * 1.025 / 10) * 10
+    # Demographic ageing adds a gradual pension cost every year; the triple lock magnifies it.
+    s.demographic_pressure = round(float(s.get('demographic_pressure', 0.0)) + 0.6, 1)
+    s.pension_pressure = round(float(s.get('pension_pressure', 0.0)) + 0.2 * s.demographic_pressure, 2)
     if s.pension_pressure:
         s.headroom = round(s.headroom - 0.25 * s.pension_pressure, 1)
     s.political_capital_points = 5
