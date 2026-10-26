@@ -182,7 +182,7 @@ _WIPE_PREFIXES = ('bt_', 'bs_', 'btp_', 'bsp_')
 def _defaults():
     s = st.session_state
     base = dict(
-        step='setup', party='Labour', year=1, block=1, term=1, steps=0,
+        step='setup', party='Labour', year=1, block=1, term=1, steps=0,\n        game_mode='chancellor', career_profile=None,
         active_crisis=None, last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
         budget_passed=False, sacked=False, sacked_reason='', game_over=None, election_result=None,
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
@@ -215,7 +215,7 @@ def ensure_init():
         _defaults()
 
 
-def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=()):
+def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),\n             game_mode='chancellor', career_name='Alex Morgan',\n             career_constituency='Riverside Central', career_ambition='policy_specialist'):
     import budget
     import country
     import politics
@@ -275,7 +275,7 @@ def undo():
 
 # ---------------------------------------------------------------- save / load
 SAVE_KEYS = [
-    'step', 'party', 'year', 'block', 'term', 'steps', 'active_crisis', 'last_ideology', 'last_crisis',
+    'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile', 'active_crisis', 'last_ideology', 'last_crisis',
     'crisis_reason', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
     'message', 'humphrey_note', 'last_humphrey_quote', 'fallout_done', 'difficulty', 'seed', 'show_tags',
     'prev', 'pending', 'history', 'stat_hist', 'country_hist', 'event_cards', 'ideology_counts',
