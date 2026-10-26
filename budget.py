@@ -586,8 +586,7 @@ def render(submit=None, after_summary=None):
 
     render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
-             desc='Estimated annual tax and other receipts received by the government.'
-             desc='Total annual receipts under this draft.'),
+             desc='Estimated annual tax and other receipts received by the government.'),
         dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'), num=(spend_now - spend_app) if changed else 0,
              inverse=True, desc='Estimated annual outgoings across departments, welfare, pensions, debt interest and selected schemes.'),
         dict(label='Deficit' if deficit_now > 0 else 'Surplus', value=f'£{abs(deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
