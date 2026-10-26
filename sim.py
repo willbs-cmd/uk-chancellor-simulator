@@ -47,6 +47,7 @@ import streamlit as st  # noqa: E402
 st.session_state = FakeState()
 
 import budget  # noqa: E402
+import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
 import imf_outlook  # noqa: E402
@@ -208,6 +209,48 @@ def check(n=None, difficulty=None):
         failures.append(f"Only {len(budget.TAX_POLICIES)} revenue schemes; expected at least {contract['minimum_tax_schemes']}.")
     if len(budget.SPEND_POLICIES) < contract['minimum_spending_schemes']:
         failures.append(f"Only {len(budget.SPEND_POLICIES)} spending schemes; expected at least {contract['minimum_spending_schemes']}.")
+
+    # Career-mode contracts: editable actions need valid stat keys and reachable promotion targets.
+    career_data = load_json('career_content.json')
+    role_data = career_data.get('roles', {})
+    if len(role_data) < 8:
+        failures.append(f"Career mode has only {len(role_data)} roles; expected at least 8.")
+    if 'mp' not in role_data or 'prime_minister' not in role_data:
+        failures.append("Career progression must include an MP start and a Prime Minister destination.")
+    for role_id, role_spec in role_data.items():
+        actions = role_spec.get('actions', [])
+        if len(actions) < 3:
+            failures.append(f"Career role {role_id} needs at least three actions.")
+        seen_action_ids = set()
+        for action in actions:
+            action_id = action.get('id')
+            if not action_id or action_id in seen_action_ids:
+                failures.append(f"Career role {role_id} has a missing or duplicate action ID.")
+            seen_action_ids.add(action_id)
+            for stat_key, amount in action.get('effects', {}).items():
+                if stat_key not in career_data.get('attributes', {}):
+                    failures.append(f"Career action {role_id}/{action_id} uses unknown stat {stat_key}.")
+                if not isinstance(amount, (int, float)) or not math.isfinite(float(amount)):
+                    failures.append(f"Career action {role_id}/{action_id} has a non-finite effect.")
+        for next_role in role_spec.get('next', []):
+            if next_role not in role_data:
+                failures.append(f"Career role {role_id} points to missing next role {next_role}.")
+    for role_id, next_roles in career_data.get('promotion_rules', {}).items():
+        if role_id not in role_data:
+            failures.append(f"Promotion rules use missing source role {role_id}.")
+        for target_role, spec in next_roles.items():
+            if target_role not in role_data:
+                failures.append(f"Promotion {role_id} -> {target_role} targets a missing role.")
+            for stat_key, threshold in spec.get('requirements', {}).items():
+                if stat_key not in career_data.get('attributes', {}):
+                    failures.append(f"Promotion {role_id} -> {target_role} uses unknown stat {stat_key}.")
+                if not math.isfinite(float(threshold)):
+                    failures.append(f"Promotion {role_id} -> {target_role} has a non-finite threshold.")
+    test_profile = career.new_profile("Test MP", "Test Constituency", "policy_specialist")
+    if test_profile.get('role') != 'mp' or len(test_profile.get('stats', {})) != len(career_data.get('attributes', {})):
+        failures.append("Career mode does not initialise a complete MP profile.")
+    if not any(target == 'prime_minister' for values in career_data.get('promotion_rules', {}).values() for target in values):
+        failures.append("Career promotion route does not contain a path to Prime Minister.")
 
     # Streamlit sliders require compatible numeric types for min/max/step.
     for tax_key, tax in budget.TAXES.items():
