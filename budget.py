@@ -191,7 +191,8 @@ def impact(old, new):
     spend_pol_diff = (_policy_sum(new, 'spend_pol', SPEND_POLICIES, 'cost_bn') - _policy_sum(old, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
     bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff
 
-    household = (d['income'] + d['income_higher'] + d['income_additional'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']\n                 + d['council_tax'] + d['sugar_duty'])
+    household = (d['income'] + d['income_higher'] + d['income_additional'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']
+                 + d['council_tax'] + d['sugar_duty'])
     wealth = d['property'] + d['cgt'] + d['iht'] + d['land_value'] + d['financial_transaction']
     vat_pts = new['tax']['vat'] - old['tax']['vat']
 
@@ -200,8 +201,10 @@ def impact(old, new):
                 + 0.02 * (ds['justice'] + ds['housing'] + ds['transport']) + 0.01 * ds['defence']
                 + 0.01 * (ds['science'] + ds['culture']) - 0.01 * ds['aid'])
     market = (max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
-              - 0.10 * d['cgt'] - 0.05 * d['iht']\n              - 0.08 * d['land_value'] - 0.06 * d['financial_transaction'] - 0.04 * d['carbon_levy'])
-    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.003 * d['income_higher'] - 0.002 * d['income_additional'] - 0.008 * d['cgt']
+              - 0.10 * d['cgt'] - 0.05 * d['iht']
+              - 0.08 * d['land_value'] - 0.06 * d['financial_transaction'] - 0.04 * d['carbon_levy'])
+    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.003 * d['income_higher'] - 0.002 * d['income_additional'] - 0.008 * d['cgt'] - 0.003 * d['land_value']
+              - 0.012 * d['financial_transaction'] - 0.015 * d['carbon_levy'] - 0.001 * d['sugar_duty'] - 0.002 * d['council_tax']
               + 0.008 * (ds['transport'] + ds['housing'] + ds['climate']) + 0.012 * ds['science']
               + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'] + ds['culture'])
               + 0.001 * ds['defence'])
@@ -213,12 +216,13 @@ def impact(old, new):
             elif not new[key][k] and old[key][k]:
                 approval -= p['app']; market -= p['mkt']; growth -= p['gro']
 
-    inflation = (0.12 * vat_pts + 0.003 * sum(ds.values()) + 0.015 * d['fuel'] + 0.005 * d['sin']\n                 + 0.004 * d['carbon_levy'] + 0.002 * d['sugar_duty'])
+    inflation = (0.12 * vat_pts + 0.003 * sum(ds.values()) + 0.015 * d['fuel'] + 0.005 * d['sin']
+                 + 0.004 * d['carbon_levy'] + 0.002 * d['sugar_duty'])
 
     return dict(headroom=bal, deficit=-bal, approval=approval, market=market,
                 growth=growth, inflation=inflation,
-                real_wages=-0.010 * d['income'] - 0.006 * d['ni'] - 0.004 * d['fuel'],
-                unemployment=0.010 * d['ni'] + 0.004 * d['corp'])
+                real_wages=-0.010 * d['income'] - 0.006 * d['ni'] - 0.004 * d['fuel'] - 0.002 * d['council_tax'] - 0.001 * d['sugar_duty'],
+                unemployment=0.010 * d['ni'] + 0.004 * d['corp'] + 0.001 * d['financial_transaction'])
 
 
 def _clip(v): return max(0, min(100, v))
