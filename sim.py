@@ -1,11 +1,12 @@
 """Headless balance testing for the Chancellor Simulator.
 
     python sim.py audit               # score every option of every decision and flag outliers
-    python sim.py run [N] [difficulty]  # play N full terms per strategy and print win/sack rates
+    python sim.py run [N] [difficulty]  # play N full terms per strategy and print win/sack rates\n    python sim.py check [N] [difficulty] # validate data contracts and enforce broad win-rate guardrails
 
 It drives the real game engine with a fake ``st.session_state``, so no browser or Streamlit server is needed.
 """
 import collections
+import math
 import random
 import statistics
 import sys
@@ -50,6 +51,7 @@ import decisions  # noqa: E402
 import engine  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
+from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
 WEIGHTS = dict(approval=1.0, market_conf=0.5, market=0.5, headroom=0.7, growth=8, deficit=-2, inflation=-4,
@@ -180,9 +182,109 @@ def run(n=200, difficulty='Hardcore'):
         print(f"  {party:<20} " + '  |  '.join(row))
 
 
+# ---------------------------------------------------------------- regression check
+def check(n=None, difficulty=None):
+    """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
+
+    Thresholds are broad regression guards, not a claim that one strategy is objectively optimal.
+    Run with: python sim.py check [N] [difficulty]
+    """
+    thresholds = load_json('balance_thresholds.json')
+    n = max(int(n or thresholds.get('default_runs', 20)), int(thresholds.get('default_runs', 20)))
+    difficulty = difficulty or thresholds.get('default_difficulty', 'Hardcore')
+    contract = thresholds['contract']
+    failures = []
+
+    if len(decisions.DECISIONS) < contract['minimum_decisions']:
+        failures.append(f"Only {len(decisions.DECISIONS)} policy decisions; expected at least {contract['minimum_decisions']}.")
+    if len(scen.CRISES) < contract['minimum_crises']:
+        failures.append(f"Only {len(scen.CRISES)} crises; expected at least {contract['minimum_crises']}.")
+    if len(budget.TAXES) < contract['minimum_tax_levers']:
+        failures.append(f"Only {len(budget.TAXES)} tax levers; expected at least {contract['minimum_tax_levers']}.")
+    if len(budget.SPEND_DEFAULTS) < contract['minimum_spending_departments']:
+        failures.append(f"Only {len(budget.SPEND_DEFAULTS)} spending departments; expected at least {contract['minimum_spending_departments']}.")
+    if len(budget.TAX_POLICIES) < contract['minimum_tax_schemes']:
+        failures.append(f"Only {len(budget.TAX_POLICIES)} revenue schemes; expected at least {contract['minimum_tax_schemes']}.")
+    if len(budget.SPEND_POLICIES) < contract['minimum_spending_schemes']:
+        failures.append(f"Only {len(budget.SPEND_POLICIES)} spending schemes; expected at least {contract['minimum_spending_schemes']}.")
+
+    for key, decision in decisions.DECISIONS.items():
+        options = decision.get('options', [])
+        effects = decision.get('effects', [])
+        if len(options) != contract['minimum_options_per_decision'] or len(effects) != contract['minimum_options_per_decision']:
+            failures.append(f"Decision {key} ({decision.get('title', 'untitled')}) must have five options and five effects.")
+        for ix, effect in enumerate(effects):
+            if not isinstance(effect, dict):
+                failures.append(f"Decision {key} option {ix + 1} has no effect object.")
+            elif any(isinstance(v, (int, float)) and not math.isfinite(v) for v in effect.values()):
+                failures.append(f"Decision {key} option {ix + 1} contains a non-finite effect.")
+
+    for key, crisis in scen.CRISES.items():
+        opts = crisis.get('opts', [])
+        if len(opts) < 2:
+            failures.append(f"Crisis {key} needs at least two response options.")
+        for ix, opt in enumerate(opts):
+            if len(opt) != 2 or not isinstance(opt[1], dict):
+                failures.append(f"Crisis {key} response {ix + 1} must be [label, effect-object].")
+
+    for key, delayed in decisions.DELAYED.items():
+        if key not in decisions.DECISIONS:
+            failures.append(f"Delayed consequences refer to missing decision key {key}.")
+        for option_ix, effect in delayed.items():
+            if option_ix < 0 or option_ix >= len(decisions.IDEOLOGIES):
+                failures.append(f"Delayed consequence at {key} refers to missing option {option_ix}.")
+            if not isinstance(effect.get('fx', {}), dict):
+                failures.append(f"Delayed consequence at {key}, option {option_ix} has invalid effects.")
+
+    print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
+          f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
+    if failures:
+        print("\nCONTENT CHECK FAILED:")
+        for msg in failures:
+            print(f"  - {msg}")
+        return 1
+    print("Content contract: PASS")
+
+    print(f"\nBalance regression: {n} sensible-strategy runs per party on {difficulty}.")
+    print(f"{'party':<20}{'win%':>8}{'sacked%':>10}{'mean approval':>15}{'mean headroom':>16}  result")
+    seed_start = int(thresholds.get('seed_start', 0))
+    for party in state.PARTIES:
+        results = [play(party, thresholds.get('strategy', 'sensible'), difficulty,
+                        seed=seed_start + i) for i in range(n)]
+        win_rate = sum(r['win'] for r in results) / n * 100
+        sack_rate = sum(r['sacked'] for r in results) / n * 100
+        mean_approval = statistics.mean(r['approval'] for r in results)
+        mean_headroom = statistics.mean(r['headroom'] for r in results)
+        guard = thresholds['party_thresholds'].get(party)
+        passed = bool(guard) and win_rate >= guard['minimum_win_percent'] and sack_rate <= guard['maximum_sack_percent']
+        for r in results:
+            for stat in ('approval', 'headroom', 'market'):
+                if not math.isfinite(float(r[stat])):
+                    failures.append(f"{party} produced non-finite {stat} in a headless run.")
+                    passed = False
+        status = "PASS" if passed else "FAIL"
+        print(f"{party:<20}{win_rate:7.1f}%{sack_rate:9.1f}%{mean_approval:15.1f}{mean_headroom:16.1f}  {status}")
+        if not passed:
+            failures.append(
+                f"{party}: win {win_rate:.1f}% (min {guard['minimum_win_percent'] if guard else 'n/a'}%), "
+                f"sacked {sack_rate:.1f}% (max {guard['maximum_sack_percent'] if guard else 'n/a'}%)."
+            )
+
+    if failures:
+        print("\nREGRESSION CHECK FAILED:")
+        for msg in failures:
+            print(f"  - {msg}")
+        return 1
+    print("\nREGRESSION CHECK PASSED")
+    return 0
+
+
 if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else 'run'
     if cmd == 'audit':
         audit()
+    elif cmd == 'check':
+        sys.exit(check(int(sys.argv[2]) if len(sys.argv) > 2 else None,
+                       sys.argv[3] if len(sys.argv) > 3 else None))
     else:
         run(int(sys.argv[2]) if len(sys.argv) > 2 else 100, sys.argv[3] if len(sys.argv) > 3 else 'Hardcore')
