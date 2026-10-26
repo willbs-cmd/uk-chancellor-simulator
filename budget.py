@@ -227,6 +227,10 @@ def totals(b):
     s = st.session_state
     ensure()
     rev = sum(revenues(b).values()) + OTHER_RECEIPTS + _policy_sum(b, 'tax_pol', TAX_POLICIES, 'yield_bn')
+    # Frozen thresholds create extra receipts through fiscal drag; this is separate from changing a tax rate.
+    if s.get('thresholds_frozen', False):
+        drag_rate = 0.35 if s.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
+        rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
     spend = (sum(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0) for k in SPEND_DEFAULTS) + interest()
              + _policy_sum(b, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
     return rev, spend
