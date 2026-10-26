@@ -390,9 +390,12 @@ def proceed_to_spring():
     s.growth = round(s.growth + (s.longrun_productivity - 1.0) * 0.04, 2)
     if s.get('thresholds_frozen', False):
         s.threshold_freeze_years = float(s.get('threshold_freeze_years', 0)) + 1.0
-        s.headroom = round(s.headroom + min(1.5, 0.35 * s.threshold_freeze_years), 1)
-        s.approval = round(_clip(s.approval - min(2.0, 0.25 * s.threshold_freeze_years)), 1)
         scope = s.get('threshold_freeze_scope', 'Personal allowance and all bands')
+        drag_receipts = min(1.5, (0.35 if scope == 'Personal allowance and all bands' else 0.25) * s.threshold_freeze_years)
+        s.headroom = round(s.headroom + drag_receipts, 1)
+        s.deficit = round(max(0.0, s.deficit - drag_receipts), 1)
+        s.approval = round(_clip(s.approval - min(2.0, 0.25 * s.threshold_freeze_years)), 1)
+        s.message += f' Frozen income-tax thresholds create fiscal drag: approximately £{drag_receipts:.1f}B of extra receipts, but take-home pay is squeezed.'
         if scope == 'Higher and additional thresholds only':
             s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
     else:
@@ -404,8 +407,11 @@ def proceed_to_spring():
     # Demographic ageing adds a gradual pension cost every year; the triple lock magnifies it.
     s.demographic_pressure = round(float(s.get('demographic_pressure', 0.0)) + 0.6, 1)
     s.pension_pressure = round(float(s.get('pension_pressure', 0.0)) + 0.2 * s.demographic_pressure, 2)
-    if s.pension_pressure:
-        s.headroom = round(s.headroom - 0.25 * s.pension_pressure, 1)
+    annual_pension_cost = round(0.25 * s.pension_pressure, 2)
+    if annual_pension_cost:
+        s.headroom = round(s.headroom - annual_pension_cost, 1)
+        s.deficit = round(s.deficit + annual_pension_cost, 1)
+        s.message += f' Demographic ageing adds about £{annual_pension_cost:.2f}B in modeled annual pension pressure.'
     s.political_capital_points = 5
     s.feature_notice = ''
     s.feature_notice_phase = 0
