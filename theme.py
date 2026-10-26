@@ -412,7 +412,6 @@ hr { margin: .6rem 0 !important; }
 [data-testid="stButton"] button,
 [data-testid="stDownloadButton"] button {
   box-sizing: border-box !important;
-  width: 100% !important;
   min-height: 2.6rem !important;
   padding: .55rem .8rem !important;
   margin: 0 !important;
@@ -479,13 +478,14 @@ hr { margin: .6rem 0 !important; }
   border-color: #c9a45c !important;
   border-bottom: 3px solid #c9a45c !important;
 }
-.st-key-budget_actions > div[data-testid="stHorizontalBlock"] {
+.st-key-budget_actions [data-testid="stHorizontalBlock"] {
   display: grid !important;
   grid-template-columns: minmax(150px, .8fr) minmax(150px, .8fr) minmax(270px, 1.5fr) !important;
   gap: 12px !important;
   width: min(100%, 900px) !important;
   align-items: stretch !important;
 }
+.st-key-budget_actions [data-testid="stButton"] button { width: 100% !important; }
 .st-key-budget_actions [data-testid="column"] {
   width: auto !important;
   min-width: 0 !important;
