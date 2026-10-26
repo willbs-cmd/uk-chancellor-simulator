@@ -83,6 +83,7 @@ def render():
     s.setdefault("pay_settlement", "unsettled")
     st.markdown("### Fiscal calendar & institutions")
     st.caption("Choose when to spend political capital. Each action can be taken once per year; the same limited pool covers statements, the Bank, pay talks and constitutional bargaining.")
+    st.markdown("<div class='fiscal-section-gap'></div>", unsafe_allow_html=True)
     if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
     m1, m2, m3, m4 = st.columns(4, gap="small")
