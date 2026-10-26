@@ -1,7 +1,7 @@
 {
   "dataset": "World Economic Outlook (WEO)",
   "vintage": "October 2026",
-  "published": "2026-10-13",
+  "published": "2026-10-12",
   "country": "United Kingdom",
   "source_name": "International Monetary Fund",
   "source_url": "https://data.imf.org/datasets/WEO",
@@ -49,5 +49,6 @@
       "debt": 100.9
     }
   },
-  "dataset_updated": "2026-10-12"
+  "dataset_updated": "2026-10-12",
+  "report_release_date": "2026-10-13"
 }
