@@ -88,7 +88,8 @@ def ensure_state():
         st.session_state.country = {k: s['start'] for k, s in STATS.items()}
         st.session_state.country_prev = dict(st.session_state.country)
 
-def apply_decision(ideology):
+def apply_decision(ideology, scale=1.0):
+    """Apply the ideology's country-level programme, scaled by the Commons vote."""
     ensure_state()
     state = st.session_state.country
     before = _overall(state)
@@ -98,7 +99,7 @@ def apply_decision(ideology):
     primary = TOPICS.get((st.session_state.year, st.session_state.block))
     for key, base in profile.items():
         weight = 0.7 if primary is None else (1.0 if key in primary else 0.3)
-        state[key] = _clamp(key, state[key] + base * weight * random.uniform(0.85, 1.15))
+        state[key] = _clamp(key, state[key] + base * weight * random.uniform(0.85, 1.15) * scale)
 
     if APPROVAL_FEEDBACK:
         bump = max(-3, min(3, (_overall(state) - before) * APPROVAL_FEEDBACK))
