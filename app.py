@@ -9,6 +9,7 @@ import engine
 import features
 import imf_outlook
 import politics
+import parliament
 import scenarios as scen
 import state
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
@@ -354,8 +355,8 @@ if s.block == 3 and s.active_crisis is None:
 else:
     # Focused workspace: keep the active decision uncluttered and put supporting
     # information behind clear tabs rather than squeezing it into a narrow column.
-    tab_decision, tab_dashboard, tab_briefing, tab_fiscal = st.tabs(
-        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences', '🏦 Fiscal toolkit']
+    tab_decision, tab_dashboard, tab_briefing, tab_fiscal, tab_parliament = st.tabs(
+        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences', '🏦 Fiscal toolkit', '🏛️ Parliament']
     )
     with tab_decision:
         if s.active_crisis is not None:
@@ -383,3 +384,6 @@ else:
     with tab_fiscal:
         st.caption('Use this toolkit in any phase to decide when to spend political capital on Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
         features.render()
+
+    with tab_parliament:
+        parliament.render()
