@@ -238,7 +238,7 @@ def budget_screen():
             if s.get('headlines'):
                 render_newspapers(*s.headlines)
     else:
-        st.markdown(f"<div class='dc-eyebrow'>Block 3 · Year {s.year}</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase 3 · Spring Budget</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
         budget.ensure()
 
         def submit():
