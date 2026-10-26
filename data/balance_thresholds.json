@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "default_runs": 20,
+  "default_difficulty": "Hardcore",
+  "strategy": "sensible",
+  "seed_start": 0,
+  "contract": {
+    "minimum_decisions": 20,
+    "minimum_crises": 25,
+    "minimum_options_per_decision": 5,
+    "minimum_tax_levers": 8,
+    "minimum_spending_departments": 10,
+    "minimum_tax_schemes": 5,
+    "minimum_spending_schemes": 5
+  },
+  "party_thresholds": {
+    "Labour": {"minimum_win_percent": 60, "maximum_sack_percent": 35},
+    "Conservative": {"minimum_win_percent": 60, "maximum_sack_percent": 35},
+    "Liberal Democrats": {"minimum_win_percent": 55, "maximum_sack_percent": 35},
+    "Reform UK": {"minimum_win_percent": 10, "maximum_sack_percent": 40},
+    "Green Party": {"minimum_win_percent": 40, "maximum_sack_percent": 45},
+    "SNP": {"minimum_win_percent": 55, "maximum_sack_percent": 35},
+    "Plaid Cymru": {"minimum_win_percent": 20, "maximum_sack_percent": 65}
+  },
+  "note": "Guardrails are deliberately broad; they catch large balance regressions, not small tuning differences. Adjust only after reviewing the sim.py check results."
+}
