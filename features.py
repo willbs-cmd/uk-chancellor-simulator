@@ -14,6 +14,7 @@ def _used():
 def _act(key, cost, label, effect):
     s = st.session_state
     year_key, used = _used()
+    s.feature_notice_phase = int(s.get("block", 1))
     capital = int(s.get("political_capital_points", 5))
     if key in used:
         s.feature_notice = f"{label} has already been used this year."
@@ -164,7 +165,8 @@ def render():
         pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief", help="Raises revenue but makes pension saving less attractive to some higher-rate taxpayers.")
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock", help="Improves pensioner incomes but increases the long-run pension bill.")
         productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan", help="Costs £0.5bn of headroom now and improves the long-run productivity trend.")
-        if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True):
+        if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True,
+                      disabled=not any((freeze, council_tax, pension_relief, triple, productivity_plan))):
             def tax_fx(x):
                 if freeze:
                     x.threshold_freeze_years = round(float(x.threshold_freeze_years) + (1 if freeze_scope == "Personal allowance and higher-rate threshold" else 0.6), 1)
@@ -212,7 +214,7 @@ def render():
                      disabled=(s.get("pm_opinion", 100) > 45 or s.get("political_capital_points", 5) < 3)):
             def challenge(x):
                 if x.party_opinion >= 50 and x.cab_opinion >= 45:
-                    x.pm_opinion = _clip(x.pm_opinion + 20); x.political_capital_points = max(0, x.political_capital_points - 2)
+                    x.pm_opinion = _clip(x.pm_opinion + 20)
                     x.message = "The party backs your challenge. You become Prime Minister and remain Chancellor during the transition."
                     x.is_prime_minister = True
                 else:
