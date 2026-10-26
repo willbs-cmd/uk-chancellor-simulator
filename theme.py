@@ -591,17 +591,22 @@ def phase_info(block):
     return PHASES.get(int(block), PHASES[1])
 
 def header(party, term, year, block):
-    phase = phase_info(block)
-    done = (year - 1) * 3 + (block - 1)
+    election_night = int(year) > 5
+    phase = (dict(name='General election', title='General election night',
+                  guide='Your five-year term is complete. The electorate decides whether you stay in government.')
+             if election_night else phase_info(block))
+    done = 15 if election_night else (year - 1) * 3 + (block - 1)
     pips = ''.join(
         f"<div class='ch-pip {'done' if i < done else ('now' if i == done else '')}'></div>"
         for i in range(15)
     )
     colour = PARTY_COLOURS.get(party, '#c9a45c')
+    period = (f"TERM {term} &nbsp;·&nbsp; GENERAL ELECTION" if election_night else
+              f"TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; {phase['name'].upper()} &nbsp;·&nbsp; PHASE {block} OF 3")
     st.markdown(
         f"""<div class='ch-banner' style='border-left-color:{colour}'>
         <div class='ch-head'><span class='ch-title'>🏛️ {party} Government</span>
-        <span class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; {phase['name'].upper()} &nbsp;·&nbsp; PHASE {block} OF 3</span></div>
+        <span class='sub'>{period}</span></div>
         <div class='ch-pips'>{pips}</div></div>""",
         unsafe_allow_html=True,
     )
