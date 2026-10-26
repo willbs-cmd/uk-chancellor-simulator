@@ -136,6 +136,71 @@
       "base": 8,
       "per": 0.2,
       "decay": 0.05
+    },
+    "council_tax": {
+      "group": "Local & environmental",
+      "label": "Council tax receipts (% change)",
+      "short": "Council tax",
+      "default": 0,
+      "lo": -20,
+      "hi": 50,
+      "step": 5,
+      "base": 45,
+      "per": 0.45,
+      "decay": 0.003,
+      "help": "Models changes to council tax receipts, such as revaluation or a higher annual yield. Higher bills may be politically unpopular."
+    },
+    "land_value": {
+      "group": "Local & environmental",
+      "label": "Land value tax rate (%)",
+      "short": "Land value tax",
+      "default": 0,
+      "lo": 0,
+      "hi": 5,
+      "step": 0.25,
+      "base": 0,
+      "per": 3,
+      "decay": 0.1,
+      "help": "A stylised tax on the value of land rather than buildings. It raises revenue but can change land prices and investment incentives."
+    },
+    "financial_transaction": {
+      "group": "Capital & environment",
+      "label": "Financial transactions levy (%)",
+      "short": "Financial transaction levy",
+      "default": 0,
+      "lo": 0,
+      "hi": 1,
+      "step": 0.1,
+      "base": 0,
+      "per": 6,
+      "decay": 1,
+      "help": "A small levy on selected financial trades. In the model it raises revenue but can reduce trading activity."
+    },
+    "carbon_levy": {
+      "group": "Local & environmental",
+      "label": "Carbon levy receipts (% change)",
+      "short": "Carbon levy",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 10,
+      "per": 0.35,
+      "decay": 0.003,
+      "help": "Represents raising or lowering the yield from carbon pricing. It can cut emissions incentives' costs but may pass costs through to energy and goods."
+    },
+    "sugar_duty": {
+      "group": "Income & consumption",
+      "label": "Sugary drinks duty receipts (% change)",
+      "short": "Sugary drinks duty",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 1,
+      "per": 0.04,
+      "decay": 0.001,
+      "help": "A stylised health-related levy on sugary drinks and similar products. Higher duty raises receipts but may raise some consumer prices."
     }
   },
   "tax_policies": {
@@ -192,6 +257,34 @@
       "label": "Overhaul Gambling Duties",
       "yield_bn": 1.5,
       "app": 1,
+      "mkt": 0,
+      "gro": 0
+    },
+    "hmrc_enforcement": {
+      "label": "Fund HMRC anti-avoidance and compliance",
+      "yield_bn": 3,
+      "app": 1,
+      "mkt": 1,
+      "gro": 0.05
+    },
+    "close_fossil_relief": {
+      "label": "Close selected fossil-fuel tax reliefs",
+      "yield_bn": 2,
+      "app": -1,
+      "mkt": 1,
+      "gro": -0.05
+    },
+    "stamp_duty_reform": {
+      "label": "Reform Stamp Duty Land Tax",
+      "yield_bn": 1.2,
+      "app": 0,
+      "mkt": 0,
+      "gro": 0.1
+    },
+    "pension_relief_reform": {
+      "label": "Reform higher-rate pension tax relief",
+      "yield_bn": 1.8,
+      "app": -1,
       "mkt": 0,
       "gro": 0
     }
