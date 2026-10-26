@@ -350,6 +350,20 @@ hr { margin: .6rem 0 !important; }
   [data-testid='stTabs'] button[role='tab'] { padding: .35rem .5rem !important; }
 }
 
+
+/* Budget action row: consistent widths, no touching or overlapping buttons */
+[data-testid="stHorizontalBlock"]:has([data-testid="stButton"] button) { align-items: stretch; }
+[data-testid="stButton"] button {
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  min-height: 2.65rem !important;
+  padding: .55rem .85rem !important;
+  margin: .12rem 0 .3rem !important;
+  width: 100%;
+}
+[data-testid="stTabs"] [role="tablist"] { flex-wrap: wrap; row-gap: .25rem; }
+[data-testid="stTabs"] button[role="tab"] { white-space: normal; line-height: 1.2; }
+
 </style>
 """
 
