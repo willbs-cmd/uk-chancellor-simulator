@@ -6,26 +6,57 @@ def _clip(x, lo=0, hi=100):
 
 def _used():
     s = st.session_state
-    key = f"feature_actions_y{s.get('year', 1)}"
-    if key not in s:
-        s[key] = []
-    return key, s[key]
+    s.setdefault("feature_actions", {})
+    year_key = str(s.get("year", 1))
+    s["feature_actions"].setdefault(year_key, [])
+    return year_key, s["feature_actions"][year_key]
 
 def _act(key, cost, label, effect):
     s = st.session_state
-    used_key, used = _used()
+    year_key, used = _used()
     capital = int(s.get("political_capital_points", 5))
     if key in used:
-        st.info(f"{label} has already been used this year.")
-        return
+        s.feature_notice = f"{label} has already been used this year."
+        return False
     if capital < cost:
-        st.warning(f"Not enough political capital. {label} costs {cost}; you have {capital}.")
-        return
+        s.feature_notice = f"Not enough political capital: {label} costs {cost}, but you have {capital}."
+        return False
     s.political_capital_points = capital - cost
-    s[used_key] = used + [key]
+    s.feature_actions[year_key] = used + [key]
     effect(s)
     s.message = (s.get("message", "") + " " + label + " announced.").strip()
-    st.success(f"{label} announced. Political capital remaining: {s.political_capital_points}.")
+    s.feature_notice = f"{label} announced. Political capital remaining: {s.political_capital_points}/5."
+    return True
+
+def render_phase_action():
+    """Show the fiscal event that belongs to the current annual phase."""
+    s = st.session_state
+    _, used = _used()
+    if s.get("feature_notice"):
+        st.info(s.feature_notice)
+    if s.block == 1:
+        with st.expander("💷 Optional Autumn Statement · costs 1 political capital", expanded=False):
+            st.write("Set out the government's fiscal direction before winter. It can reassure investors, but uses some fiscal headroom.")
+            st.caption("If announced: +2 market confidence and −£0.5bn headroom. Once per year.")
+            if st.button("Deliver Autumn Statement", key="phase_autumn_statement",
+                         disabled="autumn" in used, use_container_width=True):
+                _act("autumn", 1, "Autumn Statement",
+                     lambda x: (setattr(x, "market_conf", _clip(x.market_conf + 2)),
+                                setattr(x, "headroom", round(x.headroom - 0.5, 1))))
+                st.rerun()
+    elif s.block == 2:
+        with st.expander("🚨 Optional emergency mini-budget · costs 2 political capital", expanded=False):
+            st.write("A fast package can stimulate activity, but if it looks unfunded markets may demand higher borrowing costs.")
+            st.caption("If announced: +0.3 percentage points growth, −£3bn headroom, −5 market confidence and +0.25 points gilt yield.")
+            if st.button("Issue emergency mini-budget", key="phase_mini_budget",
+                         disabled="mini" in used, use_container_width=True):
+                def mini(x):
+                    x.headroom = round(x.headroom - 3.0, 1)
+                    x.growth = round(x.growth + 0.3, 2)
+                    x.market_conf = _clip(x.market_conf - 5)
+                    x.gilt_yield = round(x.gilt_yield + 0.25, 2)
+                _act("mini", 2, "Emergency mini-budget", mini)
+                st.rerun()
 
 def render():
     s = st.session_state
@@ -45,29 +76,30 @@ def render():
     m3.metric("Pension pressure", f"{s.pension_pressure:.1f} index")
     t1, t2, t3, t4 = st.tabs(["Statements & Budget", "Bank & gilts", "Pay & tax", "Devolution & career"])
     with t1:
-        st.markdown("**Fiscal events**")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.caption("Autumn Statement")
-            st.write("Set the direction before the main Budget.")
-            if st.button("Deliver Autumn Statement", key="feat_autumn", use_container_width=True):
-                _act("autumn", 1, "Autumn Statement", lambda x: (setattr(x, "market_conf", _clip(x.market_conf + 2)), setattr(x, "headroom", round(x.headroom - 0.5, 1))))
-                st.rerun()
-        with c2:
-            st.caption("Spring Statement")
-            st.write("Refresh the forecast and reassure markets.")
-            if st.button("Deliver Spring Statement", key="feat_spring", use_container_width=True):
-                _act("spring_statement", 1, "Spring Statement", lambda x: (setattr(x, "market_conf", _clip(x.market_conf + 3)), setattr(x, "approval", _clip(x.approval + 1))))
-                st.rerun()
-        with c3:
-            st.caption("Emergency mini-budget")
-            st.write("Act fast, with a risk of market backlash.")
-            if st.button("Issue emergency mini-budget", key="feat_mini", use_container_width=True):
-                def mini(x):
-                    x.headroom = round(x.headroom - 3.0, 1); x.growth = round(x.growth + .3, 2)
-                    x.market_conf = _clip(x.market_conf - 5); x.gilt_yield = round(x.gilt_yield + .25, 2)
-                _act("mini", 2, "Emergency mini-budget", mini)
-                st.rerun()
+        st.markdown("**Spring Statement**")
+        st.write("Before delivering the Budget, publish an updated view of the economy and reassure markets. This is a forecast statement, not the full tax-and-spending package.")
+        st.caption("If announced: +3 market confidence and +1 point public approval. Costs 1 political capital.")
+        _, used = _used()
+        if "spring_statement" in used:
+            st.success("Spring Statement already delivered this year.")
+        elif st.button("Deliver Spring Statement", key="feat_spring_statement", use_container_width=True):
+            def spring_statement(x):
+                x.market_conf = _clip(x.market_conf + 3)
+                x.approval = _clip(x.approval + 1)
+            _act("spring_statement", 1, "Spring Statement", spring_statement)
+            st.rerun()
+        st.divider()
+        st.markdown("**Fiscal-year checklist**")
+        _, used = _used()
+        statuses = [
+            ("Autumn Statement", "autumn", "Phase 1 · Autumn"),
+            ("Emergency mini-budget", "mini", "Phase 2 · Winter"),
+            ("Spring Statement", "spring_statement", "Phase 3 · Spring"),
+        ]
+        for label, key, timing in statuses:
+            st.markdown(f"{'✅' if key in used else '◯'} **{label}** — {timing}")
+        st.caption("Statements are optional. Political capital spent here cannot be used for Bank interventions, pay talks or regional bargaining.")
+
     with t2:
         st.markdown("**Bank of England and gilt issuance**")
         b1, b2 = st.columns(2)
@@ -142,6 +174,12 @@ def render():
                 x.longrun_productivity = round(x.longrun_productivity + (.1 if not freeze else 0), 2)
             _act("tax_pension", 1, "Tax threshold and pension decision", tax_fx); st.rerun()
         st.caption(f"Threshold freeze duration: {s.threshold_freeze_years} year(s). Pension pressure compounds: {s.pension_pressure:.1f}.")
+    with st.expander("📖 Glossary: what these controls mean", expanded=False):
+        st.markdown("**Political capital** is a limited annual resource for interventions; spend it on the most important priorities. **Market confidence** is a simplified investor sentiment score, not a direct market price.")
+        st.markdown("**Quantitative easing (QE)** means a central bank buys assets to loosen financial conditions; it can support demand but may add inflation risk. **Gilts** are UK government bonds. Maturity is how long until they must be repaid; index-linked gilts rise with inflation.")
+        st.markdown("**Fiscal drag** occurs when tax thresholds stay frozen while earnings rise, bringing more income into tax or higher bands. **Triple lock** means the state pension rises by the highest of earnings growth, inflation or 2.5%; this game uses an abstract pension-pressure index.")
+        st.markdown("**Productivity** is output per hour worked. **Pension pressure** represents long-run costs from an ageing population and pension commitments. **Block-grant bargaining** models negotiations between Westminster and devolved governments.")
+        st.markdown("**Leadership challenge** is a simplified political gamble: success depends on party and Cabinet support; failure risks your job. These are game abstractions, not real economic forecasts.")
     with t4:
         if s.party in ("SNP", "Plaid Cymru"):
             st.markdown("**Devolution negotiation**")
