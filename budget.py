@@ -16,9 +16,8 @@ import state
 import features
 from content_store import load_json
 from theme import render_chips
-
-# group, label, short name, default rate, slider range, revenue at the default rate (£bn),
-# £bn per point of rate, and 'decay' (how fast higher ra_POLICY_DATA = load_json('policies.json')
+# Game-editable fiscal controls and policy choices live in data/policies.json.
+_POLICY_DATA = load_json('policies.json')
 TAXES = _POLICY_DATA['taxes']
 TAX_POLICIES = _POLICY_DATA['tax_policies']
 SPEND_DEFAULTS = _POLICY_DATA['spend_defaults']
@@ -27,11 +26,6 @@ POLICY_NUDGES = _POLICY_DATA['policy_nudges']
 OTHER_RECEIPTS = float(_POLICY_DATA['other_receipts'])
 GDP_BN = float(_POLICY_DATA['gdp_bn'])
 BASE_INTEREST = float(_POLICY_DATA['base_interest'])
-
-: -0.03},
-}
-
-BASE_INTEREST = 105.4
 
 PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7fb8b0', '#c4c46f', '#8aa0a0',
            '#d98cb3', '#5f7f5f', '#b07a3c', '#6c8fd1', '#c97a7a', '#a0a0a0', '#e6d9a8']
