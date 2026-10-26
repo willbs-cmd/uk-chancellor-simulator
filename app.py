@@ -242,8 +242,12 @@ def budget_screen():
         budget.ensure()
 
         def submit():
-            if st.button('Submit Budget to the Commons & Lords', type='primary',
-                         help='Any slider changes you have not applied are applied automatically when you submit.'):
+            if st.button(
+                'Submit Budget to the Commons & Lords',
+                type='primary',
+                use_container_width=True,
+                help='Any slider changes you have not applied are applied automatically when you submit.'
+            ):
                 engine.submit_budget()
                 st.rerun()
 
