@@ -33,6 +33,12 @@ When a new IMF WEO edition is released, update `imf_uk_baseline.json`:
 
 The baseline is intentionally stored locally in the repository: the game does not silently fetch changing external numbers at runtime.
 
+## Career Mode and parliamentary votes
+
+Career Mode uses the 650 official constituency names and codes from the ONS July 2024 Westminster constituency register. The player can choose any seat in setup; this is a fictional career and does not mean the player is the current MP for that constituency. Constituency codes are stable identifiers within this boundary vintage. Update the file only when official constituency boundaries change, and preserve the source metadata.
+
+Each parliamentary session offers one featured Commons division, separate from the two career actions. The available votes and party-whip positions live in `career_divisions.json` and are fictionalised gameplay content, not current official party positions or records of historic votes. Voting with the whip can increase party trust; rebellion can build profile and integrity while risking promotion. Voting in line with the player's chosen local priority can increase constituency support when the issue matches.
+
 ## Regression check
 
 Run `python sim.py check` after changing content. It checks content shape and non-finite effects, then runs a deterministic sample of games against broad per-party win and sacking thresholds. Use `python sim.py check 50 Hardcore` to sample more seeds. A failure means investigate the balance change; it does not automatically mean the content is wrong.
