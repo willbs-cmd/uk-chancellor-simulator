@@ -104,23 +104,27 @@ def render():
 
     with t2:
         st.markdown("**Bank of England and gilt issuance**")
-        b1, b2 = st.columns(2)
+        b1, b2 = st.columns(2, gap="medium")
         with b1:
+            st.caption("QE costs 2 capital: it lowers gilt yields and may support markets, but can lift inflation and debt.")
             if st.button("Coordinate quantitative easing", key="feat_qe", use_container_width=True):
                 def qe(x):
                     x.gilt_yield = round(max(.1, x.gilt_yield - .3), 2); x.market_conf = _clip(x.market_conf + 2)
                     x.inflation = round(x.inflation + .2, 2); x.debt = round(x.debt + .3, 2)
                 _act("qe", 2, "Quantitative easing coordination", qe); st.rerun()
+            st.caption("Rate pressure costs 2 capital: it may lift growth in the short term but damages confidence in Bank independence and market trust.")
             if st.button("Pressure for lower rates", key="feat_rate", use_container_width=True):
                 def rates(x):
                     x.interest_rate = round(max(.1, x.interest_rate - .25), 2); x.growth = round(x.growth + .15, 2)
                     x.market_conf = _clip(x.market_conf - 3); x.pm_opinion = _clip(x.pm_opinion - 2)
                 _act("rate_pressure", 2, "Rate-pressure intervention", rates); st.rerun()
+            st.caption("Defending independence costs 1 capital and is designed to reassure investors.")
             if st.button("Defend Bank independence", key="feat_independence", use_container_width=True):
                 def defend(x):
                     x.market_conf = _clip(x.market_conf + 4); x.gilt_yield = round(max(.1, x.gilt_yield - .1), 2)
                 _act("bank_independence", 1, "Public defence of Bank independence", defend); st.rerun()
         with b2:
+            st.caption("Choose how long the government borrows for. Long maturities lock in financing for longer; short maturities need refinancing sooner.")
             s.gilt_maturity_years = st.select_slider("New gilt maturity", options=[2, 5, 10, 20, 30], value=int(s.gilt_maturity_years))
             s.index_linked_share = st.slider("Index-linked share (%)", 0, 100, int(s.index_linked_share), 5)
             if st.button("Hold gilt auction", key="feat_auction", use_container_width=True):
@@ -136,7 +140,7 @@ def render():
             st.caption("Short maturities refinance sooner; long maturities lock in yields. Index-linked debt exposes the Treasury to inflation.")
     with t3:
         st.markdown("**Public-sector pay round**")
-        pay = st.radio("Negotiating position", ["Inflation-matching settlement", "Targeted compromise", "Pay cap and arbitration"], key="feature_pay_choice", horizontal=False)
+        pay = st.radio("Negotiating position", ["Inflation-matching settlement", "Targeted compromise", "Pay cap and arbitration"], key="feature_pay_choice", horizontal=False, help="An inflation-matching deal costs more but improves morale; a pay cap saves money but increases strike and morale risks.")
         if st.button("Conclude annual pay round", key="feat_pay", use_container_width=True):
             def pay_fx(x):
                 if pay == "Inflation-matching settlement":
@@ -153,12 +157,12 @@ def render():
                 x.pay_settlement = pay
             _act("pay_round", 2, "Public-sector pay round", pay_fx); st.rerun()
         st.markdown("**Tax thresholds and pensions**")
-        freeze = st.checkbox("Freeze income-tax thresholds (fiscal drag)", key="feature_threshold_freeze")
+        freeze = st.checkbox("Freeze income-tax thresholds (fiscal drag)", key="feature_threshold_freeze", help="Frozen thresholds can raise revenue as nominal earnings rise, but gradually squeeze take-home pay.")
         freeze_scope = st.radio("Threshold freeze scope", ["Personal allowance and higher-rate threshold", "Higher-rate threshold only"], key="feature_threshold_scope", horizontal=False)
-        council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax")
-        pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief")
-        triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock")
-        productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan")
+        council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax", help="A simplified revaluation raises receipts but can anger households whose bills increase.")
+        pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief", help="Raises revenue but makes pension saving less attractive to some higher-rate taxpayers.")
+        triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock", help="Improves pensioner incomes but increases the long-run pension bill.")
+        productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan", help="Costs £0.5bn of headroom now and improves the long-run productivity trend.")
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True):
             def tax_fx(x):
                 if freeze:
