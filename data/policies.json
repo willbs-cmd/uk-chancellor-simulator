@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates.",
+  "taxes": {
+    "income": {
+      "group": "Income & consumption",
+      "label": "Income tax, basic rate (%)",
+      "short": "Basic-rate income tax",
+      "default": 20,
+      "lo": 5,
+      "hi": 45,
+      "step": 1,
+      "base": 300,
+      "per": 7.5,
+      "decay": 0.02,
+      "help": "Marginal rate applied to taxable income in the basic-rate band, not to all income."
+    },
+    "income_higher": {
+      "group": "Income & consumption",
+      "label": "Income tax, higher rate (%)",
+      "short": "Higher-rate income tax",
+      "default": 40,
+      "lo": 25,
+      "hi": 60,
+      "step": 1,
+      "base": 80,
+      "per": 3,
+      "decay": 0.04,
+      "help": "Marginal rate for income above the basic-rate threshold and up to the additional-rate threshold."
+    },
+    "income_additional": {
+      "group": "Income & consumption",
+      "label": "Income tax, additional rate (%)",
+      "short": "Additional-rate income tax",
+      "default": 45,
+      "lo": 30,
+      "hi": 70,
+      "step": 1,
+      "base": 20,
+      "per": 0.9,
+      "decay": 0.05,
+      "help": "Marginal rate applied to taxable income above the additional-rate threshold."
+    },
+    "ni": {
+      "group": "Income & consumption",
+      "label": "National Insurance rate (%)",
+      "short": "National Insurance",
+      "default": 15,
+      "lo": 0,
+      "hi": 30,
+      "step": 1,
+      "base": 190,
+      "per": 9,
+      "decay": 0.04
+    },
+    "vat": {
+      "group": "Income & consumption",
+      "label": "VAT (%)",
+      "short": "VAT",
+      "default": 20,
+      "lo": 5,
+      "hi": 35,
+      "step": 1,
+      "base": 170,
+      "per": 8,
+      "decay": 0.04
+    },
+    "fuel": {
+      "group": "Income & consumption",
+      "label": "Fuel duty (% change)",
+      "short": "Fuel duty",
+      "default": 0,
+      "lo": -50,
+      "hi": 50,
+      "step": 5,
+      "base": 25,
+      "per": 0.25,
+      "decay": 0.004
+    },
+    "sin": {
+      "group": "Income & consumption",
+      "label": "Alcohol & tobacco duty (% change)",
+      "short": "Alcohol & tobacco",
+      "default": 0,
+      "lo": -30,
+      "hi": 50,
+      "step": 5,
+      "base": 22,
+      "per": 0.22,
+      "decay": 0.006
+    },
+    "corp": {
+      "group": "Business, wealth & capital",
+      "label": "Corporation tax (%)",
+      "short": "Corporation tax",
+      "default": 25,
+      "lo": 5,
+      "hi": 45,
+      "step": 1,
+      "base": 90,
+      "per": 2.5,
+      "decay": 0.04
+    },
+    "property": {
+      "group": "Business, wealth & capital",
+      "label": "Property & wealth taxes (% change)",
+      "short": "Property taxes",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 110,
+      "per": 1.1,
+      "decay": 0.004
+    },
+    "cgt": {
+      "group": "Business, wealth & capital",
+      "label": "Capital gains tax (%)",
+      "short": "Capital gains tax",
+      "default": 24,
+      "lo": 10,
+      "hi": 45,
+      "step": 1,
+      "base": 16,
+      "per": 0.6,
+      "decay": 0.05
+    },
+    "iht": {
+      "group": "Business, wealth & capital",
+      "label": "Inheritance tax (%)",
+      "short": "Inheritance tax",
+      "default": 40,
+      "lo": 0,
+      "hi": 60,
+      "step": 1,
+      "base": 8,
+      "per": 0.2,
+      "decay": 0.05
+    }
+  },
+  "tax_policies": {
+    "vat_private": {
+      "label": "Apply VAT to Private School Fees",
+      "yield_bn": 1.5,
+      "app": 1,
+      "mkt": -1,
+      "gro": 0
+    },
+    "nondom": {
+      "label": "Scrap Non-Dom Tax Status",
+      "yield_bn": 2.5,
+      "app": 2,
+      "mkt": -2,
+      "gro": 0
+    },
+    "windfall": {
+      "label": "Windfall Tax on Energy Firms",
+      "yield_bn": 4,
+      "app": 3,
+      "mkt": -3,
+      "gro": -0.1
+    },
+    "wealth": {
+      "label": "1% Wealth Tax on assets >£10m",
+      "yield_bn": 9,
+      "app": 4,
+      "mkt": -6,
+      "gro": -0.2
+    },
+    "mansion": {
+      "label": "Mansion Tax on Homes over £2m",
+      "yield_bn": 1.8,
+      "app": 1,
+      "mkt": -1,
+      "gro": 0
+    },
+    "digital": {
+      "label": "Digital Services Tax on Big Tech",
+      "yield_bn": 2,
+      "app": 2,
+      "mkt": -2,
+      "gro": -0.05
+    },
+    "carbon": {
+      "label": "Expand Carbon Pricing",
+      "yield_bn": 3.5,
+      "app": -2,
+      "mkt": 1,
+      "gro": -0.05
+    },
+    "gambling": {
+      "label": "Overhaul Gambling Duties",
+      "yield_bn": 1.5,
+      "app": 1,
+      "mkt": 0,
+      "gro": 0
+    }
+  },
+  "spend_defaults": {
+    "welfare": {
+      "label": "Welfare & pensions",
+      "short": "Welfare & pensions",
+      "default": 368
+    },
+    "health": {
+      "label": "NHS & health",
+      "short": "NHS & health",
+      "default": 240
+    },
+    "education": {
+      "label": "Education",
+      "short": "Education",
+      "default": 139
+    },
+    "defence": {
+      "label": "Defence",
+      "short": "Defence",
+      "default": 69
+    },
+    "transport": {
+      "label": "Transport & infrastructure",
+      "short": "Transport & infrastructure",
+      "default": 53
+    },
+    "justice": {
+      "label": "Policing, courts & prisons",
+      "short": "Policing, courts & prisons",
+      "default": 50
+    },
+    "housing": {
+      "label": "Housing & local government",
+      "short": "Housing & local government",
+      "default": 67
+    },
+    "climate": {
+      "label": "Climate, energy & industry",
+      "short": "Climate, energy & industry",
+      "default": 39
+    },
+    "science": {
+      "label": "Science, research & innovation",
+      "short": "Science & research",
+      "default": 16
+    },
+    "aid": {
+      "label": "Overseas aid",
+      "short": "Overseas aid",
+      "default": 15
+    },
+    "culture": {
+      "label": "Culture, media & sport",
+      "short": "Culture, media & sport",
+      "default": 9
+    },
+    "other": {
+      "label": "Other departments & admin",
+      "short": "Other departments & admin",
+      "default": 105
+    }
+  },
+  "spend_policies": {
+    "hs2": {
+      "label": "Revive Full HS2 Rail Project",
+      "cost_bn": 8,
+      "app": 2,
+      "mkt": 0,
+      "gro": 0.2
+    },
+    "meals": {
+      "label": "Universal Free School Meals",
+      "cost_bn": 2.5,
+      "app": 3,
+      "mkt": 0,
+      "gro": 0
+    },
+    "child_cap": {
+      "label": "Scrap Two-Child Benefit Limit",
+      "cost_bn": 3,
+      "app": 2,
+      "mkt": -1,
+      "gro": 0
+    },
+    "water": {
+      "label": "Nationalise Water Companies",
+      "cost_bn": 10,
+      "app": 5,
+      "mkt": -4,
+      "gro": 0
+    },
+    "nuclear": {
+      "label": "Fast-Track New Nuclear Power",
+      "cost_bn": 6,
+      "app": 1,
+      "mkt": 1,
+      "gro": 0.15
+    },
+    "childcare": {
+      "label": "Expand Free Childcare",
+      "cost_bn": 4,
+      "app": 3,
+      "mkt": -0.5,
+      "gro": 0.1
+    },
+    "winterfuel": {
+      "label": "Universal Winter Fuel Payment",
+      "cost_bn": 1.5,
+      "app": 2.5,
+      "mkt": -0.5,
+      "gro": 0
+    },
+    "potholes": {
+      "label": "National Pothole & Roads Fund",
+      "cost_bn": 2,
+      "app": 2,
+      "mkt": 0,
+      "gro": 0.05
+    }
+  },
+  "policy_nudges": {
+    "hs2": {
+      "rail": 4
+    },
+    "meals": {
+      "schools": 2
+    },
+    "child_cap": {
+      "child_poverty": -4
+    },
+    "nuclear": {
+      "netzero": 2,
+      "energy_bills": -20
+    },
+    "childcare": {
+      "child_poverty": -0.8,
+      "unemployment": -0.03
+    }
+  },
+  "other_receipts": 119,
+  "gdp_bn": 3125,
+  "base_interest": 105.4
+}
