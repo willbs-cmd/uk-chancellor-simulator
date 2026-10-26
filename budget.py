@@ -14,72 +14,21 @@ import econ
 import imf_outlook
 import state
 import features
+from content_store import load_json
 from theme import render_chips
 
 # group, label, short name, default rate, slider range, revenue at the default rate (£bn),
-# £bn per point of rate, and 'decay' (how fast higher rates stop paying: the Laffer effect)
-TAXES = {
-    'income':   dict(group='Income & consumption', label='Income tax, basic rate (%)', short='Basic-rate income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02, help='Marginal rate applied to taxable income in the basic-rate band, not to all income.'),
-    'income_higher': dict(group='Income & consumption', label='Income tax, higher rate (%)', short='Higher-rate income tax', default=40, lo=25, hi=60, step=1, base=80.0, per=3.0, decay=0.04, help='Marginal rate for income above the basic-rate threshold and up to the additional-rate threshold.'),
-    'income_additional': dict(group='Income & consumption', label='Income tax, additional rate (%)', short='Additional-rate income tax', default=45, lo=30, hi=70, step=1, base=20.0, per=0.9, decay=0.05, help='Marginal rate applied to taxable income above the additional-rate threshold.'),
-    'ni':       dict(group='Income & consumption', label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
-    'vat':      dict(group='Income & consumption', label='VAT (%)', short='VAT', default=20, lo=5, hi=35, step=1, base=170.0, per=8.0, decay=0.04),
-    'fuel':     dict(group='Income & consumption', label='Fuel duty (% change)', short='Fuel duty', default=0, lo=-50, hi=50, step=5, base=25.0, per=0.25, decay=0.004),
-    'sin':      dict(group='Income & consumption', label='Alcohol & tobacco duty (% change)', short='Alcohol & tobacco', default=0, lo=-30, hi=50, step=5, base=22.0, per=0.22, decay=0.006),
-    'corp':     dict(group='Business, wealth & capital', label='Corporation tax (%)', short='Corporation tax', default=25, lo=5, hi=45, step=1, base=90.0, per=2.5, decay=0.04),
-    'property': dict(group='Business, wealth & capital', label='Property & wealth taxes (% change)', short='Property taxes', default=0, lo=-50, hi=100, step=5, base=110.0, per=1.1, decay=0.004),
-    'cgt':      dict(group='Business, wealth & capital', label='Capital gains tax (%)', short='Capital gains tax', default=24, lo=10, hi=45, step=1, base=16.0, per=0.6, decay=0.05),
-    'iht':      dict(group='Business, wealth & capital', label='Inheritance tax (%)', short='Inheritance tax', default=40, lo=0, hi=60, step=1, base=8.0, per=0.2, decay=0.05),
-}
+# £bn per point of rate, and 'decay' (how fast higher ra_POLICY_DATA = load_json('policies.json')
+TAXES = _POLICY_DATA['taxes']
+TAX_POLICIES = _POLICY_DATA['tax_policies']
+SPEND_DEFAULTS = _POLICY_DATA['spend_defaults']
+SPEND_POLICIES = _POLICY_DATA['spend_policies']
+POLICY_NUDGES = _POLICY_DATA['policy_nudges']
+OTHER_RECEIPTS = float(_POLICY_DATA['other_receipts'])
+GDP_BN = float(_POLICY_DATA['gdp_bn'])
+BASE_INTEREST = float(_POLICY_DATA['base_interest'])
 
-# One-off schemes: a flat yield (or cost) every year, plus a one-time hit to approval, markets and growth.
-TAX_POLICIES = {
-    'vat_private': dict(label='Apply VAT to Private School Fees', yield_bn=1.5, app=1, mkt=-1, gro=0),
-    'nondom':      dict(label='Scrap Non-Dom Tax Status', yield_bn=2.5, app=2, mkt=-2, gro=0),
-    'windfall':    dict(label='Windfall Tax on Energy Firms', yield_bn=4.0, app=3, mkt=-3, gro=-0.1),
-    'wealth':      dict(label='1% Wealth Tax on assets >£10m', yield_bn=9.0, app=4, mkt=-6, gro=-0.2),
-    'mansion':     dict(label='Mansion Tax on Homes over £2m', yield_bn=1.8, app=1, mkt=-1, gro=0),
-    'digital':     dict(label='Digital Services Tax on Big Tech', yield_bn=2.0, app=2, mkt=-2, gro=-0.05),
-    'carbon':      dict(label='Expand Carbon Pricing', yield_bn=3.5, app=-2, mkt=1, gro=-0.05),
-    'gambling':    dict(label='Overhaul Gambling Duties', yield_bn=1.5, app=1, mkt=0, gro=0),
-}
-
-OTHER_RECEIPTS = 119.0   # everything not broken out above (so total receipts at the defaults stay at £1,150bn)
-GDP_BN = 3125.0          # nominal GDP used for the '% of GDP' lines: tax take 36.8%, spending 40.8%, deficit 4.0% at the defaults
-
-SPEND_DEFAULTS = {
-    'welfare':   dict(label='Welfare & pensions', short='Welfare & pensions', default=368.0),
-    'health':    dict(label='NHS & health', short='NHS & health', default=240.0),
-    'education': dict(label='Education', short='Education', default=139.0),
-    'defence':   dict(label='Defence', short='Defence', default=69.0),
-    'transport': dict(label='Transport & infrastructure', short='Transport & infrastructure', default=53.0),
-    'justice':   dict(label='Policing, courts & prisons', short='Policing, courts & prisons', default=50.0),
-    'housing':   dict(label='Housing & local government', short='Housing & local government', default=67.0),
-    'climate':   dict(label='Climate, energy & industry', short='Climate, energy & industry', default=39.0),
-    'science':   dict(label='Science, research & innovation', short='Science & research', default=16.0),
-    'aid':       dict(label='Overseas aid', short='Overseas aid', default=15.0),
-    'culture':   dict(label='Culture, media & sport', short='Culture, media & sport', default=9.0),
-    'other':     dict(label='Other departments & admin', short='Other departments & admin', default=105.0),
-}
-
-SPEND_POLICIES = {
-    'hs2':        dict(label='Revive Full HS2 Rail Project', cost_bn=8.0, app=2, mkt=0, gro=0.2),
-    'meals':      dict(label='Universal Free School Meals', cost_bn=2.5, app=3, mkt=0, gro=0),
-    'child_cap':  dict(label='Scrap Two-Child Benefit Limit', cost_bn=3.0, app=2, mkt=-1, gro=0),
-    'water':      dict(label='Nationalise Water Companies', cost_bn=10.0, app=5, mkt=-4, gro=0),
-    'nuclear':    dict(label='Fast-Track New Nuclear Power', cost_bn=6.0, app=1, mkt=1, gro=0.15),
-    'childcare':  dict(label='Expand Free Childcare', cost_bn=4.0, app=3, mkt=-0.5, gro=0.1),
-    'winterfuel': dict(label='Universal Winter Fuel Payment', cost_bn=1.5, app=2.5, mkt=-0.5, gro=0),
-    'potholes':   dict(label='National Pothole & Roads Fund', cost_bn=2.0, app=2, mkt=0, gro=0.05),
-}
-
-# what each spending scheme does to the State of the Nation, every spring it stays in the Budget
-POLICY_NUDGES = {
-    'hs2': {'rail': 4},
-    'meals': {'schools': 2},
-    'child_cap': {'child_poverty': -4},
-    'nuclear': {'netzero': 2.0, 'energy_bills': -20},
-    'childcare': {'child_poverty': -0.8, 'unemployment': -0.03},
+: -0.03},
 }
 
 BASE_INTEREST = 105.4
