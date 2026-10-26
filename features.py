@@ -69,12 +69,14 @@ def render():
     s.setdefault("index_linked_share", 25)
     s.setdefault("pay_settlement", "unsettled")
     st.markdown("### Fiscal calendar & institutions")
-    st.caption("Choose when to spend political capital. Each action can be taken once per year; the same political capital must cover statements, the Bank, pay talks and constitutional bargaining.")
+    st.caption("Choose when to spend political capital. Each action can be taken once per year; the same limited pool covers statements, the Bank, pay talks and constitutional bargaining.")
+    if s.get("feature_notice"):
+        st.info(s.feature_notice)
     m1, m2, m3 = st.columns(3)
     m1.metric("Political capital", f"{s.political_capital_points}/5")
     m2.metric("Productivity trend", f"{s.longrun_productivity:.1f}%")
     m3.metric("Pension pressure", f"{s.pension_pressure:.1f} index")
-    t1, t2, t3, t4 = st.tabs(["Statements & Budget", "Bank & gilts", "Pay & tax", "Devolution & career"])
+    t1, t2, t3, t4 = st.tabs(["Statements", "Bank & gilts", "Pay & tax", "Devolution"])
     with t1:
         st.markdown("**Spring Statement**")
         st.write("Before delivering the Budget, publish an updated view of the economy and reassure markets. This is a forecast statement, not the full tax-and-spending package.")
@@ -156,10 +158,11 @@ def render():
         council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax")
         pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief")
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock")
+        productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan")
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True):
             def tax_fx(x):
                 if freeze:
-                    x.threshold_freeze_years = int(x.threshold_freeze_years) + (1 if freeze_scope == "Personal allowance and higher-rate threshold" else 0.6)
+                    x.threshold_freeze_years = round(float(x.threshold_freeze_years) + (1 if freeze_scope == "Personal allowance and higher-rate threshold" else 0.6), 1)
                     x.headroom = round(x.headroom + (.7 if freeze_scope == "Personal allowance and higher-rate threshold" else .4), 1)
                     x.approval = _clip(x.approval - (1.5 if freeze_scope == "Personal allowance and higher-rate threshold" else .8))
                 if council_tax:
@@ -171,7 +174,9 @@ def render():
                 if triple:
                     x.pension_pressure = round(x.pension_pressure + 1.0, 1)
                     x.headroom = round(x.headroom - 1.2, 1); x.approval = _clip(x.approval + 2)
-                x.longrun_productivity = round(x.longrun_productivity + (.1 if not freeze else 0), 2)
+                if productivity_plan:
+                    x.longrun_productivity = round(x.longrun_productivity + .15, 2)
+                    x.headroom = round(x.headroom - .5, 1)
             _act("tax_pension", 1, "Tax threshold and pension decision", tax_fx); st.rerun()
         st.caption(f"Threshold freeze duration: {s.threshold_freeze_years} year(s). Pension pressure compounds: {s.pension_pressure:.1f}.")
     with st.expander("📖 Glossary: what these controls mean", expanded=False):
