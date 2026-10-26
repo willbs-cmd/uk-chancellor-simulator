@@ -382,6 +382,18 @@ def proceed_to_spring():
     s.pm_opinion = round(_clip(s.pm_opinion + (5 if s.headroom > 0 else -5)), 1)
     economy_tick()
     politics.shift_macro_cycle()
+    # Long-run pressures compound annually rather than arriving as isolated crises.
+    s.setdefault('longrun_productivity', 1.0)
+    s.setdefault('pension_pressure', 0.0)
+    s.setdefault('threshold_freeze_years', 0)
+    s.setdefault('political_capital_points', 5)
+    s.growth = round(s.growth + (s.longrun_productivity - 1.0) * 0.04, 2)
+    if s.threshold_freeze_years:
+        s.headroom = round(s.headroom + min(1.5, 0.35 * s.threshold_freeze_years), 1)
+        s.approval = round(_clip(s.approval - min(2.0, 0.25 * s.threshold_freeze_years)), 1)
+    if s.pension_pressure:
+        s.headroom = round(s.headroom - 0.25 * s.pension_pressure, 1)
+    s.political_capital_points = 5
     s.year += 1
     s.block = 1
     s.budget_passed = False
