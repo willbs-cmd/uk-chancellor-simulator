@@ -391,8 +391,8 @@ def render():
     st.markdown(
         f"<div class='ch-banner'><div class='ch-head'><span class='ch-title'>🏛️ {p['name']}</span>"
         f"<span class='sub'>{role['label'].upper()} · PARLIAMENTARY CAREER</span></div>"
-        f"<div class='sub'>{p['constituency']} · Term {p['career_term']} · Year {p['career_year']} of {ELECTION_AFTER} · "
-        f"Session {p['career_session']} of {SESSIONS_PER_YEAR}</div></div>",
+        f"<div class='sub'>{p['constituency']} · {p['constituency_nation']} · {p['constituency_code']} · "
+        f"Term {p['career_term']} · Year {p['career_year']} of {ELECTION_AFTER} · Session {p['career_session']} of {SESSIONS_PER_YEAR}</div></div>",
         unsafe_allow_html=True,
     )
     st.markdown(f"## {role['label']}")
