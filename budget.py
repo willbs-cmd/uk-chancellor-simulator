@@ -13,6 +13,7 @@ import country
 import econ
 import imf_outlook
 import state
+from theme import render_chips
 
 # group, label, short name, default rate, slider range, revenue at the default rate (£bn),
 # £bn per point of rate, and 'decay' (how fast higher rates stop paying: the Laffer effect)
@@ -451,57 +452,62 @@ def apply_ongoing():
 
 
 # ================================================================ drawing
+# Layout: a row of summary chips and the Apply / Reset / Submit buttons stay at the top; the levers live in tabs with
+# one line per slider, so the whole Budget fits on screen without scrolling the page.
 def _pie(data):
     df = pd.DataFrame([{'Category': str(k), 'Value': float(v)} for k, v in data.items() if float(v) > 0])
     if not df.empty:
-        chart = alt.Chart(df).mark_arc(innerRadius=65, outerRadius=125, stroke='#0d1f17', strokeWidth=2).encode(
+        chart = alt.Chart(df).mark_arc(innerRadius=55, outerRadius=105, stroke='#0d1f17', strokeWidth=2).encode(
             theta=alt.Theta(field="Value", type="quantitative"),
             color=alt.Color(field="Category", type="nominal", scale=alt.Scale(range=PALETTE),
-                            legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=12, symbolType='square')),
+                            legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=11, symbolType='square')),
             tooltip=[alt.Tooltip('Category:N', title='Item'), alt.Tooltip('Value:Q', title='Amount (£bn)', format=',.1f')]
-        ).properties(height=300, background='transparent').configure_view(strokeWidth=0)
+        ).properties(height=240, background='transparent').configure_view(strokeWidth=0)
         st.altair_chart(chart, use_container_width=True)
 
 
+def _value_html(text, diff, good_when_positive=True, extra=''):
+    if abs(diff) < 1e-9:
+        colour = '#9fb3a6'
+    else:
+        colour = '#6fbf8a' if (diff > 0) == good_when_positive else '#e0705d'
+    return (f"<div class='lv-val'><b>{text}</b><br>"
+            f"<span style='color:{colour}'>{diff:+,.1f}b{extra}</span></div>")
+
+
 def _tax_row(k, t, s):
-    st.markdown(f"**{t['label']}**")
-    c1, c2 = st.columns([3, 1])
+    c1, c2, c3 = st.columns([2.2, 3, 1.4])
     with c1:
+        st.markdown(f"<div class='lv'>{t['label']}</div>", unsafe_allow_html=True)
+    with c2:
         # no value= here: the widget's value comes from session state via its key (passing both makes Streamlit warn)
         st.slider(f"{t['label']} slider", t['lo'], t['hi'], step=t['step'], key=f'bt_{k}', label_visibility="collapsed")
-    with c2:
+    with c3:
         d = s[f'bt_{k}'] - t['default']
         new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
-        diff_rev = new_rev - t['base']
-        color = '#6fbf8a' if diff_rev > 0 else '#e0705d' if diff_rev < 0 else '#9fb3a6'
-        st.markdown(f"<div style='text-align:right; font-size:1.1rem; line-height:1.2;'><b>£{new_rev:,.1f}b</b><br>"
-                    f"<span style='color:{color}; font-size:0.85rem;'>{diff_rev:+,.1f}b</span></div>", unsafe_allow_html=True)
+        st.markdown(_value_html(f'£{new_rev:,.1f}b', new_rev - t['base']), unsafe_allow_html=True)
 
 
 def _spend_row(k, sp, s):
     base = s.dept_spend[k]
-    st.markdown(f"**{sp['label']}** (Current base: £{base:,.1f}bn)")
-    c1, c2 = st.columns([3, 1])
+    c1, c2, c3 = st.columns([2.2, 3, 1.4])
     with c1:
-        st.slider(f"{sp['label']} slider", -15.0, 15.0, step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
+        st.markdown(f"<div class='lv'>{sp['short']}<br><small>base £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
     with c2:
+        st.slider(f"{sp['label']} slider", -15.0, 15.0, step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
+    with c3:
         pct = float(s[f'bs_{k}'])
         new_val = base * (1.0 + pct / 100.0)
-        diff = new_val - base
-        color = '#e0705d' if diff < 0 else '#6fbf8a' if diff > 0 else '#9fb3a6'
-        st.markdown(f"<div style='text-align:right; font-size:1.1rem; line-height:1.2;'><b>£{new_val:,.1f}b</b><br>"
-                    f"<span style='color:{color}; font-size:0.85rem;'>{diff:+,.1f}b ({pct:+.1f}%)</span></div>", unsafe_allow_html=True)
+        st.markdown(_value_html(f'£{new_val:,.1f}b', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%)'),
+                    unsafe_allow_html=True)
 
 
 def render_whips(cur):
     s = st.session_state
-    st.markdown("#### 🏛️ The Whips' Office")
-    st.caption('The Budget needs 326 ayes. Upset your own side and morale falls before the vote; the Whips can buy votes at a price.')
+    st.markdown("**🏛️ The Whips' Office**")
     ayes = projected_ayes(cur)
-    m1, m2, m3 = st.columns(3)
-    m1.metric('Backbench morale', f'{s.backbench_opinion:.0f}/100')
-    m2.metric('Projected ayes', f'{ayes}', f'{ayes - WIN:+d} vs the {WIN} needed')
-    m3.metric('Whip interventions', f"+{s.get('whip_ayes', 0)} votes")
+    st.markdown(f"Backbench morale **{s.backbench_opinion:.0f}/100** · Projected ayes **{ayes}** ({ayes - WIN:+d} vs the {WIN} needed)"
+                f" · Whip votes **+{s.get('whip_ayes', 0)}**")
     for _, size, msg in rebel_risks(cur):
         st.warning(f'{msg} (-{size} when the Budget is delivered)')
     if ayes < WIN:
@@ -514,20 +520,18 @@ def render_whips(cur):
     for col, (k, w) in zip(cols, WHIPS.items()):
         used = k in s.get('whip_used', [])
         col.button('✔ ' + w['label'] if used else w['label'], key=f'whip_{k}', on_click=_whip, args=(k,),
-                   disabled=used or not w['can'](s), use_container_width=True)
+                   disabled=used or not w['can'](s), use_container_width=True, help=w['hint'])
         col.caption(w['hint'])
 
 
 def render_forecast(cur):
     s = st.session_state
-    st.markdown('#### 🔭 OBR Forecast')
-    st.caption('A central forecast of the next three springs if you deliver this Budget and nothing else happens: no crises, '
-               'no surprises. The real thing will be bumpier.')
+    st.markdown('**🔭 OBR forecast** (a central case: no crises, no surprises)')
     rows = forecast(cur)
     df = pd.DataFrame([{
-        'Year': r['year'], 'GDP growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
-        'OBR headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'National debt': f"{r['debt']:.1f}% GDP",
-        'Gilt yield': f"{r['gilt']:.1f}%", 'Market confidence': f"{r['market']:.0f}%"} for r in rows])
+        'Year': r['year'], 'Growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
+        'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
+        'Gilts': f"{r['gilt']:.1f}%", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
     worst = min(r['headroom'] for r in rows)
     if worst < 0:
@@ -542,7 +546,7 @@ def render_forecast(cur):
 
 def render_red_book(cur):
     s = st.session_state
-    with st.expander('📕 The Red Book: departmental budgets'):
+    with st.expander('📕 The Red Book: departmental budgets and tax changes'):
         rows = []
         for k, sp in SPEND_DEFAULTS.items():
             base, start = s.dept_spend[k], sp['default']
@@ -561,7 +565,9 @@ def render_red_book(cur):
         st.dataframe(pd.DataFrame(trows), hide_index=True, use_container_width=True)
 
 
-def render():
+def render(submit=None, after_summary=None):
+    """Draw the whole Budget screen. ``submit`` draws the Submit button (it lives in engine land, so app.py passes it in);
+    ``after_summary`` draws anything that should sit just under the summary (the manifesto pledge chips)."""
     ensure()
     s = st.session_state
     applied, cur = s.budget_applied, read()
@@ -570,75 +576,96 @@ def render():
     rev_now, spend_now = totals(cur)
     rev_app, spend_app = totals(applied)
     bal_now, bal_app = rev_now - spend_now, rev_app - spend_app
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric('Total income', f'£{rev_now:,.0f}bn', f'{rev_now - rev_app:+,.1f}bn' if changed else None)
-    m2.metric('Total spending', f'£{spend_now:,.0f}bn', f'{spend_now - spend_app:+,.1f}bn' if changed else None, delta_color='inverse')
     deficit_now = s.deficit + (bal_app - bal_now)     # the running deficit, adjusted for the draft
-    label = 'surplus' if deficit_now <= 0 else 'deficit'
-    m3.metric(f'Projected annual {label}', f'£{abs(deficit_now):,.1f}bn',
-              f'{(bal_now - bal_app):+,.1f}bn' if changed else None)
-
-    r1, r2, r3 = st.columns(3)
-    r1.metric('Tax take', f'{rev_now / GDP_BN * 100:.1f}% of GDP', f'{(rev_now - rev_app) / GDP_BN * 100:+.1f}pp' if changed else None, delta_color='off')
-    r2.metric('Public spending', f'{spend_now / GDP_BN * 100:.1f}% of GDP', f'{(spend_now - spend_app) / GDP_BN * 100:+.1f}pp' if changed else None, delta_color='off')
-    r3.metric('Deficit', f'{deficit_now / GDP_BN * 100:.1f}% of GDP', f'{(bal_now - bal_app) / GDP_BN * 100:+.1f}pp' if changed else None, delta_color='off')
-
-    left, right = st.columns(2)
-
-    with left:
-        st.markdown('#### Taxes')
-        group = None
-        for k, t in TAXES.items():
-            if t['group'] != group:
-                group = t['group']
-                st.caption(group)
-            _tax_row(k, t, s)
-
-        st.markdown("---")
-        st.markdown('#### Revenue Raising Schemes')
-        for k, p in TAX_POLICIES.items():
-            st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}",
-                        help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
-
-    with right:
-        st.markdown('#### Department Spending (Annual % Change)')
-        st.caption('Set annual spending growth or cuts (-15% to +15%). Changes compound into baseline budgets each year.')
-        for k, sp in SPEND_DEFAULTS.items():
-            _spend_row(k, sp, s)
-
-        st.markdown("---")
-        st.markdown('#### Spending Pledges')
-        for k, p in SPEND_POLICIES.items():
-            st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}",
-                        help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
-
-    st.caption(f'Debt interest (£{interest():,.1f}bn, {interest() / rev_now * 100:.1f}% of receipts) is set by gilt yields and the debt stock, not by departmental budgets.')
-
     imp = impact(applied, cur)
-    st.markdown('#### Projected impact' if changed else '#### Impact of your current budget')
-    c = st.columns(6)
-    c[0].metric('Public Approval', f"{_clip(s.approval + imp['approval']):.1f}%", f"{imp['approval']:+.1f}")
-    c[1].metric('Market Confidence', f"{_clip(s.market_conf + imp['market']):.1f}%", f"{imp['market']:+.1f}")
-    c[2].metric('Economic Growth', f"{s.growth + imp['growth']:.1f}%", f"{imp['growth']:+.2f}")
-    c[3].metric('Inflation', f"{s.inflation + imp['inflation']:.1f}%", f"{imp['inflation']:+.2f}", delta_color='inverse')
-    c[4].metric('OBR Headroom', f"£{s.headroom + imp['headroom']:.1f}B", f"{imp['headroom']:+.1f}")
-    c[5].metric('Annual Deficit', f"£{s.deficit + imp['deficit']:.1f}B", f"{imp['deficit']:+.1f}", delta_color='inverse')
+    ayes = projected_ayes(cur)
 
-    b1, b2, _ = st.columns([1, 1, 3])
+    def delta(v, unit=''):
+        return f'{v:+,.1f}{unit}' if changed else '\u2014'
+
+    render_chips([
+        dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
+             desc='Total annual receipts under this draft.'),
+        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'), num=(spend_now - spend_app) if changed else 0,
+             inverse=True, desc='Total annual spending under this draft, including debt interest and pledges.'),
+        dict(label='Deficit' if deficit_now > 0 else 'Surplus', value=f'£{abs(deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
+             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The projected annual deficit (the running figure, adjusted for this draft).'),
+        dict(label='Approval', value=f"{_clip(s.approval + imp['approval']):.1f}%", delta=delta(imp['approval']), num=imp['approval'] if changed else 0),
+        dict(label='Market conf.', value=f"{_clip(s.market_conf + imp['market']):.1f}%", delta=delta(imp['market']), num=imp['market'] if changed else 0),
+        dict(label='Growth', value=f"{s.growth + imp['growth']:.1f}%", delta=(f"{imp['growth']:+.2f}" if changed else '\u2014'),
+             num=imp['growth'] if changed else 0),
+        dict(label='Inflation', value=f"{s.inflation + imp['inflation']:.1f}%", delta=(f"{imp['inflation']:+.2f}" if changed else '\u2014'),
+             num=imp['inflation'] if changed else 0, inverse=True),
+        dict(label='OBR headroom', value=f"£{s.headroom + imp['headroom']:.1f}B", delta=delta(imp['headroom']), num=imp['headroom'] if changed else 0,
+             desc='How far you are inside your fiscal rules. Below zero is a breach.'),
+        dict(label='Projected ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs {WIN}', num=ayes - WIN,
+             desc='Votes for the Budget in the Commons. You need 326.'),
+    ])
+
+    b1, b2, b3 = st.columns([1, 1, 3])
     b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed)
     b2.button('Reset sliders', on_click=_reset, disabled=not changed)
+    with b3:
+        if submit:
+            submit()
+    if after_summary:
+        after_summary()
 
-    st.caption('Departmental funding levels also nudge the State of the Nation indicators across turns.')
+    t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
+        ['💷 Taxes', '🏥 Spending', '📜 Schemes', '🏛️ Whips & forecast', '📊 Charts & Red Book'])
 
-    render_forecast(cur)
-    render_whips(cur)
-    render_red_book(cur)
+    with t_tax:
+        groups = {}
+        for k, tx in TAXES.items():
+            groups.setdefault(tx['group'], []).append((k, tx))
+        for col, (group, items) in zip(st.columns(len(groups)), groups.items()):
+            with col:
+                st.caption(group)
+                for k, tx in items:
+                    _tax_row(k, tx, s)
+        st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. Raise a rate too far and it stops paying (the Laffer effect).')
 
-    p1, p2 = st.columns(2)
-    with p1:
-        st.markdown('#### Where the money comes from')
-        _pie(revenue_pie(cur))
-    with p2:
-        st.markdown('#### Where the money goes')
-        _pie(spending_pie(cur))
+    with t_spend:
+        items = list(SPEND_DEFAULTS.items())
+        half = (len(items) + 1) // 2
+        left, right = st.columns(2)
+        with left:
+            st.caption('Annual change in each budget (-15% to +15%). Changes compound into next year\'s baseline.')
+            for k, sp in items[:half]:
+                _spend_row(k, sp, s)
+        with right:
+            st.caption(f'Spending {spend_now / GDP_BN * 100:.1f}% of GDP. Debt interest (£{interest():,.1f}bn, '
+                       f'{interest() / rev_now * 100:.1f}% of receipts) follows gilt yields, not departments.')
+            for k, sp in items[half:]:
+                _spend_row(k, sp, s)
+
+    with t_schemes:
+        left, right = st.columns(2)
+        with left:
+            st.markdown('**Revenue raising schemes**')
+            for k, p in TAX_POLICIES.items():
+                st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}",
+                            help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
+        with right:
+            st.markdown('**Spending pledges**')
+            for k, p in SPEND_POLICIES.items():
+                st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}",
+                            help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
+
+    with t_whips:
+        left, right = st.columns(2)
+        with left:
+            render_forecast(cur)
+        with right:
+            render_whips(cur)
+
+    with t_charts:
+        p1, p2 = st.columns(2)
+        with p1:
+            st.markdown('**Where the money comes from**')
+            _pie(revenue_pie(cur))
+        with p2:
+            st.markdown('**Where the money goes**')
+            _pie(spending_pie(cur))
+        render_red_book(cur)
+    
