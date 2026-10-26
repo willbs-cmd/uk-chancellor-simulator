@@ -120,12 +120,22 @@ def render():
             _act("pay_round", 2, "Public-sector pay round", pay_fx); st.rerun()
         st.markdown("**Tax thresholds and pensions**")
         freeze = st.checkbox("Freeze income-tax thresholds (fiscal drag)", key="feature_threshold_freeze")
+        freeze_scope = st.radio("Threshold freeze scope", ["Personal allowance and higher-rate threshold", "Higher-rate threshold only"], key="feature_threshold_scope", horizontal=False)
+        council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax")
+        pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief")
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock")
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True):
             def tax_fx(x):
                 if freeze:
-                    x.threshold_freeze_years = int(x.threshold_freeze_years) + 1
-                    x.headroom = round(x.headroom + .7, 1); x.approval = _clip(x.approval - 1)
+                    x.threshold_freeze_years = int(x.threshold_freeze_years) + (1 if freeze_scope == "Personal allowance and higher-rate threshold" else 0.6)
+                    x.headroom = round(x.headroom + (.7 if freeze_scope == "Personal allowance and higher-rate threshold" else .4), 1)
+                    x.approval = _clip(x.approval - (1.5 if freeze_scope == "Personal allowance and higher-rate threshold" else .8))
+                if council_tax:
+                    x.headroom = round(x.headroom + .5, 1); x.approval = _clip(x.approval - 1.5)
+                    x.message = (x.get("message", "") + " Council tax band revaluation sparks local controversy.").strip()
+                if pension_relief:
+                    x.headroom = round(x.headroom + .8, 1); x.approval = _clip(x.approval - 1)
+                    x.party_opinion = _clip(x.party_opinion - 1)
                 if triple:
                     x.pension_pressure = round(x.pension_pressure + 1.0, 1)
                     x.headroom = round(x.headroom - 1.2, 1); x.approval = _clip(x.approval + 2)
