@@ -20,6 +20,8 @@ from theme import render_chips
 # £bn per point of rate, and 'decay' (how fast higher rates stop paying: the Laffer effect)
 TAXES = {
     'income':   dict(group='Income & consumption', label='Income tax, basic rate (p in the £)', short='Income tax', default=20, lo=5, hi=45, step=1, base=300.0, per=7.5, decay=0.02),
+    'income_higher': dict(group='Income & consumption', label='Income tax, higher rate (%)', short='Higher-rate income tax', default=40, lo=25, hi=60, step=1, base=80.0, per=3.0, decay=0.04),
+    'income_additional': dict(group='Income & consumption', label='Income tax, additional rate (%)', short='Additional-rate income tax', default=45, lo=30, hi=70, step=1, base=20.0, per=0.9, decay=0.05),
     'ni':       dict(group='Income & consumption', label='National Insurance rate (%)', short='National Insurance', default=15, lo=0, hi=30, step=1, base=190.0, per=9.0, decay=0.04),
     'vat':      dict(group='Income & consumption', label='VAT (%)', short='VAT', default=20, lo=5, hi=35, step=1, base=170.0, per=8.0, decay=0.04),
     'fuel':     dict(group='Income & consumption', label='Fuel duty (% change)', short='Fuel duty', default=0, lo=-50, hi=50, step=5, base=25.0, per=0.25, decay=0.004),
@@ -42,7 +44,7 @@ TAX_POLICIES = {
     'gambling':    dict(label='Overhaul Gambling Duties', yield_bn=1.5, app=1, mkt=0, gro=0),
 }
 
-OTHER_RECEIPTS = 219.0   # everything not broken out above (so total receipts at the defaults stay at £1,150bn)
+OTHER_RECEIPTS = 119.0   # everything not broken out above (so total receipts at the defaults stay at £1,150bn)
 GDP_BN = 3125.0          # nominal GDP used for the '% of GDP' lines: tax take 36.8%, spending 40.8%, deficit 4.0% at the defaults
 
 SPEND_DEFAULTS = {
@@ -242,7 +244,7 @@ def impact(old, new):
     spend_pol_diff = (_policy_sum(new, 'spend_pol', SPEND_POLICIES, 'cost_bn') - _policy_sum(old, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
     bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff
 
-    household = d['income'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']
+    household = d['income'] + d['income_higher'] + d['income_additional'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']
     wealth = d['property'] + d['cgt'] + d['iht']
     vat_pts = new['tax']['vat'] - old['tax']['vat']
 
@@ -252,7 +254,7 @@ def impact(old, new):
                 + 0.01 * (ds['science'] + ds['culture']) - 0.01 * ds['aid'])
     market = (max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
               - 0.10 * d['cgt'] - 0.05 * d['iht'])
-    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.008 * d['cgt']
+    growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.003 * d['income_higher'] - 0.002 * d['income_additional'] - 0.008 * d['cgt']
               + 0.008 * (ds['transport'] + ds['housing'] + ds['climate']) + 0.012 * ds['science']
               + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'] + ds['culture'])
               + 0.001 * ds['defence'])
