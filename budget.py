@@ -571,14 +571,21 @@ def render(submit=None, after_summary=None):
             st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
 
     with st.container(key="budget_actions"):
-        b1, b2, b3 = st.columns([0.8, 0.8, 1.5], gap='small')
-        b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed, use_container_width=True,
-                  help='Apply the current slider values to the draft forecast.')
-        b2.button('Reset sliders', on_click=_reset, disabled=not changed, use_container_width=True,
-                  help='Return tax rates, spending changes and schemes to the previous applied draft.')
-        with b3:
-            if submit:
-                submit()
+        apply_col, reset_col = st.columns(2, gap="medium")
+        apply_col.button(
+            "Apply Budget", type="primary", on_click=_apply,
+            disabled=not changed, use_container_width=True,
+            help="Apply the current slider values to the draft forecast."
+        )
+        reset_col.button(
+            "Reset sliders", on_click=_reset,
+            disabled=not changed, use_container_width=True,
+            help="Return tax rates, spending changes and schemes to the previously applied draft."
+        )
+        # Submission sits on its own full-width row so the label never gets clipped
+        # by a narrow third column, especially on mobile.
+        if submit:
+            submit()
     if after_summary:
         after_summary()
 
