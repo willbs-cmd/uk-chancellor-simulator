@@ -592,43 +592,40 @@ def render(submit=None, after_summary=None):
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book', 'Fiscal tools'])
 
     with t_tax:
-        st.caption('Income tax rates are marginal: each rate applies only to the income in its band. The Fiscal tools tab shows the thresholds and explains fiscal drag. These Budget sliders change the rate, while threshold policy controls when the bands move.')
+        st.caption('Income-tax rates are marginal: each rate applies only to income inside its band. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
         groups = {}
         for k, tx in TAXES.items():
             groups.setdefault(tx['group'], []).append((k, tx))
-        for col, (group, items) in zip(st.columns(len(groups)), groups.items()):
-            with col:
-                st.caption(group)
+        for ix, (group, items) in enumerate(groups.items()):
+            with st.expander(f"{group} · {len(items)} controls", expanded=(ix == 0)):
                 for k, tx in items:
                     _tax_row(k, tx, s)
-        st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. Raise a rate too far and it stops paying (the Laffer effect).')
+        st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. The Laffer effect is a simplified game rule: very high rates may raise less extra revenue than expected.')
 
     with t_spend:
-        items = list(SPEND_DEFAULTS.items())
-        half = (len(items) + 1) // 2
-        left, right = st.columns(2)
-        with left:
-            st.caption('Annual change in each budget (-15% to +15%). Changes compound into next year\'s baseline.')
-            for k, sp in items[:half]:
-                _spend_row(k, sp, s)
-        with right:
-            st.caption(f'Spending {spend_now / GDP_BN * 100:.1f}% of GDP. Debt interest (£{interest():,.1f}bn, '
-                       f'{interest() / rev_now * 100:.1f}% of receipts) follows gilt yields, not departments.')
-            for k, sp in items[half:]:
-                _spend_row(k, sp, s)
+        st.caption(f"Adjust department budgets against today's baseline. The draft changes compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / rev_now * 100:.1f}% of receipts).")
+        spend_groups = [
+            ("People & frontline services", ["welfare", "health", "education", "justice", "defence"]),
+            ("Infrastructure & transition", ["transport", "housing", "climate"]),
+            ("Science, culture & other", ["science", "aid", "culture", "other"]),
+        ]
+        for group, keys in spend_groups:
+            with st.expander(f"{group} · {len(keys)} departments", expanded=False):
+                for k in keys:
+                    if k in SPEND_DEFAULTS:
+                        _spend_row(k, SPEND_DEFAULTS[k], s)
 
     with t_schemes:
-        left, right = st.columns(2)
-        with left:
-            st.markdown('**Revenue raising schemes**')
+        with st.expander(f"Revenue-raising schemes · {len(TAX_POLICIES)} options", expanded=False):
+            st.caption("Select policy ideas that affect annual receipts. Hover over an option for the simplified approval, market and growth effects.")
             for k, p in TAX_POLICIES.items():
                 st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}",
-                            help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
-        with right:
-            st.markdown('**Spending pledges**')
+                            help=f"Estimated annual yield: £{p['yield_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
+        with st.expander(f"Spending pledges · {len(SPEND_POLICIES)} options", expanded=False):
+            st.caption("Choose programmes that add recurring costs to the Budget. These are stylised scenario costs, not official costings.")
             for k, p in SPEND_POLICIES.items():
                 st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}",
-                            help=f"Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp")
+                            help=f"Annual cost: £{p['cost_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
 
     with t_whips:
         left, right = st.columns(2)
