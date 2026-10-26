@@ -41,7 +41,7 @@ def render_phase_action():
             st.write("Set out the government's fiscal direction before winter. It can reassure investors, but uses some fiscal headroom.")
             st.caption("If announced: +2 market confidence and −£0.5bn headroom. Once per year.")
             if st.button("Deliver Autumn Statement", key="phase_autumn_statement",
-                         disabled="autumn" in used, use_container_width=True):
+                         disabled=("autumn" in used or s.political_capital_points < 1), use_container_width=True):
                 _act("autumn", 1, "Autumn Statement",
                      lambda x: (setattr(x, "market_conf", _clip(x.market_conf + 2)),
                                 setattr(x, "headroom", round(x.headroom - 0.5, 1))))
@@ -51,7 +51,7 @@ def render_phase_action():
             st.write("A fast package can stimulate activity, but if it looks unfunded markets may demand higher borrowing costs.")
             st.caption("If announced: +0.3 percentage points growth, −£3bn headroom, −5 market confidence and +0.25 points gilt yield.")
             if st.button("Issue emergency mini-budget", key="phase_mini_budget",
-                         disabled="mini" in used, use_container_width=True):
+                         disabled=("mini" in used or s.political_capital_points < 2), use_container_width=True):
                 def mini(x):
                     x.headroom = round(x.headroom - 3.0, 1)
                     x.growth = round(x.growth + 0.3, 2)
@@ -93,7 +93,7 @@ def render():
         _, used = _used()
         if "spring_statement" in used:
             st.success("Spring Statement already delivered this year.")
-        elif st.button("Deliver Spring Statement", key="feat_spring_statement", use_container_width=True):
+        elif st.button("Deliver Spring Statement", key="feat_spring_statement", use_container_width=True, disabled=s.political_capital_points < 1):
             def spring_statement(x):
                 x.market_conf = _clip(x.market_conf + 3)
                 x.approval = _clip(x.approval + 1)
