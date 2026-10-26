@@ -6,10 +6,11 @@ import state
 from content_store import load_json
 
 def C(title, humphrey, *args):
-    opts = [(args[i], args[i+1]) for i in range(0, len(args), 2)]
-    return dict(title=tiCRISES = load_json('crises.json')['crises']
-om=-1.0, market=2, approval=1)),
-}
+    opts = [(args[i], args[i + 1]) for i in range(0, len(args), 2)]
+    return dict(title=title, humphrey=humphrey, opts=opts)
+
+
+CRISES = load_json('crises.json')['crises']
 
 
 RANDOM_POOL = ['gilt_revolt', 'nhs_walkout', 'energy_bankruptcy', 'pension_hole', 'cyber_attack', 'floods', 'bank_run',
