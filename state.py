@@ -218,7 +218,8 @@ def ensure_init():
 
 def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),
              game_mode='chancellor', career_name='Alex Morgan',
-             career_constituency='Riverside Central', career_ambition='policy_specialist'):
+             career_constituency='Aberafan Maesteg', career_ambition='policy_specialist',
+             career_local_mandate='public_services'):
     import budget
     import country
     import politics
@@ -245,7 +246,9 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.game_mode = game_mode if game_mode in ('career', 'chancellor') else 'chancellor'
     if s.game_mode == 'career':
         import career
-        s.career_profile = career.new_profile(career_name, career_constituency, career_ambition)
+        s.career_profile = career.new_profile(
+            career_name, career_constituency, career_ambition,
+            local_mandate=career_local_mandate, party=party\n        )
     s.message = (sc['msg'] + " My job is to protect you from the press, the public, and most importantly, your own "
                  "backbenchers.")
     country.ensure_state()
