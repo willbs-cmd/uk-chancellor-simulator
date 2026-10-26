@@ -67,6 +67,11 @@ def render():
     s.setdefault("longrun_productivity", 1.0)
     s.setdefault("pension_pressure", 0.0)
     s.setdefault("threshold_freeze_years", 0)
+    s.setdefault("thresholds_frozen", False)
+    s.setdefault("personal_allowance", 12570.0)
+    s.setdefault("higher_rate_threshold", 50270.0)
+    s.setdefault("additional_rate_threshold", 125140.0)
+    s.setdefault("threshold_freeze_scope", "Personal allowance and all bands")
     s.setdefault("gilt_maturity_years", 10)
     s.setdefault("index_linked_share", 25)
     s.setdefault("pay_settlement", "unsettled")
@@ -159,8 +164,15 @@ def render():
                 x.pay_settlement = pay
             _act("pay_round", 2, "Public-sector pay round", pay_fx); st.rerun()
         st.markdown("**Tax thresholds and pensions**")
+        if "feature_threshold_freeze" not in s:
+            s.feature_threshold_freeze = bool(s.get("thresholds_frozen", False))
         freeze = st.checkbox("Freeze income-tax thresholds (fiscal drag)", key="feature_threshold_freeze", help="Frozen thresholds can raise revenue as nominal earnings rise, but gradually squeeze take-home pay.")
-        freeze_scope = st.radio("Threshold freeze scope", ["Personal allowance and higher-rate threshold", "Higher-rate threshold only"], key="feature_threshold_scope", horizontal=False)
+        freeze_scope = st.radio("Threshold freeze scope", ["Personal allowance and all bands", "Higher and additional thresholds only"], key="feature_threshold_scope", horizontal=False)
+        t1, t2, t3 = st.columns(3, gap="small")
+        t1.metric("Personal allowance", f"£{s.personal_allowance:,.0f}")
+        t2.metric("Higher-rate threshold", f"£{s.higher_rate_threshold:,.0f}")
+        t3.metric("Additional-rate threshold", f"£{s.additional_rate_threshold:,.0f}")
+        st.caption("Model starting points: 0% up to the £12,570 personal allowance, 20% basic rate to £50,270 total income, 40% higher rate above that, and 45% additional rate above £125,140. The game uses the main bands for England, Wales and Northern Ireland; Scotland has different bands.");
         council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax", help="A simplified revaluation raises receipts but can anger households whose bills increase.")
         pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief", help="Raises revenue but makes pension saving less attractive to some higher-rate taxpayers.")
         triple = st.checkbox("Uprate pensions by the triple lock", key="feature_triple_lock", help="Improves pensioner incomes but increases the long-run pension bill.")
@@ -168,10 +180,8 @@ def render():
         if st.button("Set threshold and pension policy", key="feat_tax_pension", use_container_width=True,
                       disabled=not any((freeze, council_tax, pension_relief, triple, productivity_plan))):
             def tax_fx(x):
-                if freeze:
-                    x.threshold_freeze_years = round(float(x.threshold_freeze_years) + (1 if freeze_scope == "Personal allowance and higher-rate threshold" else 0.6), 1)
-                    x.headroom = round(x.headroom + (.7 if freeze_scope == "Personal allowance and higher-rate threshold" else .4), 1)
-                    x.approval = _clip(x.approval - (1.5 if freeze_scope == "Personal allowance and higher-rate threshold" else .8))
+                x.thresholds_frozen = bool(freeze)
+                x.threshold_freeze_scope = freeze_scope
                 if council_tax:
                     x.headroom = round(x.headroom + .5, 1); x.approval = _clip(x.approval - 1.5)
                     x.message = (x.get("message", "") + " Council tax band revaluation sparks local controversy.").strip()
@@ -185,7 +195,7 @@ def render():
                     x.longrun_productivity = round(x.longrun_productivity + .15, 2)
                     x.headroom = round(x.headroom - .5, 1)
             _act("tax_pension", 1, "Tax threshold and pension decision", tax_fx); st.rerun()
-        st.caption(f"Threshold freeze duration: {s.threshold_freeze_years} year(s). Pension pressure compounds: {s.pension_pressure:.1f}.")
+        st.caption(f"Threshold-freeze years: {s.threshold_freeze_years:.0f}. Pension pressure compounds over time: {s.pension_pressure:.1f} index.")
     with st.expander("📖 Glossary: what these controls mean", expanded=False):
         st.markdown("**Political capital** is a limited annual resource for interventions; spend it on the most important priorities. **Market confidence** is a simplified investor sentiment score, not a direct market price.")
         st.markdown("**Quantitative easing (QE)** means a central bank buys assets to loosen financial conditions; it can support demand but may add inflation risk. **Gilts** are UK government bonds. Maturity is how long until they must be repaid; index-linked gilts rise with inflation.")
