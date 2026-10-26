@@ -26,13 +26,14 @@ def _act(key, cost, label, effect):
     effect(s)
     s.message = (s.get("message", "") + " " + label + " announced.").strip()
     s.feature_notice = f"{label} announced. Political capital remaining: {s.political_capital_points}/5."
+    s.feature_notice_phase = int(s.get("block", 1))
     return True
 
 def render_phase_action():
     """Show the fiscal event that belongs to the current annual phase."""
     s = st.session_state
     _, used = _used()
-    if s.get("feature_notice"):
+    if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
     if s.block == 1:
         with st.expander("💷 Optional Autumn Statement · costs 1 political capital", expanded=False):
