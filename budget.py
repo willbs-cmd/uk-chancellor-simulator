@@ -13,6 +13,7 @@ import country
 import econ
 import imf_outlook
 import state
+import features
 from theme import render_chips
 
 # group, label, short name, default rate, slider range, revenue at the default rate (£bn),
@@ -602,17 +603,17 @@ def render(submit=None, after_summary=None):
              desc='Votes for the Budget in the Commons. You need 326.'),
     ])
 
-    b1, b2, b3 = st.columns([1, 1, 3])
-    b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed)
-    b2.button('Reset sliders', on_click=_reset, disabled=not changed)
+    b1, b2, b3 = st.columns([1.05, 1.05, 2.6], gap='medium')
+    b1.button('Apply Budget', type='primary', on_click=_apply, disabled=not changed, use_container_width=True)
+    b2.button('Reset sliders', on_click=_reset, disabled=not changed, use_container_width=True)
     with b3:
         if submit:
             submit()
     if after_summary:
         after_summary()
 
-    t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
-        ['💷 Taxes', '🏥 Spending', '📜 Schemes', '🏛️ Whips & forecast', '📊 Charts & Red Book'])
+    t_tax, t_spend, t_schemes, t_whips, t_charts, t_features = st.tabs(
+        ['💷 Taxes', '🏥 Spending', '📜 Schemes', '🏛️ Whips & forecast', '📊 Charts & Red Book', '🏦 Fiscal calendar'])
 
     with t_tax:
         groups = {}
@@ -668,4 +669,7 @@ def render(submit=None, after_summary=None):
             st.markdown('**Where the money goes**')
             _pie(spending_pie(cur))
         render_red_book(cur)
+
+    with t_features:
+        features.render()
     
