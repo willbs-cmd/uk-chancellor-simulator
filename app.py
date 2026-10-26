@@ -118,6 +118,7 @@ def setup_screen():
             help="This is your chosen constituency campaign focus, not a claim about every voter's view in the real constituency."
         )
         st.caption(career.MANDATES[career_local_mandate]["description"])
+        st.caption("The seat list uses official ONS Westminster constituency names and codes for the July 2024 boundaries; it does not imply that you are the current sitting MP. [ONS source](https://www.data.gov.uk/dataset/90293fcf-9268-4a1a-be3d-d4a20d314604/westminster-parliamentary-constituencies-july-2024-names-and-codes-in-the-uk-v2).")
         st.info("You begin as a backbench MP. Each session includes one Commons vote plus two career actions. Build your reputation and qualify for appointments.")
     else:
         c1, c2, c3 = st.columns([1.4, 1.4, 1], gap='medium')
