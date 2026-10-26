@@ -1,5 +1,6 @@
 """Additional fiscal calendar and institutions mechanics for the Chancellor Simulator."""
 import streamlit as st
+import state
 
 def _clip(x, lo=0, hi=100):
     return max(lo, min(hi, x))
@@ -22,12 +23,16 @@ def _act(key, cost, label, effect):
     if capital < cost:
         s.feature_notice = f"Not enough political capital: {label} costs {cost}, but you have {capital}."
         return False
+    before = state.values()
+    state.snapshot()
     s.political_capital_points = capital - cost
     s.feature_actions[year_key] = used + [key]
     effect(s)
     s.message = (s.get("message", "") + " " + label + " announced.").strip()
     s.feature_notice = f"{label} announced. Political capital remaining: {s.political_capital_points}/5."
     s.feature_notice_phase = int(s.get("block", 1))
+    state.log("event", label, before=before, note=s.feature_notice)
+    state.record()
     return True
 
 def render_phase_action():
