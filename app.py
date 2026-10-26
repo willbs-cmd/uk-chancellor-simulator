@@ -328,15 +328,30 @@ def decision_screen():
 if s.block == 3 and s.active_crisis is None:
     budget_screen()
 else:
-    # Left: the thing you must do. Right: what just happened, then the dashboard tabs.
-    col_game, col_dash = st.columns([5, 4], gap='large')
-    with col_game:
+    # Focused workspace: keep the active decision uncluttered and put supporting
+    # information behind clear tabs rather than squeezing it into a narrow column.
+    tab_decision, tab_dashboard, tab_briefing = st.tabs(
+        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences']
+    )
+    with tab_decision:
         if s.active_crisis is not None:
             crisis_screen()
         elif s.get('active_request'):
             request_screen()
         else:
             decision_screen()
-    with col_dash:
-        last_turn()
+    with tab_dashboard:
         dashboard()
+    with tab_briefing:
+        has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
+        if has_briefing:
+            for ev in s.event_cards:
+                event_card(ev['title'], ev['text'], ev['summary'])
+            if s.get('message'):
+                news_box(s.message)
+            if s.get('humphrey_note'):
+                humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
+            if s.get('headlines'):
+                render_newspapers(*s.headlines)
+        else:
+            st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
