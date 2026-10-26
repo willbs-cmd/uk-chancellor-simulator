@@ -364,13 +364,171 @@ hr { margin: .6rem 0 !important; }
 [data-testid="stTabs"] [role="tablist"] { flex-wrap: wrap; row-gap: .25rem; }
 [data-testid="stTabs"] button[role="tab"] { white-space: normal; line-height: 1.2; }
 
+
+/* Final colour and spacing overrides — keep all controls inside the Treasury palette. */
+:root {
+  --bench: #0d1f17;
+  --leather: #163326;
+  --leather-2: #1d4130;
+  --brass: #c9a45c;
+  --paper: #efe9da;
+  --muted: #9fb3a6;
+  --alarm: #c8412f;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stDateInput"] input {
+  background: #10271c !important;
+  background-color: #10271c !important;
+  color: #efe9da !important;
+  border: 1px solid #355a45 !important;
+  border-radius: 7px !important;
+  -webkit-text-fill-color: #efe9da !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stMultiSelect"] [data-baseweb="select"] * {
+  color: #efe9da !important;
+  -webkit-text-fill-color: #efe9da !important;
+}
+[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"],
+[data-baseweb="popover"] ul, [data-baseweb="popover"] li,
+[data-baseweb="menu"] ul, [data-baseweb="menu"] li,
+[role="option"] {
+  background: #10271c !important;
+  color: #efe9da !important;
+}
+[role="option"]:hover, [aria-selected="true"][role="option"] {
+  background: #1d4130 !important;
+  color: #efe9da !important;
+}
+[data-testid="stNumberInput"] button {
+  background: #1d4130 !important;
+  color: #efe9da !important;
+  border-color: #355a45 !important;
+}
+[data-testid="stButton"] button,
+[data-testid="stDownloadButton"] button {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-height: 2.6rem !important;
+  padding: .55rem .8rem !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  line-height: 1.25 !important;
+  text-align: center !important;
+  background: #163326 !important;
+  color: #efe9da !important;
+  border: 1px solid #c9a45c !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+[data-testid="stButton"] button:hover,
+[data-testid="stDownloadButton"] button:hover {
+  background: #c9a45c !important;
+  color: #0d1f17 !important;
+  border-color: #e0bd70 !important;
+}
+[data-testid="stButton"] button[kind="primary"],
+[data-testid="stDownloadButton"] button[kind="primary"] {
+  background: #c9a45c !important;
+  color: #0d1f17 !important;
+  border-color: #c9a45c !important;
+}
+[data-testid="stButton"] button[kind="primary"]:hover {
+  background: #e0bd70 !important;
+}
+[data-testid="stButton"] button:disabled,
+[data-testid="stDownloadButton"] button:disabled {
+  background: #20372b !important;
+  color: #83998b !important;
+  -webkit-text-fill-color: #83998b !important;
+  border-color: #2b5440 !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+[data-testid="stButton"] button[kind="primary"]:disabled {
+  background: #796744 !important;
+  color: #e4d7b8 !important;
+  border-color: #796744 !important;
+}
+[data-testid="stTabs"] [role="tablist"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: .4rem !important;
+  align-items: stretch !important;
+  border-bottom: 1px solid #2b5440 !important;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  flex: 0 1 auto !important;
+  min-height: 2.5rem !important;
+  padding: .5rem .85rem !important;
+  background: #10271c !important;
+  border: 1px solid #2b5440 !important;
+  border-radius: 7px 7px 0 0 !important;
+  color: #bdcabe !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  background: #1d4130 !important;
+  color: #efe9da !important;
+  border-color: #c9a45c !important;
+  border-bottom: 3px solid #c9a45c !important;
+}
+.st-key-budget-actions > div[data-testid="stHorizontalBlock"] {
+  display: grid !important;
+  grid-template-columns: minmax(150px, .8fr) minmax(150px, .8fr) minmax(270px, 1.5fr) !important;
+  gap: 12px !important;
+  width: min(100%, 900px) !important;
+  align-items: stretch !important;
+}
+.st-key-budget-actions [data-testid="column"] {
+  width: auto !important;
+  min-width: 0 !important;
+  flex: none !important;
+}
+[data-testid="stRadio"] [data-testid="stWidgetLabel"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+[data-testid="stRadio"] div[role="radiogroup"] { gap: .5rem !important; }
+@media (max-width: 760px) {
+  .st-key-budget-actions > div[data-testid="stHorizontalBlock"] {
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+  }
+  .st-key-budget-actions > div[data-testid="stHorizontalBlock"] > div:last-child {
+    grid-column: 1 / -1;
+  }
+  [data-testid="stTabs"] [role="tablist"] { gap: .25rem !important; }
+  [data-testid="stTabs"] button[role="tab"] { padding: .4rem .55rem !important; }
+}
+
 </style>
 """
 
 def apply_theme():
     st.markdown(CSS, unsafe_allow_html=True)
 
+PHASES = {
+    1: dict(name='Autumn agenda', title='Autumn · Set the agenda',
+            guide='Choose the policy direction for the year. This is where you set priorities and signal your governing style.'),
+    2: dict(name='Winter pressure', title='Winter · Handle the pressure',
+            guide='Take a second major decision while managing crises, ministerial requests and political consequences.'),
+    3: dict(name='Spring Budget', title='Spring · Budget and Parliament',
+            guide='Set tax and spending, check the OBR forecast, manage your MPs and submit the Budget for a Commons vote.'),
+}
+
+def phase_info(block):
+    return PHASES.get(int(block), PHASES[1])
+
 def header(party, term, year, block):
+    phase = phase_info(block)
     done = (year - 1) * 3 + (block - 1)
     pips = ''.join(
         f"<div class='ch-pip {'done' if i < done else ('now' if i == done else '')}'></div>"
@@ -380,7 +538,7 @@ def header(party, term, year, block):
     st.markdown(
         f"""<div class='ch-banner' style='border-left-color:{colour}'>
         <div class='ch-head'><span class='ch-title'>🏛️ {party} Government</span>
-        <span class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; DECISION {block} OF 3</span></div>
+        <span class='sub'>TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; {phase['name'].upper()} &nbsp;·&nbsp; PHASE {block} OF 3</span></div>
         <div class='ch-pips'>{pips}</div></div>""",
         unsafe_allow_html=True,
     )
