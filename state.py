@@ -248,7 +248,8 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
         import career
         s.career_profile = career.new_profile(
             career_name, career_constituency, career_ambition,
-            local_mandate=career_local_mandate, party=party\n        )
+            local_mandate=career_local_mandate, party=party
+        )
     s.message = (sc['msg'] + " My job is to protect you from the press, the public, and most importantly, your own "
                  "backbenchers.")
     country.ensure_state()
