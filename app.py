@@ -11,8 +11,8 @@ import politics
 import scenarios as scen
 import state
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
-from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box, render_cards,
-                   render_newspapers, render_polls, render_scorecard, render_timeline)
+from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
+                   render_hud, render_newspapers, render_polls, render_scorecard, render_timeline)
 
 st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', page_icon='🏛️',
                    initial_sidebar_state='collapsed')
@@ -101,9 +101,26 @@ if s.step == 'setup':
 
 # ==================== MAIN HEADER & DASHBOARD ====================
 header(s.party, s.term, s.year, s.block)
-render_cards(CARDS_TOP)
-with st.expander('🏛️ Political Capital · Cabinet, party and media support', expanded=False):
-    render_cards(CARDS_POLITICAL)
+
+
+def hud_note():
+    """The small status line at the end of the dashboard strip: world cycle, advisor and pledges."""
+    icon = {'Boom': '📈', 'Stagnation': '➖', 'Recession': '📉'}.get(s.get('macro_cycle'), '➖')
+    bits = [f"🌍 World economy: <b>{icon} {s.get('macro_cycle', 'Stagnation')}</b>"]
+    if s.get('spad') in politics.SPADS:
+        bits.append(f"🧑‍💼 <b>{politics.SPADS[s.spad]['label']}</b>")
+    if s.get('pledges'):
+        kept = len([k for k in s.pledges if k not in s.get('broken_pledges', [])])
+        bits.append(f"📜 Pledges kept: <b>{kept}/{len(s.pledges)}</b>")
+    return ' '.join(f'<span>{b}</span>' for b in bits)
+
+
+# On the Budget screen the economy numbers appear as the *projected* summary instead, so only political capital is shown here.
+_on_budget_screen = (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
+_hud = [('Political capital', CARDS_POLITICAL)]
+if not _on_budget_screen:
+    _hud.insert(0, ('The economy', CARDS_TOP + CARDS_ECON))
+render_hud(_hud, note=hud_note())
 
 
 def scorecard_block(show_share=True):
@@ -169,71 +186,68 @@ if s.year > 5:
 
 
 # ==================== BUDGET ====================
+def lords_memo():
+    lords_ayes = min(750, max(0, int(200 + s.approval * 2.5)))
+    lords_noes = 750 - lords_ayes
+    if s.approval < 40:
+        humphrey_message(f"As for the House of Lords, Chancellor, they actually voted against us (<b>{lords_noes} Not-Contents</b> to {lords_ayes} Contents). "
+                         "I reminded them of the Parliament Act of 1911. They cannot reject a Money Bill. However, seeing your dismal poll numbers, "
+                         "they decided to delay it for a month just to be difficult. The markets were briefly irritated.")
+    else:
+        humphrey_message(f"As for the House of Lords, Chancellor, they supported the bill (<b>{lords_ayes} Contents</b> to {lords_noes} Not-Contents). "
+                         "Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
+
+
 def budget_screen():
     if s.get('budget_passed'):
-        st.subheader('🏛️ Parliamentary Vote Results')
-        bb = s.backbench_opinion
-        ayes = s.get('vote_ayes') or budget.commons_ayes()
-        noes = 650 - ayes
-        txt = f'**Ayes:** {ayes} | **Noes:** {noes}'
-        if ayes >= budget.WIN + 40:
-            st.success(f'**House of Commons:** The Budget passed the Commons with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{txt}')
-        elif ayes >= budget.WIN + 15:
-            st.info(f'**House of Commons:** The Budget passed the Commons. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{txt}')
-        else:
-            st.warning(f'**House of Commons:** The Budget barely scraped through the Commons! A massive backbench rebellion nearly brought the government down.\n\n{txt}')
-
-        lords_ayes = min(750, max(0, int(200 + s.approval * 2.5)))
-        lords_noes = 750 - lords_ayes
-        if s.approval < 40:
-            humphrey_message(f"As for the House of Lords, Chancellor, they actually voted against us (**{lords_noes} Not-Contents** to {lords_ayes} Contents). "
-                             "I reminded them of the Parliament Act of 1911. They cannot reject a Money Bill. However, seeing your dismal poll numbers, "
-                             "they decided to delay it for a month just to be difficult. The markets were briefly irritated.")
-        else:
-            humphrey_message(f"As for the House of Lords, Chancellor, they supported the bill (**{lords_ayes} Contents** to {lords_noes} Not-Contents). "
-                             "Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
-        speech = s.get('budget_speech')
-        if speech:
-            with st.expander('🎙️ The Budget Speech and the morning-after reactions', expanded=True):
-                st.markdown('> ' + speech['text'])
-                for who, quote in speech['reactions']:
-                    st.markdown(f'**{who}:** {quote}')
-        for ev in s.event_cards:
-            event_card(ev['title'], ev['text'], ev['summary'])
-        if s.get('headlines'):
-            render_newspapers(*s.headlines)
-        st.divider()
-        if st.button('Proceed to Spring', type='primary'):
-            engine.proceed_to_spring()
-            st.rerun()
+        left, right = st.columns([3, 2], gap='large')
+        with left:
+            st.markdown("<div class='pane-title'>Parliamentary vote</div>", unsafe_allow_html=True)
+            ayes = s.get('vote_ayes') or budget.commons_ayes()
+            txt = f'**Ayes:** {ayes} | **Noes:** {650 - ayes}'
+            if ayes >= budget.WIN + 40:
+                st.success(f'**House of Commons:** The Budget passed with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{txt}')
+            elif ayes >= budget.WIN + 15:
+                st.info(f'**House of Commons:** The Budget passed. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{txt}')
+            else:
+                st.warning(f'**House of Commons:** The Budget barely scraped through! A massive backbench rebellion nearly brought the government down.\n\n{txt}')
+            if st.button('Proceed to Spring', type='primary'):
+                engine.proceed_to_spring()
+                st.rerun()
+            speech = s.get('budget_speech')
+            if speech:
+                with st.expander('🎙️ The Budget speech and the morning-after reactions', expanded=True):
+                    st.markdown('> ' + speech['text'])
+                    for who, quote in speech['reactions']:
+                        st.markdown(f'**{who}:** {quote}')
+        with right:
+            st.markdown("<div class='pane-title'>The morning after</div>", unsafe_allow_html=True)
+            for ev in s.event_cards:
+                event_card(ev['title'], ev['text'], ev['summary'])
+            lords_memo()
+            if s.get('headlines'):
+                render_newspapers(*s.headlines)
     else:
-        st.subheader(f"Year {s.year} - Block 3: The Chancellor's Budget")
-        humphrey_message("A budget, Chancellor, is merely a collection of numbers we present to the House to obscure our true intentions. "
-                         "Shall we proceed to the dispatch box?")
+        st.markdown(f"<div class='dc-eyebrow'>Block 3 · Year {s.year}</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
         budget.ensure()
-        politics.render_pledges(budget.read())
-        budget.render()
-        st.divider()
-        st.caption('Any slider changes you have not applied are applied automatically when you submit.')
-        if st.button('Submit Budget to the Commons & Lords', type='primary'):
-            engine.submit_budget()
-            st.rerun()
+
+        def submit():
+            if st.button('Submit Budget to the Commons & Lords', type='primary',
+                         help='Any slider changes you have not applied are applied automatically when you submit.'):
+                engine.submit_budget()
+                st.rerun()
+
+        budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
 
 
 # ==================== DASHBOARD TABS ====================
 def dashboard():
-    tab_econ, tab_nation, tab_imf, tab_hist = st.tabs(['📊 Economy & Polls', '🇬🇧 State of the Nation', '🌍 IMF Outlook', '📜 History'])
-    with tab_econ:
-        icon = {'Boom': '📈', 'Stagnation': '➖', 'Recession': '📉'}.get(s.get('macro_cycle'), '➖')
-        st.caption(f"🌍 Global economic cycle: {icon} **{s.get('macro_cycle', 'Stagnation')}**. It nudges growth every year it lasts, and can shift each spring.")
-        render_cards(CARDS_ECON, per_row=2)
-        with st.expander('📈 Voting intention and polling history', expanded=False):
-            df = pd.DataFrame(s.poll_history).set_index('Period')
-            render_polls(df)
+    tab_polls, tab_nation, tab_imf, tab_hist = st.tabs(['📊 Polls', '🧭 State of the Nation', '🌍 IMF Outlook', '📜 History'])
+    with tab_polls:
+        render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
     with tab_nation:
         country.render()
     with tab_imf:
-        st.markdown('### 🌍 IMF Outlook')
         st.caption(f'External baseline: {imf_outlook.IMF_SOURCE}. The annual economy tick gently pulls growth and inflation '
                    'towards these figures; it is not a forecast of your own playthrough.')
         st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
@@ -245,6 +259,21 @@ def dashboard():
             st.rerun()
 
 
+def last_turn():
+    """What just happened: always visible (it is the feedback loop of the game), but compact."""
+    if not (s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines')):
+        return
+    st.markdown("<div class='pane-title'>Last turn</div>", unsafe_allow_html=True)
+    for ev in s.event_cards:
+        event_card(ev['title'], ev['text'], ev['summary'])
+    if s.get('message'):
+        news_box(s.message)
+    if s.get('humphrey_note'):
+        humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
+    if s.get('headlines'):
+        render_newspapers(*s.headlines)
+
+
 # ==================== DECISIONS & CRISES ====================
 def crisis_screen():
     crisis = scen.get(s.active_crisis)
@@ -252,12 +281,11 @@ def crisis_screen():
         s.active_crisis = None
         st.rerun()
     crisis_card(crisis['title'])
-    with st.expander('💼 Memo from Sir Humphrey Appleby', expanded=False):
-        humphrey_message(crisis['humphrey'])
+    humphrey_message(crisis['humphrey'])
     if s.get('crisis_reason'):
         st.caption(s.crisis_reason)
     labels = scen.option_labels(crisis)
-    choice = st.radio('Choose emergency response:', labels, index=None, key=f'crisis_{s.steps}')
+    choice = st.radio('Choose emergency response:', labels, index=None, key=f'crisis_{s.steps}', label_visibility='collapsed')
     if st.button('Resolve Crisis', type='primary', disabled=choice is None):
         engine.resolve_crisis(labels.index(choice))
         st.rerun()
@@ -265,12 +293,11 @@ def crisis_screen():
 
 def request_screen():
     req = s.active_request
-    st.subheader(f"🗂️ Urgent request from the {req['minister']}")
+    st.markdown(f"<div class='dc-eyebrow'>Urgent request</div><div class='dc-title'>From the {req['minister']}</div>", unsafe_allow_html=True)
     st.info(req['text'])
-    with st.expander('💼 Advice from Sir Humphrey', expanded=False):
-        humphrey_message('A Cabinet colleague with their hand out, Chancellor. Refuse, and they will remember it. '
-                         'Approve, and every other minister will notice that you can be persuaded.')
-    c1, c2 = st.columns(2)
+    humphrey_message('A Cabinet colleague with their hand out, Chancellor. Refuse, and they will remember it. '
+                     'Approve, and every other minister will notice that you can be persuaded.')
+    c1, c2, _ = st.columns([1, 1, 2])
     with c1:
         if st.button(f"Approve (-£{req['cost']:.1f}B headroom)", type='primary'):
             engine.resolve_request(True)
@@ -287,12 +314,12 @@ def decision_screen():
         st.write('No decision data found for this block.')
         return
     options = engine.current_options()
-    st.subheader(f"Block {s.block}: {decision['title']}")
+    title = decision['title']
+    st.markdown(f"<div class='dc-eyebrow'>Block {s.block} · Year {s.year}</div><div class='dc-title'>{title}</div>", unsafe_allow_html=True)
     st.write(decision['text'])
-    with st.expander('💼 Memo from Sir Humphrey Appleby', expanded=False):
-        humphrey_message(decision['humphrey'])
+    humphrey_message(decision['humphrey'])
     labels = [o['label'] for o in options]
-    choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}')
+    choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}', label_visibility='collapsed')
     if st.button('Execute Policy', type='primary', disabled=choice is None):
         engine.execute_decision(options[labels.index(choice)])
         st.rerun()
@@ -301,25 +328,15 @@ def decision_screen():
 if s.block == 3 and s.active_crisis is None:
     budget_screen()
 else:
-    col_game, col_dash = st.columns(2, gap='large')
-    with col_dash:
-        dashboard()
+    # Left: the thing you must do. Right: what just happened, then the dashboard tabs.
+    col_game, col_dash = st.columns([5, 4], gap='large')
     with col_game:
-        # Keep the action and choices prominent; supporting news is available on demand.
-        has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
-        if has_briefing:
-            with st.expander('📰 Briefing, headlines and recent consequences', expanded=False):
-                for ev in s.event_cards:
-                    event_card(ev['title'], ev['text'], ev['summary'])
-                if s.get('message'):
-                    news_box(s.message)
-                if s.get('humphrey_note'):
-                    humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
-                if s.get('headlines'):
-                    render_newspapers(*s.headlines)
         if s.active_crisis is not None:
             crisis_screen()
         elif s.get('active_request'):
             request_screen()
         else:
             decision_screen()
+    with col_dash:
+        last_turn()
+        dashboard()
