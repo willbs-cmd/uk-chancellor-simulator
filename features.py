@@ -119,41 +119,91 @@ def render():
         st.caption("Statements are optional. Political capital spent here cannot be used for Bank interventions, pay talks or regional bargaining.")
 
     with t2:
-        st.markdown("**Bank of England and gilt issuance**")
-        b1, b2 = st.columns(2, gap="medium")
-        with b1:
-            st.caption("QE costs 2 capital: it lowers gilt yields and may support markets, but can lift inflation and debt.")
-            if st.button("Coordinate quantitative easing", key="feat_qe", use_container_width=True, disabled=("qe" in _used()[1] or s.political_capital_points < 2)):
-                def qe(x):
-                    x.gilt_yield = round(max(.1, x.gilt_yield - .3), 2); x.market_conf = _clip(x.market_conf + 2)
-                    x.inflation = round(x.inflation + .2, 2); x.debt = round(x.debt + .3, 2)
-                _act("qe", 2, "Quantitative easing coordination", qe); st.rerun()
-            st.caption("Rate pressure costs 2 capital: it may lift growth in the short term but damages confidence in Bank independence and market trust.")
-            if st.button("Pressure for lower rates", key="feat_rate", use_container_width=True, disabled=("rate_pressure" in _used()[1] or s.political_capital_points < 2)):
-                def rates(x):
-                    x.interest_rate = round(max(.1, x.interest_rate - .25), 2); x.growth = round(x.growth + .15, 2)
-                    x.market_conf = _clip(x.market_conf - 3); x.pm_opinion = _clip(x.pm_opinion - 2)
-                _act("rate_pressure", 2, "Rate-pressure intervention", rates); st.rerun()
-            st.caption("Defending independence costs 1 capital and is designed to reassure investors.")
-            if st.button("Defend Bank independence", key="feat_independence", use_container_width=True, disabled=("bank_independence" in _used()[1] or s.political_capital_points < 1)):
-                def defend(x):
-                    x.market_conf = _clip(x.market_conf + 4); x.gilt_yield = round(max(.1, x.gilt_yield - .1), 2)
-                _act("bank_independence", 1, "Public defence of Bank independence", defend); st.rerun()
-        with b2:
-            st.caption("Choose how long the government borrows for. Long maturities lock in financing for longer; short maturities need refinancing sooner.")
-            s.gilt_maturity_years = st.select_slider("New gilt maturity", options=[2, 5, 10, 20, 30], value=int(s.gilt_maturity_years))
-            s.index_linked_share = st.slider("Index-linked share (%)", 0, 100, int(s.index_linked_share), 5)
-            if st.button("Hold gilt auction", key="feat_auction", use_container_width=True, disabled=("gilt_auction" in _used()[1] or s.political_capital_points < 1)):
+        st.markdown("**What this tab is for**")
+        st.caption("A gilt is a UK government bond — essentially an IOU issued by the Treasury. Selling gilts raises money to fund borrowing or replace debt that is coming due. This is a simplified game model, not a full Debt Management Office forecast.")
+
+        with st.expander("🏦 Bank of England choices", expanded=False):
+            st.caption("The Bank sets interest rates independently. These are political choices about pressure or public support, with simplified effects on growth, inflation and investor confidence.")
+            c1, c2, c3 = st.columns(3, gap="small")
+            _, used = _used()
+            with c1:
+                st.markdown("**Quantitative easing (QE)**")
+                st.caption("Cost: 2 political capital")
+                if st.button("Coordinate QE", key="feat_qe", use_container_width=True,
+                             disabled=("qe" in used or s.political_capital_points < 2),
+                             help="Gilt yield −0.30 points; market confidence +2; inflation +0.20 points; debt ratio +0.3 points."):
+                    def qe(x):
+                        x.gilt_yield = round(max(.1, x.gilt_yield - .3), 2)
+                        x.market_conf = _clip(x.market_conf + 2)
+                        x.inflation = round(x.inflation + .2, 2)
+                        x.debt = round(x.debt + .3, 2)
+                    _act("qe", 2, "Quantitative easing coordination", qe)
+                    st.rerun()
+            with c2:
+                st.markdown("**Pressure for lower rates**")
+                st.caption("Cost: 2 political capital")
+                if st.button("Pressure the Bank", key="feat_rate", use_container_width=True,
+                             disabled=("rate_pressure" in used or s.political_capital_points < 2),
+                             help="Growth +0.15 points; Bank Rate −0.25 points; market confidence −3; PM confidence −2."):
+                    def rates(x):
+                        x.interest_rate = round(max(.1, x.interest_rate - .25), 2)
+                        x.growth = round(x.growth + .15, 2)
+                        x.market_conf = _clip(x.market_conf - 3)
+                        x.pm_opinion = _clip(x.pm_opinion - 2)
+                    _act("rate_pressure", 2, "Rate-pressure intervention", rates)
+                    st.rerun()
+            with c3:
+                st.markdown("**Defend Bank independence**")
+                st.caption("Cost: 1 political capital")
+                if st.button("Defend independence", key="feat_independence", use_container_width=True,
+                             disabled=("bank_independence" in used or s.political_capital_points < 1),
+                             help="Market confidence +4 and gilt yield −0.10 points."):
+                    def defend(x):
+                        x.market_conf = _clip(x.market_conf + 4)
+                        x.gilt_yield = round(max(.1, x.gilt_yield - .1), 2)
+                    _act("bank_independence", 1, "Public defence of Bank independence", defend)
+                    st.rerun()
+
+        with st.expander("📉 Gilt auction — choose how the government borrows", expanded=True):
+            st.write("**Maturity** means how long until the bond is repaid. A 2-year gilt needs refinancing sooner; a 30-year gilt locks in borrowing for much longer. **Index-linked gilts** adjust payments with inflation, so they can become more expensive when prices rise.")
+            st.caption("Choose the proposed mix, then hold one auction per year. Only clicking the auction button applies the modelled effects.")
+            s.gilt_maturity_years = st.select_slider(
+                "Term of the new government borrowing",
+                options=[2, 5, 10, 20, 30],
+                value=int(s.gilt_maturity_years),
+                help="Years until the bond matures and must be repaid or refinanced."
+            )
+            s.index_linked_share = st.slider(
+                "Share of this issuance linked to inflation",
+                0, 100, int(s.index_linked_share), 5,
+                help="Percentage of this new bond issuance whose payments rise with inflation."
+            )
+            if int(s.gilt_maturity_years) <= 5:
+                st.info("Short-dated choice: in this model, the auction raises the gilt yield by 0.12 percentage points and the debt ratio by 0.1 points.")
+            else:
+                debt_add = 0.2 if int(s.gilt_maturity_years) >= 20 else 0.1
+                st.info(f"Longer-dated choice: in this model, the auction lowers the gilt yield by 0.04 percentage points and the debt ratio rises by {debt_add:.1f} points.")
+            if int(s.index_linked_share) > 40:
+                st.warning("Because more than 40% is index-linked, this model deducts £0.6bn from fiscal headroom.")
+            else:
+                st.caption("At 40% index-linked or less, this model applies no extra headroom penalty.")
+            _, used = _used()
+            if st.button("Issue gilts in auction", key="feat_auction", use_container_width=True,
+                         disabled=("gilt_auction" in used or s.political_capital_points < 1),
+                         help="Costs 1 political capital. Applies the maturity and index-linked effects described above."):
                 def auction(x):
                     maturity = int(x.gilt_maturity_years)
                     x.debt = round(x.debt + (0.2 if maturity >= 20 else 0.1), 2)
-                    if maturity <= 5: x.gilt_yield = round(x.gilt_yield + .12, 2)
-                    else: x.gilt_yield = round(max(.1, x.gilt_yield - .04), 2)
+                    if maturity <= 5:
+                        x.gilt_yield = round(x.gilt_yield + .12, 2)
+                    else:
+                        x.gilt_yield = round(max(.1, x.gilt_yield - .04), 2)
                     if int(x.index_linked_share) > 40:
                         x.headroom = round(x.headroom - .6, 1)
                     x.message = f"Gilt auction: {maturity}-year issuance; {x.index_linked_share}% index-linked."
-                _act("gilt_auction", 1, "Gilt auction", auction); st.rerun()
-            st.caption("Short maturities refinance sooner; long maturities lock in yields. Index-linked debt exposes the Treasury to inflation.")
+                _act("gilt_auction", 1, "Gilt auction", auction)
+                st.rerun()
+            st.caption("Important limitation: the prototype does not yet model a full schedule of maturing debt, coupon payments or refinancing by year; the auction affects only the listed headline indicators.")
     with t3:
         st.markdown("**Public-sector pay round**")
         pay = st.radio("Negotiating position", ["Inflation-matching settlement", "Targeted compromise", "Pay cap and arbitration"], key="feature_pay_choice", horizontal=False, help="An inflation-matching deal costs more but improves morale; a pay cap saves money but increases strike and morale risks.")
