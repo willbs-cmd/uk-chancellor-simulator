@@ -429,16 +429,31 @@ def _value_html(text, diff, good_when_positive=True, extra=''):
             f"<span style='color:{colour}'>{diff:+,.1f}b{extra}</span></div>")
 
 
+def _tax_slider_spec(t):
+    """Return compatible numeric types for the slider's min/max/step arguments."""
+    step = t['step']
+    if isinstance(step, float) and not step.is_integer():
+        return float(t['lo']), float(t['hi']), float(step)
+    return int(t['lo']), int(t['hi']), int(step)
+
+
 def _tax_row(k, t, s):
-    c1, c2, c3 = st.columns([2.2, 3, 1.4])
+    c1, c2, c3 = st.columns([2.2, 3, 1.4], gap='small')
     with c1:
         st.markdown(f"<div class='lv'>{t['label']}</div>", unsafe_allow_html=True)
     with c2:
-        # no value= here: the widget's value comes from session state via its key (passing both makes Streamlit warn)
-        st.slider(f"{t['label']} slider", t['lo'], t['hi'], step=t['step'], key=f'bt_{k}', label_visibility="collapsed",
-                  help=t.get('help', 'Changing this rate changes estimated annual receipts. Higher rates can reduce the tax base or discourage activity.'))
+        lo, hi, step = _tax_slider_spec(t)
+        key = f'bt_{k}'
+        if isinstance(step, float) and key in s and not isinstance(s[key], float):
+            # Cast saved/default values before creating the slider widget.
+            s[key] = float(s[key])
+        st.slider(
+            f"{t['label']} slider", min_value=lo, max_value=hi, step=step,
+            key=key, label_visibility="collapsed",
+            help=t.get('help', 'Changing this rate changes estimated annual receipts. Higher rates can reduce the tax base or discourage activity.')
+        )
     with c3:
-        d = s[f'bt_{k}'] - t['default']
+        d = float(s[f'bt_{k}']) - float(t['default'])
         new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
         st.markdown(_value_html(f'£{new_rev:,.1f}b', new_rev - t['base']), unsafe_allow_html=True)
 
