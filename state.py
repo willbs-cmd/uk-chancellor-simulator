@@ -200,7 +200,7 @@ def _defaults():
         higher_rate_threshold=50270.0, additional_rate_threshold=125140.0,
         gilt_maturity_years=10, index_linked_share=25,
         feature_actions={}, feature_notice='', feature_notice_phase=0,
-        threshold_freeze_scope='Personal allowance and all bands',
+        threshold_freeze_scope='Personal allowance and all bands',\n        parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],\n        parliament_actions={}, parliament_last_strategy=None,
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
     for k, v in base.items():
@@ -285,7 +285,7 @@ SAVE_KEYS = [
     'feature_actions', 'feature_notice', 'feature_notice_phase',
     'gilt_maturity_years', 'index_linked_share', 'pay_settlement', 'is_prime_minister',
     'thresholds_frozen', 'personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold',
-    'threshold_freeze_scope',
+    'threshold_freeze_scope',\n    'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',\n    'parliament_actions', 'parliament_last_strategy',
 ] + STAT_KEYS
 
 
