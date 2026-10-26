@@ -249,8 +249,27 @@ def check(n=None, difficulty=None):
     test_profile = career.new_profile("Test MP", "Test Constituency", "policy_specialist")
     if test_profile.get('role') != 'mp' or len(test_profile.get('stats', {})) != len(career_data.get('attributes', {})):
         failures.append("Career mode does not initialise a complete MP profile.")
-    if not any(target == 'prime_minister' for values in career_data.get('promotion_rules', {}).values() for target in values):
-        failures.append("Career promotion route does not contain a path to Prime Minister.")
+    # Ensure Prime Minister is reachable from the MP start through the role graph.
+    reachable, frontier = set(), ['mp']
+    while frontier:
+        node = frontier.pop()
+        if node in reachable:
+            continue
+        reachable.add(node)
+        frontier.extend(role_data.get(node, {}).get('next', []))
+    if 'prime_minister' not in reachable:
+        failures.append("Career role graph does not connect an MP to Prime Minister.")
+    # Exercise the attribute clamp and a representative top-level promotion rule.
+    career._apply_effects(test_profile, {'constituency_support': 1000, 'party_trust': -1000})
+    if test_profile['stats']['constituency_support'] != 100 or test_profile['stats']['party_trust'] != 0:
+        failures.append("Career attribute effects are not clamped to the 0–100 range.")
+    test_profile['role'] = 'secretary_state'
+    test_profile['career_total_years'] = 5
+    test_profile['last_promotion_total_year'] = 4
+    test_profile['stats'] = {key: 100 for key in career_data['attributes']}
+    eligible = {role_id for role_id, _ in career._eligible_promotions(test_profile)}
+    if 'prime_minister' not in eligible or 'chancellor' not in eligible:
+        failures.append("Career promotion rules do not offer senior-office progression to a qualified Secretary of State.")
 
     # Streamlit sliders require compatible numeric types for min/max/step.
     for tax_key, tax in budget.TAXES.items():
