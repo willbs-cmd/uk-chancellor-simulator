@@ -196,7 +196,9 @@ def _defaults():
         term_start=None, whip_ayes=0, whip_used=[], vote_ayes=0, scenario='fragile', spad=None, pledges=[], broken_pledges=[],
         macro_cycle='Stagnation', active_request=None, undos_left=0, checkpoint=None, budget_speech=None, budget_impact={},
         political_capital_points=5, longrun_productivity=1.0, pension_pressure=0.0,
-        threshold_freeze_years=0, gilt_maturity_years=10, index_linked_share=25,
+        threshold_freeze_years=0, thresholds_frozen=False, personal_allowance=12570.0,
+        higher_rate_threshold=50270.0, additional_rate_threshold=125140.0,
+        gilt_maturity_years=10, index_linked_share=25,
         feature_actions={}, feature_notice='', feature_notice_phase=0,
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
@@ -281,6 +283,7 @@ SAVE_KEYS = [
     'political_capital_points', 'longrun_productivity', 'pension_pressure', 'threshold_freeze_years',
     'feature_actions', 'feature_notice', 'feature_notice_phase',
     'gilt_maturity_years', 'index_linked_share', 'pay_settlement', 'is_prime_minister',
+    'thresholds_frozen', 'personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold',
 ] + STAT_KEYS
 
 
