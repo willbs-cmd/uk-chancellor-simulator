@@ -498,11 +498,11 @@ hr { margin: .6rem 0 !important; }
 }
 [data-testid="stRadio"] div[role="radiogroup"] { gap: .5rem !important; }
 @media (max-width: 760px) {
-  .st-key-budget_actions > div[data-testid="stHorizontalBlock"] {
+  .st-key-budget_actions [data-testid="stHorizontalBlock"] {
     grid-template-columns: 1fr 1fr !important;
     width: 100% !important;
   }
-  .st-key-budget_actions > div[data-testid="stHorizontalBlock"] > div:last-child {
+  .st-key-budget_actions [data-testid="stHorizontalBlock"] > div:last-child {
     grid-column: 1 / -1;
   }
   [data-testid="stTabs"] [role="tablist"] { gap: .25rem !important; }
@@ -535,6 +535,23 @@ hr { margin: .6rem 0 !important; }
   .st-key-policy_options div[role="radiogroup"] {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+}
+
+
+[data-testid="stMultiSelect"] [data-baseweb="tag"] {
+  background: #1d4130 !important;
+  color: #efe9da !important;
+  border: 1px solid #355a45 !important;
+}
+[data-testid="stMultiSelect"] [data-baseweb="tag"] * {
+  color: #efe9da !important;
+  -webkit-text-fill-color: #efe9da !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stTextInput"] input:focus {
+  outline: 2px solid #c9a45c !important;
+  outline-offset: 1px;
 }
 
 </style>
