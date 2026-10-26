@@ -478,18 +478,27 @@ hr { margin: .6rem 0 !important; }
   border-color: #c9a45c !important;
   border-bottom: 3px solid #c9a45c !important;
 }
+.st-key-budget_actions { margin-top: .2rem !important; width: 100% !important; }
 .st-key-budget_actions [data-testid="stHorizontalBlock"] {
-  display: grid !important;
-  grid-template-columns: minmax(150px, .8fr) minmax(150px, .8fr) minmax(270px, 1.5fr) !important;
-  gap: 12px !important;
-  width: min(100%, 900px) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: .8rem !important;
+  width: 100% !important;
   align-items: stretch !important;
 }
-.st-key-budget_actions [data-testid="stButton"] button { width: 100% !important; }
 .st-key-budget_actions [data-testid="column"] {
-  width: auto !important;
+  width: calc(50% - .4rem) !important;
   min-width: 0 !important;
-  flex: none !important;
+  flex: 1 1 0% !important;
+}
+.st-key-budget_actions [data-testid="stButton"] { width: 100% !important; }
+.st-key-budget_actions [data-testid="stButton"] button {
+  width: 100% !important;
+  min-height: 2.8rem !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  padding: .65rem 1rem !important;
 }
 [data-testid="stRadio"] [data-testid="stWidgetLabel"] {
   background: transparent !important;
@@ -499,11 +508,12 @@ hr { margin: .6rem 0 !important; }
 [data-testid="stRadio"] div[role="radiogroup"] { gap: .5rem !important; }
 @media (max-width: 760px) {
   .st-key-budget_actions [data-testid="stHorizontalBlock"] {
-    grid-template-columns: 1fr 1fr !important;
-    width: 100% !important;
+    flex-direction: column !important;
+    gap: .45rem !important;
   }
-  .st-key-budget_actions [data-testid="stHorizontalBlock"] > div:last-child {
-    grid-column: 1 / -1;
+  .st-key-budget_actions [data-testid="column"] {
+    width: 100% !important;
+    min-width: 100% !important;
   }
   [data-testid="stTabs"] [role="tablist"] { gap: .25rem !important; }
   [data-testid="stTabs"] button[role="tab"] { padding: .4rem .55rem !important; }
@@ -611,6 +621,19 @@ hr { margin: .6rem 0 !important; }
     padding: .45rem .6rem !important;
     white-space: normal !important;
   }
+}
+
+
+/* Global rhythm: keep captions, cards and sections from visually colliding. */
+[data-testid="stVerticalBlock"] { gap: .8rem !important; }
+[data-testid="stHorizontalBlock"] { gap: .85rem !important; }
+[data-testid="stTabs"] [data-baseweb="tab-panel"] { padding-top: .9rem !important; }
+[data-testid="stExpander"] > details > summary { margin-bottom: .15rem !important; }
+[data-testid="stCaptionContainer"] { margin-top: .1rem !important; margin-bottom: .25rem !important; }
+[data-testid="stMetric"] { margin-top: .15rem !important; margin-bottom: .2rem !important; }
+@media (max-width: 760px) {
+  [data-testid="stVerticalBlock"] { gap: .65rem !important; }
+  [data-testid="stHorizontalBlock"] { gap: .6rem !important; }
 }
 
 </style>
