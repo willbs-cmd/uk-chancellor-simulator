@@ -477,3 +477,42 @@ else:
 
     with tab_parliament:
         parliament.render()
+        st.divider()
+        st.markdown("### 🧑‍💼 Cabinet management")
+        used_terms = s.setdefault('cabinet_reshuffle_terms', [])
+        if int(s.term) in used_terms:
+            st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
+        else:
+            st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
+            reshuffle = st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
+                                  disabled=int(s.get('political_capital_points', 0)) < 2,
+                                  use_container_width=True)
+            if reshuffle:
+                state.checkpoint()
+                before = state.values()
+                state.snapshot()
+                s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
+                s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
+                s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
+                if float(s.backbench_opinion) < 45:
+                    s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
+                    s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
+                    s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
+                else:
+                    s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
+                    s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
+                used_terms.append(int(s.term))
+                state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
+                state.record()
+                st.rerun()
+        st.divider()
+        st.markdown("### 📖 The political story so far")
+        recent = [item for item in s.get('history', []) if int(item.get('term', 1)) == int(s.term)][-5:]
+        if recent:
+            for item in reversed(recent):
+                kind = str(item.get('kind', 'event')).replace('_', ' ').title()
+                choice = f" — {item.get('choice')}" if item.get('choice') else ""
+                st.markdown(f"**Year {item.get('year', '?')} · {kind}: {item.get('title', 'Political development')}**")
+                st.caption((str(item.get('note', '')) or f"Your choice: {item.get('choice', 'no recorded choice')}{choice}")[:350])
+        else:
+            st.info("Your political story begins with your first decision.")
