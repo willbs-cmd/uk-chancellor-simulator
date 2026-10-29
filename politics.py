@@ -17,6 +17,10 @@ SPADS = {
     'hawk':     dict(label='The Fiscal Hawk', blurb=f'Finds £{HAWK_SAVING:.1f}B of efficiency savings every spring.'),
     'enforcer': dict(label='The Enforcer', blurb=f'+{ENFORCER_VOTES} guaranteed votes whenever your Budget goes to the Commons.'),
     'banker':   dict(label='The City Banker', blurb=f'Market confidence can never fall below {BANKER_FLOOR:.0f}%.'),
+    'economist': dict(label='The Growth Economist', blurb='Adds a small productivity boost each spring, but the technocratic approach can frustrate backbenchers.'),
+    'pollster': dict(label='The Campaign Pollster', blurb='Improves the polling benefit of strong approval, but offers no help when public approval is low.'),
+    'negotiator': dict(label='The Parliamentary Negotiator', blurb='Helps win support for Commons bills, but expects compromises that cost a little fiscal headroom.'),
+    'organiser': dict(label='The Party Organiser', blurb='Gradually rebuilds party unity each spring, but media opinion drifts down as message discipline tightens.'),
 }
 
 
@@ -46,6 +50,14 @@ PLEDGES = {
     'edu':     dict(label='Protect Education (No Cuts)', test=_no_cut('education')),
     'welfare': dict(label='Never Increase Welfare Spending', test=lambda b, s: b['spend']['welfare'] > 0),
     'deficit': dict(label='Cut the Deficit (lower than at the start of the term by Year 5)', test=_deficit_not_cut),
+    'fuel': dict(label='No Increase in Fuel Duty', test=_no_rise('fuel')),
+    'iht': dict(label='No Increase in Inheritance Tax', test=_no_rise('iht')),
+    'aid': dict(label='Protect the Overseas Aid Budget', test=_no_cut('aid')),
+    'science': dict(label='Back British Science (No Cuts)', test=_no_cut('science')),
+    'climate': dict(label='Keep the Green Investment Pledge', test=_no_cut('climate')),
+    'transport': dict(label='No Cuts to Transport Investment', test=_no_cut('transport')),
+    'welfare_floor': dict(label='Protect Welfare from Real-Term Cuts', test=lambda b, s: b['spend']['welfare'] < 0),
+    'business': dict(label='No Corporation Tax Rise or Fuel Duty Rise', test=lambda b, s: b['tax']['corp'] > budget.TAXES['corp']['default'] or b['tax']['fuel'] > budget.TAXES['fuel']['default']),
 }
 
 
