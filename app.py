@@ -419,7 +419,18 @@ def decision_screen():
     features.render_phase_action()
     # Make the choice legible before the player commits: policy labels alone hide
     # the mechanical trade-offs, which made decisions feel like guesswork.
-    st.progress(min(1.0, max(0.0, (int(s.block) - 1) / 3)), text=f"Annual programme · Phase {s.block} of 3")
+    current_phase = min(3, max(1, int(s.block)))
+    phase_labels = ['Autumn agenda', 'Winter pressure', 'Spring Budget']
+    phase_segments = ''.join(
+        f"<div class='annual-segment {'complete' if n < current_phase else ('current' if n == current_phase else '')}'></div>"
+        for n in range(1, 4)
+    )
+    st.markdown(
+        f"<div class='annual-progress'><div class='annual-progress-heading'><span>Annual programme</span>"
+        f"<span class='annual-phase'>Phase {current_phase} of 3 <span class='annual-phase-name'>· {phase_labels[current_phase - 1]}</span></span></div>"
+        f"<div class='annual-track'>{phase_segments}</div></div>",
+        unsafe_allow_html=True
+    )
     labels = [o['label'] for o in options]
     with st.container(key='policy_options'):
         choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
