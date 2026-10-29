@@ -109,6 +109,8 @@ def update_polls(label):
     ph, gov = s.poll_history, s.party
     nation = (country._overall(s.country) - 0.5) * 100
     shift = (s.approval - 50) * 0.5 + nation * 0.15
+    if s.get('spad') == 'pollster' and s.approval >= 50:
+        shift += 1.5
     if gov in state.REGIONAL:
         shift *= 0.2
     last = {p: ph[p][-1] for p in state.PARTIES}
@@ -375,6 +377,16 @@ def economy_tick():
         s.approval = round(_clip(s.approval + min(CRED_GAIN_CAP, CRED_GAIN * cred)), 1)
     if s.market_conf < 45:
         s.approval = round(_clip(s.approval - (45 - s.market_conf) * 0.1), 1)
+
+    # Adviser effects applied during the annual spring update.
+    if s.get('spad') == 'economist':
+        s.growth = round(s.growth + 0.08, 2)
+        s.backbench_opinion = round(_clip(s.backbench_opinion - 1.0), 1)
+        s.message += ' The growth adviser has launched a productivity programme; some MPs are uneasy.'
+    if s.get('spad') == 'organiser':
+        s.party_opinion = round(_clip(s.party_opinion + 4.0), 1)
+        s.media_opinion = round(_clip(s.media_opinion - 2.0), 1)
+        s.message += ' The party organiser has tightened internal discipline, while media opinion slips.'
 
     # political capital drifts back towards normal over a year
     s.backbench_opinion = round(_clip(s.backbench_opinion + 0.2 * (60 - s.backbench_opinion)), 1)
