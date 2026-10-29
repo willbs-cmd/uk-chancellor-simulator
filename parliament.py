@@ -151,6 +151,41 @@ def render():
     st.markdown("## 🏛️ The House of Commons")
     st.caption("Every major policy decision is put to a vote. Party unity, backbench morale and public approval determine support; you can spend political capital to influence the next bill. The Budget has a separate vote in the Whips & forecast tab.")
 
+    st.markdown("### 📰 Parliamentary update")
+    approval = float(s.get("approval", 48))
+    backbench = float(s.get("backbench_opinion", 60))
+    unity = float(s.get("party_opinion", 65))
+    headroom = float(s.get("headroom", 0))
+    deficit = float(s.get("deficit", 0))
+    update_items = []
+    if backbench < 35:
+        update_items.append(("🔴 Backbench pressure", "Discontent is high among government MPs. Expect amendments, public letters and a greater risk of rebellion on the next major vote."))
+    elif backbench < 55:
+        update_items.append(("🟠 Whips face a difficult week", "Some government MPs are uneasy. The whips may need concessions or a stronger case before the next vote."))
+    else:
+        update_items.append(("🟢 Government benches broadly holding", "Backbench morale is relatively steady, giving ministers more room to negotiate legislation."))
+    if unity < 40:
+        update_items.append(("🔴 Party unity under strain", "Disagreement inside the governing party is making it harder to present a united front. A compromise could cost money or dilute policy."))
+    elif unity > 70:
+        update_items.append(("🟢 Party discipline holding", "The parliamentary party is comparatively cohesive, although individual bills can still trigger dissent."))
+    else:
+        update_items.append(("🟡 Internal negotiations continue", "The leadership needs to keep different wings of the parliamentary party on board."))
+    if approval < 30:
+        update_items.append(("📉 Opposition sees an opening", "Low public approval is giving opposition parties more room to challenge the government's economic record."))
+    elif approval > 60:
+        update_items.append(("📈 Government claims political momentum", "Stronger public approval is helping ministers defend their agenda, but it does not guarantee votes in the Commons."))
+    else:
+        update_items.append(("🎙️ Opposition presses ministers", "Opposition parties are challenging the government on delivery, public services and the cost of its economic choices."))
+    if headroom < 0 or deficit > 5:
+        update_items.append(("💷 Fiscal scrutiny intensifies", "The Treasury's limited headroom and borrowing position are likely to feature in committee questions and opposition attacks."))
+    else:
+        update_items.append(("🏦 Treasury plan under scrutiny", "MPs are watching whether the government's fiscal plans match its growth and public-service commitments."))
+    for headline, detail in update_items:
+        with st.container(border=True):
+            st.markdown(f"**{headline}**")
+            st.caption(detail)
+    st.caption(f"Simulated parliamentary calendar · Term {int(s.get('term', 1))}, Year {int(s.get('year', 1))}, Phase {int(s.get('block', 1))}. These headlines react to your game state; they are not real-world news.")
+
     m1, m2, m3 = st.columns(3, gap="medium")
     m1.metric("Projected ayes", f"{votes}/650", help="A bill needs 326 votes to pass. A result of 346 or more is treated as a clear passage.")
     m2.metric("Backbench morale", f"{float(s.get('backbench_opinion', 60)):.0f}/100", help="Measures willingness among your own MPs to support government legislation.")
