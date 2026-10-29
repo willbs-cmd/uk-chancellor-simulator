@@ -8,6 +8,7 @@ import country
 import engine
 import features
 import imf_outlook
+import world_economy
 import politics
 import parliament
 import scenarios as scen
@@ -280,18 +281,19 @@ def dashboard():
                   help='Approximate growth in the money value of output, including inflation.')
         st.caption('GDP is the value of goods and services produced in the UK. The GDP figure is a gameplay estimate; country comparisons below are illustrative reference rates, not live forecasts.')
         st.markdown('#### 🌍 How UK growth compares with other economies')
-        peers = pd.DataFrame([
-            {'Economy': 'United Kingdom (your game)', 'Real GDP growth (%)': round(float(s.growth), 2), 'Basis': 'Your simulated economy'},
-            {'Economy': 'United States', 'Real GDP growth (%)': 2.0, 'Basis': 'Illustrative benchmark'},
-            {'Economy': 'Euro area', 'Real GDP growth (%)': 1.2, 'Basis': 'Illustrative benchmark'},
-            {'Economy': 'Germany', 'Real GDP growth (%)': 1.0, 'Basis': 'Illustrative benchmark'},
-            {'Economy': 'France', 'Real GDP growth (%)': 1.1, 'Basis': 'Illustrative benchmark'},
-            {'Economy': 'Japan', 'Real GDP growth (%)': 0.8, 'Basis': 'Illustrative benchmark'},
-            {'Economy': 'China', 'Real GDP growth (%)': 4.5, 'Basis': 'Illustrative benchmark'},
-        ])
-        peers = peers.sort_values('Real GDP growth (%)', ascending=False).reset_index(drop=True)
+        world_economy.ensure(s)
+        peer_rows = [{'Economy': 'United Kingdom (your game)', 'Real GDP growth (%)': round(float(s.growth), 2),
+                      'Direction': 'Growing' if float(s.growth) > 0 else 'Contracting' if float(s.growth) < 0 else 'Flat'}]
+        peer_rows += world_economy.rows(s)
+        peers = pd.DataFrame(peer_rows).sort_values('Real GDP growth (%)', ascending=False).reset_index(drop=True)
         peers.insert(0, 'Rank', range(1, len(peers) + 1))
         st.dataframe(peers, hide_index=True, use_container_width=True)
+        if s.get('world_history'):
+            with st.expander('World economy history'):
+                st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
+        shock = s.get('temporary_shock') or {}
+        if shock:
+            st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
         hist = s.get('gdp_history', [])
         if hist:
             st.markdown('#### 📈 Your GDP over time')
