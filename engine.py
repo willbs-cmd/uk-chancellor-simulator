@@ -13,6 +13,7 @@ import parliament
 import speech
 import scenarios as scen
 import state
+import world_economy
 
 SEATS = 650
 REQUEST_CHANCE = 0.35
@@ -250,6 +251,23 @@ def resolve_crisis(idx):
     state.snapshot()
     label, fx = crisis['opts'][idx]
     s.message = scen.resolve(crisis, idx)
+    # Global crises create a temporary second-round macro effect next year.
+    shock_profiles = {
+        'global_recession': ('Global recession', -0.65, 0.0, -3),
+        'oil_price_spike': ('Energy price shock', -0.25, 0.55, -2),
+        'global_supply_crunch': ('Supply-chain disruption', -0.45, 0.35, -2),
+        'trade_war': ('Trade-war uncertainty', -0.45, 0.1, -3),
+        'banking_panic': ('International credit crunch', -0.7, 0.0, -5),
+        'technology_boom': ('Global productivity boom', 0.45, 0.0, 1),
+        'food_price_crisis': ('Global food-price shock', -0.1, 0.4, -1),
+        'export_surge': ('Export-demand surge', 0.45, 0.0, 1),
+        'climate_disaster': ('Extreme-weather disruption', -0.35, 0.25, -2),
+        'sovereign_debt_crisis': ('Sovereign-debt contagion', -0.35, 0.1, -4),
+    }
+    if s.active_crisis in shock_profiles:
+        shock_label, shock_growth, shock_inflation, shock_market = shock_profiles[s.active_crisis]
+        s.temporary_shock = {'label': shock_label, 'growth': shock_growth, 'inflation': shock_inflation,
+                             'market': shock_market, 'years_left': 1}
     proxy = scen.proxy_ideology(fx)
     s.headlines = generate_headlines(proxy)
     update_political_capital(proxy, s.approval - before['approval'], s.headroom - before['headroom'])
@@ -366,6 +384,17 @@ def economy_tick():
     s.media_opinion = round(_clip(s.media_opinion + 0.2 * (50 - s.media_opinion)), 1)
 
     # knock-on drags (these used to fire after every single decision)
+    # A major external shock has a one-year second-round effect after the response.
+    shock = s.get('temporary_shock') or {}
+    if shock.get('years_left', 0) > 0:
+        s.growth = round(s.growth + float(shock.get('growth', 0.0)), 2)
+        s.inflation = round(max(-1.0, s.inflation + float(shock.get('inflation', 0.0))), 2)
+        s.market_conf = round(_clip(s.market_conf + float(shock.get('market', 0.0))), 1)
+        s.message += " External shock continues: " + str(shock.get('label', 'global disruption')) + "."
+        shock['years_left'] -= 1
+        if shock['years_left'] <= 0:
+            s.temporary_shock = {}
+
     if s.inflation > 3.0:
         s.approval = round(_clip(s.approval - 2.0), 1)
         s.message += ' Sticky inflation is eroding your support.'
@@ -394,7 +423,13 @@ def proceed_to_spring():
         s.headroom = round(s.headroom + politics.HAWK_SAVING, 1)
         s.message += f' Your Fiscal Hawk finds £{politics.HAWK_SAVING:.1f}B of efficiency savings.'
     s.pm_opinion = round(_clip(s.pm_opinion + (5 if s.headroom > 0 else -5)), 1)
+    # Trading partners evolve each year; their cycle spills into UK exports and confidence.
+    world_economy.ensure(s)
+    world_economy.advance(s)
     economy_tick()
+    world_drag = float(s.get('world_cycle', 0.0))
+    s.growth = round(s.growth + world_drag * 0.12, 2)
+    s.market_conf = round(_clip(s.market_conf + world_drag * 0.8), 1)
     # Track nominal GDP in £ trillions using real growth and inflation.
     nominal_growth = ((1 + s.growth / 100.0) * (1 + s.inflation / 100.0) - 1) * 100
     s.gdp_trillion = round(float(s.get('gdp_trillion', 3.0)) * (1 + nominal_growth / 100.0), 3)
