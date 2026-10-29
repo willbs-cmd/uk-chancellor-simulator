@@ -82,6 +82,12 @@ def setup_screen():
         format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
         help='Each pledge gives you +2 starting approval. Break one and you take a U-turn scandal: approval, media and party support all fall.'
     )
+    with st.expander('📜 Browse manifesto commitments', expanded=False):
+        st.caption('Commitments are promises to voters, not free bonuses. A pledge may constrain future Budgets and a broken pledge can cost approval, media support and party unity.')
+        pledge_cols = st.columns(2)
+        for i, (key, item) in enumerate(politics.PLEDGES.items()):
+            pledge_cols[i % 2].markdown(f"**{item['label']}**")
+            pledge_cols[i % 2].caption('Selected' if key in pledges else 'Available to choose')
     tags = st.checkbox(
         'Show ideology tags on policy options',
         value=(difficulty == 'Easy'), key=f'tags_{difficulty}',
