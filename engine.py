@@ -395,6 +395,16 @@ def proceed_to_spring():
         s.message += f' Your Fiscal Hawk finds £{politics.HAWK_SAVING:.1f}B of efficiency savings.'
     s.pm_opinion = round(_clip(s.pm_opinion + (5 if s.headroom > 0 else -5)), 1)
     economy_tick()
+    # Track nominal GDP in £ trillions using real growth and inflation.
+    nominal_growth = ((1 + s.growth / 100.0) * (1 + s.inflation / 100.0) - 1) * 100
+    s.gdp_trillion = round(float(s.get('gdp_trillion', 3.0)) * (1 + nominal_growth / 100.0), 3)
+    s.setdefault('gdp_history', []).append({
+        'Year': f"Term {s.term}, Year {s.year}",
+        'Real GDP growth (%)': round(float(s.growth), 2),
+        'Inflation (%)': round(float(s.inflation), 2),
+        'Nominal GDP growth (%)': round(nominal_growth, 2),
+        'GDP (£tn)': float(s.gdp_trillion),
+    })
     politics.shift_macro_cycle()
     # Long-run pressures compound annually rather than arriving as isolated crises.
     s.setdefault('longrun_productivity', 1.0)
