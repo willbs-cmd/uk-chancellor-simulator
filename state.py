@@ -204,6 +204,7 @@ def _defaults():
         threshold_freeze_scope='Personal allowance and all bands',
         parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],
         parliament_actions={}, parliament_last_strategy=None,
+        cabinet_reshuffle_terms=[],
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
     for k, v in base.items():
@@ -300,7 +301,7 @@ SAVE_KEYS = [
     'thresholds_frozen', 'personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold', 'gdp_trillion', 'gdp_history', 'world_economy', 'world_history', 'world_cycle', 'temporary_shock',
     'threshold_freeze_scope',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
-    'parliament_actions', 'parliament_last_strategy',
+    'parliament_actions', 'parliament_last_strategy', 'cabinet_reshuffle_terms',
 ] + STAT_KEYS
 
 
