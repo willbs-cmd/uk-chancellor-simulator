@@ -42,6 +42,8 @@ def projected_ayes(bonus=None):
     )
     if s.get("spad") == "enforcer":
         votes += 8
+    if s.get("spad") == "negotiator":
+        votes += 10
     return max(0, min(650, int(math.floor(votes + 0.5))))
 
 
