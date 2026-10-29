@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Crisis events. Each opts item is [player-facing label, effect object]. Numeric values are model deltas.",
+  "description": "Crisis events. Each opts item is [player-facing label, effect object]. Numeric values are model deltas. Expanded with major global economic shocks and policy responses.",
   "crises": {
     "leadership_challenge": {
       "title": "🚨 BREAKING: Leadership Challenge!",
@@ -1056,6 +1056,314 @@
             "headroom": -1,
             "market": 2,
             "approval": 1
+          }
+        ]
+      ]
+    },
+    "global_recession": {
+      "title": "🌍 GLOBAL SHOCK: World Recession",
+      "humphrey": "Chancellor, the major economies are contracting together. Export orders have collapsed, markets are fleeing risk and the Treasury's forecasts are now worth rather less than yesterday's newspaper.",
+      "opts": [
+        [
+          "Launch a targeted, temporary investment and jobs package",
+          {
+            "headroom": -7,
+            "approval": 5,
+            "growth": 0.8,
+            "deficit": 5,
+            "market": 2
+          }
+        ],
+        [
+          "Protect the public finances and let automatic stabilisers work",
+          {
+            "approval": -5,
+            "growth": -1.1,
+            "market": 1,
+            "deficit": 2
+          }
+        ],
+        [
+          "Coordinate an international recovery plan",
+          {
+            "headroom": -4,
+            "approval": 2,
+            "growth": 0.4,
+            "market": 5
+          }
+        ]
+      ]
+    },
+    "oil_price_spike": {
+      "title": "🛢️ GLOBAL SHOCK: Oil and Gas Price Spike",
+      "humphrey": "A geopolitical confrontation has disrupted energy supplies. Household bills and business costs are surging, and inflation forecasts have been torn up.",
+      "opts": [
+        [
+          "Temporary targeted energy support for vulnerable households",
+          {
+            "headroom": -6,
+            "approval": 6,
+            "inflation": -0.3,
+            "growth": 0.2
+          }
+        ],
+        [
+          "Cut fuel duty temporarily to ease pump prices",
+          {
+            "headroom": -3,
+            "approval": 4,
+            "inflation": -0.2,
+            "market": -1
+          }
+        ],
+        [
+          "Avoid broad subsidies and accelerate energy diversification",
+          {
+            "headroom": -2,
+            "approval": -4,
+            "growth": -0.2,
+            "market": 2
+          }
+        ]
+      ]
+    },
+    "global_supply_crunch": {
+      "title": "🚢 GLOBAL SHOCK: Supply-Chain Breakdown",
+      "humphrey": "Ports are congested, shipping routes are disrupted and manufacturers cannot get key components. Prices are rising just as output stalls.",
+      "opts": [
+        [
+          "Backstop critical supply chains and ports",
+          {
+            "headroom": -4,
+            "growth": 0.5,
+            "inflation": -0.2
+          }
+        ],
+        [
+          "Offer temporary credit guarantees to import-dependent firms",
+          {
+            "headroom": -2,
+            "growth": 0.3,
+            "market": 2
+          }
+        ],
+        [
+          "Do not intervene; allow firms to adapt",
+          {
+            "approval": -4,
+            "growth": -0.6,
+            "inflation": 0.3
+          }
+        ]
+      ]
+    },
+    "trade_war": {
+      "title": "⚔️ GLOBAL SHOCK: Major-Power Trade War",
+      "humphrey": "Two of the world's largest economies have imposed sweeping tariffs. British exporters are caught in the crossfire, and investors are asking whether the UK has a plan.",
+      "opts": [
+        [
+          "Negotiate exemptions and retaliatory measures with allies",
+          {
+            "headroom": -1,
+            "approval": 2,
+            "growth": 0.4,
+            "market": 3
+          }
+        ],
+        [
+          "Create a temporary export-credit scheme",
+          {
+            "headroom": -3,
+            "growth": 0.5,
+            "deficit": 2
+          }
+        ],
+        [
+          "Avoid retaliation and focus on domestic demand",
+          {
+            "approval": -2,
+            "growth": 0.1,
+            "market": 1
+          }
+        ]
+      ]
+    },
+    "banking_panic": {
+      "title": "🏦 GLOBAL SHOCK: International Banking Panic",
+      "humphrey": "A major overseas lender has failed. Credit markets are freezing and UK banks are reviewing their exposure. This is no time for a casual press conference.",
+      "opts": [
+        [
+          "Guarantee deposits and provide emergency liquidity coordination",
+          {
+            "headroom": -5,
+            "market": 8,
+            "growth": 0.3
+          }
+        ],
+        [
+          "Guarantee deposits only and demand private recapitalisation",
+          {
+            "headroom": -2,
+            "market": 4,
+            "approval": -2
+          }
+        ],
+        [
+          "Refuse extraordinary support",
+          {
+            "market": -14,
+            "growth": -1,
+            "debt": 1.5,
+            "approval": -6
+          }
+        ]
+      ]
+    },
+    "technology_boom": {
+      "title": "🤖 GLOBAL SHOCK: Global Productivity Boom",
+      "humphrey": "A wave of breakthroughs in automation, medicine and computing is lifting productivity abroad. The question is whether Britain can turn the opportunity into higher wages and output.",
+      "opts": [
+        [
+          "Co-invest in skills, research and adoption",
+          {
+            "headroom": -4,
+            "growth": 0.7,
+            "approval": 3
+          }
+        ],
+        [
+          "Offer time-limited investment allowances",
+          {
+            "headroom": -3,
+            "growth": 0.5,
+            "market": 2
+          }
+        ],
+        [
+          "Let private investment lead without new support",
+          {
+            "growth": 0.2,
+            "market": 1,
+            "approval": -1
+          }
+        ]
+      ]
+    },
+    "food_price_crisis": {
+      "title": "🌾 GLOBAL SHOCK: Food Price Crisis",
+      "humphrey": "A poor harvest across several major exporters has sent global food prices soaring. The cost-of-living story is back, Chancellor, and the public will expect an answer.",
+      "opts": [
+        [
+          "Temporary support for low-income households",
+          {
+            "headroom": -4,
+            "approval": 6,
+            "growth": 0.1
+          }
+        ],
+        [
+          "Help domestic growers increase next-season output",
+          {
+            "headroom": -3,
+            "growth": 0.3,
+            "inflation": -0.1
+          }
+        ],
+        [
+          "Avoid new spending and target competition enforcement",
+          {
+            "headroom": 0,
+            "approval": -4,
+            "market": 1
+          }
+        ]
+      ]
+    },
+    "export_surge": {
+      "title": "📦 GLOBAL SHOCK: Export Demand Surge",
+      "humphrey": "Our trading partners are growing faster than expected and demand for British services, advanced manufacturing and creative exports is surging.",
+      "opts": [
+        [
+          "Expand export finance and trade missions",
+          {
+            "headroom": -2,
+            "growth": 0.6,
+            "approval": 2
+          }
+        ],
+        [
+          "Use the windfall to reduce borrowing",
+          {
+            "headroom": 2,
+            "market": 3,
+            "approval": 1
+          }
+        ],
+        [
+          "Invest in ports, grids and skills to sustain the boom",
+          {
+            "headroom": -4,
+            "growth": 0.8
+          }
+        ]
+      ]
+    },
+    "climate_disaster": {
+      "title": "🌪️ GLOBAL SHOCK: Extreme Weather Emergency",
+      "humphrey": "Severe weather has damaged infrastructure and disrupted food and energy supplies across several trading partners. Insurance premiums and commodity prices are rising.",
+      "opts": [
+        [
+          "Fund immediate resilience and emergency relief",
+          {
+            "headroom": -5,
+            "approval": 5,
+            "growth": 0.2
+          }
+        ],
+        [
+          "Prioritise repairs and defer other capital projects",
+          {
+            "headroom": -2,
+            "growth": -0.2,
+            "approval": -2
+          }
+        ],
+        [
+          "Coordinate a joint resilience fund with allies",
+          {
+            "headroom": -3,
+            "market": 2,
+            "growth": 0.2
+          }
+        ]
+      ]
+    },
+    "sovereign_debt_crisis": {
+      "title": "💥 GLOBAL SHOCK: Sovereign Debt Crisis",
+      "humphrey": "A heavily indebted economy is struggling to refinance its bonds. Investors are reassessing risk across government debt markets, including ours.",
+      "opts": [
+        [
+          "Publish a credible medium-term fiscal plan",
+          {
+            "approval": -2,
+            "market": 6,
+            "gilt": -0.3
+          }
+        ],
+        [
+          "Join a coordinated international stabilisation package",
+          {
+            "headroom": -3,
+            "market": 4,
+            "growth": 0.2
+          }
+        ],
+        [
+          "Dismiss contagion fears and change nothing",
+          {
+            "market": -8,
+            "gilt": 0.5,
+            "approval": -2
           }
         ]
       ]
