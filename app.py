@@ -121,7 +121,7 @@ header(s.party, s.term, s.year, s.block)
 
 
 def hud_note():
-    """The small status line at the end of the dashboard strip: world cycle, advisor and pledges."""
+    """Compact cabinet pulse: world cycle, adviser/pledges and the most urgent risks."""
     icon = {'Boom': '📈', 'Stagnation': '➖', 'Recession': '📉'}.get(s.get('macro_cycle'), '➖')
     bits = [f"🌍 World economy: <b>{icon} {s.get('macro_cycle', 'Stagnation')}</b>"]
     if s.get('spad') in politics.SPADS:
@@ -129,8 +129,21 @@ def hud_note():
     if s.get('pledges'):
         kept = len([k for k in s.pledges if k not in s.get('broken_pledges', [])])
         bits.append(f"📜 Pledges kept: <b>{kept}/{len(s.pledges)}</b>")
-    return ' '.join(f'<span>{b}</span>' for b in bits)
 
+    risks = []
+    if float(s.get('market_conf', 50)) < 40:
+        risks.append(('danger', '⚠ Markets fragile'))
+    if float(s.get('backbench_opinion', 60)) < 40:
+        risks.append(('danger', '⚠ Rebellion risk'))
+    if float(s.get('headroom', 0)) < 0:
+        risks.append(('danger', '⚠ Negative headroom'))
+    if float(s.get('inflation', 2)) >= 4.5:
+        risks.append(('warning', '↑ Inflation pressure'))
+    if float(s.get('approval', 50)) < 30:
+        risks.append(('warning', '↓ Public approval'))
+    status = ''.join(f"<span class='pulse-flag {kind}'>{label}</span>" for kind, label in risks[:3])
+    status_html = f"<div class='pulse-flags'>{status}</div>" if status else ""
+    return ''.join(f'<span>{b}</span>' for b in bits) + status_html
 
 # On the Budget screen the economy numbers appear as the *projected* summary instead, so only political capital is shown here.
 _on_budget_screen = (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
