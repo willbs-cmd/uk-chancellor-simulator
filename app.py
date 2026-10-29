@@ -400,12 +400,31 @@ def decision_screen():
     st.caption(phase['guide'])
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
+    # Make the choice legible before the player commits: policy labels alone hide
+    # the mechanical trade-offs, which made decisions feel like guesswork.
+    st.progress(min(1.0, max(0.0, (int(s.block) - 1) / 3)), text=f"Annual programme · Phase {s.block} of 3")
     labels = [o['label'] for o in options]
     with st.container(key='policy_options'):
         choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
                           label_visibility='collapsed',
-                          help='Choose one of the five approaches. Each has a different trade-off between public approval, growth, market confidence and fiscal headroom.')
-    if st.button('Execute Policy', type='primary', disabled=choice is None):
+                          help='Choose one of the five approaches. Select an option to inspect its likely effects before committing.')
+    if choice is not None:
+        selected = options[labels.index(choice)]
+        effect_text = state.fmt_fx(selected.get('effect', {}))
+        with st.container(border=True):
+            st.markdown("#### 📋 Decision brief")
+            st.markdown(f"**Selected approach:** {choice}")
+            if effect_text:
+                st.caption("Immediate modelled effects")
+                st.write(effect_text)
+            else:
+                st.caption("This option has no direct stat changes listed; its consequences may be political or delayed.")
+            delayed = selected.get('delayed')
+            if delayed:
+                st.markdown(f"**Delayed consequence — {delayed.get('title', 'Follow-up event')}**")
+                st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Timing: about {delayed.get('after', 1)} action(s) later.")
+            st.caption("Parliament can reduce the impact: a clear passage applies the full effect, a narrow passage applies 70%, and a rejected bill applies only 25%. Effects are estimates, not guaranteed outcomes.")
+    if st.button('Execute Policy', type='primary', disabled=choice is None, use_container_width=True):
         engine.execute_decision(options[labels.index(choice)])
         st.rerun()
 
