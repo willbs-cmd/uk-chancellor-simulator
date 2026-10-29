@@ -208,7 +208,17 @@ div[data-testid="stColumn"]:has(.sc-card:focus-within), div[data-testid="stEleme
 [data-testid='stSelectbox'] [data-baseweb='select'] > div, [data-testid='stMultiSelect'] [data-baseweb='select'] > div { border-radius: 7px !important; }
 [data-testid='stAlert'] { border-radius: 8px; }
 hr { border-color: #2b5440 !important; }
-[data-testid='stProgress'] > div > div { background: var(--brass) !important; }
+/* Annual programme indicator: three clear phases instead of Streamlit's oversized default bar. */
+.annual-progress { background: rgba(22,51,38,.72); border: 1px solid #2b5440; border-radius: 8px; padding: 9px 12px 10px; margin: 3px 0 8px; }
+.annual-progress-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); line-height: 1.25; }
+.annual-progress-heading > span:first-child { color: var(--paper); font-weight: 600; }
+.annual-phase { color: var(--brass); font-weight: 600; }
+.annual-phase-name { color: var(--muted); font-weight: 400; }
+.annual-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }
+.annual-segment { height: 5px; border-radius: 99px; background: #294536; }
+.annual-segment.complete { background: #c9a45c; }
+.annual-segment.current { background: linear-gradient(90deg, #c9a45c, #efe9da); box-shadow: 0 0 0 1px rgba(201,164,92,.28); }
+@media (max-width: 650px) { .annual-progress { padding: 8px 10px; } .annual-phase-name { display: none; } }
 .stButton > button, [data-testid='stDownloadButton'] button { min-height: 2.5rem; border-radius: 7px; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
 .stButton > button:hover, [data-testid='stDownloadButton'] button:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(0,0,0,.18); }
 [data-testid='stMetric'] { border-radius: 9px; box-shadow: 0 4px 14px rgba(0,0,0,.1); }
