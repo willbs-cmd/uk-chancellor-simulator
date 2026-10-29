@@ -647,11 +647,43 @@ def scorecard():
     overall = now['overall']
     colour = '#6fbf8a' if overall >= 60 else ('#d9b45a' if overall >= 45 else '#d6604f')
     seats = f" ({r['player_seats']} seats)" if r else ''
+    term_history = [h for h in s.history if h.get('term') == s.term]
+    decisions_made = [h for h in term_history if h.get('kind') in ('decision', 'crisis', 'budget', 'parliament', 'event')]
+    votes = [h for h in s.get('parliament_history', []) if h.get('term') == s.term]
+    rejected = [v for v in votes if v.get('status') == 'Rejected']
+    chapters = []
+    if best:
+        chapters.append({'title': 'The high point', 'detail': f"{best.get('title', 'A key decision')}: {best.get('choice', 'your response') or 'your response'}. It was your strongest recorded turn by the model's combined approval, market-confidence and headroom score."})
+    if worst:
+        chapters.append({'title': 'The low point', 'detail': f"{worst.get('title', 'A difficult decision')}: {worst.get('choice', 'your response') or 'your response'}. This was the most damaging recorded turn by the same simplified score."})
+    approval_change = now['values']['approval'] - start['values']['approval']
+    headroom_change = now['values']['headroom'] - start['values']['headroom']
+    if approval_change >= 8:
+        public_verdict = 'You leave office with a stronger public mandate.'
+    elif approval_change <= -8:
+        public_verdict = 'Public patience has worn thin; the next leader inherits a difficult political climate.'
+    else:
+        public_verdict = 'Public opinion has changed little overall, leaving your record open to interpretation.'
+    if headroom_change >= 5:
+        fiscal_verdict = 'You built a larger fiscal buffer for your successor.'
+    elif headroom_change <= -5:
+        fiscal_verdict = 'You leave a thinner fiscal safety margin and less room for the next crisis.'
+    else:
+        fiscal_verdict = 'Your fiscal room is broadly similar to where you started.'
+    legacy = f"{public_verdict} {fiscal_verdict} Your term receives a {grade(overall)} for the state of the nation ({overall:.0f}/100)."
+    if r and r.get('win'):
+        legacy += ' You also secured another term at the ballot box.'
+    elif r:
+        legacy += ' The election result ended your time in office.'
+    elif over and over.get('kind') == 'sacked':
+        legacy += ' Your premiership ended before the electorate could deliver its verdict.'
     return dict(
         title=title, subtitle=subtitle, rows=rows, best=best, worst=worst, overall=overall,
         grade=grade(overall), grade_colour=colour,
         badges=[ach[a][0] for a in s.achievements if a in ach],
         new_badges=[ach[a][0] for a in s.new_achievements if a in ach],
+        legacy=legacy, actions=len(decisions_made), commons_votes=len(votes), bills_rejected=len(rejected),
+        chapters=chapters,
         share=_share_text(title, seats, overall, start, now),
     )
 
