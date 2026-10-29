@@ -654,6 +654,14 @@ hr { margin: .6rem 0 !important; }
 }
 
 
+/* Small, actionable risk flags in the dashboard status line. */
+.hud-note { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: .4rem .65rem !important; }
+.hud-note > span { white-space: normal; }
+.pulse-flags { display: flex; flex-wrap: wrap; gap: .3rem; width: 100%; padding-top: .15rem; }
+.pulse-flag { display: inline-flex; align-items: center; border-radius: 99px; padding: .18rem .5rem; font-size: .7rem; line-height: 1.25; font-weight: 600; border: 1px solid rgba(201,164,92,.3); background: rgba(201,164,92,.09); color: #e8c97f; }
+.pulse-flag.danger { border-color: rgba(224,112,93,.42); background: rgba(224,112,93,.1); color: #f09a88; }
+.pulse-flag.warning { border-color: rgba(201,164,92,.4); background: rgba(201,164,92,.1); color: #e8c97f; }
+
 /* ================= CLEAN INTERFACE PASS =================
    One consistent rhythm, calmer panels and clearer hierarchy. */
 :root {
