@@ -9,13 +9,20 @@ GDP_USD_TN = {"United States": 29.2, "Euro area": 16.5, "Germany": 4.7, "France"
               "Japan": 4.1, "China": 18.7, "India": 3.9, "Canada": 2.2, "Australia": 1.8}
 
 def ensure(s):
-    if not s.get("world_economy"):
-        s.world_economy = {name: {"growth": rate, "momentum": 0.0, "output_index": 100.0,
-                                  "gdp_usd_tn": GDP_USD_TN[name]} for name, rate in BASELINES.items()}
-    else:
-        for name, item in s.world_economy.items():
-            item.setdefault("output_index", 100.0)
-            item.setdefault("gdp_usd_tn", GDP_USD_TN.get(name, 1.0))
+    # Migrate older save files as well as initialise a fresh game. Always merge
+    # the current country roster into saved data so new economies appear without
+    # resetting progress already made by the player.
+    if not isinstance(s.get("world_economy"), dict):
+        s.world_economy = {}
+    for name, rate in BASELINES.items():
+        item = s.world_economy.get(name)
+        if not isinstance(item, dict):
+            item = {}
+            s.world_economy[name] = item
+        item.setdefault("growth", rate)
+        item.setdefault("momentum", 0.0)
+        item.setdefault("output_index", 100.0)
+        item.setdefault("gdp_usd_tn", GDP_USD_TN[name])
     s.setdefault("world_history", [])
 
 def advance(s):
