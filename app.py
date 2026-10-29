@@ -152,15 +152,6 @@ if not _on_budget_screen:
     _hud.insert(0, ('The economy', CARDS_TOP + CARDS_ECON))
 render_hud(_hud, note=hud_note())
 
-with st.expander('🗓️ How the annual cycle works', expanded=False):
-    g1, g2, g3 = st.columns(3, gap='medium')
-    for col, num in zip((g1, g2, g3), (1, 2, 3)):
-        phase = phase_info(num)
-        with col:
-            st.markdown(f"**Phase {num} · {phase['title']}**")
-            st.caption(phase['guide'])
-    st.caption('You get two major policy decisions per year and then a Budget vote. Political capital is limited: use it only for the interventions that matter most. The next financial year begins after the Budget passes and you proceed to spring.')
-
 
 def scorecard_block(show_share=True):
     data = engine.scorecard()
