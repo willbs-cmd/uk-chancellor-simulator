@@ -146,6 +146,17 @@ with st.expander('🗓️ How the annual cycle works', expanded=False):
 def scorecard_block(show_share=True):
     data = engine.scorecard()
     render_scorecard(data)
+    st.markdown("### 📚 Your Chancellor's legacy")
+    st.write(data.get('legacy', 'Your record is still being written.'))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Policies & crises", data.get('actions', 0))
+    c2.metric("Commons votes", data.get('commons_votes', 0))
+    c3.metric("Bills rejected", data.get('bills_rejected', 0))
+    if data.get('chapters'):
+        with st.expander("Read the key moments of your term"):
+            for item in data['chapters']:
+                st.markdown(f"**{item['title']}**")
+                st.caption(item['detail'])
     if show_share:
         st.caption('Share your result:')
         st.code(data['share'], language=None)
