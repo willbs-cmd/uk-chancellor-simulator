@@ -653,6 +653,136 @@ hr { margin: .6rem 0 !important; }
   text-overflow: clip !important;
 }
 
+
+/* ================= CLEAN INTERFACE PASS =================
+   One consistent rhythm, calmer panels and clearer hierarchy. */
+:root {
+  --ui-border: rgba(159,179,166,.18);
+  --ui-panel: rgba(22,51,38,.78);
+  --ui-panel-hover: #1b3b2b;
+}
+.block-container {
+  max-width: 1480px !important;
+  padding-top: 1rem !important;
+  padding-bottom: 1.25rem !important;
+  padding-left: clamp(.9rem, 1.8vw, 1.6rem) !important;
+  padding-right: clamp(.9rem, 1.8vw, 1.6rem) !important;
+}
+[data-testid='stVerticalBlock'] { gap: .6rem !important; }
+[data-testid='stHorizontalBlock'] { gap: .8rem !important; }
+[data-testid='stMarkdownContainer'] p { line-height: 1.48; }
+[data-testid='stMarkdownContainer'] h1,
+[data-testid='stMarkdownContainer'] h2,
+[data-testid='stMarkdownContainer'] h3,
+[data-testid='stMarkdownContainer'] h4 { margin-top: .25rem; margin-bottom: .35rem; }
+[data-testid='stMarkdownContainer'] ul,
+[data-testid='stMarkdownContainer'] ol { padding-top: .1rem; padding-bottom: .1rem; }
+
+/* Tabs read as a deliberate navigation bar rather than loose buttons. */
+[data-testid='stTabs'] [data-baseweb='tab-list'] {
+  gap: .25rem !important;
+  padding: .25rem .25rem 0 !important;
+  border-bottom: 1px solid var(--ui-border) !important;
+  background: rgba(8,22,15,.22);
+  border-radius: 8px 8px 0 0;
+}
+[data-testid='stTabs'] button[data-baseweb='tab'] {
+  border: 1px solid transparent !important;
+  border-radius: 7px 7px 0 0 !important;
+  padding: .48rem .8rem !important;
+  min-height: 2.45rem !important;
+  font-size: .88rem !important;
+  color: var(--muted) !important;
+  transition: background .15s ease, border-color .15s ease;
+}
+[data-testid='stTabs'] button[data-baseweb='tab']:hover {
+  background: rgba(29,65,48,.6) !important;
+  color: var(--paper) !important;
+}
+[data-testid='stTabs'] button[data-baseweb='tab'][aria-selected='true'] {
+  background: #1b3b2b !important;
+  border-color: var(--ui-border) !important;
+  border-bottom: 2px solid var(--brass) !important;
+  color: var(--paper) !important;
+}
+[data-testid='stTabs'] [data-baseweb='tab-panel'] { padding-top: .8rem !important; }
+
+/* Shared surface language for expanders, metrics and bordered containers. */
+[data-testid='stExpander'],
+[data-testid='stVerticalBlockBorderWrapper'] {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 9px !important;
+  background: rgba(16,39,28,.42);
+}
+[data-testid='stExpander'] details,
+[data-testid='stExpander'] details > summary {
+  background: transparent !important;
+  border-radius: 9px !important;
+}
+[data-testid='stExpander'] details > summary { padding: .55rem .8rem !important; }
+[data-testid='stExpander'] details > summary:hover { background: rgba(29,65,48,.5) !important; }
+[data-testid='stMetric'] {
+  background: linear-gradient(145deg, #163326, #11291d) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-top: 2px solid var(--brass) !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  padding: 9px 11px !important;
+}
+.sc-card { box-shadow: none !important; border-color: var(--ui-border) !important; }
+.ch-event, .ch-news { border-radius: 8px !important; }
+
+/* Controls line up and have consistent, accessible focus states. */
+[data-baseweb='select'] > div,
+[data-testid='stTextInput'] input,
+[data-testid='stNumberInput'] input,
+[data-testid='stTextArea'] textarea {
+  border-radius: 7px !important;
+  border-color: #355a45 !important;
+}
+[data-testid='stRadio'] div[role='radiogroup'] { gap: .45rem !important; }
+[data-testid='stRadio'] div[role='radiogroup'] > label {
+  border-radius: 8px !important;
+  border-color: var(--ui-border) !important;
+  transition: border-color .15s ease, background .15s ease !important;
+}
+[data-testid='stRadio'] div[role='radiogroup'] > label:hover {
+  border-color: rgba(201,164,92,.7) !important;
+}
+[data-testid='stRadio'] div[role='radiogroup'] > label:has(input:checked) {
+  border-color: var(--brass) !important;
+  background: var(--ui-panel-hover) !important;
+}
+div.stButton > button,
+[data-testid='stDownloadButton'] button {
+  border-radius: 7px !important;
+  min-height: 2.45rem;
+  font-size: .9rem;
+  box-shadow: none !important;
+}
+div.stButton > button[kind='primary'] {
+  box-shadow: 0 2px 0 rgba(0,0,0,.12) !important;
+}
+[data-testid='stAlert'] { border-radius: 8px !important; }
+hr { margin: .45rem 0 !important; border-color: var(--ui-border) !important; }
+[data-testid='stCaptionContainer'] { margin: 0 !important; }
+[data-testid='stCaptionContainer'] p { font-size: .82rem !important; color: var(--muted) !important; }
+.annual-progress { box-shadow: none !important; }
+.ch-banner { box-shadow: none !important; }
+.setup-hero { box-shadow: none !important; }
+
+@media (max-width: 760px) {
+  .block-container { padding-top: .7rem !important; }
+  [data-testid='stVerticalBlock'] { gap: .55rem !important; }
+  [data-testid='stHorizontalBlock'] { gap: .5rem !important; }
+  [data-testid='stTabs'] [data-baseweb='tab-list'] { border-radius: 7px 7px 0 0; }
+  [data-testid='stTabs'] button[data-baseweb='tab'] {
+    flex: 1 1 auto !important;
+    font-size: .8rem !important;
+    padding: .45rem .5rem !important;
+  }
+}
+
 </style>
 """
 
