@@ -47,5 +47,6 @@ def advance(s):
 def rows(s):
     ensure(s)
     return [{"Economy": name, "Real GDP growth (%)": round(float(v["growth"]), 2),
-             "Direction": "Growing faster" if v.get("momentum", 0) > 0.18 else ("Slowing / contracting" if v.get("momentum", 0) < -0.18 else "Steady")}
+             "Direction": ("Growing" if float(v["growth"]) > 0 else "Contracting" if float(v["growth"]) < 0 else "Flat"),
+             "Momentum": ("Accelerating" if v.get("momentum", 0) > 0.18 else ("Slowing" if v.get("momentum", 0) < -0.18 else "Steady"))}
             for name, v in s.world_economy.items()]
