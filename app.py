@@ -473,10 +473,9 @@ def decision_screen():
 if s.block == 3 and s.active_crisis is None:
     budget_screen()
 else:
-    # Focused workspace: keep the active decision uncluttered and put supporting
-    # information behind clear tabs rather than squeezing it into a narrow column.
-    tab_decision, tab_dashboard, tab_briefing, tab_fiscal, tab_parliament = st.tabs(
-        ['⚖️ Current decision', '📊 National dashboard', '📰 Briefing & consequences', '🏦 Fiscal toolkit', '🏛️ Parliament']
+    # Keep the main navigation short; less-frequently-used management tools live together.
+    tab_decision, tab_dashboard, tab_briefing, tab_government = st.tabs(
+        ['⚖️ Decision', '📊 Dashboard', '📰 Briefing', '🏛️ Government & tools']
     )
     with tab_decision:
         if s.active_crisis is not None:
@@ -485,8 +484,18 @@ else:
             request_screen()
         else:
             decision_screen()
+        with st.expander('How the annual cycle works'):
+            g1, g2, g3 = st.columns(3, gap='medium')
+            for col, num in zip((g1, g2, g3), (1, 2, 3)):
+                phase = phase_info(num)
+                with col:
+                    st.markdown(f"**Phase {num} · {phase['title']}**")
+                    st.caption(phase['guide'])
+            st.caption('Two major policy decisions lead into a Budget vote each year. Political capital is limited; use it where it matters most.')
+
     with tab_dashboard:
         dashboard()
+
     with tab_briefing:
         has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
         if has_briefing:
@@ -501,48 +510,51 @@ else:
         else:
             st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
 
-    with tab_fiscal:
-        st.caption('Use this toolkit in any phase to decide when to spend political capital on Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
-        features.render()
+    with tab_government:
+        gov_parliament, gov_fiscal, gov_cabinet = st.tabs(
+            ['Parliament', 'Fiscal toolkit', 'Cabinet & history']
+        )
+        with gov_parliament:
+            parliament.render()
+        with gov_fiscal:
+            st.caption('Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
+            features.render()
+        with gov_cabinet:
+            st.markdown('### Cabinet management')
+            used_terms = s.setdefault('cabinet_reshuffle_terms', [])
+            if int(s.term) in used_terms:
+                st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
+            else:
+                st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
+                reshuffle = st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
+                                      disabled=int(s.get('political_capital_points', 0)) < 2,
+                                      use_container_width=True)
+                if reshuffle:
+                    state.checkpoint()
+                    before = state.values()
+                    state.snapshot()
+                    s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
+                    s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
+                    s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
+                    if float(s.backbench_opinion) < 45:
+                        s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
+                        s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
+                        s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
+                    else:
+                        s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
+                        s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
+                    used_terms.append(int(s.term))
+                    state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
+                    state.record()
+                    st.rerun()
 
-    with tab_parliament:
-        parliament.render()
-        st.divider()
-        st.markdown("### 🧑‍💼 Cabinet management")
-        used_terms = s.setdefault('cabinet_reshuffle_terms', [])
-        if int(s.term) in used_terms:
-            st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
-        else:
-            st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
-            reshuffle = st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
-                                  disabled=int(s.get('political_capital_points', 0)) < 2,
-                                  use_container_width=True)
-            if reshuffle:
-                state.checkpoint()
-                before = state.values()
-                state.snapshot()
-                s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
-                s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
-                s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
-                if float(s.backbench_opinion) < 45:
-                    s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
-                    s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
-                    s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
-                else:
-                    s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
-                    s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
-                used_terms.append(int(s.term))
-                state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
-                state.record()
-                st.rerun()
-        st.divider()
-        st.markdown("### 📖 The political story so far")
-        recent = [item for item in s.get('history', []) if int(item.get('term', 1)) == int(s.term)][-5:]
-        if recent:
-            for item in reversed(recent):
-                kind = str(item.get('kind', 'event')).replace('_', ' ').title()
-                choice = f" — {item.get('choice')}" if item.get('choice') else ""
-                st.markdown(f"**Year {item.get('year', '?')} · {kind}: {item.get('title', 'Political development')}**")
-                st.caption((str(item.get('note', '')) or f"Your choice: {item.get('choice', 'no recorded choice')}{choice}")[:350])
-        else:
-            st.info("Your political story begins with your first decision.")
+            st.markdown('### The political story so far')
+            recent = [item for item in s.get('history', []) if int(item.get('term', 1)) == int(s.term)][-5:]
+            if recent:
+                for item in reversed(recent):
+                    kind = str(item.get('kind', 'event')).replace('_', ' ').title()
+                    choice = f" — {item.get('choice')}" if item.get('choice') else ""
+                    st.markdown(f"**Year {item.get('year', '?')} · {kind}: {item.get('title', 'Political development')}**")
+                    st.caption((str(item.get('note', '')) or f"Your choice: {item.get('choice', 'no recorded choice')}{choice}")[:350])
+            else:
+                st.info("Your political story begins with your first decision.")
