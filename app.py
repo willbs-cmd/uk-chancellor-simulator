@@ -269,6 +269,33 @@ def dashboard():
     with tab_polls:
         render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
     with tab_nation:
+        gdp = float(s.get('gdp_trillion', 3.0))
+        nominal_growth = ((1 + float(s.growth) / 100.0) * (1 + float(s.inflation) / 100.0) - 1) * 100
+        st.markdown('### 💷 Size of the UK economy')
+        g1, g2, g3 = st.columns(3)
+        g1.metric('Estimated GDP', f'£{gdp:.3f} trillion',
+                  help='A simulated starting estimate, updated each in-game spring using real growth and inflation. Not a live official statistic.')
+        g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
+        g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
+                  help='Approximate growth in the money value of output, including inflation.')
+        st.caption('GDP is the value of goods and services produced in the UK. The GDP figure is a gameplay estimate; country comparisons below are illustrative reference rates, not live forecasts.')
+        st.markdown('#### 🌍 How UK growth compares with other economies')
+        peers = pd.DataFrame([
+            {'Economy': 'United Kingdom (your game)', 'Real GDP growth (%)': round(float(s.growth), 2), 'Basis': 'Your simulated economy'},
+            {'Economy': 'United States', 'Real GDP growth (%)': 2.0, 'Basis': 'Illustrative benchmark'},
+            {'Economy': 'Euro area', 'Real GDP growth (%)': 1.2, 'Basis': 'Illustrative benchmark'},
+            {'Economy': 'Germany', 'Real GDP growth (%)': 1.0, 'Basis': 'Illustrative benchmark'},
+            {'Economy': 'France', 'Real GDP growth (%)': 1.1, 'Basis': 'Illustrative benchmark'},
+            {'Economy': 'Japan', 'Real GDP growth (%)': 0.8, 'Basis': 'Illustrative benchmark'},
+            {'Economy': 'China', 'Real GDP growth (%)': 4.5, 'Basis': 'Illustrative benchmark'},
+        ])
+        peers = peers.sort_values('Real GDP growth (%)', ascending=False).reset_index(drop=True)
+        peers.insert(0, 'Rank', range(1, len(peers) + 1))
+        st.dataframe(peers, hide_index=True, use_container_width=True)
+        hist = s.get('gdp_history', [])
+        if hist:
+            st.markdown('#### 📈 Your GDP over time')
+            st.dataframe(pd.DataFrame(hist), hide_index=True, use_container_width=True)
         country.render()
     with tab_imf:
         st.markdown(
