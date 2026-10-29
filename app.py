@@ -280,14 +280,37 @@ def dashboard():
         g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
                   help='Approximate growth in the money value of output, including inflation.')
         st.caption('GDP is the value of goods and services produced in the UK. The GDP figure is a gameplay estimate; country comparisons below are illustrative reference rates, not live forecasts.')
-        st.markdown('#### 🌍 How UK growth compares with other economies')
+        st.markdown('#### 🌍 Global economy league — cumulative real growth since you took office')
         world_economy.ensure(s)
-        peer_rows = [{'Economy': 'United Kingdom (your game)', 'Real GDP growth (%)': round(float(s.growth), 2),
-                      'Direction': 'Growing' if float(s.growth) > 0 else 'Contracting' if float(s.growth) < 0 else 'Flat'}]
-        peer_rows += world_economy.rows(s)
-        peers = pd.DataFrame(peer_rows).sort_values('Real GDP growth (%)', ascending=False).reset_index(drop=True)
-        peers.insert(0, 'Rank', range(1, len(peers) + 1))
-        st.dataframe(peers, hide_index=True, use_container_width=True)
+        uk_index = 100.0
+        for item in s.get('gdp_history', []):
+            try:
+                uk_index *= 1 + float(item.get('Real GDP growth (%)', 0)) / 100.0
+            except (TypeError, ValueError):
+                pass
+        league_rows = [{
+            '#': 0, 'Economy': '🇬🇧  United Kingdom  🟠 You',
+            'Output idx': round(uk_index, 1), 'Growth': f'{float(s.growth):+.1f}%',
+            'GDP ($tn)': round(float(s.get('gdp_trillion', 3.0)) * 1.27, 2), '_sort': uk_index
+        }]
+        for row in world_economy.rows(s):
+            league_rows.append({
+                '#': 0, 'Economy': row['Flag'] + '  ' + row['Economy'],
+                'Output idx': row['Output index'], 'Growth': row['Growth'],
+                'GDP ($tn)': row['GDP ($tn)'], '_sort': row['Output index']
+            })
+        league_rows.sort(key=lambda row: row['_sort'], reverse=True)
+        for rank, row in enumerate(league_rows, 1):
+            row['#'] = rank
+        league = pd.DataFrame(league_rows).drop(columns=['_sort'])
+        st.dataframe(league, hide_index=True, use_container_width=True,
+                     column_config={
+                         '#': st.column_config.NumberColumn('#', format='%d'),
+                         'Output idx': st.column_config.NumberColumn('OUTPUT IDX', format='%.1f'),
+                         'Growth': st.column_config.TextColumn('GROWTH'),
+                         'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
+                     })
+        st.caption('Output index starts at 100 and compounds by annual real GDP growth. GDP values are illustrative game estimates, not live data.')
         if s.get('world_history'):
             with st.expander('World economy history'):
                 st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
