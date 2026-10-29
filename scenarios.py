@@ -15,7 +15,9 @@ CRISES = load_json('crises.json')['crises']
 
 RANDOM_POOL = ['gilt_revolt', 'nhs_walkout', 'energy_bankruptcy', 'pension_hole', 'cyber_attack', 'floods', 'bank_run',
                'steel_closure', 'border_surge', 'student_loans', 'water_collapse', 'winter_flu', 'rating_warning',
-               'prison_riot', 'ai_job_crisis', 'grid_blackout', 'farming_collapse', 'flash_crash']
+               'prison_riot', 'ai_job_crisis', 'grid_blackout', 'farming_collapse', 'flash_crash',
+               'global_recession', 'oil_price_spike', 'global_supply_crunch', 'trade_war', 'banking_panic',
+               'technology_boom', 'food_price_crisis', 'export_surge', 'climate_disaster', 'sovereign_debt_crisis']
 
 IDEOLOGY_LINKS = {'Hard Left': 'capital_flight', 'Free-Market': 'utility_failure', 'Fiscal Austerity': 'service_collapse'}
 
