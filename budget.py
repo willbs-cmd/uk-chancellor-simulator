@@ -284,6 +284,15 @@ def _reset():
     for k, v in s.budget_applied['spend_pol'].items(): s[f'bsp_{k}'] = v
 
 
+
+def _reset_spending_draft():
+    """Discard only departmental draft changes and restore the last approved allocation."""
+    s = st.session_state
+    ensure()
+    for k in SPEND_DEFAULTS:
+        s[f'bs_{k}'] = float(s.budget_applied.get('spend', {}).get(k, 0.0))
+
+
 # ---------------------------------------------------------------- the Commons vote
 def rebel_risks(b):
     """Who your own side will be angry about in Budget ``b``: a list of (stat, size, message)."""
@@ -520,16 +529,22 @@ def _tax_row(k, t, s):
 
 
 def _spend_row(k, sp, s):
-    base = s.dept_spend[k]
-    c1, c2, c3 = st.columns([2.2, 3, 1.4])
+    base = float(s.dept_spend[k])
+    pct = float(s.get(f'bs_{k}', s.budget_applied.get('spend', {}).get(k, 0.0)))
+    c1, c2, c3 = st.columns([2.0, 3.2, 1.35], gap='small')
     with c1:
-        st.markdown(f"<div class='lv'>{sp['short']}<br><small>base £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='lv'><b>{sp['short']}</b><br><small>Baseline £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
     with c2:
-        st.slider(f"{sp['label']} slider", min_value=-15.0, max_value=15.0, value=0.0, step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
+        st.slider(
+            f"{sp['label']} slider", min_value=-15.0, max_value=15.0,
+            step=0.5, key=f'bs_{k}', format="%+.1f%%",
+            label_visibility="collapsed",
+            help="Change this department's annual budget relative to today's approved baseline. Negative values are cuts; positive values are increases."
+        )
     with c3:
         pct = float(s[f'bs_{k}'])
         new_val = base * (1.0 + pct / 100.0)
-        st.markdown(_value_html(f'£{new_val:,.1f}b', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%)'),
+        st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%)'),
                     unsafe_allow_html=True)
 
 
@@ -703,7 +718,21 @@ def render(submit=None, after_summary=None):
         st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. The Laffer effect is a simplified game rule: very high rates may raise less extra revenue than expected.')
 
     with t_spend:
-        st.caption(f"Adjust department budgets against today's baseline. The draft changes compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / rev_now * 100:.1f}% of receipts).")
+        spend_values = {k: float(cur['spend'].get(k, 0.0)) for k in SPEND_DEFAULTS}
+        cut_count = sum(1 for v in spend_values.values() if v < -0.05)
+        rise_count = sum(1 for v in spend_values.values() if v > 0.05)
+        net_change = sum(float(s.dept_spend[k]) * spend_values[k] / 100.0 for k in SPEND_DEFAULTS)
+        st.caption(f"Department budgets are changes against today's approved baseline. They only take effect when the Budget is delivered and compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
+        control_cols = st.columns([2.2, 1, 1], gap='small')
+        control_cols[0].markdown(f"**{cut_count} departments cut · {rise_count} increased**  \\n<small>Net annual departmental change: £{net_change:+,.1f}bn</small>", unsafe_allow_html=True)
+        control_cols[1].button("Restore approved", key="restore_spend_draft", on_click=_reset_spending_draft,
+                               use_container_width=True, help="Discard all departmental draft changes and restore the last approved settings.")
+        control_cols[2].button("Reset all draft", key="reset_budget_draft", on_click=_reset,
+                               use_container_width=True, help="Discard all tax, spending and scheme changes in this Budget draft.")
+        if cut_count == len(SPEND_DEFAULTS) and all(v <= -14.5 for v in spend_values.values()):
+            st.warning("Every department is currently set to a 15% cut. These are saved draft slider values, not automatic game behaviour. Use Restore approved to discard them.")
+        elif cut_count:
+            st.info(f"This draft cuts funding for {cut_count} of {len(SPEND_DEFAULTS)} departments. Check the service and political consequences before delivering it.")
         spend_groups = [
             ("People & frontline services", ["welfare", "health", "education", "justice", "defence"]),
             ("Infrastructure & transition", ["transport", "housing", "climate"]),
@@ -782,7 +811,7 @@ def render_spending_review():
                     continue
                 base = float(s.dept_spend[key])
                 widget_key = f"sr_{period}_{key}"
-                default_pct = float(s.spending_review_plan.get(key, 0.0))
+                # Each annual review starts from the current approved baseline; last year's percentage is not silently repeated.\n                default_pct = 0.0
                 if widget_key not in s:
                     s[widget_key] = default_pct
                 with cols[i % 2]:
