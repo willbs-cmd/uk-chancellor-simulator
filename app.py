@@ -359,13 +359,20 @@ def crisis_screen():
     if crisis is None:
         s.active_crisis = None
         st.rerun()
-    crisis_card(crisis['title'])
-    humphrey_message(crisis['humphrey'])
+    st.markdown(
+        f"<div class='briefing-kicker'><span class='briefing-alert-dot'></span> COBRA · EMERGENCY DECISION</div><div class='briefing-heading'>{crisis['title']}</div>",
+        unsafe_allow_html=True,
+    )
     if s.get('crisis_reason'):
-        st.caption(s.crisis_reason)
+        st.markdown(f"<div class='briefing-context'>{s.crisis_reason}</div>", unsafe_allow_html=True)
+    humphrey_message(crisis['humphrey'])
     labels = scen.option_labels(crisis)
-    choice = st.radio('Choose emergency response:', labels, index=None, key=f'crisis_{s.steps}', label_visibility='collapsed')
-    if st.button('Resolve Crisis', type='primary', disabled=choice is None):
+    st.markdown("<div class='choice-instruction'>SELECT YOUR RESPONSE <span>One decision · Consequences may be immediate or delayed</span></div>", unsafe_allow_html=True)
+    with st.container(key='policy_options'):
+        choice = st.radio('Choose emergency response:', labels, index=None, key=f'crisis_{s.steps}', label_visibility='collapsed')
+    if choice is not None:
+        st.markdown(f"<div class='choice-confirm'><span>SELECTED RESPONSE</span><strong>{choice}</strong><small>Confirm to put this emergency measure into effect.</small></div>", unsafe_allow_html=True)
+    if st.button('Authorise emergency response', type='primary', disabled=choice is None, use_container_width=True):
         engine.resolve_crisis(labels.index(choice))
         st.rerun()
 
@@ -395,11 +402,12 @@ def decision_screen():
     options = engine.current_options()
     title = decision['title']
     phase = phase_info(s.block)
-    st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase {s.block} · {phase['name']}</div><div class='dc-title'>{title}</div>", unsafe_allow_html=True)
-    st.write(decision['text'])
+    st.markdown(f"<div class='briefing-kicker'>CABINET OFFICE · POLICY SUBMISSION <span>YEAR {s.year} / PHASE {s.block}</span></div><div class='briefing-heading'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='briefing-context'>{decision['text']}</div>", unsafe_allow_html=True)
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
     labels = [o['label'] for o in options]
+    st.markdown("<div class='choice-instruction'>OPTIONS FOR THE CHANCELLOR <span>Select an option to inspect its likely effects</span></div>", unsafe_allow_html=True)
     with st.container(key='policy_options'):
         choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
                           label_visibility='collapsed',
@@ -407,20 +415,21 @@ def decision_screen():
     if choice is not None:
         selected = options[labels.index(choice)]
         effect_text = state.fmt_fx(selected.get('effect', {}))
+        st.markdown("<div class='decision-brief-label'>CHANCELLOR'S DECISION BRIEF</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.markdown("#### 📋 Decision brief")
-            st.markdown(f"**Selected approach:** {choice}")
+            st.markdown(f"**{choice}**")
             if effect_text:
-                st.caption("Immediate modelled effects")
-                st.write(effect_text)
+                st.caption("MODELLED IMMEDIATE EFFECTS")
+                st.markdown(f"<div class='decision-impact'>{effect_text}</div>", unsafe_allow_html=True)
             else:
-                st.caption("This option has no direct stat changes listed; its consequences may be political or delayed.")
+                st.caption("No direct stat changes are listed. Consequences may be political or delayed.")
             delayed = selected.get('delayed')
             if delayed:
                 st.markdown(f"**Delayed consequence — {delayed.get('title', 'Follow-up event')}**")
                 st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Timing: about {delayed.get('after', 1)} action(s) later.")
             st.caption("Parliament can reduce the impact: a clear passage applies the full effect, a narrow passage applies 70%, and a rejected bill applies only 25%. Effects are estimates, not guaranteed outcomes.")
-    if st.button('Execute Policy', type='primary', disabled=choice is None, use_container_width=True):
+        st.markdown("<div class='decision-authority'>DECISION PENDING · Your choice is not enacted until you authorise it below.</div>", unsafe_allow_html=True)
+    if st.button('Authorise policy decision', type='primary', disabled=choice is None, use_container_width=True):
         engine.execute_decision(options[labels.index(choice)])
         st.rerun()
 
