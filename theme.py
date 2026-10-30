@@ -1255,6 +1255,16 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
   }
 }
 
+
+/* Local election campaign and results-night presentation */
+.local-election-banner{border:1px solid rgba(211,177,112,.72);border-radius:14px;padding:24px 28px;margin:14px 0 18px;background:linear-gradient(115deg,rgba(94,39,34,.96),rgba(48,27,29,.96));box-shadow:0 12px 30px rgba(0,0,0,.16);animation:treasury-enter .55s ease both}
+.local-election-banner>span{color:#d7b46d;font-size:.72rem;font-weight:800;letter-spacing:.16em}
+.local-election-banner h2{margin:.35rem 0;color:#f4e8d4;font-family:Georgia,serif;font-size:clamp(1.8rem,3vw,2.8rem)}
+.local-election-banner p{margin:0;color:rgba(244,232,212,.72)}
+.local-election-countdown{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-left:3px solid #d2ad6a;padding:14px 18px;margin:16px 0;background:rgba(30,23,25,.45);border-radius:0 9px 9px 0}
+.local-election-countdown span{color:rgba(244,232,212,.68)}
+.local-election-banner.results{border-left:5px solid #d2ad6a}
+
 </style>
 """
 
