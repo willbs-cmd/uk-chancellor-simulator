@@ -11,6 +11,7 @@ import imf_outlook
 import world_economy
 import politics
 import parliament
+import local_elections
 import scenarios as scen
 import state
 import treasury
@@ -548,7 +549,7 @@ with tab_economy:
 
 with tab_government:
     st.markdown('### Government and Parliament')
-    gov_polls, gov_parliament, gov_office = st.tabs(['Polling', 'Parliament', "Chancellor's Office"])
+    gov_polls, gov_parliament, gov_local, gov_office = st.tabs(['Polling', 'Parliament', 'Local Elections', "Chancellor's Office"])
     with gov_polls:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
@@ -556,6 +557,8 @@ with tab_government:
             st.info('Polling history will appear after the first update.')
     with gov_parliament:
         parliament.render()
+    with gov_local:
+        local_elections.render()
     with gov_office:
         chancellor_office.render()
 
