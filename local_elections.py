@@ -80,9 +80,8 @@ def calculate():
     gov_share = gov_seats / all_wards
     # Local elections are a political signal, not a second general election.
     approval_change = round(max(-3.0, min(3.0, (gov_share - 0.34) * 7.0)), 1)
-    s.approval = round(max(0.0, min(100.0, s.approval + approval_change)), 1)
-    s.pm_opinion = round(max(0.0, min(100.0, s.pm_opinion + approval_change * 0.7)), 1)
-    s.party_opinion = round(max(0.0, min(100.0, s.party_opinion + approval_change * 0.5)), 1)
+    # Keep calculate() pure: previewing or rendering results must never mutate a save.
+    # Effects are applied exactly once in hold_election().
     ordered = sorted(totals.items(), key=lambda item: item[1], reverse=True)
     previous = (s.get('local_election_history') or [])[-1] if s.get('local_election_history') else None
     seat_swing = {p: totals[p] - int(previous.get('seats', {}).get(p, 0)) for p in state.PARTIES} if previous else {p: 0 for p in state.PARTIES}
@@ -116,9 +115,10 @@ def hold_election():
     s.local_election_result = result
     s.local_election_due = False
     s.council_control = dict(result['council_control'])
-    s.party_opinion = round(max(0.0, min(100.0, float(s.get('party_opinion', 65)) + result['party_change'])), 1)
-    s.backbench_opinion = round(max(0.0, min(100.0, float(s.get('backbench_opinion', 60)) + result['backbench_change'])), 1)
+    s.approval = round(max(0.0, min(100.0, float(s.get('approval', 50)) + result['approval_change'])), 1)
     s.pm_opinion = round(max(0.0, min(100.0, float(s.get('pm_opinion', 75)) + result['approval_change'] * 0.7)), 1)
+    s.party_opinion = round(max(0.0, min(100.0, float(s.get('party_opinion', 65)) + result['approval_change'] * 0.5 + result['party_change'])), 1)
+    s.backbench_opinion = round(max(0.0, min(100.0, float(s.get('backbench_opinion', 60)) + result['backbench_change'])), 1)
     s.local_government_mandate = round(float(result['local_government_mandate']), 1)
     capital = int(s.get('political_capital_points', 5))
     if result['majority']:
@@ -126,7 +126,7 @@ def hold_election():
     elif result['verdict'] == 'A local election disaster':
         s.political_capital_points = max(0, capital - 1)
     s.message = (f"Local election results are in. {result['governing_party']} won "
-                 f"{result['governing_seats']} of {result['total_wards']} simulated council seats. {result['verdict']}.")
+                 f"{result['governing_seats']} of {result['total_wards']} simulated council wards. {result['verdict']}.")
     state.record()
     return result
 
@@ -160,23 +160,23 @@ def render(widget_namespace='government'):
         st.warning(f"{result['governing_party']} leads the seat tally but falls short of a majority.")
     a, b, cc, d = st.columns(4)
     has_previous = len(s.get("local_election_history", [])) > 1
-    a.metric("Governing party seats", f"{result['governing_seats']}/{result['total_wards']}", delta=f"{result.get('seat_swing', {}).get(result['governing_party'], 0):+d}" if has_previous else None)
+    a.metric("Governing party wards", f"{result['governing_seats']}/{result['total_wards']}", delta=f"{result.get('seat_swing', {}).get(result['governing_party'], 0):+d}" if has_previous else None)
     b.metric("Estimated turnout", f"{result['turnout']:.1f}%")
     cc.metric("National local vote", f"{result['vote_share'].get(result['governing_party'], 0):.1f}%", delta=f"{result.get('vote_swing', {}).get(result['governing_party'], 0):+.1f} pts" if has_previous else None)
     d.metric("Approval impact", f"{result['approval_change']:+.1f} pts")
     st.info(f"Party unity {result['party_change']:+.1f} · Backbench morale {result['backbench_change']:+.1f}. " + ("Council majority: +1 political capital." if result['majority'] else "No council majority: local delivery faces more political friction."))
     st.markdown("### Council control across the UK")
-    st.caption("Simulated council seats are separate from Westminster constituencies.")
-    control_rows = [{"Party": p, "Council seats": n, "Change": f"{result.get('control_swing', {}).get(p, 0):+d}"} for p, n in sorted(result.get("council_control", result["seats"]).items(), key=lambda x: x[1], reverse=True)]
+    st.caption("Simulated council wards are separate from Westminster constituencies.")
+    control_rows = [{"Party": p, "Council wards": n, "Change": f"{result.get('control_swing', {}).get(p, 0):+d}"} for p, n in sorted(result.get("council_control", result["seats"]).items(), key=lambda x: x[1], reverse=True)]
     st.dataframe(pd.DataFrame(control_rows), hide_index=True, use_container_width=True)
     st.markdown("### The national council picture")
-    chart_rows = [{"Party": p, "Council seats": n} for p, n in sorted(result["seats"].items(), key=lambda x: x[1], reverse=True)]
+    chart_rows = [{"Party": p, "Council wards": n} for p, n in sorted(result["seats"].items(), key=lambda x: x[1], reverse=True)]
     st.bar_chart(pd.DataFrame(chart_rows).set_index("Party"), horizontal=True, use_container_width=True)
     st.markdown("### Council seat totals")
-    rows = [{"Party": p, "Council seats": n, "Seat change": f"{result.get('seat_swing', {}).get(p, 0):+d}" if has_previous else "First contest", "Local vote share": f"{result['vote_share'].get(p, 0):.1f}%", "Vote change": f"{result.get('vote_swing', {}).get(p, 0):+.1f} pts" if has_previous else "—"} for p, n in sorted(result["seats"].items(), key=lambda x: x[1], reverse=True)]
+    rows = [{"Party": p, "Council wards": n, "Seat change": f"{result.get('seat_swing', {}).get(p, 0):+d}" if has_previous else "First contest", "Local vote share": f"{result['vote_share'].get(p, 0):.1f}%", "Vote change": f"{result.get('vote_swing', {}).get(p, 0):+.1f} pts" if has_previous else "—"} for p, n in sorted(result["seats"].items(), key=lambda x: x[1], reverse=True)]
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
     st.markdown("### Regional battlegrounds")
-    regional = [{"Region": r["region"], "Leading party": r["winner"], "Leader's wards": r["seats"], "Contested wards": r["wards"], "Governing party wards": r["party_seats"].get(result["governing_party"], 0)} for r in result["regions"]]
+    regional = [{"Region": r["region"], "Leading party": r["winner"], "Leading party wards": r["seats"], "Contested wards": r["wards"], "Governing party wards": r["party_seats"].get(result["governing_party"], 0)} for r in result["regions"]]
     st.dataframe(pd.DataFrame(regional), hide_index=True, use_container_width=True)
     with st.expander("Full regional party breakdown", key=f"{widget_namespace}_regional_party_breakdown"):
         for r in result["regions"]:
