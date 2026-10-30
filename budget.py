@@ -83,6 +83,9 @@ def defaults():
 def _migrate_applied(applied):
     """Old save files predate some levers: fill the gaps with the defaults so nothing raises a KeyError."""
     for section, dflt in defaults().items():
+        if not isinstance(dflt, dict):
+            applied.setdefault(section, dflt)
+            continue
         got = applied.setdefault(section, {})
         for k, v in dflt.items():
             got.setdefault(k, v)
