@@ -62,8 +62,17 @@ IRRITANTS = [
 ]
 
 
+FISCAL_STRATEGIES = {
+    'balanced': {'label':'Balanced books', 'description':'Protect credibility and keep borrowing under control.', 'headroom':0.4,'approval':0.2,'market':0.2,'growth':0.02},
+    'investment': {'label':'Investment-led growth', 'description':'Borrow for productive investment and accept weaker near-term headroom.', 'headroom':-1.2,'approval':1.5,'market':-0.5,'growth':0.12},
+    'austerity': {'label':'Spending restraint', 'description':'Prioritise deficit reduction, with a political and growth cost.', 'headroom':1.5,'approval':-1.8,'market':0.7,'growth':-0.08},
+    'tax_cuts': {'label':'Tax-cutting growth', 'description':'Prioritise household and business incentives at the expense of receipts.', 'headroom':-1.0,'approval':1.0,'market':-0.5,'growth':0.08},
+    'redistribution': {'label':'Redistribution & public services', 'description':'Prioritise fairness and frontline services, requiring more revenue or borrowing.', 'headroom':-1.3,'approval':1.8,'market':-0.3,'growth':0.01},
+}
+
 def defaults():
     return {
+        'strategy': 'balanced',
         'tax': {k: v['default'] for k, v in TAXES.items()},
         'spend': {k: 0.0 for k in SPEND_DEFAULTS},
         'tax_pol': {k: False for k in TAX_POLICIES},
@@ -105,6 +114,7 @@ def ensure():
         s.budget_last_tax.setdefault(k, TAXES[k]['default'])
     s.setdefault('budget_last_pol', {'tax_pol': {k: False for k in TAX_POLICIES}, 'spend_pol': {k: False for k in SPEND_POLICIES}})
     s.setdefault('budget_impact', {})
+    s.setdefault('budget_message', '')
     s.setdefault('whip_ayes', 0)
     s.setdefault('whip_used', [])
 
@@ -117,6 +127,7 @@ def ensure():
 def read():
     s = st.session_state
     return {
+        'strategy': s.get('budget_strategy', s.budget_applied.get('strategy', 'balanced')),
         'tax': {k: s[f'bt_{k}'] for k in TAXES},
         'spend': {k: float(s[f'bs_{k}']) for k in SPEND_DEFAULTS},
         'tax_pol': {k: s[f'btp_{k}'] for k in TAX_POLICIES},
@@ -191,6 +202,10 @@ def impact(old, new):
     tax_pol_diff = (_policy_sum(new, 'tax_pol', TAX_POLICIES, 'yield_bn') - _policy_sum(old, 'tax_pol', TAX_POLICIES, 'yield_bn'))
     spend_pol_diff = (_policy_sum(new, 'spend_pol', SPEND_POLICIES, 'cost_bn') - _policy_sum(old, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
     bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff
+    old_st = FISCAL_STRATEGIES.get(old.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
+    new_st = FISCAL_STRATEGIES.get(new.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
+    sd = {k: new_st[k] - old_st[k] for k in ('headroom','approval','market','growth')}
+    bal += sd['headroom']
 
     household = (d['income'] + d['income_higher'] + d['income_additional'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']
                  + d['council_tax'] + d['sugar_duty'])
@@ -220,8 +235,8 @@ def impact(old, new):
     inflation = (0.12 * vat_pts + 0.003 * sum(ds.values()) + 0.015 * d['fuel'] + 0.005 * d['sin']
                  + 0.004 * d['carbon_levy'] + 0.002 * d['sugar_duty'])
 
-    return dict(headroom=bal, deficit=-bal, approval=approval, market=market,
-                growth=growth, inflation=inflation,
+    return dict(headroom=bal, deficit=-bal, approval=approval + sd['approval'], market=market + sd['market'],
+                growth=growth + sd['growth'], inflation=inflation,
                 real_wages=-0.010 * d['income'] - 0.006 * d['ni'] - 0.004 * d['fuel'] - 0.002 * d['council_tax'] - 0.001 * d['sugar_duty'],
                 unemployment=0.010 * d['ni'] + 0.004 * d['corp'] + 0.001 * d['financial_transaction'])
 
@@ -247,6 +262,7 @@ def _apply():
     s.inflation = round(s.inflation + imp['inflation'], 2)
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
     s.budget_applied = new
+    s.budget_strategy = new.get('strategy', 'balanced')
     acc = dict(s.get('budget_impact') or {})
     for k, v in imp.items():
         acc[k] = round(acc.get(k, 0.0) + v, 4)
@@ -257,6 +273,8 @@ def _apply():
 
 def _reset():
     s = st.session_state
+    s.budget_strategy = s.budget_applied.get('strategy', 'balanced')
+    s.budget_message = ''
     for k, v in s.budget_applied['tax'].items(): s[f'bt_{k}'] = v
     for k, v in s.budget_applied['spend'].items(): s[f'bs_{k}'] = float(v)
     for k, v in s.budget_applied['tax_pol'].items(): s[f'btp_{k}'] = v
@@ -584,6 +602,7 @@ def render(submit=None, after_summary=None):
     s = st.session_state
     applied, cur = s.budget_applied, read()
     changed = cur != applied
+    s.budget_strategy = cur.get('strategy', 'balanced')
 
     rev_now, spend_now = totals(cur)
     rev_app, spend_app = totals(applied)
@@ -620,6 +639,11 @@ def render(submit=None, after_summary=None):
              desc='Votes for the Budget in the Commons. You need 326.'),
     ])
 
+    st.markdown('### Choose your fiscal strategy')
+    strategy_keys = list(FISCAL_STRATEGIES)
+    st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
+    st.caption(FISCAL_STRATEGIES[s.budget_strategy]['description'] + ' Its effects feed into the draft and forecast.')
+    st.text_input("Chancellor's message to the country (optional)", key='budget_message', max_chars=180, placeholder='e.g. A fair deal for working people and a stronger economy')
     with st.expander('ℹ️ Budget glossary: what the figures mean', expanded=False):
         g1, g2, g3 = st.columns(3, gap='medium')
         with g1:
