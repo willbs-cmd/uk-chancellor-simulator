@@ -418,30 +418,35 @@ def decision_screen():
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
     labels = [o['label'] for o in options]
-    st.markdown("<div class='choice-instruction'>OPTIONS FOR THE CHANCELLOR <span>Select an option to inspect its likely effects</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='decision-section-head'><span>THE CABINET OPTIONS</span><small>Five competing approaches · Select one to open its assessment</small></div>", unsafe_allow_html=True)
     with st.container(key='policy_options'):
-        choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
+        choice = st.radio('Select policy approach:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
                           label_visibility='collapsed',
-                          help='Choose one of the five approaches. Select an option to inspect its likely effects before committing.')
+                          help='Each approach has different economic, political and delivery trade-offs.')
     if choice is not None:
         selected = options[labels.index(choice)]
+        assessment = engine.assess_decision(selected)
         effect_text = state.fmt_fx(selected.get('effect', {}))
-        st.markdown("<div class='decision-brief-label'>CHANCELLOR'S DECISION BRIEF</div>", unsafe_allow_html=True)
+        st.markdown("<div class='decision-brief-label'>TREASURY & CABINET ASSESSMENT</div>", unsafe_allow_html=True)
         with st.container(key='decision_brief', border=True):
             st.markdown(f"**{choice}**")
-            if effect_text:
-                st.caption("MODELLED IMMEDIATE EFFECTS")
-                st.markdown(f"<div class='decision-impact'>{effect_text}</div>", unsafe_allow_html=True)
-            else:
-                st.caption("No direct stat changes are listed. Consequences may be political or delayed.")
+            m1, m2, m3 = st.columns(3, gap='small')
+            m1.metric("Delivery confidence", f"{assessment['confidence']:.0%}", help="A live estimate based on Cabinet support, party discipline, market confidence and fiscal headroom.")
+            m2.metric("Projected Commons", f"{assessment['projected_ayes']}/650", help="A bill needs 326 votes to pass. 346 votes is treated as a clear passage.")
+            m3.metric("Likely vote", assessment['vote_label'])
+            st.caption("MODELLED POLICY EFFECTS · Before delivery and Commons adjustments")
+            st.markdown(f"<div class='decision-impact'>{effect_text or 'No immediate numerical effect is listed.'}</div>", unsafe_allow_html=True)
+            st.markdown("**Delivery risks & constraints**")
+            for risk in assessment['risks']:
+                st.markdown(f"- {risk}")
             delayed = selected.get('delayed')
             if delayed:
-                st.markdown(f"**Delayed consequence — {delayed.get('title', 'Follow-up event')}**")
-                st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Timing: about {delayed.get('after', 1)} action(s) later.")
-            st.caption("Parliament can reduce the impact: a clear passage applies the full effect, a narrow passage applies 70%, and a rejected bill applies only 25%. Effects are estimates, not guaranteed outcomes.")
-        st.markdown("<div class='decision-authority'>DECISION PENDING · Your choice is not enacted until you authorise it below.</div>", unsafe_allow_html=True)
+                st.markdown(f"**Later consequence — {delayed.get('title', 'Follow-up event')}**")
+                st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Expected timing: about {delayed.get('after', 1)} action(s) later.")
+            st.caption(f"Estimated combined implementation: {assessment['combined_factor']:.0%}. The final result depends on the Commons vote and your government's ability to deliver.")
+        st.markdown("<div class='decision-authority'>DECISION PENDING · Your selection has no effect until authorised.</div>", unsafe_allow_html=True)
     with st.container(key='decision_authorise'):
-        if st.button('Authorise policy decision', type='primary', disabled=choice is None, use_container_width=True):
+        if st.button('Take this decision to Cabinet & Commons', type='primary', disabled=choice is None, use_container_width=True):
             engine.execute_decision(options[labels.index(choice)])
             st.rerun()
 
