@@ -88,13 +88,22 @@ def calculate():
     seat_swing = {p: totals[p] - int(previous.get('seats', {}).get(p, 0)) for p in state.PARTIES} if previous else {p: 0 for p in state.PARTIES}
     vote_swing = {p: round(vote_share[p] - float(previous.get('vote_share', {}).get(p, 0)), 1) for p in state.PARTIES} if previous else {p: 0.0 for p in state.PARTIES}
     verdict = ('A decisive endorsement' if gov_share >= 0.45 else 'A respectable set of results' if gov_share >= 0.34 else 'A difficult night for the government' if gov_share >= 0.24 else 'A local election disaster')
+    council_control = {p: int(totals[p]) for p in state.PARTIES}
+    previous_control = s.get('council_control', {})
+    control_swing = {p: council_control[p] - int(previous_control.get(p, 0)) for p in state.PARTIES}
+    governing_majority = gov_seats > all_wards / 2
+    party_change = (2.5 if gov_share >= 0.40 else 1.0 if gov_share >= 0.34 else -2.0 if gov_share < 0.24 else -0.75)
+    backbench_change = (2.0 if gov_share >= 0.40 else 0.5 if gov_share >= 0.34 else -3.0 if gov_share < 0.24 else -1.0)
+    local_mandate = 2.0 if governing_majority else -2.0 if ordered[0][0] != governing else -0.5
     return {
         "term": int(s.term), "year": int(s.year), "governing_party": governing,
         "total_wards": all_wards, "seats": totals, "vote_share": vote_share,
         "regions": results, "governing_seats": gov_seats,
         "approval_change": approval_change, "winner": ordered[0][0],
         "seat_swing": seat_swing, "vote_swing": vote_swing, "strategy": strategy,
-        "verdict": verdict, "majority": gov_seats > all_wards / 2,
+        "verdict": verdict, "majority": governing_majority, "council_control": council_control,
+        "control_swing": control_swing, "party_change": party_change,
+        "backbench_change": backbench_change, "local_government_mandate": local_mandate,
         "turnout": round(rng.uniform(30.0, 42.0), 1),
         "note": "Illustrative simulated council contests; not a forecast or reconstruction of real council results.",
     }
@@ -106,6 +115,16 @@ def hold_election():
     s.local_election_history = list(s.get("local_election_history", [])) + [result]
     s.local_election_result = result
     s.local_election_due = False
+    s.council_control = dict(result['council_control'])
+    s.party_opinion = round(max(0.0, min(100.0, float(s.get('party_opinion', 65)) + result['party_change'])), 1)
+    s.backbench_opinion = round(max(0.0, min(100.0, float(s.get('backbench_opinion', 60)) + result['backbench_change'])), 1)
+    s.pm_opinion = round(max(0.0, min(100.0, float(s.get('pm_opinion', 75)) + result['approval_change'] * 0.7)), 1)
+    s.local_government_mandate = round(float(result['local_government_mandate']), 1)
+    capital = int(s.get('political_capital_points', 5))
+    if result['majority']:
+        s.political_capital_points = min(5, capital + 1)
+    elif result['verdict'] == 'A local election disaster':
+        s.political_capital_points = max(0, capital - 1)
     s.message = (f"Local election results are in. {result['governing_party']} won "
                  f"{result['governing_seats']} of {result['total_wards']} simulated council seats. {result['verdict']}.")
     state.record()
@@ -145,6 +164,11 @@ def render(widget_namespace='government'):
     b.metric("Estimated turnout", f"{result['turnout']:.1f}%")
     cc.metric("National local vote", f"{result['vote_share'].get(result['governing_party'], 0):.1f}%", delta=f"{result.get('vote_swing', {}).get(result['governing_party'], 0):+.1f} pts" if has_previous else None)
     d.metric("Approval impact", f"{result['approval_change']:+.1f} pts")
+    st.info(f"Party unity {result['party_change']:+.1f} · Backbench morale {result['backbench_change']:+.1f}. " + ("Council majority: +1 political capital." if result['majority'] else "No council majority: local delivery faces more political friction."))
+    st.markdown("### Council control across the UK")
+    st.caption("Simulated council seats are separate from Westminster constituencies.")
+    control_rows = [{"Party": p, "Council seats": n, "Change": f"{result.get('control_swing', {}).get(p, 0):+d}"} for p, n in sorted(result.get("council_control", result["seats"]).items(), key=lambda x: x[1], reverse=True)]
+    st.dataframe(pd.DataFrame(control_rows), hide_index=True, use_container_width=True)
     st.markdown("### The national council picture")
     chart_rows = [{"Party": p, "Council seats": n} for p, n in sorted(result["seats"].items(), key=lambda x: x[1], reverse=True)]
     st.bar_chart(pd.DataFrame(chart_rows).set_index("Party"), horizontal=True, use_container_width=True)
