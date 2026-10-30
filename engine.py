@@ -638,7 +638,8 @@ def compute_election():
     swings = {p: round(float(polls[p]) - float(previous[p]), 1) for p in state.PARTIES}
     turnout = round(max(55.0, min(78.0, 65.0 + random.uniform(-2.5, 2.5) + (float(s.approval) - 50) * 0.04)), 1)
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
-             coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,\n             constituency_results=constituency_results,
+             coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
+             constituency_results=constituency_results,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
