@@ -187,7 +187,7 @@ def render():
         "Hear from employers and investors about the conditions needed to expand, hire and invest in the UK.",
         "business_council",
         [
-            ("Prioritise stability and predictable taxes", "Offer businesses a stable policy environment rather than short-term giveaways.", {"market_conf": 2, "growth": 0.08, "business_confidence": 2}, "You commit to predictable tax policy and a stable investment environment. Business confidence improves modestly."),
+            ("Prioritise stability and predictable taxes", "Offer businesses a stable policy environment rather than short-term giveaways.", {"market_conf": 2, "growth": 0.08}, "You commit to predictable tax policy and a stable investment environment. Business confidence improves modestly."),
             ("Offer targeted investment allowances", "Encourage capital spending at a cost to the public finances.", {"headroom": -0.8, "growth": 0.18, "market_conf": 1}, "You introduce a targeted investment incentive. The measure costs headroom but could support capital formation."),
             ("Launch a skills and apprenticeships compact", "Work with employers to address shortages and improve workforce productivity.", {"headroom": -0.5, "growth": 0.15, "approval": 1, "cab_opinion": 1}, "You agree a skills compact with employers. It requires upfront funding but supports the long-term workforce."),
         ],
