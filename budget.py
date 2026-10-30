@@ -845,7 +845,19 @@ def render_spending_review():
         ("Other services", ["aid", "culture", "other"]),
     ]
     draft = {}
-    st.markdown("### Departmental settlements · Year 1")
+    # Secretaries submit politically and operationally differentiated bids each year.
+    bid_rates = {
+        "health": 5.0, "education": 4.0, "welfare": 3.0, "justice": 4.5,
+        "defence": 6.0, "transport": 7.0, "housing": 8.0, "science": 9.0,
+        "climate": 6.5, "aid": 2.0, "culture": 3.5, "other": 2.5,
+    }
+    st.markdown("### Departmental bids · Year 1")
+    st.caption("Each Secretary of State has submitted a funding request. Negotiate the settlement: generous awards improve ministerial support but cost more, while rejecting bids risks cabinet tension and service pressure.")
+    with st.expander("Read the Secretaries' submissions", expanded=False):
+        for key in departments:
+            base = float(s.dept_spend[key])
+            request = bid_rates.get(key, 3.0)
+            st.write(f"**{SPEND_DEFAULTS[key]['label']} Secretary:** requests a {request:+.1f}% uplift (£{base * request / 100.0:+.1f}bn) to meet service pressures and delivery commitments.")
     for group, keys in groups:
         with st.expander(group, expanded=(group == groups[0][0])):
             cols = st.columns(2)
@@ -854,8 +866,9 @@ def render_spending_review():
                     continue
                 base = float(s.dept_spend[key])
                 widget_key = f"sr_{period}_{key}"
-                # Each annual review starts from the current approved baseline; last year's percentage is not silently repeated.
-                default_pct = 0.0
+                # Each department begins at its submitted bid; the Chancellor can negotiate a lower or higher settlement.
+                requested_pct = bid_rates.get(key, 3.0)
+                default_pct = requested_pct
                 if widget_key not in s:
                     s[widget_key] = default_pct
                 with cols[i % 2]:
@@ -867,7 +880,7 @@ def render_spending_review():
                             f"{SPEND_DEFAULTS[key]['label']} · £{base:,.1f}bn baseline",
                             min_value=-8.0, max_value=15.0, step=0.5,
                             key=widget_key,
-                            help="Change to this department's annual baseline, applied when you approve the review."
+                            help=f"Secretary requested {requested_pct:+.1f}%. Your settlement is applied to the departmental baseline when approved."
                         )
                     draft[key] = round(base * (1 + pct / 100.0), 1)
 
@@ -915,6 +928,14 @@ def render_spending_review():
             elif annual_change < 0:
                 s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
             s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
+            # Cabinet satisfaction reflects how much of each Secretary's bid was funded.
+            bid_satisfaction = []
+            for key in departments:
+                requested = float(bid_rates.get(key, 3.0))
+                settled = float(s.get(f"sr_{period}_{key}", 0.0))
+                bid_satisfaction.append(max(-1.0, min(1.0, (settled - requested) / max(abs(requested), 2.0))))
+            cabinet_effect = sum(bid_satisfaction) / max(1, len(bid_satisfaction)) * 5.0
+            s.cab_opinion = round(_clip(float(s.get("cab_opinion", 65.0)) + cabinet_effect), 1)
             s.spending_review_plan = {
                 "term": int(s.get("term", 1)), "approved_year": int(s.get("year", 1)),
                 "year2_uplift": float(year2_uplift), "year3_uplift": float(year3_uplift),
@@ -926,6 +947,7 @@ def render_spending_review():
                 "period": period, "annual_change": round(annual_change, 1),
                 "departmental_total": round(proposed_total, 1),
                 "allocations": {k: round(v, 1) for k, v in draft.items()},
+                "cabinet_effect": round(cabinet_effect, 1),
             })
             s.event_cards = list(s.get("event_cards", []))
             s.event_cards.append({
