@@ -67,7 +67,7 @@ def calculate():
                            for p in state.PARTIES},
         })
 
-    vote_share = {p: round(vote_totals[p] / all_wards, 1) for p in state.PARTIES}
+    vote_share = {p: round(vote_totals[p] / all_wards * 100.0, 1) for p in state.PARTIES}
     governing = s.party
     gov_seats = totals.get(governing, 0)
     gov_share = gov_seats / all_wards
