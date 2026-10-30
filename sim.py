@@ -50,6 +50,7 @@ import budget  # noqa: E402
 import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
+import local_elections  # noqa: E402
 import econ  # noqa: E402
 import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
@@ -200,6 +201,19 @@ def check(n=None, difficulty=None):
     difficulty = difficulty or thresholds.get('default_difficulty', 'Hardcore')
     contract = thresholds['contract']
     failures = []
+
+    # Local election vote shares must be expressed as percentages and sum to 100.
+    try:
+        new_run('Labour', 'Normal', 24680)
+        local_result = local_elections.calculate()
+        vote_total = sum(local_result['vote_share'].values())
+        seat_total = sum(local_result['seats'].values())
+        if abs(vote_total - 100.0) > 1.0:
+            failures.append(f"Local election vote shares total {vote_total:.1f}%, expected approximately 100%.")
+        if seat_total != local_result['total_wards']:
+            failures.append(f"Local election seat totals add to {seat_total}, expected {local_result['total_wards']}.")
+    except Exception as exc:
+        failures.append(f"Local election regression check failed: {exc}")
 
     if len(decisions.DECISIONS) < contract['minimum_decisions']:
         failures.append(f"Only {len(decisions.DECISIONS)} policy decisions; expected at least {contract['minimum_decisions']}.")
