@@ -593,10 +593,13 @@ def compute_seats(polls, return_details=False):
         scores = {}
         for party in parties:
             national = max(0.1, float(polls.get(party, 0.0)))
-            local_lean = rng.gauss(0.0, 3.6)
+            local_lean = rng.gauss(0.0, 9.0)
             regional = nation_effects.get(nation, {}).get(party, 0.0)
-            # National parties have modest local variation; regionally rooted
-            # parties get a realistic concentration advantage in their nation.
+            # Constituency voting differs substantially from the national poll:
+            # local incumbency, candidates and tactical voting create meaningful
+            # seat-level variation. A narrow national lead must not become a
+            # near-total parliamentary sweep. Regional parties retain a geographic
+            # advantage in their home nations.
             scores[party] = max(0.01, national + local_lean + regional)
         winner = max(parties, key=lambda p: scores[p])
         seats[winner] += 1
