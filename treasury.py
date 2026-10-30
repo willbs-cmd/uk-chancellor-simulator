@@ -166,6 +166,15 @@ def render():
     b.metric("Latest annual investment income", f"£{float(s.treasury_last_investment_income):.2f}bn")
     c.metric("Extra receipts accumulated", f"£{float(s.treasury_cumulative_income):.1f}bn")
 
+    pressures = s.get("treasury_last_cost_pressures", {})
+    if pressures:
+        st.markdown("#### Annual spending pressures")
+        p1, p2, p3 = st.columns(3)
+        p1.metric("NHS & public services", f"£{float(pressures.get('NHS and public services (£bn)', 0)):.2f}bn")
+        p2.metric("Public-sector pay", f"£{float(pressures.get('Public-sector pay (£bn)', 0)):.2f}bn")
+        p3.metric("Combined annual pressure", f"£{float(pressures.get('Total recurring pressures (£bn)', 0)):.2f}bn")
+        st.caption("These are additional annual pressures on the fiscal margin, not the total budgets for the NHS or public-sector wages. Pension costs are modelled separately; debt-interest repricing is included in the Budget forecast.")
+
     with st.expander("Make a new public investment", expanded=False):
         keys = list(ASSETS)
         labels = {k: f"{ASSETS[k]['label']} · {ASSETS[k]['yield']*100:.1f}% indicative yield · {ASSETS[k]['risk']} risk" for k in keys}
