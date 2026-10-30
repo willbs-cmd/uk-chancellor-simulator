@@ -13,6 +13,22 @@ import country
 import econ
 import imf_outlook
 import state
+
+# Fictional Cabinet roster used by the simulation.
+DEPARTMENT_MINISTERS = {
+    "health": ("Dr Eleanor Shaw", "NHS waiting lists and hospital capacity"),
+    "education": ("James Whitfield", "school buildings and teacher retention"),
+    "welfare": ("Amira Patel", "child poverty and welfare reform"),
+    "justice": ("Robert Hales", "prison capacity and court backlogs"),
+    "defence": ("Dame Victoria Ashford", "readiness, equipment and NATO commitments"),
+    "transport": ("Daniel Mercer", "rail reliability and regional connectivity"),
+    "housing": ("Sophie Bennett", "housebuilding and affordable homes"),
+    "science": ("Professor Michael Grant", "research funding and productivity"),
+    "climate": ("Leila Morgan", "clean energy investment and net zero"),
+    "aid": ("Oliver Pembroke", "international development commitments"),
+    "culture": ("Catherine Ellis", "museums, arts and national heritage"),
+    "other": ("Thomas Reed", "local government and cross-department services"),
+}
 from content_store import load_json
 from theme import render_chips
 # Game-editable fiscal controls and policy choices live in data/policies.json.
@@ -102,6 +118,12 @@ def _migrate_depts(dept):
 
 def ensure():
     s = st.session_state
+    s.setdefault("cabinet_ministers", {})
+    s.setdefault("ministerial_loyalty", {})
+    s.setdefault("ministerial_resignations", [])
+    for key, (name, priority) in DEPARTMENT_MINISTERS.items():
+        s.cabinet_ministers.setdefault(key, name)
+        s.ministerial_loyalty.setdefault(key, 65.0)
     if 'dept_spend' not in s:
         s.dept_spend = {k: v['default'] for k, v in SPEND_DEFAULTS.items()}
     else:
@@ -857,7 +879,10 @@ def render_spending_review():
         for key in departments:
             base = float(s.dept_spend[key])
             request = bid_rates.get(key, 3.0)
-            st.write(f"**{SPEND_DEFAULTS[key]['label']} Secretary:** requests a {request:+.1f}% uplift (£{base * request / 100.0:+.1f}bn) to meet service pressures and delivery commitments.")
+            minister = s.cabinet_ministers.get(key, DEPARTMENT_MINISTERS[key][0])
+            loyalty = float(s.ministerial_loyalty.get(key, 65.0))
+            st.write(f"**{minister}, {SPEND_DEFAULTS[key]['label']} Secretary** · Ministerial confidence {loyalty:.0f}/100")
+            st.caption(f"Priority: {DEPARTMENT_MINISTERS[key][1]}. Requests a {request:+.1f}% uplift (£{base * request / 100.0:+.1f}bn).")
     for group, keys in groups:
         with st.expander(group, expanded=(group == groups[0][0])):
             cols = st.columns(2)
@@ -928,8 +953,36 @@ def render_spending_review():
             elif annual_change < 0:
                 s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
             s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
-            # Cabinet satisfaction reflects how much of each Secretary's bid was funded.
+            # Department-by-department loyalty remembers whether ministers repeatedly lose their bids.
             bid_satisfaction = []
+            resignations = []
+            for key in departments:
+                requested = float(bid_rates.get(key, 3.0))
+                settled = float(s.get(f"sr_{period}_{key}", 0.0))
+                gap = settled - requested
+                loyalty = float(s.ministerial_loyalty.get(key, 65.0))
+                loyalty_change = max(-8.0, min(3.0, gap * 0.75))
+                loyalty = round(_clip(loyalty + loyalty_change), 1)
+                s.ministerial_loyalty[key] = loyalty
+                if loyalty <= 15.0:
+                    minister = s.cabinet_ministers.get(key, DEPARTMENT_MINISTERS[key][0])
+                    resignations.append((key, minister))
+                    s.cabinet_ministers[key] = "Vacant — reshuffle required"
+                    s.ministerial_loyalty[key] = 0.0
+            if resignations:
+                s.ministerial_resignations.extend([
+                    {"period": period, "department": key, "minister": minister}
+                    for key, minister in resignations
+                ])
+                s.cab_opinion = round(_clip(float(s.get("cab_opinion", 65.0)) - 4.0 * len(resignations)), 1)
+                s.media_opinion = round(_clip(float(s.get("media_opinion", 50.0)) - 2.0 * len(resignations)), 1)
+                s.event_cards = list(s.get("event_cards", []))
+                for key, minister in resignations:
+                    s.event_cards.append({
+                        "title": f"{minister} resigns from Cabinet",
+                        "text": f"The {SPEND_DEFAULTS[key]['label']} Secretary has resigned after repeated disputes over departmental funding. The post is vacant pending a reshuffle.",
+                        "summary": "Cabinet crisis · A replacement is required",
+                    })
             for key in departments:
                 requested = float(bid_rates.get(key, 3.0))
                 settled = float(s.get(f"sr_{period}_{key}", 0.0))
