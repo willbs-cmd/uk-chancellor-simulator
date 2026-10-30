@@ -573,8 +573,12 @@ def compute_election():
     regional = party in state.REGIONAL
 
     sacked = s.pm_opinion < 40 or s.party_opinion < 35
+    history = s.get('poll_history', {})
+    previous = {p: (history.get(p, [polls[p]])[-2] if len(history.get(p, [])) > 1 else polls[p]) for p in state.PARTIES}
+    swings = {p: round(float(polls[p]) - float(previous[p]), 1) for p in state.PARTIES}
+    turnout = round(max(55.0, min(78.0, 65.0 + random.uniform(-2.5, 2.5) + (float(s.approval) - 50) * 0.04)), 1)
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
-             coalition=None, sacked=sacked, polls=polls,
+             coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
