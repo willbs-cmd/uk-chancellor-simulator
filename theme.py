@@ -791,6 +791,42 @@ hr { margin: .45rem 0 !important; border-color: var(--ui-border) !important; }
   }
 }
 
+
+/* APP WORKSPACE NAVIGATION */
+[data-testid="stTabs"] { margin-top: .15rem; }
+[data-testid="stTabs"] > div:first-child {
+  position: sticky; top: 2.6rem; z-index: 90;
+  background: rgba(13,31,23,.96); backdrop-filter: blur(12px);
+  border: 1px solid #2b5440; border-radius: 9px;
+  padding: 5px; margin: 0 0 .8rem 0;
+}
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap: 5px; border-bottom: 0; flex-wrap: nowrap;
+}
+[data-testid="stTabs"] button[data-baseweb="tab"] {
+  border: 1px solid transparent; border-radius: 7px;
+  padding: .58rem .9rem; min-height: 2.5rem;
+  color: var(--muted); font-weight: 600;
+}
+[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+  background: var(--leather-2); color: var(--paper);
+}
+[data-testid="stTabs"] button[aria-selected="true"] {
+  background: var(--leather-2); color: var(--paper);
+  border-color: var(--brass);
+}
+[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: .9rem; }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background: var(--brass); height: 0; }
+[data-testid="stTabs"] [data-baseweb="tab-border"] { display: none; }
+
+/* Tighter information density: fewer oversized gaps and cleaner section breaks. */
+[data-testid="stVerticalBlock"] { gap: .5rem; }
+[data-testid="stExpander"] { margin-bottom: .15rem; }
+[data-testid="stDataFrame"] { border: 1px solid #2b5440; border-radius: 8px; overflow: hidden; }
+hr { border-color: #2b5440 !important; margin: .7rem 0 !important; }
+h2 { margin-top: .45rem !important; }
+h3 { margin-top: .35rem !important; }
+
 </style>
 """
 
