@@ -14,6 +14,7 @@ import parliament
 import speech
 import scenarios as scen
 import state
+import treasury
 import world_economy
 
 SEATS = 650
@@ -453,6 +454,8 @@ def proceed_to_spring():
         'Nominal GDP growth (%)': round(nominal_growth, 2),
         'GDP (£tn)': float(s.gdp_trillion),
     })
+    # Higher nominal GDP expands the tax base; public assets add recurring income.
+    treasury.annual_update(nominal_growth)
     politics.shift_macro_cycle()
     # Long-run pressures compound annually rather than arriving as isolated crises.
     s.setdefault('longrun_productivity', 1.0)
