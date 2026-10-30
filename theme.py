@@ -1292,6 +1292,18 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
   [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:nth-child(3) { min-width:25%!important; }
 }
 
+
+/* Decision-system overhaul: clearer Cabinet docket and live delivery assessment. */
+.decision-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:.8rem 0 .45rem; color:var(--brass); font-size:.78rem; font-weight:700; letter-spacing:.12em; }
+.decision-section-head small { color:var(--muted); font-size:.76rem; font-weight:400; letter-spacing:0; }
+.st-key-decision_brief [data-testid="stMetric"] { background:rgba(8,25,18,.28); border:1px solid rgba(201,164,92,.22); border-radius:10px; padding:12px; }
+.st-key-decision_brief [data-testid="stMetricValue"] { font-family:'Newsreader',serif; }
+.st-key-policy_options [role="radiogroup"] { gap:8px!important; }
+.st-key-policy_options [role="radiogroup"] > label { border:1px solid rgba(201,164,92,.35); border-radius:9px; padding:12px 14px; background:rgba(255,255,255,.025); transition:background .15s ease,border-color .15s ease; }
+.st-key-policy_options [role="radiogroup"] > label:hover { border-color:var(--brass); background:rgba(201,164,92,.09); }
+.st-key-policy_options [role="radiogroup"] > label:has(input:checked) { border-color:var(--brass); background:rgba(201,164,92,.15); }
+@media(max-width:650px) { .decision-section-head { align-items:flex-start; flex-direction:column; gap:3px; } }
+
 </style>
 """
 
