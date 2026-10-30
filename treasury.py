@@ -62,7 +62,11 @@ def annual_update(nominal_growth):
     old_receipts = sum(budget.revenues(applied).values())
     s.tax_base_index = round(new_index, 5)
     new_receipts = sum(budget.revenues(applied).values())
-    tax_uplift = round(new_receipts - old_receipts, 2)
+    gross_tax_uplift = round(new_receipts - old_receipts, 2)
+    # Most extra receipts are absorbed by higher demand, public-service costs and
+    # existing spending pressures. Only a conservative share becomes new headroom.
+    # In a downturn, however, the full receipts loss feeds through automatically.
+    tax_uplift = round(gross_tax_uplift * 0.30 if gross_tax_uplift > 0 else gross_tax_uplift, 2)
 
     investment_income = 0.0
     asset_growth = 0.0
@@ -88,13 +92,14 @@ def annual_update(nominal_growth):
     s.treasury_cumulative_income = round(float(s.treasury_cumulative_income) + total_extra, 2)
     s.treasury_income_history.append({
         "Year": f"Term {s.term}, Year {s.year}",
-        "Tax receipts from growth (£bn)": tax_uplift,
+        "Gross extra tax receipts (£bn)": gross_tax_uplift,
+        "Net growth dividend to headroom (£bn)": tax_uplift,
         "Investment income (£bn)": investment_income,
         "Total extra receipts (£bn)": total_extra,
         "Tax base index": s.tax_base_index,
     })
     s.message += (
-        f" Treasury update: economic growth added £{tax_uplift:.1f}B to recurring tax receipts; "
+        f" Treasury update: economic growth generated £{gross_tax_uplift:.1f}B in extra tax receipts, of which £{tax_uplift:.1f}B improves headroom after spending pressures; "
         f"public investments generated £{investment_income:.1f}B."
     )
 
