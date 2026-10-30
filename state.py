@@ -205,6 +205,7 @@ def _defaults():
         parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],
         parliament_actions={}, parliament_last_strategy=None,
         local_election_due=False, local_election_result=None, local_election_history=[],
+        council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], chancellor_actions=[],
         spending_review_last_period='', spending_review_plan={}, spending_review_history=[],
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
@@ -308,7 +309,7 @@ SAVE_KEYS = [
     'threshold_freeze_scope',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
-    'parliament_actions', 'parliament_last_strategy', 'local_election_due', 'local_election_result', 'local_election_history', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'parliament_actions', 'parliament_last_strategy', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 
