@@ -286,6 +286,19 @@ def check(n=None, difficulty=None):
         failures.append("A constituency result contains an unsupported winning party.")
     if len({row.get('code') for row in local_results}) != 650:
         failures.append("The constituency election model has duplicate or missing seat codes.")
+    # A party polling around one-third should not automatically sweep almost every seat.
+    competitive_polls = {
+        'Green Party': 34.9, 'Labour': 22.6, 'Conservative': 22.2,
+        'Reform UK': 8.9, 'Liberal Democrats': 8.8, 'SNP': 1.3,
+        'Plaid Cymru': 1.3,
+    }
+    competitive_seats = engine.compute_seats(competitive_polls)
+    if sum(competitive_seats.values()) != 650:
+        failures.append("A competitive election must allocate all 650 seats.")
+    if competitive_seats.get('Green Party', 0) >= 600:
+        failures.append("A 34.9% polling party is incorrectly sweeping almost every constituency.")
+    if competitive_seats.get('Labour', 0) == 0 or competitive_seats.get('Conservative', 0) == 0:
+        failures.append("Major parties with around 22% national support should win constituency representation.")
     repeated_totals, repeated_results = engine.compute_seats(sample_polls, return_details=True)
     if seat_totals != repeated_totals or local_results != repeated_results:
         failures.append("The same polling inputs must produce a repeatable constituency result.")
