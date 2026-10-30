@@ -99,14 +99,14 @@ def hold_election():
     return result
 
 
-def render():
+def render(widget_namespace='government'):
     s = st.session_state
     st.markdown("## 🗳️ Local elections")
     st.caption("Annual council contests provide a mid-term test of your government's popularity. Council seats are simulated from national polling with regional and ward-level variation.")
     result = s.get("local_election_result")
     if s.get("local_election_due") and (not result or result.get("term") != s.term or result.get("year") != s.year):
         st.info(f"Local election day · Term {s.term}, Year {s.year}. The councils are going to the polls.")
-        if st.button("Hold local elections", type="primary", use_container_width=True, key="local_elections_hold_button"):
+        if st.button("Hold local elections", type="primary", use_container_width=True, key=f"{widget_namespace}_local_elections_hold_button"):
             hold_election()
             st.rerun()
         return
@@ -128,7 +128,7 @@ def render():
                  "Seats won by leader": r["seats"], "Contested wards": r["wards"]}
                 for r in result["regions"]]
     st.dataframe(pd.DataFrame(regional), hide_index=True, use_container_width=True)
-    with st.expander("Regional party breakdown"):
+    with st.expander("Regional party breakdown", key=f"{widget_namespace}_regional_party_breakdown"):
         for r in result["regions"]:
             st.markdown(f"**{r['region']}**")
             st.caption(" · ".join(f"{p}: {n}" for p, n in sorted(r["party_seats"].items(), key=lambda x: x[1], reverse=True) if n))
