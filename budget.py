@@ -346,6 +346,9 @@ def forecast(b, years=3):
              approval=round(_clip(s.approval + imp['approval']), 1), cycle=s.get('macro_cycle', 'Stagnation'))
     booked = s.get('budget_interest', BASE_INTEREST)
     now = econ.game_year(s.term, s.year)
+    tax_index = float(s.get('tax_base_index', 1.0))
+    tax_receipts_base = sum(revenues(b).values()) / max(0.01, tax_index)
+    portfolio = {k: float(v) for k, v in s.get('treasury_assets', {}).items()}
     rows = []
     for i in range(1, years + 1):
         new_int = interest_for(v['gilt_yield'], v['debt'])          # spring: debt interest is re-priced...
@@ -357,9 +360,26 @@ def forecast(b, years=3):
         if v['headroom'] < 0:                                       # ...and a breached rule spooks the markets
             v['market_conf'] = round(_clip(v['market_conf'] - min(4, 0.15 * -v['headroom'])), 1)
         v = econ.step(v, now + i)                                   # ...then the economy moves on
+        nominal_growth = ((1 + v['growth'] / 100.0) * (1 + v['inflation'] / 100.0) - 1) * 100
+        next_index = max(0.55, tax_index * (1 + max(-8.0, min(12.0, nominal_growth * 0.85)) / 100.0))
+        growth_receipts = tax_receipts_base * (next_index - tax_index)
+        tax_index = next_index
+        market_factor = max(0.55, min(1.15, 0.75 + v['market_conf'] / 200.0))
+        investment_income = 0.0
+        from treasury import ASSETS
+        for key, amount in list(portfolio.items()):
+            spec = ASSETS.get(key)
+            if spec and amount > 0:
+                investment_income += amount * (spec['yield'] * market_factor - 0.005)
+                portfolio[key] = amount * (1 + spec['appreciation'] * market_factor)
+        investment_income = max(0.0, investment_income)
+        extra_receipts = growth_receipts + investment_income
+        v['headroom'] = round(v['headroom'] + extra_receipts, 1)
+        v['deficit'] = round(max(0.0, v['deficit'] - extra_receipts), 1)
         rows.append(dict(year=imf_outlook.year_for_game(now + i), growth=v['growth'], inflation=v['inflation'],
                          headroom=v['headroom'], deficit=v['deficit'], debt=v['debt'], market=v['market_conf'],
-                         gilt=v['gilt_yield']))
+                         gilt=v['gilt_yield'], growth_receipts=round(growth_receipts, 2),
+                         investment_income=round(investment_income, 2)))
     return rows
 
 
@@ -502,6 +522,7 @@ def render_forecast(cur):
     rows = forecast(cur)
     df = pd.DataFrame([{
         'Year': r['year'], 'Growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
+        'Growth receipts': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
         'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
         'Gilts': f"{r['gilt']:.1f}%", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
