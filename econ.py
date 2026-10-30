@@ -47,8 +47,8 @@ def step(v, incoming_year=None):
     # Debt as a share of GDP: new borrowing adds to it, nominal growth (real growth + inflation) shrinks it.
     o['debt'] = round(o['debt'] + 0.034 * (o['deficit'] + max(0.0, -o['headroom']) * 0.5)
                       - o['debt'] * (o['growth'] + o['inflation']) / 100.0, 1)
-    o['headroom'] = round(o['headroom'] + 2.0 * (o['growth'] - 1.0), 1)
-    o['deficit'] = round(o['deficit'] - 2.0 * (o['growth'] - 1.0), 1)   # a stronger economy narrows the deficit too
+    # The Treasury module applies the actual tax-receipt dividend from nominal GDP growth
+    # at the annual spring update. Do not add a second abstract growth bonus here.
 
     cred = clip(o['headroom'], -30, 20)
     mkt_target = 55 + (cred if cred > 0 else 2.0 * cred) + (o['approval'] - 50) * 0.1
