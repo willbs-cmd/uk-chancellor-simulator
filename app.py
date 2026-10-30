@@ -224,7 +224,8 @@ if s.year > 5:
     st.markdown("### 📊 The national result")
     e1, e2, e3 = st.columns(3, gap="small")
     # Count coalition partners when displaying the government's parliamentary strength.
-    coalition_seats = r['seats'].get(r.get('coalition'), 0) if r.get('coalition') else 0
+    coalition_partners = r.get('coalition_partners') or ([r['coalition']] if r.get('coalition') in r['seats'] else [])
+    coalition_seats = sum(r['seats'].get(p, 0) for p in coalition_partners)
     government_seats = r['player_seats'] + coalition_seats
     government_majority = government_seats - engine.WIN_MAJORITY
     e1.metric("Estimated turnout", f"{r.get('turnout', 65.0):.1f}%")
@@ -243,7 +244,8 @@ if s.year > 5:
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
     if r.get('coalition'):
-        st.success(f"Coalition majority: {r['player_seats']} {s.party} MPs + {coalition_seats} {r['coalition']} MPs = {government_seats} seats. That is {government_majority} above the 326-seat majority threshold.")
+        partner_text = ' + '.join(coalition_partners)
+        st.success(f"Coalition majority: {r['player_seats']} {s.party} MPs + {coalition_seats} partner MPs ({partner_text}) = {government_seats} seats. That is {government_majority} above the 326-seat majority threshold.")
     elif r['player_seats'] < engine.WIN_MAJORITY and r['win']:
         st.warning("Minority government: you remain in office but need support from other parties on confidence and supply.")
     elif not r['win']:
