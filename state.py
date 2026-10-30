@@ -189,7 +189,7 @@ def _defaults():
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
         difficulty='Hardcore', seed=random.randint(1000, 99999), show_tags=False,
         approval=48.0, market_conf=65.0, debt=98.2, deficit=125.4, inflation=3.2, interest_rate=5.0,
-        gilt_yield=4.7, growth=0.8, headroom=8.5, gdp_trillion=3.0, gdp_history=[], world_economy={}, world_history=[], world_cycle=0.0, temporary_shock={},
+        gilt_yield=4.7, growth=0.8, headroom=8.5, gdp_trillion=3.0, gdp_history=[], tax_base_index=1.0, treasury_assets={}, treasury_income_history=[], treasury_last_tax_uplift=0.0, treasury_last_investment_income=0.0, treasury_cumulative_income=0.0, world_economy={}, world_history=[], world_cycle=0.0, temporary_shock={},
         pm_opinion=75.0, cab_opinion=65.0, party_opinion=70.0, backbench_opinion=60.0, media_opinion=50.0,
         prev={}, pending=[], history=[], stat_hist={}, country_hist=[], event_cards=[],
         ideology_counts={}, crises_handled=0, achievements=[], new_achievements=[],
