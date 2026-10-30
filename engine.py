@@ -1,6 +1,7 @@
 """Game engine: every rule of the simulator, with no UI. app.py drives it; sim.py can drive it headlessly."""
 import math
 import random
+from itertools import combinations
 
 import streamlit as st
 
@@ -601,10 +602,29 @@ def compute_election():
     else:
         r['title'] = 'Hung Parliament'
         bloc = LEFT_BLOC if party in LEFT_BLOC else RIGHT_BLOC
-        partner = next((p for p in bloc if p != party and mine + seats[p] >= WIN_MAJORITY), None)
-        if partner:
-            r.update(win=True, kind='coalition', coalition=partner, margin=mine + seats[partner] - WIN_MAJORITY,
-                     gov_type=f'Formal Coalition with {partner}')
+        eligible = [p for p in bloc if p != party and seats.get(p, 0) > 0]
+        coalition_partners = []
+        # Search the smallest viable coalition first, then choose the combination
+        # with the narrowest surplus. This supports multi-party agreements without
+        # automatically giving the player every ideologically compatible party.
+        for count in range(1, len(eligible) + 1):
+            viable = [
+                group for group in combinations(eligible, count)
+                if mine + sum(seats[p] for p in group) >= WIN_MAJORITY
+            ]
+            if viable:
+                coalition_partners = list(min(
+                    viable,
+                    key=lambda group: mine + sum(seats[p] for p in group) - WIN_MAJORITY
+                ))
+                break
+        if coalition_partners:
+            government_seats = mine + sum(seats[p] for p in coalition_partners)
+            coalition_label = ' + '.join(coalition_partners)
+            r.update(win=True, kind='coalition', coalition=coalition_label,
+                     coalition_partners=coalition_partners,
+                     margin=government_seats - WIN_MAJORITY,
+                     gov_type=f'Coalition with {coalition_label}')
         elif mine == seats[largest]:
             r.update(win=True, kind='minority', gov_type='Fragile Minority Government')
         else:
