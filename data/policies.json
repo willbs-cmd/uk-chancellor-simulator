@@ -322,6 +322,55 @@
       "app": 1,
       "mkt": 1,
       "gro": 0.03
+    },
+    "bank_surcharge": {
+      "label": "Reform the Bank Levy & Banking Surcharge",
+      "yield_bn": 1.2,
+      "app": -1,
+      "mkt": -0.5,
+      "gro": -0.02
+    },
+    "landlord_relief": {
+      "label": "Restrict Tax Relief for High-Value Landlords",
+      "yield_bn": 1.6,
+      "app": 1,
+      "mkt": 0,
+      "gro": -0.02
+    },
+    "packaging_levy": {
+      "label": "Expand the Plastic Packaging Levy",
+      "yield_bn": 0.8,
+      "app": 0,
+      "mkt": 0,
+      "gro": 0.01
+    },
+    "luxury_goods_levy": {
+      "label": "Introduce a Luxury Goods Levy",
+      "yield_bn": 1,
+      "app": 1,
+      "mkt": -0.2,
+      "gro": -0.01
+    },
+    "relief_cap": {
+      "label": "Cap Selected Tax Reliefs for High Earners",
+      "yield_bn": 1.4,
+      "app": 1,
+      "mkt": 0,
+      "gro": 0
+    },
+    "vat_compliance": {
+      "label": "Modernise VAT Compliance & Close Avoidance Loopholes",
+      "yield_bn": 2,
+      "app": 0,
+      "mkt": 0.5,
+      "gro": 0.02
+    },
+    "property_empty": {
+      "label": "Higher Council Tax Premium on Long-Term Empty Homes",
+      "yield_bn": 0.9,
+      "app": 1,
+      "mkt": 0,
+      "gro": 0.01
     }
   },
   "spend_defaults": {
@@ -498,6 +547,55 @@
       "app": 3,
       "mkt": 0,
       "gro": 0.06
+    },
+    "primary_care": {
+      "label": "GP Access & Primary Care Recovery Plan",
+      "cost_bn": 2.8,
+      "app": 3,
+      "mkt": 0,
+      "gro": 0.06
+    },
+    "school_rebuild": {
+      "label": "National School Rebuilding Programme",
+      "cost_bn": 3.5,
+      "app": 2,
+      "mkt": 0,
+      "gro": 0.08
+    },
+    "social_care": {
+      "label": "Adult Social Care Workforce & Capacity Fund",
+      "cost_bn": 3,
+      "app": 3,
+      "mkt": 0,
+      "gro": 0.04
+    },
+    "grid_upgrade": {
+      "label": "National Electricity Grid Upgrade",
+      "cost_bn": 4,
+      "app": 1,
+      "mkt": 1,
+      "gro": 0.12
+    },
+    "regional_growth": {
+      "label": "Regional Growth & Town Centre Investment Fund",
+      "cost_bn": 2.5,
+      "app": 2,
+      "mkt": 0,
+      "gro": 0.08
+    },
+    "prison_capacity": {
+      "label": "Prison Capacity & Rehabilitation Expansion",
+      "cost_bn": 1.8,
+      "app": 1,
+      "mkt": 0,
+      "gro": 0.02
+    },
+    "homelessness_prevention": {
+      "label": "Homelessness Prevention & Supported Housing",
+      "cost_bn": 1.6,
+      "app": 2,
+      "mkt": 0,
+      "gro": 0.03
     }
   },
   "policy_nudges": {
