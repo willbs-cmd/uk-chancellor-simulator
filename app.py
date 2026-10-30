@@ -153,9 +153,9 @@ _KEY_STATS = ['approval', 'market_conf', 'headroom', 'growth', 'inflation', 'pm_
 _on_budget_screen = (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
 if _on_budget_screen:
     # The Budget screen shows the projected economy itself, so only political capital is needed here.
-    render_hud([('Political capital', CARDS_POLITICAL)], note=hud_note(), cols=5)
+    render_hud([('Political capital', CARDS_POLITICAL)], note=hud_note())
 else:
-    render_hud([(None, [_by_key[k] for k in _KEY_STATS])], note=hud_note(), cols=6)
+    render_hud([(None, [_by_key[k] for k in _KEY_STATS])], note=hud_note())
     with st.expander('All indicators', expanded=False):
         render_hud([('The economy', [d for d in CARDS_TOP + CARDS_ECON if d['key'] not in _KEY_STATS]),
                     ('Political capital', [d for d in CARDS_POLITICAL if d['key'] not in _KEY_STATS])], cols=4)
