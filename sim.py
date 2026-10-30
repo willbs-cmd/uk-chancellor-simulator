@@ -162,7 +162,10 @@ def play(party='Labour', strategy='random', difficulty='Hardcore', seed=1, terms
     r = s.get('election_result') or {}
     return dict(win=bool(r.get('win')) and not s.get('sacked'), sacked=bool(s.get('sacked')),
                 seats=r.get('player_seats', 0), approval=s.approval, headroom=s.headroom,
-                year=s.year, term=s.term, market=s.market_conf, over=(s.get('game_over') or {}).get('kind'))
+                year=s.year, term=s.term, market=s.market_conf, over=(s.get('game_over') or {}).get('kind'),
+                player_poll=float((s.get('election_result') or {}).get('polls', {}).get(party, 0.0)),
+                coalition=(s.get('election_result') or {}).get('coalition'),
+                largest_party=max((s.get('election_result') or {}).get('seats', {party: 0}), key=(s.get('election_result') or {}).get('seats', {party: 0}).get))
 
 
 def run(n=200, difficulty='Hardcore'):
@@ -403,6 +406,8 @@ def check(n=None, difficulty=None):
         sack_rate = sum(r['sacked'] for r in results) / n * 100
         mean_approval = statistics.mean(r['approval'] for r in results)
         mean_headroom = statistics.mean(r['headroom'] for r in results)
+        mean_seats = statistics.mean(r['seats'] for r in results)
+        mean_poll = statistics.mean(r['player_poll'] for r in results)
         guard = thresholds['party_thresholds'].get(party)
         passed = bool(guard) and win_rate >= guard['minimum_win_percent'] and sack_rate <= guard['maximum_sack_percent']
         for r in results:
@@ -411,7 +416,7 @@ def check(n=None, difficulty=None):
                     failures.append(f"{party} produced non-finite {stat} in a headless run.")
                     passed = False
         status = "PASS" if passed else "FAIL"
-        print(f"{party:<20}{win_rate:7.1f}%{sack_rate:9.1f}%{mean_approval:15.1f}{mean_headroom:16.1f}  {status}")
+        print(f"{party:<20}{win_rate:7.1f}%{sack_rate:9.1f}%{mean_approval:15.1f}{mean_headroom:16.1f}  {status}  seats={mean_seats:.1f} poll={mean_poll:.1f}%")
         if not passed:
             failures.append(
                 f"{party}: win {win_rate:.1f}% (min {guard['minimum_win_percent'] if guard else 'n/a'}%), "
