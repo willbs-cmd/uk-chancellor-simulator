@@ -803,8 +803,20 @@ def compute_election():
         majority = government_seats - WIN_MAJORITY
         r['government_seats'] = government_seats
         r['working_majority'] = majority
-        r['mandate_strength'] = max(-12, min(12, int(round(majority / 12))))
-        r['mandate_label'] = ('Strong mandate' if majority >= 80 else 'Working mandate' if majority >= 20 else 'Narrow mandate')
+        if r.get('kind') == 'majority':
+            r['mandate_strength'] = max(0, min(12, int(round(majority / 12))))
+            r['mandate_label'] = ('Strong mandate' if majority >= 80 else 'Working mandate' if majority >= 20 else 'Narrow mandate')
+        elif r.get('kind') == 'coalition':
+            # Coalition authority is real, but shared: it should never create a
+            # negative mandate merely because the largest party lacks 326 seats.
+            r['mandate_strength'] = max(0, min(2, int(round(max(0, majority) / 20))))
+            r['mandate_label'] = 'Coalition mandate'
+        elif r.get('kind') == 'minority':
+            r['mandate_strength'] = 0
+            r['mandate_label'] = 'Minority mandate'
+        else:  # Regional mandate: not a Westminster government majority.
+            r['mandate_strength'] = 0
+            r['mandate_label'] = 'Regional mandate'
     else:
         r['government_seats'] = mine
         r['working_majority'] = mine - WIN_MAJORITY
