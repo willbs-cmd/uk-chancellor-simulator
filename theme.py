@@ -1265,6 +1265,33 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
 .local-election-countdown span{color:rgba(244,232,212,.68)}
 .local-election-banner.results{border-left:5px solid #d2ad6a}
 
+
+/* Budget refinement: clearer control rows, compact responsive spacing and legible slider tracks. */
+.lv { min-height:2.5rem; display:flex; flex-direction:column; justify-content:center; }
+.lv b { color:#f4eadb; font-weight:650; }
+.lv small { color:#d1bfb0!important; font-size:.73rem; }
+.lv-val { padding-top:.25rem; font-variant-numeric:tabular-nums; }
+.spend-draft-summary { display:flex; flex-direction:column; gap:2px; padding:.3rem 0; }
+.spend-draft-summary strong { color:#f3eadb; font-size:.88rem; }
+.spend-draft-summary small { color:#d1bfb0; font-size:.75rem; }
+[data-testid="stSlider"] { padding:.2rem .15rem .1rem; }
+[data-testid="stSlider"] [data-baseweb="slider"] { padding-top:.45rem; }
+[data-testid="stSlider"] [role="slider"] { box-shadow:0 0 0 3px rgba(224,197,143,.13); }
+[data-testid="stSlider"] [data-testid="stTickBar"] { opacity:.65; }
+.st-key-restore_spend_draft button { border-color:#d4b77d!important; }
+.st-key-reset_budget_draft button { border-color:rgba(224,201,174,.45)!important; }
+@media(max-width:850px) {
+  .lv { padding-top:.15rem; min-height:auto; }
+  [data-testid="stHorizontalBlock"]:has(.lv) { gap:.35rem!important; }
+}
+@media(max-width:600px) {
+  .budget-command-line { gap:8px!important; }
+  [data-testid="stHorizontalBlock"]:has(.lv) { flex-wrap:wrap!important; }
+  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:first-child { min-width:100%!important; }
+  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:nth-child(2) { min-width:65%!important; }
+  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:nth-child(3) { min-width:25%!important; }
+}
+
 </style>
 """
 
@@ -1524,25 +1551,3 @@ def render_scorecard(data):
     </div>""", unsafe_allow_html=True)
 
 
-/* Budget refinement: clearer control rows, compact responsive spacing and legible slider tracks. */
-.lv { min-height:2.5rem; display:flex; flex-direction:column; justify-content:center; }
-.lv b { color:#f4eadb; font-weight:650; }
-.lv small { color:#d1bfb0!important; font-size:.73rem; }
-.lv-val { padding-top:.25rem; font-variant-numeric:tabular-nums; }
-[data-testid="stSlider"] { padding:.2rem .15rem .1rem; }
-[data-testid="stSlider"] [data-baseweb="slider"] { padding-top:.45rem; }
-[data-testid="stSlider"] [role="slider"] { box-shadow:0 0 0 3px rgba(224,197,143,.13); }
-[data-testid="stSlider"] [data-testid="stTickBar"] { opacity:.65; }
-.st-key-restore_spend_draft button { border-color:#d4b77d!important; }
-.st-key-reset_budget_draft button { border-color:rgba(224,201,174,.45)!important; }
-@media(max-width:850px) {
-  .lv { padding-top:.15rem; min-height:auto; }
-  [data-testid="stHorizontalBlock"]:has(.lv) { gap:.35rem!important; }
-}
-@media(max-width:600px) {
-  .budget-command-line { gap:8px!important; }
-  [data-testid="stHorizontalBlock"]:has(.lv) { flex-wrap:wrap!important; }
-  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:first-child { min-width:100%!important; }
-  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:nth-child(2) { min-width:65%!important; }
-  [data-testid="stHorizontalBlock"]:has(.lv) > [data-testid="column"]:nth-child(3) { min-width:25%!important; }
-}
