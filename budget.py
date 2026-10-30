@@ -596,6 +596,10 @@ def render(submit=None, after_summary=None):
     def delta(v, unit=''):
         return f'{v:+,.1f}{unit}' if changed else '\u2014'
 
+    st.markdown(
+        f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
+        unsafe_allow_html=True,
+    )
     render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
              desc='Estimated annual tax and other receipts received by the government.'),
