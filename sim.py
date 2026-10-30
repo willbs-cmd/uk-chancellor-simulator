@@ -262,6 +262,19 @@ def check(n=None, difficulty=None):
     if any(actual_nations.get(nation, 0) != expected for nation, expected in expected_nations.items()):
         failures.append(f"Constituency nation counts do not match the official 2024 register: {dict(actual_nations)}.")
 
+    # Exercise the constituency-by-constituency election model and its repeatability.
+    sample_polls = {party: 100.0 / len(state.PARTIES) for party in state.PARTIES}
+    seat_totals, local_results = engine.compute_seats(sample_polls, return_details=True)
+    if sum(seat_totals.values()) != 650 or len(local_results) != 650:
+        failures.append("The constituency election model must return exactly 650 decided seats.")
+    if any(row.get('winner') not in state.PARTIES for row in local_results):
+        failures.append("A constituency result contains an unsupported winning party.")
+    if len({row.get('code') for row in local_results}) != 650:
+        failures.append("The constituency election model has duplicate or missing seat codes.")
+    repeated_totals, repeated_results = engine.compute_seats(sample_polls, return_details=True)
+    if seat_totals != repeated_totals or local_results != repeated_results:
+        failures.append("The same polling inputs must produce a repeatable constituency result.")
+
     division_data = load_json('career_divisions.json')
     divisions = division_data.get('divisions', [])
     if len(divisions) < contract.get('minimum_divisions', 15):
