@@ -29,29 +29,42 @@ def restart():
     st.rerun()
 
 
-# ==================== SIDEBAR: SAVE / NEW GAME ====================
+# ==================== SIDEBAR: RUN INFO / SAVE / HELP ====================
 with st.sidebar:
-    st.markdown('### 💾 Game')
     if s.step == 'game':
-        st.download_button('Download save file', state.export_save(), file_name=f'chancellor_{s.party.replace(" ", "")}_T{s.term}Y{s.year}.json',
-                           mime='application/json', help='Save your progress and load it again from the start screen.')
-        st.caption(f'{s.party} · {s.difficulty} · seed {s.seed}')
-        st.caption(f"📅 {state.SCENARIOS[s.get('scenario', 'fragile')]['label']}")
+        st.markdown('### 🏛️ Your run')
+        st.caption(f"{s.party} · {s.difficulty} · seed {s.seed}\n\n"
+                   f"📅 {state.SCENARIOS[s.get('scenario', 'fragile')]['label']}")
+        if s.get('spad') in politics.SPADS:
+            st.caption(f"🧑‍💼 **{politics.SPADS[s.spad]['label']}**: {politics.SPADS[s.spad]['blurb']}")
+        if s.get('pledges'):
+            kept = [k for k in s.pledges if k not in s.get('broken_pledges', [])]
+            with st.expander(f"📜 Pledges kept: {len(kept)}/{len(s.pledges)}"):
+                for k in s.pledges:
+                    broken = k in s.get('broken_pledges', [])
+                    st.caption(f"{'❌ ~~' if broken else '✅ '}{politics.PLEDGES[k]['label']}{'~~' if broken else ''}")
+        st.divider()
         if state.diff().get('undos', 0) > 0:
-            if st.button(f"↩️ Undo last action ({s.get('undos_left', 0)} left)", disabled=not state.can_undo(),
+            if st.button(f"↩️ Undo last action ({s.get('undos_left', 0)} left)", disabled=not state.can_undo(), use_container_width=True,
                          help='Roll back your last decision, crisis, request, Budget or spring. Same seed, so only a different choice changes what happens.'):
                 if state.undo():
                     st.rerun()
-        if st.button('Abandon run & start over'):
-            restart()
-        if s.get('spad') in politics.SPADS:
-            st.markdown('### 🧑‍💼 Special Advisor')
-            st.caption(f"**{politics.SPADS[s.spad]['label']}**: {politics.SPADS[s.spad]['blurb']}")
-        if s.get('pledges'):
-            st.markdown('### 📜 Manifesto pledges')
-            for k in s.pledges:
-                broken = k in s.get('broken_pledges', [])
-                st.caption(f"{'❌ ~~' if broken else '✅ '}{politics.PLEDGES[k]['label']}{'~~' if broken else ''}")
+        st.download_button('💾 Download save file', state.export_save(), use_container_width=True,
+                           file_name=f'chancellor_{s.party.replace(" ", "")}_T{s.term}Y{s.year}.json',
+                           mime='application/json', help='Save your progress and load it again from the start screen.')
+        with st.expander('📖 How the annual cycle works'):
+            for num in (1, 2, 3):
+                phase = phase_info(num)
+                st.markdown(f"**{phase['title']}**")
+                st.caption(phase['guide'])
+            st.caption('Two major policy decisions lead into a Budget vote each year. Political capital is limited; use it where it matters most.')
+        with st.expander('⚠️ End this run'):
+            st.caption('Resigning ends your career and shows your scorecard. Abandoning discards the run with no scorecard.')
+            if st.button('Resign as Chancellor', use_container_width=True):
+                engine.resign()
+                st.rerun()
+            if st.button('Abandon run & start over', use_container_width=True):
+                restart()
     else:
         st.caption('Start a game to enable saving.')
 
@@ -80,14 +93,8 @@ def setup_screen():
     pledges = st.multiselect(
         'Manifesto pledges (optional, up to 3)', list(politics.PLEDGES),
         format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
-        help='Each pledge gives you +2 starting approval. Break one and you take a U-turn scandal: approval, media and party support all fall.'
+        help='Each pledge gives +2 starting approval, but it is a promise, not a free bonus: it can constrain future Budgets, and breaking one causes a U-turn scandal (approval, media and party support all fall).'
     )
-    with st.expander('📜 Browse manifesto commitments', expanded=False):
-        st.caption('Commitments are promises to voters, not free bonuses. A pledge may constrain future Budgets and a broken pledge can cost approval, media support and party unity.')
-        pledge_cols = st.columns(2)
-        for i, (key, item) in enumerate(politics.PLEDGES.items()):
-            pledge_cols[i % 2].markdown(f"**{item['label']}**")
-            pledge_cols[i % 2].caption('Selected' if key in pledges else 'Available to choose')
     tags = st.checkbox(
         'Show ideology tags on policy options',
         value=(difficulty == 'Easy'), key=f'tags_{difficulty}',
@@ -121,15 +128,9 @@ header(s.party, s.term, s.year, s.block)
 
 
 def hud_note():
-    """Compact cabinet pulse: world cycle, adviser/pledges and the most urgent risks."""
+    """One quiet line under the key stats: world cycle plus up to three urgent risks."""
     icon = {'Boom': '📈', 'Stagnation': '➖', 'Recession': '📉'}.get(s.get('macro_cycle'), '➖')
     bits = [f"🌍 World economy: <b>{icon} {s.get('macro_cycle', 'Stagnation')}</b>"]
-    if s.get('spad') in politics.SPADS:
-        bits.append(f"🧑‍💼 <b>{politics.SPADS[s.spad]['label']}</b>")
-    if s.get('pledges'):
-        kept = len([k for k in s.pledges if k not in s.get('broken_pledges', [])])
-        bits.append(f"📜 Pledges kept: <b>{kept}/{len(s.pledges)}</b>")
-
     risks = []
     if float(s.get('market_conf', 50)) < 40:
         risks.append(('danger', '⚠ Markets fragile'))
@@ -145,12 +146,19 @@ def hud_note():
     status_html = f"<div class='pulse-flags'>{status}</div>" if status else ""
     return ''.join(f'<span>{b}</span>' for b in bits) + status_html
 
-# On the Budget screen the economy numbers appear as the *projected* summary instead, so only political capital is shown here.
+
+# The headline row shows the six numbers a Chancellor checks first; everything else is one click away.
+_by_key = {d['key']: d for d in CARDS_TOP + CARDS_ECON + CARDS_POLITICAL}
+_KEY_STATS = ['approval', 'market_conf', 'headroom', 'growth', 'inflation', 'pm_opinion']
 _on_budget_screen = (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
-_hud = [('Political capital', CARDS_POLITICAL)]
-if not _on_budget_screen:
-    _hud.insert(0, ('The economy', CARDS_TOP + CARDS_ECON))
-render_hud(_hud, note=hud_note())
+if _on_budget_screen:
+    # The Budget screen shows the projected economy itself, so only political capital is needed here.
+    render_hud([('Political capital', CARDS_POLITICAL)], note=hud_note(), cols=5)
+else:
+    render_hud([(None, [_by_key[k] for k in _KEY_STATS])], note=hud_note(), cols=6)
+    with st.expander('All indicators', expanded=False):
+        render_hud([('The economy', [d for d in CARDS_TOP + CARDS_ECON if d['key'] not in _KEY_STATS]),
+                    ('Political capital', [d for d in CARDS_POLITICAL if d['key'] not in _KEY_STATS])], cols=4)
 
 
 def scorecard_block(show_share=True):
@@ -285,95 +293,6 @@ def budget_screen():
         budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
 
 
-# ==================== DASHBOARD TABS ====================
-def dashboard():
-    tab_polls, tab_nation, tab_imf, tab_hist = st.tabs(['📊 Polls', '🧭 State of the Nation', '🌍 IMF Outlook', '📜 History'])
-    with tab_polls:
-        render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
-    with tab_nation:
-        gdp = float(s.get('gdp_trillion', 3.0))
-        nominal_growth = ((1 + float(s.growth) / 100.0) * (1 + float(s.inflation) / 100.0) - 1) * 100
-        st.markdown('### 💷 Size of the UK economy')
-        g1, g2, g3 = st.columns(3)
-        g1.metric('Estimated GDP', f'£{gdp:.3f} trillion',
-                  help='A simulated starting estimate, updated each in-game spring using real growth and inflation. Not a live official statistic.')
-        g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
-        g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
-                  help='Approximate growth in the money value of output, including inflation.')
-        st.caption('GDP is the value of goods and services produced in the UK. The GDP figure is a gameplay estimate; country comparisons below are illustrative reference rates, not live forecasts.')
-        st.markdown('#### 🌍 Global economy league — cumulative real growth since you took office')
-        world_economy.ensure(s)
-        uk_index = 100.0
-        for item in s.get('gdp_history', []):
-            try:
-                uk_index *= 1 + float(item.get('Real GDP growth (%)', 0)) / 100.0
-            except (TypeError, ValueError):
-                pass
-        league_rows = [{
-            '#': 0, 'Economy': '🇬🇧  United Kingdom  🟠 You',
-            'Output idx': round(uk_index, 1), 'Growth': f'{float(s.growth):+.1f}%',
-            'GDP ($tn)': round(float(s.get('gdp_trillion', 3.0)) * 1.27, 2), '_sort': uk_index
-        }]
-        for row in world_economy.rows(s):
-            league_rows.append({
-                '#': 0, 'Economy': row['Flag'] + '  ' + row['Economy'],
-                'Output idx': row['Output index'], 'Growth': row['Growth'],
-                'GDP ($tn)': row['GDP ($tn)'], '_sort': row['Output index']
-            })
-        league_rows.sort(key=lambda row: row['_sort'], reverse=True)
-        for rank, row in enumerate(league_rows, 1):
-            row['#'] = rank
-        league = pd.DataFrame(league_rows).drop(columns=['_sort'])
-        st.dataframe(league, hide_index=True, use_container_width=True,
-                     column_config={
-                         '#': st.column_config.NumberColumn('#', format='%d'),
-                         'Output idx': st.column_config.NumberColumn('OUTPUT IDX', format='%.1f'),
-                         'Growth': st.column_config.TextColumn('GROWTH'),
-                         'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
-                     })
-        st.caption('Output index starts at 100 and compounds by annual real GDP growth. GDP values are illustrative game estimates, not live data.')
-        if s.get('world_history'):
-            with st.expander('World economy history'):
-                st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
-        shock = s.get('temporary_shock') or {}
-        if shock:
-            st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
-        hist = s.get('gdp_history', [])
-        if hist:
-            st.markdown('#### 📈 Your GDP over time')
-            st.dataframe(pd.DataFrame(hist), hide_index=True, use_container_width=True)
-        country.render()
-    with tab_imf:
-        st.markdown(
-            f"**External baseline:** [{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · "
-            f"vintage published {imf_outlook.IMF_PUBLISHED}. These figures are from one fixed data-file vintage; "
-            "the annual economy tick gently nudges growth and inflation towards them, but does not forecast your playthrough."
-        )
-        st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
-        st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
-    with tab_hist:
-        pending = sorted(s.pending, key=lambda p: p['due'])
-        render_timeline(s.history, pending)
-        if st.button('Resign & Start New Career'):
-            engine.resign()
-            st.rerun()
-
-
-def last_turn():
-    """What just happened: always visible (it is the feedback loop of the game), but compact."""
-    if not (s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines')):
-        return
-    st.markdown("<div class='pane-title'>Last turn</div>", unsafe_allow_html=True)
-    for ev in s.event_cards:
-        event_card(ev['title'], ev['text'], ev['summary'])
-    if s.get('message'):
-        news_box(s.message)
-    if s.get('humphrey_note'):
-        humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
-    if s.get('headlines'):
-        render_newspapers(*s.headlines)
-
-
 # ==================== DECISIONS & CRISES ====================
 def crisis_screen():
     crisis = scen.get(s.active_crisis)
@@ -418,23 +337,8 @@ def decision_screen():
     phase = phase_info(s.block)
     st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase {s.block} · {phase['name']}</div><div class='dc-title'>{title}</div>", unsafe_allow_html=True)
     st.write(decision['text'])
-    st.caption(phase['guide'])
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
-    # Make the choice legible before the player commits: policy labels alone hide
-    # the mechanical trade-offs, which made decisions feel like guesswork.
-    current_phase = min(3, max(1, int(s.block)))
-    phase_labels = ['Autumn agenda', 'Winter pressure', 'Spring Budget']
-    phase_segments = ''.join(
-        f"<div class='annual-segment {'complete' if n < current_phase else ('current' if n == current_phase else '')}'></div>"
-        for n in range(1, 4)
-    )
-    st.markdown(
-        f"<div class='annual-progress'><div class='annual-progress-heading'><span>Annual programme</span>"
-        f"<span class='annual-phase'>Phase {current_phase} of 3 <span class='annual-phase-name'>· {phase_labels[current_phase - 1]}</span></span></div>"
-        f"<div class='annual-track'>{phase_segments}</div></div>",
-        unsafe_allow_html=True
-    )
     labels = [o['label'] for o in options]
     with st.container(key='policy_options'):
         choice = st.radio('Select strategy:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
@@ -461,12 +365,121 @@ def decision_screen():
         st.rerun()
 
 
+def briefing():
+    """What just happened (the feedback loop of the game) plus the full timeline, in one place."""
+    if s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'):
+        for ev in s.event_cards:
+            event_card(ev['title'], ev['text'], ev['summary'])
+        if s.get('message'):
+            news_box(s.message)
+        if s.get('humphrey_note'):
+            humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
+        if s.get('headlines'):
+            render_newspapers(*s.headlines)
+    else:
+        st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
+    with st.expander('📜 Full timeline', expanded=False):
+        render_timeline(s.history, sorted(s.pending, key=lambda p: p['due']))
+
+
+def economy():
+    """State of the nation and the IMF baseline."""
+    gdp = float(s.get('gdp_trillion', 3.0))
+    nominal_growth = ((1 + float(s.growth) / 100.0) * (1 + float(s.inflation) / 100.0) - 1) * 100
+    g1, g2, g3 = st.columns(3)
+    g1.metric('Estimated GDP', f'£{gdp:.3f} trillion',
+              help='A simulated starting estimate, updated each in-game spring using real growth and inflation. Not a live official statistic.')
+    g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
+    g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
+              help='Approximate growth in the money value of output, including inflation. GDP figures are gameplay estimates, not live forecasts.')
+    shock = s.get('temporary_shock') or {}
+    if shock:
+        st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
+
+    st.markdown('#### 🌍 Global economy league')
+    st.caption('Cumulative real growth since you took office. Output index starts at 100; GDP values are illustrative game estimates.')
+    world_economy.ensure(s)
+    uk_index = 100.0
+    for item in s.get('gdp_history', []):
+        try:
+            uk_index *= 1 + float(item.get('Real GDP growth (%)', 0)) / 100.0
+        except (TypeError, ValueError):
+            pass
+    league_rows = [{
+        '#': 0, 'Economy': '🇬🇧  United Kingdom  🟠 You',
+        'Output idx': round(uk_index, 1), 'Growth': f'{float(s.growth):+.1f}%',
+        'GDP ($tn)': round(float(s.get('gdp_trillion', 3.0)) * 1.27, 2), '_sort': uk_index
+    }]
+    for row in world_economy.rows(s):
+        league_rows.append({
+            '#': 0, 'Economy': row['Flag'] + '  ' + row['Economy'],
+            'Output idx': row['Output index'], 'Growth': row['Growth'],
+            'GDP ($tn)': row['GDP ($tn)'], '_sort': row['Output index']
+        })
+    league_rows.sort(key=lambda row: row['_sort'], reverse=True)
+    for rank, row in enumerate(league_rows, 1):
+        row['#'] = rank
+    league = pd.DataFrame(league_rows).drop(columns=['_sort'])
+    st.dataframe(league, hide_index=True, use_container_width=True,
+                 column_config={
+                     '#': st.column_config.NumberColumn('#', format='%d'),
+                     'Output idx': st.column_config.NumberColumn('OUTPUT IDX', format='%.1f'),
+                     'Growth': st.column_config.TextColumn('GROWTH'),
+                     'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
+                 })
+    with st.expander('📈 History: your GDP and the world economy'):
+        if s.get('gdp_history'):
+            st.caption('Your GDP over time')
+            st.dataframe(pd.DataFrame(s.gdp_history), hide_index=True, use_container_width=True)
+        if s.get('world_history'):
+            st.caption('World economy history')
+            st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
+        if not (s.get('gdp_history') or s.get('world_history')):
+            st.caption('History builds up as the years pass.')
+    with st.expander('🌍 IMF outlook (external baseline)'):
+        st.markdown(
+            f"[{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · vintage published {imf_outlook.IMF_PUBLISHED}. "
+            "A fixed data-file vintage: the annual tick nudges growth and inflation towards it, but it does not forecast your playthrough."
+        )
+        st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
+        st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
+    country.render()
+
+
+def reshuffle_panel():
+    used_terms = s.setdefault('cabinet_reshuffle_terms', [])
+    with st.expander('🔀 Cabinet reshuffle', expanded=False):
+        if int(s.term) in used_terms:
+            st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
+            return
+        st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
+        if st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
+                     disabled=int(s.get('political_capital_points', 0)) < 2, use_container_width=True):
+            state.checkpoint()
+            before = state.values()
+            state.snapshot()
+            s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
+            s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
+            s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
+            if float(s.backbench_opinion) < 45:
+                s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
+                s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
+                s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
+            else:
+                s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
+                s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
+            used_terms.append(int(s.term))
+            state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
+            state.record()
+            st.rerun()
+
+
 if s.block == 3 and s.active_crisis is None:
     budget_screen()
 else:
-    # Keep the main navigation short; less-frequently-used management tools live together.
-    tab_decision, tab_dashboard, tab_briefing, tab_government = st.tabs(
-        ['⚖️ Decision', '📊 Dashboard', '📰 Briefing', '🏛️ Government & tools']
+    has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
+    tab_decision, tab_briefing, tab_economy, tab_politics, tab_fiscal = st.tabs(
+        ['⚖️ Decision', '📰 Briefing' + (' •' if has_briefing else ''), '📊 Economy', '🏛️ Politics', '💷 Treasury tools']
     )
     with tab_decision:
         if s.active_crisis is not None:
@@ -475,77 +488,14 @@ else:
             request_screen()
         else:
             decision_screen()
-        with st.expander('How the annual cycle works'):
-            g1, g2, g3 = st.columns(3, gap='medium')
-            for col, num in zip((g1, g2, g3), (1, 2, 3)):
-                phase = phase_info(num)
-                with col:
-                    st.markdown(f"**Phase {num} · {phase['title']}**")
-                    st.caption(phase['guide'])
-            st.caption('Two major policy decisions lead into a Budget vote each year. Political capital is limited; use it where it matters most.')
-
-    with tab_dashboard:
-        dashboard()
-
     with tab_briefing:
-        has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
-        if has_briefing:
-            for ev in s.event_cards:
-                event_card(ev['title'], ev['text'], ev['summary'])
-            if s.get('message'):
-                news_box(s.message)
-            if s.get('humphrey_note'):
-                humphrey_message(s.humphrey_note, title='Sir Humphrey on your last decision')
-            if s.get('headlines'):
-                render_newspapers(*s.headlines)
-        else:
-            st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
-
-    with tab_government:
-        gov_parliament, gov_fiscal, gov_cabinet = st.tabs(
-            ['Parliament', 'Fiscal toolkit', 'Cabinet & history']
-        )
-        with gov_parliament:
-            parliament.render()
-        with gov_fiscal:
-            st.caption('Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
-            features.render()
-        with gov_cabinet:
-            st.markdown('### Cabinet management')
-            used_terms = s.setdefault('cabinet_reshuffle_terms', [])
-            if int(s.term) in used_terms:
-                st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
-            else:
-                st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
-                reshuffle = st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
-                                      disabled=int(s.get('political_capital_points', 0)) < 2,
-                                      use_container_width=True)
-                if reshuffle:
-                    state.checkpoint()
-                    before = state.values()
-                    state.snapshot()
-                    s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
-                    s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
-                    s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
-                    if float(s.backbench_opinion) < 45:
-                        s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
-                        s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
-                        s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
-                    else:
-                        s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
-                        s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
-                    used_terms.append(int(s.term))
-                    state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
-                    state.record()
-                    st.rerun()
-
-            st.markdown('### The political story so far')
-            recent = [item for item in s.get('history', []) if int(item.get('term', 1)) == int(s.term)][-5:]
-            if recent:
-                for item in reversed(recent):
-                    kind = str(item.get('kind', 'event')).replace('_', ' ').title()
-                    choice = f" — {item.get('choice')}" if item.get('choice') else ""
-                    st.markdown(f"**Year {item.get('year', '?')} · {kind}: {item.get('title', 'Political development')}**")
-                    st.caption((str(item.get('note', '')) or f"Your choice: {item.get('choice', 'no recorded choice')}{choice}")[:350])
-            else:
-                st.info("Your political story begins with your first decision.")
+        briefing()
+    with tab_economy:
+        economy()
+    with tab_politics:
+        render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
+        parliament.render()
+        reshuffle_panel()
+    with tab_fiscal:
+        st.caption('Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
+        features.render()
