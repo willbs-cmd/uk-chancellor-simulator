@@ -158,7 +158,7 @@ else:
     render_hud([(None, [_by_key[k] for k in _KEY_STATS])], note=hud_note())
     with st.expander('All indicators', expanded=False):
         render_hud([('The economy', [d for d in CARDS_TOP + CARDS_ECON if d['key'] not in _KEY_STATS]),
-                    ('Political capital', [d for d in CARDS_POLITICAL if d['key'] not in _KEY_STATS])], cols=4)
+                    ('Political capital', [d for d in CARDS_POLITICAL if d['key'] not in _KEY_STATS])])
 
 
 def scorecard_block(show_share=True):
