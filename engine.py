@@ -541,39 +541,76 @@ def end_run(kind, result=None):
     s.game_over = dict(kind=kind, title=title, text=text)
 
 
-def compute_seats(polls):
-    """Convert national vote shares into a stylised FPTP seat result.
+def compute_seats(polls, return_details=False):
+    """Run a stylised constituency-by-constituency FPTP election.
 
-    Regional parties receive a constituency-concentration bonus; national parties
-    receive different vote-to-seat efficiencies. Largest-remainder allocation
-    guarantees exactly 650 seats without handing every rounding error to one party.
-    This is a game model, not a constituency-level forecast.
+    The official register supplies all 650 seat names, codes and nations. It does
+    not contain 2024 party results, so local candidate/party lean is simulated
+    deterministically rather than presented as historical data.
     """
-    # Effective seat weights approximate geographic concentration under FPTP.
+    import json
+    from pathlib import Path
+
+    data_path = Path(__file__).resolve().parent / 'data' / 'constituencies_2024.json'
+    with data_path.open(encoding='utf-8') as handle:
+        constituencies = json.load(handle).get('constituencies', [])
+
+    if len(constituencies) != SEATS:
+        # Keep the game playable if a user has an incomplete/custom data file.
+        return _legacy_compute_seats(polls)
+
+    parties = list(state.PARTIES)
+    seats = {p: 0 for p in parties}
+    results = []
+    nation_effects = {
+        'England': {},
+        'Scotland': {'SNP': 24.0, 'Labour': 1.0, 'Conservative': -1.0},
+        'Wales': {'Plaid Cymru': 20.0, 'Labour': 2.0, 'Conservative': -1.0},
+        'Northern Ireland': {'SNP': -8.0, 'Plaid Cymru': -8.0,
+                             'Liberal Democrats': -3.0, 'Green Party': -2.0},
+    }
+
+    for seat in constituencies:
+        # A stable per-seat seed means the same game state always produces the
+        # same local map, while each constituency has its own voting character.
+        rng = random.Random('seat:' + str(seat.get('code', seat.get('name', ''))))
+        nation = seat.get('nation', 'England')
+        scores = {}
+        for party in parties:
+            national = max(0.1, float(polls.get(party, 0.0)))
+            local_lean = rng.gauss(0.0, 3.6)
+            regional = nation_effects.get(nation, {}).get(party, 0.0)
+            # National parties have modest local variation; regionally rooted
+            # parties get a realistic concentration advantage in their nation.
+            scores[party] = max(0.01, national + local_lean + regional)
+        winner = max(parties, key=lambda p: scores[p])
+        seats[winner] += 1
+        results.append({
+            'name': seat.get('name', 'Unknown constituency'),
+            'code': seat.get('code', ''),
+            'nation': nation,
+            'winner': winner,
+            'margin': round(scores[winner] - max(v for p, v in scores.items() if p != winner), 1),
+        })
+
+    return (seats, results) if return_details else seats
+
+
+def _legacy_compute_seats(polls):
+    """Fallback allocation for a missing or invalid constituency register."""
     weights = {
-        'Labour': 1.12,
-        'Conservative': 1.12,
-        'Liberal Democrats': 0.72,
-        'Reform UK': 0.48,
-        'Green Party': 0.32,
-        'SNP': 3.20,
-        'Plaid Cymru': 3.00,
+        'Labour': 1.12, 'Conservative': 1.12, 'Liberal Democrats': 0.72,
+        'Reform UK': 0.48, 'Green Party': 0.32, 'SNP': 3.20, 'Plaid Cymru': 3.00,
     }
     regional_caps = {'SNP': 57, 'Plaid Cymru': 32}
     seats = {p: 0 for p in state.PARTIES}
-    # Regional parties are concentrated in their home nations, but cannot exceed
-    # their approximate Westminster constituency totals.
     for party, cap in regional_caps.items():
-        share = max(0.0, float(polls.get(party, 0)))
-        seats[party] = min(cap, int(round(SEATS * share / 100 * weights[party])))
+        seats[party] = min(cap, int(round(SEATS * max(0.0, float(polls.get(party, 0))) / 100 * weights[party])))
     remaining = SEATS - sum(seats.values())
     national = [p for p in state.PARTIES if p not in regional_caps]
     raw = {p: max(0.0, float(polls.get(p, 0))) * weights[p] for p in national}
-    total = sum(raw.values())
-    if total <= 0:
-        raw = {p: 1.0 for p in national}
-        total = float(len(national))
-    exact = {p: remaining * raw[p] / total for p in national}
+    total = sum(raw.values()) or float(len(national))
+    exact = {p: remaining * (raw[p] if sum(raw.values()) else 1.0) / total for p in national}
     for p in national:
         seats[p] = int(math.floor(exact[p]))
     leftovers = remaining - sum(seats[p] for p in national)
@@ -589,7 +626,7 @@ def compute_election():
         return s.election_result
     reseed('election')
     polls = {p: s.poll_history[p][-1] for p in state.PARTIES}
-    seats = compute_seats(polls)
+    seats, constituency_results = compute_seats(polls, return_details=True)
     largest = max(seats, key=seats.get)
     party = s.party
     mine = seats[party]
@@ -601,7 +638,7 @@ def compute_election():
     swings = {p: round(float(polls[p]) - float(previous[p]), 1) for p in state.PARTIES}
     turnout = round(max(55.0, min(78.0, 65.0 + random.uniform(-2.5, 2.5) + (float(s.approval) - 50) * 0.04)), 1)
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
-             coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
+             coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,\n             constituency_results=constituency_results,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
