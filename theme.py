@@ -827,6 +827,128 @@ hr { border-color: #2b5440 !important; margin: .7rem 0 !important; }
 h2 { margin-top: .45rem !important; }
 h3 { margin-top: .35rem !important; }
 
+
+/* ================= NUMBER 11 / TREASURY CONTROL ROOM REDESIGN ================= */
+:root {
+  --command-bg: #09170f;
+  --command-panel: #11291d;
+  --command-panel-raised: #183827;
+  --command-line: rgba(178,199,183,.17);
+  --command-gold: #d6b36b;
+}
+.stApp {
+  background:
+    radial-gradient(ellipse at 50% -24%, rgba(52,94,66,.42), transparent 58%),
+    linear-gradient(145deg, #0b1b12 0%, #09170f 60%, #0d2116 100%) !important;
+}
+.block-container { max-width: 1580px !important; }
+.treasury-command {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 18px 10px !important;
+  border: 1px solid var(--command-line) !important;
+  border-left: 4px solid var(--party-accent, var(--brass)) !important;
+  border-radius: 10px !important;
+  background:
+    linear-gradient(105deg, rgba(24,56,39,.98), rgba(12,31,21,.98) 66%),
+    var(--command-panel) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.16) !important;
+}
+.treasury-command:after {
+  content: "HM";
+  position: absolute; right: 24px; top: 25px;
+  font-family: 'Newsreader',serif; font-size: clamp(3rem,6vw,5.4rem);
+  font-weight: 700; line-height: 1; letter-spacing: -.08em;
+  color: rgba(214,179,107,.055); pointer-events: none;
+}
+.command-topline {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding-bottom:8px; margin-bottom:8px;
+  border-bottom:1px solid var(--command-line);
+  color:#9fb3a6; font-size:.64rem; font-weight:700; letter-spacing:.15em;
+}
+.command-seal { color:var(--command-gold); }
+.command-location { opacity:.72; }
+.command-live { margin-left:auto; display:flex; align-items:center; gap:6px; letter-spacing:.1em; }
+.command-live i { width:6px; height:6px; border-radius:50%; background:#70bd88; box-shadow:0 0 9px rgba(112,189,136,.75); }
+.command-identity { display:flex; align-items:center; gap:11px; }
+.command-crest {
+  display:flex; align-items:center; justify-content:center;
+  width:36px; height:36px; flex:none;
+  border:1px solid rgba(214,179,107,.55); border-radius:8px;
+  color:var(--command-gold); font-family:'Newsreader',serif;
+  font-size:1.45rem; font-weight:700;
+  background:rgba(214,179,107,.07);
+}
+.treasury-command .ch-title { font-size:1.35rem; line-height:1.05; }
+.treasury-command .command-subtitle { margin-top:3px; color:#9fb3a6; font-size:.72rem; letter-spacing:.035em; }
+.treasury-command .ch-head { align-items:center; justify-content:space-between; gap:10px 18px; }
+.treasury-command .sub {
+  color:#d0d9d0 !important; text-align:right; font-size:.7rem !important;
+  letter-spacing:.09em; font-weight:600; max-width:55%;
+}
+.treasury-command .ch-pips { margin-top:9px !important; max-width:none !important; }
+.treasury-command .ch-pip { height:3px !important; background:rgba(159,179,166,.2); }
+.treasury-command .ch-pip.done { background:var(--command-gold); }
+.treasury-command .ch-pip.now { background:#f2e8d1; box-shadow:0 0 7px rgba(214,179,107,.45); }
+
+/* Dashboard numbers become a single coherent instrument panel. */
+.hud { padding:9px 10px; border:1px solid var(--command-line); border-radius:10px; background:rgba(13,32,22,.68); }
+.hud-title { color:var(--command-gold); font-size:.67rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin:0 0 6px 2px; }
+.hud-row { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:7px; align-items:stretch; }
+.hud-row + .hud-title { margin-top:10px; }
+.hud .sc-card { min-width:0; min-height:0; padding:7px 9px; border:1px solid var(--command-line) !important; border-top:2px solid rgba(214,179,107,.72) !important; border-radius:7px; background:linear-gradient(150deg,#173626,#10271b); }
+.hud .sc-label { font-size:.7rem; }
+.hud .sc-value { font-size:clamp(1.05rem,1.5vw,1.4rem); margin:2px 0; }
+.hud .sc-delta { font-size:.68rem; padding:1px 5px; }
+.hud-note { grid-column:1/-1; min-height:22px; align-content:center; }
+.pulse-flags { gap:5px; }
+.pulse-flag { font-size:.66rem; }
+
+/* Main workspace tabs: high-contrast navigation with a clear active state. */
+[data-testid='stTabs'] > div:first-child {
+  top:2.35rem !important; padding:5px !important;
+  border:1px solid var(--command-line) !important;
+  background:rgba(8,23,15,.96) !important;
+  box-shadow:0 8px 22px rgba(0,0,0,.18);
+}
+[data-testid='stTabs'] button[data-baseweb='tab'] {
+  min-height:2.65rem !important; padding:.55rem 1rem !important;
+  font-size:.86rem !important; font-weight:650 !important;
+  border:1px solid transparent !important; border-radius:7px !important;
+}
+[data-testid='stTabs'] button[data-baseweb='tab'][aria-selected='true'] {
+  background:linear-gradient(180deg,#254a34,#1a3928) !important;
+  border:1px solid rgba(214,179,107,.5) !important;
+  box-shadow:inset 0 -2px 0 var(--command-gold), 0 2px 8px rgba(0,0,0,.14);
+}
+/* Better separation for data-heavy panels and charts. */
+[data-testid='stDataFrame'], [data-testid='stTable'] {
+  border:1px solid var(--command-line); border-radius:8px; overflow:hidden;
+}
+[data-testid='stAlert'] { border:1px solid var(--command-line); background:rgba(18,42,29,.88); }
+[data-testid='stPlotlyChart'], [data-testid='stVegaLiteChart'] { border-radius:9px; overflow:hidden; }
+[data-testid='stExpander'] { background:rgba(16,39,28,.55) !important; border-color:var(--command-line) !important; }
+[data-testid='stExpander'] summary { font-weight:600; }
+[data-testid='stMetric'] { background:linear-gradient(145deg,#173626,#10271b) !important; border-color:var(--command-line) !important; }
+[data-testid='stSidebar'] { background:linear-gradient(180deg,#10271c,#08160f) !important; border-right:1px solid var(--command-line) !important; }
+[data-testid='stSidebar'] [data-testid='stButton'] button { min-height:2.35rem !important; }
+.stApp a { color:#e0bd70 !important; }
+:focus-visible { outline-color:var(--command-gold) !important; }
+
+@media (max-width:1050px) {
+  .hud-row { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:700px) {
+  .treasury-command { padding:10px 12px 9px !important; }
+  .command-location { display:none; }
+  .treasury-command .ch-head { align-items:flex-start; flex-direction:column; }
+  .treasury-command .sub { max-width:100%; text-align:left; }
+  .command-live { margin-left:auto; }
+  .hud-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  [data-testid='stTabs'] > div:first-child { top:2.1rem !important; }
+}
+
 </style>
 """
 
@@ -859,8 +981,9 @@ def header(party, term, year, block):
     period = (f"TERM {term} &nbsp;·&nbsp; GENERAL ELECTION" if election_night else
               f"TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; {phase['name'].upper()} &nbsp;·&nbsp; PHASE {block} OF 3")
     st.markdown(
-        f"""<div class='ch-banner' style='border-left-color:{colour}'>
-        <div class='ch-head'><span class='ch-title'>🏛️ {party} Government</span>
+        f"""<div class='ch-banner treasury-command' style='--party-accent:{colour};border-left-color:{colour}'>
+        <div class='command-topline'><span class='command-seal'>HM TREASURY</span><span class='command-location'>1 HORSE GUARDS ROAD · LONDON</span><span class='command-live'><i></i> SIMULATION LIVE</span></div>
+        <div class='ch-head'><div class='command-identity'><span class='command-crest'>£</span><div><div class='ch-title'>{party} Government</div><div class='command-subtitle'>The Chancellor's private office</div></div></div>
         <span class='sub'>{period}</span></div>
         <div class='ch-pips'>{pips}</div></div>""",
         unsafe_allow_html=True,
