@@ -343,7 +343,8 @@ def forecast(b, years=3):
     v = dict(inflation=round(s.inflation + imp['inflation'], 2), interest_rate=s.interest_rate, gilt_yield=s.gilt_yield,
              growth=round(s.growth + imp['growth'], 2), debt=s.debt, deficit=round(s.deficit + imp['deficit'], 1),
              headroom=round(s.headroom + imp['headroom'], 1), market_conf=round(_clip(s.market_conf + imp['market']), 1),
-             approval=round(_clip(s.approval + imp['approval']), 1), cycle=s.get('macro_cycle', 'Stagnation'))
+             approval=round(_clip(s.approval + imp['approval']), 1), cycle=s.get('macro_cycle', 'Stagnation'),
+             gdp_trillion=float(s.get('gdp_trillion', 3.0)))
     booked = s.get('budget_interest', BASE_INTEREST)
     now = econ.game_year(s.term, s.year)
     tax_index = float(s.get('tax_base_index', 1.0))
@@ -392,7 +393,9 @@ def forecast(b, years=3):
         v['deficit'] = round(max(0.0, v['deficit'] - net_fiscal_change), 1)
         rows.append(dict(year=imf_outlook.year_for_game(now + i), growth=v['growth'], inflation=v['inflation'],
                          headroom=v['headroom'], deficit=v['deficit'], debt=v['debt'], market=v['market_conf'],
-                         gilt=v['gilt_yield'], growth_receipts=round(growth_receipts, 2),
+                         gilt=v['gilt_yield'], gilt_risk_premium=v.get('gilt_risk_premium', 0.0),
+                         debt_interest=round(interest_for(v['gilt_yield'], v['debt']), 1),
+                         growth_receipts=round(growth_receipts, 2),
                          investment_income=round(investment_income, 2), nhs_pressure=nhs_pressure,
                          public_pay_pressure=public_pay_pressure, pension_cost=pension_cost,
                          recurring_costs=recurring_costs, net_fiscal_change=net_fiscal_change))
