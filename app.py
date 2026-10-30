@@ -13,6 +13,7 @@ import politics
 import parliament
 import scenarios as scen
 import state
+import treasury
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
@@ -311,6 +312,7 @@ def budget_screen():
                 st.rerun()
 
         budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
+    treasury.render()
 
 
 # ==================== DECISIONS & CRISES ====================
