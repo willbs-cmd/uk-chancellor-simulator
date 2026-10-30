@@ -325,10 +325,20 @@ def budget_screen():
                 st.rerun()
             speech = s.get('budget_speech')
             if speech:
-                with st.expander('🎙️ The Budget speech and the morning-after reactions', expanded=True):
+                with st.expander('🎙️ The Budget speech', expanded=True):
                     st.markdown('> ' + speech['text'])
-                    for who, quote in speech['reactions']:
-                        st.markdown(f'**{who}:** {quote}')
+                st.markdown("<div class='budget-day-heading'><span>THE HOUSE OF COMMONS · BUDGET DAY</span><h3>From the Red Box to the evening headlines</h3></div>", unsafe_allow_html=True)
+                for clock, title, detail in speech.get('budget_day', []):
+                    st.markdown(f"<div class='budget-day-row'><span>{clock}</span><div><strong>{title}</strong><small>{detail}</small></div></div>", unsafe_allow_html=True)
+                st.markdown("#### Opposition amendments")
+                for amendment in speech.get('amendments', []):
+                    st.markdown(f"**{amendment['title']}**  \n{amendment['detail']}  \nAyes: **{amendment['ayes']}** · Noes: **{650-amendment['ayes']}** · **{amendment['result']}**")
+                st.markdown("#### Immediate reactions")
+                for who, quote in speech['reactions']:
+                    st.markdown(f"**{who}:** {quote}")
+                move = float(speech.get('market_move', 0.0))
+                direction = "rose" if move > 0 else "fell" if move < 0 else "was unchanged"
+                st.caption(f"10-year gilt yield {direction} by {abs(move):.2f} percentage points · now {speech.get('market_after', s.gilt_yield):.2f}%")
         with right:
             st.markdown("<div class='pane-title'>The morning after</div>", unsafe_allow_html=True)
             for ev in s.event_cards:
