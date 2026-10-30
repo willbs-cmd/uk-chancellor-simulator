@@ -129,7 +129,9 @@ def revenues(b):
     out = {}
     for k, t in TAXES.items():
         d = b['tax'][k] - t['default']
-        out[k] = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
+        base_receipt = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
+        # A larger nominal economy expands the underlying income, profits and spending tax bases.
+        out[k] = base_receipt * float(st.session_state.get('tax_base_index', 1.0))
     return out
 
 
