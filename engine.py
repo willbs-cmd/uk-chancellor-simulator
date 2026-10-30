@@ -1,4 +1,5 @@
 """Game engine: every rule of the simulator, with no UI. app.py drives it; sim.py can drive it headlessly."""
+import math
 import random
 
 import streamlit as st
