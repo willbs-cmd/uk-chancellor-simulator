@@ -786,12 +786,16 @@ def render_spending_review():
                 if widget_key not in s:
                     s[widget_key] = default_pct
                 with cols[i % 2]:
-                    pct = st.slider(
-                        f"{SPEND_DEFAULTS[key]['label']} · £{base:,.1f}bn baseline",
-                        min_value=-8.0, max_value=15.0, step=0.5,
-                        key=widget_key, disabled=done,
-                        help="Change to this department's annual baseline, applied when you approve the review."
-                    )
+                    if done:
+                        pct = 0.0
+                        st.metric(SPEND_DEFAULTS[key]['label'], f"£{base:,.1f}bn", "Approved baseline")
+                    else:
+                        pct = st.slider(
+                            f"{SPEND_DEFAULTS[key]['label']} · £{base:,.1f}bn baseline",
+                            min_value=-8.0, max_value=15.0, step=0.5,
+                            key=widget_key,
+                            help="Change to this department's annual baseline, applied when you approve the review."
+                        )
                     draft[key] = round(base * (1 + pct / 100.0), 1)
 
     current_total = sum(float(s.dept_spend[k]) for k in departments)
@@ -816,6 +820,8 @@ def render_spending_review():
 
     if not done:
         if st.button("Approve Spending Review", type="primary", use_container_width=True, key="approve_spending_review"):
+            # Calculate frontline changes against the old baselines before applying the settlement.
+            frontline = sum(draft.get(k, s.dept_spend[k]) - float(s.dept_spend[k]) for k in ("health", "education", "justice"))
             # Apply a single annual settlement to the actual departmental baselines.
             s.checkpoint = None
             for key, amount in draft.items():
@@ -829,7 +835,6 @@ def render_spending_review():
                 s.market_conf = round(_clip(float(s.market_conf) - min(4.0, annual_change * 0.025)), 1)
             elif annual_change < 0:
                 s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
-            frontline = sum(draft.get(k, s.dept_spend[k]) - float(s.dept_spend[k]) for k in ("health", "education", "justice"))
             s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
             s.spending_review_plan = {k: float(s.get(f"sr_{period}_{k}", 0.0)) for k in departments}
             s.spending_review_last_period = period
