@@ -45,6 +45,7 @@ def ensure():
     s.setdefault("treasury_last_tax_uplift", 0.0)
     s.setdefault("treasury_last_investment_income", 0.0)
     s.setdefault("treasury_cumulative_income", 0.0)
+    s.setdefault("treasury_notice", "")
 
 
 def annual_update(nominal_growth):
@@ -113,6 +114,7 @@ def invest(key, amount):
     s.deficit = round(float(s.deficit) + amount, 1)
     s.treasury_assets[key] = round(float(s.treasury_assets.get(key, 0.0)) + amount, 2)
     s.message = f" Treasury investment approved: £{amount:.1f}B allocated to {ASSETS[key]['label']}. Returns begin at the next annual update."
+    s.treasury_notice = s.message.strip()
     return True, s.message
 
 
@@ -120,6 +122,9 @@ def render():
     """Treasury investment desk and a transparent record of passive receipts."""
     ensure()
     s = st.session_state
+    if s.get("treasury_notice"):
+        st.success(s.treasury_notice)
+        s.treasury_notice = ""
     st.markdown("### 🏦 Treasury investment fund")
     st.caption("Invest available fiscal headroom in public assets. Capital is committed upfront; income and asset values update each spring.")
     total_assets = sum(float(v) for v in s.treasury_assets.values())
