@@ -348,7 +348,15 @@ def submit_budget():
         return 'sacked'
     if s.approval < 40:
         s.market_conf = round(_clip(s.market_conf - 1.0), 1)
+    s.vote_ayes = ayes
     s.budget_speech = speech.compose()
+    market_impulse = float((s.get('budget_impact') or {}).get('market', 0.0))
+    gilt_move = max(-0.12, min(0.12, -0.035 * market_impulse))
+    if float((s.get('budget_impact') or {}).get('headroom', 0.0)) < -5:
+        gilt_move += 0.04
+    s.gilt_yield = round(max(0.1, s.gilt_yield + gilt_move), 2)
+    s.budget_speech['market_move'] = gilt_move
+    s.budget_speech['market_after'] = s.gilt_yield
     budget.commit_budget(ayes)
     s.budget_passed = True
     s.headlines = generate_headlines(None, True, s.headroom)
