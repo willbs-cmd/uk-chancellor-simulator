@@ -70,11 +70,6 @@ FISCAL_STRATEGIES = {
     'redistribution': {'label':'Redistribution & public services', 'description':'Prioritise fairness and frontline services, requiring more revenue or borrowing.', 'headroom':-1.3,'approval':1.8,'market':-0.3,'growth':0.01},
 }
 
-def _tax_slider_spec(tax):
-    """Return Streamlit-compatible bounds and step for a tax control."""
-    return float(tax['lo']), float(tax['hi']), float(tax['step'])
-
-
 def defaults():
     return {
         'strategy': 'balanced',
@@ -496,5 +491,414 @@ def apply_ongoing():
         s.market_conf = round(_clip(s.market_conf - min(4, 0.15 * -s.headroom)), 1)
         s.message += " ⚠️ Negative OBR headroom: markets punish the breach of your fiscal rules."
 
+def _pie(data):
+    df = pd.DataFrame([{'Category': str(k), 'Value': float(v)} for k, v in data.items() if float(v) > 0])
+    if not df.empty:
+        chart = alt.Chart(df).mark_arc(innerRadius=55, outerRadius=105, stroke='#0d1f17', strokeWidth=2).encode(
+            theta=alt.Theta(field="Value", type="quantitative"),
+            color=alt.Color(field="Category", type="nominal", scale=alt.Scale(range=PALETTE),
+                            legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=11, symbolType='square')),
+            tooltip=[alt.Tooltip('Category:N', title='Item'), alt.Tooltip('Value:Q', title='Amount (£bn)', format=',.1f')]
+        ).properties(height=240, background='transparent').configure_view(strokeWidth=0)
+        st.altair_chart(chart, use_container_width=True)
 
+
+def _value_html(text, diff, good_when_positive=True, extra=''):
+    if abs(diff) < 1e-9:
+        colour = '#9fb3a6'
+    else:
+        colour = '#6fbf8a' if (diff > 0) == good_when_positive else '#e0705d'
+    return (f"<div class='lv-val'><b>{text}</b><br>"
+            f"<span style='color:{colour}'>{diff:+,.1f}b{extra}</span></div>")
+
+
+def _tax_slider_spec(t):
+    """Return compatible numeric types for the slider's min/max/step arguments."""
+    step = t['step']
+    if isinstance(step, float) and not step.is_integer():
+        return float(t['lo']), float(t['hi']), float(step)
+    return int(t['lo']), int(t['hi']), int(step)
+
+
+def _tax_row(k, t, s):
+    c1, c2, c3 = st.columns([2.2, 3, 1.4], gap='small')
+    with c1:
+        st.markdown(f"<div class='lv'>{t['label']}</div>", unsafe_allow_html=True)
+    with c2:
+        lo, hi, step = _tax_slider_spec(t)
+        key = f'bt_{k}'
+        if isinstance(step, float) and key in s and not isinstance(s[key], float):
+            # Cast saved/default values before creating the slider widget.
+            s[key] = float(s[key])
+        st.slider(
+            f"{t['label']} slider", min_value=lo, max_value=hi, step=step,
+            key=key, label_visibility="collapsed",
+            help=t.get('help', 'Changing this rate changes estimated annual receipts. Higher rates can reduce the tax base or discourage activity.')
+        )
+    with c3:
+        d = float(s[f'bt_{k}']) - float(t['default'])
+        new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
+        st.markdown(_value_html(f'£{new_rev:,.1f}b', new_rev - t['base']), unsafe_allow_html=True)
+
+
+def _spend_row(k, sp, s):
+    base = float(s.dept_spend[k])
+    pct = float(s.get(f'bs_{k}', s.budget_applied.get('spend', {}).get(k, 0.0)))
+    c1, c2, c3 = st.columns([2.0, 3.2, 1.35], gap='small')
+    with c1:
+        st.markdown(f"<div class='lv'><b>{sp['short']}</b><br><small>Baseline £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
+    with c2:
+        st.slider(
+            f"{sp['label']} slider", min_value=-15.0, max_value=15.0,
+            step=0.5, key=f'bs_{k}', format="%+.1f%%",
+            label_visibility="collapsed",
+            help="Change this department's annual budget relative to today's approved baseline. Negative values are cuts; positive values are increases."
+        )
+    with c3:
+        pct = float(s[f'bs_{k}'])
+        new_val = base * (1.0 + pct / 100.0)
+        st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%)'),
+                    unsafe_allow_html=True)
+
+
+def render_whips(cur):
+    s = st.session_state
+    st.markdown("**🏛️ The Whips' Office**")
+    ayes = projected_ayes(cur)
+    st.markdown(f"Backbench morale **{s.backbench_opinion:.0f}/100** · Projected ayes **{ayes}** ({ayes - WIN:+d} vs the {WIN} needed)"
+                f" · Whip votes **+{s.get('whip_ayes', 0)}**")
+    for _, size, msg in rebel_risks(cur):
+        st.warning(f'{msg} (-{size} when the Budget is delivered)')
+    if ayes < WIN:
+        st.error(f'🚨 PROJECTED DEFEAT: {ayes} votes. A defeated Budget is a vote of no confidence. Soften it, or call in the Whips.')
+    elif ayes < WIN + 15:
+        st.warning(f'⚠️ A knife-edge: {ayes} votes. A rebellion could sink you.')
+    else:
+        st.success(f'✅ Projected to pass with {ayes} votes.')
+    cols = st.columns(len(WHIPS))
+    for col, (k, w) in zip(cols, WHIPS.items()):
+        used = k in s.get('whip_used', [])
+        col.button('✔ ' + w['label'] if used else w['label'], key=f'whip_{k}', on_click=_whip, args=(k,),
+                   disabled=used or not w['can'](s), use_container_width=True, help=w['hint'])
+        col.caption(w['hint'])
+
+
+def render_forecast(cur):
+    s = st.session_state
+    st.markdown('**🔭 OBR forecast** (a central case: no crises, no surprises)')
+    rows = forecast(cur)
+    df = pd.DataFrame([{
+        'Year': r['year'], 'Growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
+        'Net growth dividend': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
+        'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
+        'Gilts': f"{r['gilt']:.1f}%", 'Risk premium': f"+{r['gilt_risk_premium']:.2f}pp",
+        'Debt interest': f"£{r['debt_interest']:.1f}B", 'Markets': f"{r['market']:.0f}%"} for r in rows])
+    st.dataframe(df, hide_index=True, use_container_width=True)
+    st.caption('Illustrative sensitivity range, not an official OBR confidence interval. It shows how weaker growth and higher borrowing costs could alter the central forecast.')
+    risk_rows = []
+    for i, row in enumerate(rows):
+        growth_margin = 0.35 + 0.1 * i
+        headroom_margin = 2.0 + i
+        risk_rows.append({'Year': row['year'], 'Growth downside': round(row['growth'] - growth_margin, 1), 'Growth upside': round(row['growth'] + growth_margin, 1), 'Headroom downside (£bn)': round(row['headroom'] - headroom_margin, 1), 'Headroom upside (£bn)': round(row['headroom'] + headroom_margin * 0.75, 1)})
+    st.dataframe(pd.DataFrame(risk_rows), hide_index=True, use_container_width=True)
+    worst = min(r['headroom'] for r in rows)
+    if worst < 0:
+        st.error(f'❌ Fiscal rule at risk: headroom falls to £{worst:.1f}B. Markets and voters will punish a breach.')
+    else:
+        st.success(f'✅ Fiscal rule met in every forecast year (lowest headroom £{worst:.1f}B).')
+    if rows[-1]['debt'] < s.debt:
+        st.success(f"✅ Debt is falling: {s.debt:.1f}% of GDP now, {rows[-1]['debt']:.1f}% by {rows[-1]['year']}.")
+    else:
+        st.warning(f"⚠️ Debt is not falling: {s.debt:.1f}% of GDP now, {rows[-1]['debt']:.1f}% by {rows[-1]['year']}.")
+
+
+def render_red_book(cur):
+    s = st.session_state
+    with st.expander('📕 The Red Book: departmental budgets and tax changes'):
+        rows = []
+        for k, sp in SPEND_DEFAULTS.items():
+            base, start = s.dept_spend[k], sp['default']
+            prop = base * (1.0 + cur['spend'][k] / 100.0)
+            rows.append({'Department': sp['short'], 'Start of term (£bn)': round(start, 1), 'Baseline now (£bn)': round(base, 1),
+                         'This Budget (£bn)': round(prop, 1), 'Change since start': f"{(prop / start - 1) * 100:+.1f}%"})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        st.caption('Percentage changes compound into next year\'s baseline when spring arrives.')
+        last = s.get('budget_last_tax', {})
+        trows = []
+        for k, tx in TAXES.items():
+            was, now = last.get(k, tx['default']), cur['tax'][k]
+            trows.append({'Tax': tx['short'], 'Last Budget': f'{was:g}', 'This draft': f'{now:g}',
+                          'Change': f'{now - was:+g}', 'Revenue (£bn)': round(revenues(cur)[k], 1)})
+        st.markdown('**Taxes: last Budget vs this draft**')
+        st.dataframe(pd.DataFrame(trows), hide_index=True, use_container_width=True)
+
+
+def render(submit=None, after_summary=None):
+    """Draw the whole Budget screen. ``submit`` draws the Submit button (it lives in engine land, so app.py passes it in);
+    ``after_summary`` draws anything that should sit just under the summary (the manifesto pledge chips)."""
+    ensure()
+    s = st.session_state
+    applied, cur = s.budget_applied, read()
+    changed = cur != applied
+    s.budget_strategy = cur.get('strategy', 'balanced')
+
+    rev_now, spend_now = totals(cur)
+    rev_app, spend_app = totals(applied)
+    bal_now, bal_app = rev_now - spend_now, rev_app - spend_app
+    deficit_now = s.deficit + (bal_app - bal_now)     # the running deficit, adjusted for the draft
+    imp = impact(applied, cur)
+    ayes = projected_ayes(cur)
+
+    def delta(v, unit=''):
+        return f'{v:+,.1f}{unit}' if changed else '\u2014'
+
+    st.markdown(
+        f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
+        unsafe_allow_html=True,
+    )
+    render_chips([
+        dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
+             desc='Estimated annual tax and other receipts received by the government.'),
+        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'), num=(spend_now - spend_app) if changed else 0,
+             inverse=True, desc='Estimated annual outgoings across departments, welfare, pensions, debt interest and selected schemes.'),
+        dict(label='Deficit' if deficit_now > 0 else 'Surplus', value=f'£{abs(deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
+             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The gap between annual spending and income. A surplus means income exceeds spending.'),
+        dict(label='Approval', value=f"{_clip(s.approval + imp['approval']):.1f}%", delta=delta(imp['approval']), num=imp['approval'] if changed else 0,
+             desc='Estimated public support for the government. It affects polling and political survival.'),
+        dict(label='Market conf.', value=f"{_clip(s.market_conf + imp['market']):.1f}%", delta=delta(imp['market']), num=imp['market'] if changed else 0,
+             desc='Investor confidence. Weak confidence can raise government borrowing costs and make new debt more expensive.'),
+        dict(label='Growth', value=f"{s.growth + imp['growth']:.1f}%", delta=(f"{imp['growth']:+.2f}" if changed else '\u2014'),
+             num=imp['growth'] if changed else 0, desc='The annual rate at which the economy produces more goods and services, after adjusting for inflation.'),
+        dict(label='Inflation', value=f"{s.inflation + imp['inflation']:.1f}%", delta=(f"{imp['inflation']:+.2f}" if changed else '\u2014'),
+             num=imp['inflation'] if changed else 0, inverse=True, desc='How quickly prices are rising. High inflation squeezes household budgets and can keep interest rates elevated.'),
+        dict(label='OBR headroom', value=f"£{s.headroom + imp['headroom']:.1f}B", delta=delta(imp['headroom']), num=imp['headroom'] if changed else 0,
+             desc='The amount of fiscal room left before your chosen fiscal rule is breached. Negative headroom means the rule is missed.'),
+        dict(label='Projected ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs {WIN}', num=ayes - WIN,
+             desc='Votes for the Budget in the Commons. You need 326.'),
+    ])
+
+    st.markdown('### Choose your fiscal strategy')
+    strategy_keys = list(FISCAL_STRATEGIES)
+    st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
+    st.caption(FISCAL_STRATEGIES[s.budget_strategy]['description'] + ' Its effects feed into the draft and forecast.')
+    st.text_input("Chancellor's message to the country (optional)", key='budget_message', max_chars=180, placeholder='e.g. A fair deal for working people and a stronger economy')
+    with st.expander('ℹ️ Budget glossary: what the figures mean', expanded=False):
+        g1, g2, g3 = st.columns(3, gap='medium')
+        with g1:
+            st.markdown('**Income** — money government expects to collect. **Spending** — money paid across services, benefits, pensions and debt interest.')
+            st.markdown('**Deficit / surplus** — deficit means spending is higher than income; surplus means income is higher.')
+            st.markdown('**Fiscal headroom** — the safety margin against the fiscal rule. Below £0B means the forecast breaks that rule.')
+        with g2:
+            st.markdown('**Public approval** — a simplified measure of voters’ support; it feeds into polls and political stability.')
+            st.markdown('**Market confidence** — a simplified investor-confidence score. Falling confidence can make government borrowing more expensive.')
+            st.markdown('**Growth** — change in real economic output. **Inflation** — the rate prices rise; high inflation reduces purchasing power.')
+        with g3:
+            st.markdown('**Projected ayes** — estimated MPs voting for the Budget. The model uses 326 as the majority threshold.')
+            st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
+            st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
+
+    with st.container(key="budget_actions"):
+        apply_col, reset_col = st.columns(2, gap="medium")
+        apply_col.button(
+            "Apply Budget", type="primary", on_click=_apply,
+            disabled=not changed, use_container_width=True,
+            help="Apply the current slider values to the draft forecast."
+        )
+        reset_col.button(
+            "Reset sliders", on_click=_reset,
+            disabled=not changed, use_container_width=True,
+            help="Return tax rates, spending changes and schemes to the previously applied draft."
+        )
+        # Submission sits on its own full-width row so the label never gets clipped
+        # by a narrow third column, especially on mobile.
+        if submit:
+            submit()
+    if after_summary:
+        after_summary()
+
+    t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
+        ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
+
+    with t_tax:
+        st.caption('Income-tax rates are marginal: each rate applies only to income inside its band. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
+        groups = {}
+        for k, tx in TAXES.items():
+            groups.setdefault(tx['group'], []).append((k, tx))
+        for ix, (group, items) in enumerate(groups.items()):
+            with st.expander(f"{group} · {len(items)} controls", expanded=(ix == 0)):
+                for k, tx in items:
+                    _tax_row(k, tx, s)
+        st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. The Laffer effect is a simplified game rule: very high rates may raise less extra revenue than expected.')
+
+    with t_spend:
+        spend_values = {k: float(cur['spend'].get(k, 0.0)) for k in SPEND_DEFAULTS}
+        cut_count = sum(1 for v in spend_values.values() if v < -0.05)
+        rise_count = sum(1 for v in spend_values.values() if v > 0.05)
+        net_change = sum(float(s.dept_spend[k]) * spend_values[k] / 100.0 for k in SPEND_DEFAULTS)
+        st.caption(f"Department budgets are changes against today's approved baseline. They only take effect when the Budget is delivered and compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
+        control_cols = st.columns([2.2, 1, 1], gap='small')
+        control_cols[0].markdown(f"<div class='spend-draft-summary'><strong>{cut_count} departments cut · {rise_count} increased</strong><small>Net annual departmental change: £{net_change:+,.1f}bn</small></div>", unsafe_allow_html=True)
+        control_cols[1].button("Restore approved", key="restore_spend_draft", on_click=_reset_spending_draft,
+                               use_container_width=True, help="Discard all departmental draft changes and restore the last approved settings.")
+        control_cols[2].button("Reset all draft", key="reset_budget_draft", on_click=_reset,
+                               use_container_width=True, help="Discard all tax, spending and scheme changes in this Budget draft.")
+        if cut_count == len(SPEND_DEFAULTS) and all(v <= -14.5 for v in spend_values.values()):
+            st.warning("Every department is currently set to a 15% cut. These are saved draft slider values, not automatic game behaviour. Use Restore approved to discard them.")
+        elif cut_count:
+            st.info(f"This draft cuts funding for {cut_count} of {len(SPEND_DEFAULTS)} departments. Check the service and political consequences before delivering it.")
+        spend_groups = [
+            ("People & frontline services", ["welfare", "health", "education", "justice", "defence"]),
+            ("Infrastructure & transition", ["transport", "housing", "climate"]),
+            ("Science, culture & other", ["science", "aid", "culture", "other"]),
+        ]
+        for group, keys in spend_groups:
+            with st.expander(f"{group} · {len(keys)} departments", expanded=False):
+                for k in keys:
+                    if k in SPEND_DEFAULTS:
+                        _spend_row(k, SPEND_DEFAULTS[k], s)
+
+    with t_schemes:
+        with st.expander(f"Revenue-raising schemes · {len(TAX_POLICIES)} options", expanded=False):
+            st.caption("Select policy ideas that affect annual receipts. Hover over an option for the simplified approval, market and growth effects.")
+            for k, p in TAX_POLICIES.items():
+                st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}",
+                            help=f"Estimated annual yield: £{p['yield_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
+        with st.expander(f"Spending pledges · {len(SPEND_POLICIES)} options", expanded=False):
+            st.caption("Choose programmes that add recurring costs to the Budget. These are stylised scenario costs, not official costings.")
+            for k, p in SPEND_POLICIES.items():
+                st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}",
+                            help=f"Annual cost: £{p['cost_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
+
+    with t_whips:
+        left, right = st.columns(2)
+        with left:
+            render_forecast(cur)
+        with right:
+            render_whips(cur)
+
+    with t_charts:
+        p1, p2 = st.columns(2)
+        with p1:
+            st.markdown('**Where the money comes from**')
+            _pie(revenue_pie(cur))
+        with p2:
+            st.markdown('**Where the money goes**')
+            _pie(spending_pie(cur))
+        render_red_book(cur)
+
+    
+
+
+
+# ---------------------------------------------------------------- Spending Review: multi-year departmental settlements
+def render_spending_review():
+    """Annual multi-year Spending Review. Approved settlements change the live departmental baselines."""
+    ensure()
+    s = st.session_state
+    period = f"{s.get('term', 1)}-{s.get('year', 1)}"
+    s.setdefault('spending_review_history', [])
+    s.setdefault('spending_review_last_period', '')
+    s.setdefault('spending_review_plan', {})
+    done = s.spending_review_last_period == period
+
+    st.markdown("## 🏛️ The Spending Review")
+    st.caption("Set departmental budgets for the year ahead and publish a three-year spending path. Settlements change the live Treasury baseline, not just a forecast.")
+    if done:
+        st.success("The Spending Review for this year has been approved. You can review the settlement below, but cannot issue a second one in the same year.")
+    else:
+        st.info("The spending round is open. Departmental Secretaries have submitted their bids; you decide the final settlements.")
+
+    departments = list(SPEND_DEFAULTS.keys())
+    groups = [
+        ("Public services & security", ["health", "education", "welfare", "justice", "defence"]),
+        ("Growth & infrastructure", ["transport", "housing", "science", "climate"]),
+        ("Other services", ["aid", "culture", "other"]),
+    ]
+    draft = {}
+    st.markdown("### Departmental settlements · Year 1")
+    for group, keys in groups:
+        with st.expander(group, expanded=(group == groups[0][0])):
+            cols = st.columns(2)
+            for i, key in enumerate(keys):
+                if key not in SPEND_DEFAULTS:
+                    continue
+                base = float(s.dept_spend[key])
+                widget_key = f"sr_{period}_{key}"
+                # Each annual review starts from the current approved baseline; last year's percentage is not silently repeated.
+                default_pct = 0.0
+                if widget_key not in s:
+                    s[widget_key] = default_pct
+                with cols[i % 2]:
+                    if done:
+                        pct = 0.0
+                        st.metric(SPEND_DEFAULTS[key]['label'], f"£{base:,.1f}bn", "Approved baseline")
+                    else:
+                        pct = st.slider(
+                            f"{SPEND_DEFAULTS[key]['label']} · £{base:,.1f}bn baseline",
+                            min_value=-8.0, max_value=15.0, step=0.5,
+                            key=widget_key,
+                            help="Change to this department's annual baseline, applied when you approve the review."
+                        )
+                    draft[key] = round(base * (1 + pct / 100.0), 1)
+
+    current_total = sum(float(s.dept_spend[k]) for k in departments)
+    proposed_total = sum(draft.values()) if draft else current_total
+    annual_change = proposed_total - current_total
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Current departmental spend", f"£{current_total:,.1f}bn")
+    c2.metric("Proposed settlement", f"£{proposed_total:,.1f}bn", f"£{annual_change:+,.1f}bn")
+    c3.metric("Change in spending", f"{(annual_change / max(current_total, 1)) * 100:+.2f}%")
+
+    st.markdown("### Three-year spending path")
+    st.caption("Illustrative nominal totals: the approved settlement is the starting point, followed by the growth assumptions shown below. These are game projections, not OBR forecasts.")
+    path_rows = []
+    for yr, uplift in [(1, 0.0), (2, 1.5), (3, 2.5)]:
+        total = proposed_total * (1 + uplift / 100.0)
+        path_rows.append({"Spending year": f"Year {yr}", "Annual departmental budgets": f"£{total:,.1f}bn", "Assumed uplift": f"{uplift:+.1f}%"})
+    st.dataframe(pd.DataFrame(path_rows), hide_index=True, use_container_width=True)
+
+    with st.expander("What the settlement means", expanded=False):
+        st.write("Higher allocations improve the capacity of services over time but increase the annual spending baseline. Large unfunded settlements can worsen borrowing, reduce fiscal headroom and unsettle markets.")
+        st.write("This review excludes welfare demand changes and debt interest, which continue to be modelled separately.")
+
+    if not done:
+        if st.button("Approve Spending Review", type="primary", use_container_width=True, key="approve_spending_review"):
+            # Calculate frontline changes against the old baselines before applying the settlement.
+            frontline = sum(draft.get(k, s.dept_spend[k]) - float(s.dept_spend[k]) for k in ("health", "education", "justice"))
+            # Apply a single annual settlement to the actual departmental baselines.
+            s.checkpoint = None
+            for key, amount in draft.items():
+                s.dept_spend[key] = amount
+                s[f"bs_{key}"] = 0.0
+                s.budget_applied.setdefault("spend", {})[key] = 0.0
+            # An unfunded increase worsens the annual deficit and uses fiscal room.
+            s.deficit = round(float(s.deficit) + annual_change, 1)
+            s.headroom = round(float(s.headroom) - annual_change * 0.22, 1)
+            if annual_change > 0:
+                s.market_conf = round(_clip(float(s.market_conf) - min(4.0, annual_change * 0.025)), 1)
+            elif annual_change < 0:
+                s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
+            s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
+            s.spending_review_plan = {k: float(s.get(f"sr_{period}_{k}", 0.0)) for k in departments}
+            s.spending_review_last_period = period
+            s.spending_review_history.append({
+                "period": period, "annual_change": round(annual_change, 1),
+                "departmental_total": round(proposed_total, 1),
+                "allocations": {k: round(v, 1) for k, v in draft.items()},
+            })
+            s.event_cards = list(s.get("event_cards", []))
+            s.event_cards.append({
+                "title": "Spending Review approved",
+                "text": f"You approved departmental settlements worth £{proposed_total:,.1f}bn a year. The annual spending change is £{annual_change:+,.1f}bn.",
+                "summary": f"Headroom £{-annual_change * 0.22:+.1f}bn · Deficit £{annual_change:+.1f}bn",
+            })
+            s.message = f"Spending Review approved. Departmental budgets change by £{annual_change:+,.1f}bn a year."
+            st.rerun()
+
+    if s.spending_review_history:
+        with st.expander("Previous Spending Reviews", expanded=False):
+            rows = [{"Period": x["period"], "Departmental total (£bn)": x["departmental_total"], "Annual change (£bn)": x["annual_change"]} for x in reversed(s.spending_review_history)]
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+            latest = s.spending_review_history[-1]
+            st.caption("Latest settlement: " + ", ".join(f"{SPEND_DEFAULTS[k]['short']} £{v:,.1f}bn" for k, v in latest["allocations"].items()))
 
