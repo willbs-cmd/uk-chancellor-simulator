@@ -416,7 +416,7 @@ def decision_screen():
         selected = options[labels.index(choice)]
         effect_text = state.fmt_fx(selected.get('effect', {}))
         st.markdown("<div class='decision-brief-label'>CHANCELLOR'S DECISION BRIEF</div>", unsafe_allow_html=True)
-        with st.container(border=True):
+        with st.container(key='decision_brief', border=True):
             st.markdown(f"**{choice}**")
             if effect_text:
                 st.caption("MODELLED IMMEDIATE EFFECTS")
@@ -429,9 +429,10 @@ def decision_screen():
                 st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Timing: about {delayed.get('after', 1)} action(s) later.")
             st.caption("Parliament can reduce the impact: a clear passage applies the full effect, a narrow passage applies 70%, and a rejected bill applies only 25%. Effects are estimates, not guaranteed outcomes.")
         st.markdown("<div class='decision-authority'>DECISION PENDING · Your choice is not enacted until you authorise it below.</div>", unsafe_allow_html=True)
-    if st.button('Authorise policy decision', type='primary', disabled=choice is None, use_container_width=True):
-        engine.execute_decision(options[labels.index(choice)])
-        st.rerun()
+    with st.container(key='decision_authorise'):
+        if st.button('Authorise policy decision', type='primary', disabled=choice is None, use_container_width=True):
+            engine.execute_decision(options[labels.index(choice)])
+            st.rerun()
 
 
 def briefing():
