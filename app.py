@@ -543,7 +543,7 @@ tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
 
 with tab_action:
     if s.get('local_election_due'):
-        local_elections.render()
+        local_elections.render(widget_namespace='action')
     elif _is_budget_phase:
         budget_screen()
     elif s.active_crisis is not None:
@@ -570,7 +570,7 @@ with tab_government:
     with gov_parliament:
         parliament.render()
     with gov_local:
-        local_elections.render()
+        local_elections.render(widget_namespace='government')
     with gov_office:
         chancellor_office.render()
 
