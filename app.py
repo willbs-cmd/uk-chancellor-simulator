@@ -350,9 +350,7 @@ def budget_screen():
                 st.rerun()
 
         budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
-    treasury.render()
-    st.divider()
-    chancellor_office.render()
+
 
 
 # ==================== DECISIONS & CRISES ====================
@@ -508,28 +506,52 @@ def economy():
     country.render()
 
 
-if s.block == 3 and s.active_crisis is None:
-    budget_screen()
-else:
-    has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
-    tab_decision, tab_briefing, tab_economy, tab_politics, tab_fiscal = st.tabs(
-        ['⚖️ Decision', '📰 Briefing' + (' •' if has_briefing else ''), '📊 Economy', '🏛️ Chancellor’s Office', '💷 Treasury tools']
-    )
-    with tab_decision:
-        if s.active_crisis is not None:
-            crisis_screen()
-        elif s.get('active_request'):
-            request_screen()
+# ==================== MAIN NAVIGATION ====================
+# Keep the core action visible in one place; supporting information is separated
+# into compact workspaces so the player does not have to scroll through everything.
+_has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
+_is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request'))
+
+tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
+    '⚖️  Action' + (' •' if _is_budget_phase else ''),
+    '📰  Briefing' + (' •' if _has_briefing else ''),
+    '📊  Economy',
+    '🏛️  Government',
+    '💷  Treasury'
+])
+
+with tab_action:
+    if _is_budget_phase:
+        budget_screen()
+    elif s.active_crisis is not None:
+        crisis_screen()
+    elif s.get('active_request'):
+        request_screen()
+    else:
+        decision_screen()
+
+with tab_briefing:
+    briefing()
+
+with tab_economy:
+    economy()
+
+with tab_government:
+    st.markdown('### Government and Parliament')
+    gov_polls, gov_parliament, gov_office = st.tabs(['Polling', 'Parliament', "Chancellor's Office"])
+    with gov_polls:
+        if s.get('poll_history'):
+            render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
         else:
-            decision_screen()
-    with tab_briefing:
-        briefing()
-    with tab_economy:
-        economy()
-    with tab_politics:
-        render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
+            st.info('Polling history will appear after the first update.')
+    with gov_parliament:
         parliament.render()
+    with gov_office:
         chancellor_office.render()
-    with tab_fiscal:
-        st.caption('Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
+
+with tab_treasury:
+    st.markdown('### Treasury control room')
+    st.caption('Manage public investments, fiscal tools and the cost of government borrowing.')
+    treasury.render()
+    with st.expander('Advanced fiscal tools', expanded=False):
         features.render()
