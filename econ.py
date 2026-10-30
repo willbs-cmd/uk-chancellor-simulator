@@ -31,8 +31,21 @@ def step(v, incoming_year=None):
     o['inflation'] = round(clip(o['inflation'] + 0.25 * gap - 0.08 * (o['interest_rate'] - (o['inflation'] + 1.5)), 0, 12), 2)
     target_rate = o['inflation'] + 1.8
     o['interest_rate'] = round(clip(o['interest_rate'] + max(-0.5, min(0.5, 0.6 * (target_rate - o['interest_rate']))), 0.5, 9), 2)
-    gilt_target = o['interest_rate'] - 0.3 + (65 - o['market_conf']) * 0.03 + (o['debt'] - 98.2) * 0.02
-    o['gilt_yield'] = round(clip(o['gilt_yield'] + 0.5 * (gilt_target - o['gilt_yield']), 1, 9), 2)
+    # A sovereign risk premium makes gilt markets react to the whole fiscal picture,
+    # not just the policy rate. The premium builds gradually and is capped to keep
+    # the simulation playable rather than creating an instant debt spiral.
+    nominal_gdp_bn = max(500.0, float(o.get('gdp_trillion', 3.0)) * 1000.0)
+    deficit_ratio = max(0.0, float(o['deficit'])) / nominal_gdp_bn
+    debt_pressure = max(0.0, float(o['debt']) - 90.0) * 0.012
+    deficit_pressure = max(0.0, deficit_ratio - 0.035) * 18.0
+    confidence_pressure = max(0.0, 50.0 - float(o['market_conf'])) * 0.025
+    risk_premium = round(clip(debt_pressure + deficit_pressure + confidence_pressure, 0.0, 2.5), 2)
+    gilt_target = (o['interest_rate'] - 0.3 + (65 - o['market_conf']) * 0.03
+                   + (o['debt'] - 98.2) * 0.02 + risk_premium)
+    o['gilt_yield'] = round(clip(o['gilt_yield'] + 0.5 * (gilt_target - o['gilt_yield']), 1, 10), 2)
+    o['gilt_risk_premium'] = risk_premium
+    o['debt_interest_bill'] = round(10.7 * (1 + 0.4 * (o['gilt_yield'] / 4.7 - 1)
+                                              + (o['debt'] / 98.2 - 1)), 1)
     o['growth'] = round(o['growth'] + 0.2 * (1.2 - o['growth']) - 0.08 * (o['interest_rate'] - 4.5), 2)
 
     # IMF baseline anchor: player decisions still dominate, but the economy gently converges on the external forecast.
