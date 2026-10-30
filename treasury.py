@@ -45,6 +45,8 @@ def ensure():
     s.setdefault("treasury_last_tax_uplift", 0.0)
     s.setdefault("treasury_last_investment_income", 0.0)
     s.setdefault("treasury_cumulative_income", 0.0)
+    s.setdefault("treasury_cost_pressure_history", [])
+    s.setdefault("treasury_last_cost_pressures", {})
     s.setdefault("treasury_notice", "")
 
 
@@ -84,23 +86,49 @@ def annual_update(nominal_growth):
 
     investment_income = round(max(0.0, investment_income), 2)
     total_extra = round(tax_uplift + investment_income, 2)
-    if total_extra:
-        s.headroom = round(float(s.headroom) + total_extra, 1)
-        s.deficit = round(max(0.0, float(s.deficit) - total_extra), 1)
+
+    # Recurring public-service cost pressures. These are incremental annual
+    # pressures on the fiscal margin, not the full NHS/pay/pension budgets.
+    inflation = float(s.get("inflation", 2.0))
+    demographic_pressure = float(s.get("demographic_pressure", 0.0))
+    nhs_pressure = round(
+        0.45 + 0.10 * max(0.0, inflation - 2.0) + 0.025 * demographic_pressure, 2
+    )
+    public_pay_pressure = round(
+        0.40 + 0.12 * max(0.0, inflation - 2.0) + 0.015 * max(0.0, 2.0 - float(s.get("growth", 0.0))), 2
+    )
+    annual_cost_pressure = round(nhs_pressure + public_pay_pressure, 2)
+
+    net_fiscal_change = round(total_extra - annual_cost_pressure, 2)
+    if net_fiscal_change:
+        s.headroom = round(float(s.headroom) + net_fiscal_change, 1)
+        s.deficit = round(max(0.0, float(s.deficit) - net_fiscal_change), 1)
     s.treasury_last_tax_uplift = tax_uplift
     s.treasury_last_investment_income = investment_income
+    s.treasury_last_cost_pressures = {
+        "NHS and public services (£bn)": nhs_pressure,
+        "Public-sector pay (£bn)": public_pay_pressure,
+        "Total recurring pressures (£bn)": annual_cost_pressure,
+    }
+    s.treasury_cost_pressure_history = s.get("treasury_cost_pressure_history", [])
+    s.treasury_cost_pressure_history.append({
+        "Year": f"Term {s.term}, Year {s.year}",
+        **s.treasury_last_cost_pressures,
+    })
     s.treasury_cumulative_income = round(float(s.treasury_cumulative_income) + total_extra, 2)
     s.treasury_income_history.append({
         "Year": f"Term {s.term}, Year {s.year}",
         "Gross extra tax receipts (£bn)": gross_tax_uplift,
         "Net growth dividend to headroom (£bn)": tax_uplift,
         "Investment income (£bn)": investment_income,
-        "Total extra receipts (£bn)": total_extra,
+        "Recurring cost pressures (£bn)": annual_cost_pressure,
+        "Net change to headroom (£bn)": net_fiscal_change,
         "Tax base index": s.tax_base_index,
     })
     s.message += (
         f" Treasury update: economic growth generated £{gross_tax_uplift:.1f}B in extra tax receipts, of which £{tax_uplift:.1f}B improves headroom after spending pressures; "
-        f"public investments generated £{investment_income:.1f}B."
+        f"public investments generated £{investment_income:.1f}B. Recurring NHS and public-sector pay pressures cost £{annual_cost_pressure:.2f}B "
+        f"(NHS £{nhs_pressure:.2f}B; pay £{public_pay_pressure:.2f}B)."
     )
 
 
