@@ -180,7 +180,7 @@ def settle():
 # ================================================================ the decision loop
 def current_decision():
     s = st.session_state
-    return decisions.get_weekly_decision(s.get('seed', 0), s.get('term', 1), s.get('year', 1), s.get('block', 1))
+    return decisions.get_weekly_decision(s.get('seed', 0), s.get('term', 1), s.get('year', 1), s.get('block', 1), s.get('policy_history', []))
 
 
 def current_options():
@@ -265,6 +265,15 @@ def execute_decision(opt):
     applied_effect = parliament.scale_effect(effect, combined_factor)
     s.message = effect.get('message', 'Decision applied.')
     s.last_ideology = ideology
+    s.policy_history.append({
+        'term': int(s.get('term', 1)),
+        'year': int(s.get('year', 1)),
+        'block': int(s.get('block', 1)),
+        'title': decision.get('title', 'Policy decision'),
+        'ideology': ideology,
+        'choice': opt.get('label', ''),
+        'branch_id': decision.get('branch_id')
+    })
     s.headlines = generate_headlines(ideology)
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
