@@ -87,7 +87,7 @@ BRANCHES = {
     },
     'fiscal_reset': {
         'title': 'The Fiscal Credibility Test',
-        'text': 'Your previous decisions have put fiscal discipline at the centre of the government's identity. The Treasury and bond markets now expect a credible medium-term plan.',
+        'text': "Your previous decisions have put fiscal discipline at the centre of the government's identity. The Treasury and bond markets now expect a credible medium-term plan.",
         'humphrey': 'The markets are demanding a plan, Chancellor. Preferably one with numbers in it. They are terribly old-fashioned that way.',
         'trigger': {'Fiscal Austerity'},
         'options': [
