@@ -62,12 +62,93 @@ def scale_effect(effect, factor):
     return scaled
 
 
+def _party_seats(s):
+    """Use the latest election result, falling back to the latest polling split."""
+    result = s.get("election_result") or {}
+    seats = result.get("seats", {}) if isinstance(result, dict) else {}
+    parties = list(state.PARTIES)
+    if seats and sum(max(0, int(seats.get(p, 0))) for p in parties):
+        raw = {p: max(0, int(seats.get(p, 0))) for p in parties}
+    else:
+        history = s.get("poll_history", {})
+        raw = {p: float(history.get(p, [0])[-1]) if history.get(p) else 0 for p in parties}
+    total = sum(raw.values())
+    if total <= 0:
+        raw = {p: (1 if p == s.get("party") else 0) for p in parties}
+        total = 1
+    scaled = {p: int(raw[p] * 650 / total) for p in parties}
+    remainder = 650 - sum(scaled.values())
+    for p in sorted(parties, key=lambda x: raw[x], reverse=True)[:remainder]:
+        scaled[p] += 1
+    return scaled
+
+
+def _policy_pressure(option):
+    """Estimate which parliamentary blocs are naturally sympathetic to a proposal."""
+    ideology = option.get("ideology", "Centric")
+    effect = option.get("effect", {})
+    cuts = sum(max(0.0, -float(v)) for k, v in effect.items()
+               if any(word in k.lower() for word in ("spend", "health", "education", "welfare", "public")))
+    austerity = ideology == "Fiscal Austerity" or cuts >= 2.0
+    homes = {
+        "Labour": {"Social Democratic", "Hard Left"},
+        "Conservative": {"Free-Market", "Fiscal Austerity"},
+        "Liberal Democrats": {"Centric", "Social Democratic"},
+        "Reform UK": {"Free-Market", "Fiscal Austerity"},
+        "Green Party": {"Hard Left", "Social Democratic"},
+        "SNP": {"Social Democratic", "Centric"},
+        "Plaid Cymru": {"Social Democratic", "Hard Left"},
+    }
+    return ideology, austerity, homes
+
+
+def _simulate_party_vote(option, bonus=0):
+    """Simulate party-by-party support and dissent, including opposition-party rebels."""
+    s = st.session_state
+    seats = _party_seats(s)
+    ideology, austerity, homes = _policy_pressure(option)
+    government = s.get("party", "Labour")
+    result, total_ayes = {}, 0
+    for party, strength in seats.items():
+        if not strength:
+            continue
+        aligned = ideology in homes.get(party, {"Centric"}) or ideology == "Centric"
+        if party == government:
+            morale = float(s.get("backbench_opinion", 60))
+            unity = float(s.get("party_opinion", 65))
+            support = 0.84 + (morale - 50) * 0.0025 + (unity - 50) * 0.0015
+            if austerity and party in {"Labour", "SNP", "Plaid Cymru", "Green Party"}:
+                support -= 0.17
+            if not aligned:
+                support -= 0.08
+            support += min(0.08, max(-0.08, bonus / max(1, strength)))
+        else:
+            # Opposition MPs mostly oppose the government, but cross-party votes
+            # and ideological sympathy allow a minority to break ranks.
+            support = 0.08 + (0.16 if aligned else 0.0)
+            if austerity and party in {"Conservative", "Reform UK"}:
+                support += 0.28
+            if austerity and party in {"Labour", "SNP", "Plaid Cymru", "Green Party"}:
+                support -= 0.04
+        support = max(0.02, min(0.98, support))
+        ayes = max(0, min(strength, int(math.floor(strength * support + 0.5))))
+        noes = strength - ayes
+        expected = "Government support" if party == government else "Opposition against"
+        rebels = noes if party == government else ayes
+        result[party] = {"seats": strength, "ayes": ayes, "noes": noes,
+                         "rebels": rebels, "line": expected}
+        total_ayes += ayes
+    # Whip/SPAD bonuses persuade wavering MPs across the House, without creating seats.
+    total_ayes = max(0, min(650, total_ayes))
+    return total_ayes, result
+
+
 def review_bill(decision, option):
-    """Vote on the selected policy before applying its effects."""
+    """Vote on the selected policy, modelling every party's MPs and internal rebellions."""
     s = st.session_state
     bonus = int(s.get("parliament_next_bonus", 0))
     s.parliament_next_bonus = 0
-    votes = projected_ayes(bonus=bonus)
+    votes, party_votes = _simulate_party_vote(option, bonus)
     if votes >= CLEAR_PASS:
         status, factor = "Passed", 1.0
         explanation = "The Commons backs the bill without a substantial amendment."
@@ -77,25 +158,20 @@ def review_bill(decision, option):
     else:
         status, factor = "Rejected", 0.25
         explanation = "The Commons rejects the proposal. Only a limited pilot or administrative part is implemented."
+    rebels = sum(row["rebels"] for row in party_votes.values())
     record = {
-        "term": int(s.get("term", 1)),
-        "year": int(s.get("year", 1)),
-        "phase": int(s.get("block", 1)),
-        "title": decision.get("title", "Policy bill"),
+        "term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
+        "phase": int(s.get("block", 1)), "title": decision.get("title", "Policy bill"),
         "choice": option.get("label", "Government proposal"),
-        "ideology": option.get("ideology", "Centric"),
-        "ayes": int(votes),
-        "noes": int(650 - votes),
-        "status": status,
-        "factor": factor,
-        "bonus": bonus,
+        "ideology": option.get("ideology", "Centric"), "ayes": int(votes),
+        "noes": int(650 - votes), "status": status, "factor": factor,
+        "bonus": bonus, "rebels": rebels, "party_votes": party_votes,
         "explanation": explanation,
     }
     s.parliament_last_vote = record
     s.setdefault("parliament_history", [])
     s.parliament_history = (list(s.parliament_history) + [record])[-15:]
     return record
-
 
 def apply_fallout(record):
     """Political consequences after the Commons has passed, amended or rejected a bill."""
@@ -255,6 +331,16 @@ def render():
         else:
             st.error(text)
         st.caption(last["explanation"])
+        st.metric("MPs breaking their party line", f"{int(last.get('rebels', 0))}")
+        party_rows = last.get("party_votes", {})
+        if party_rows:
+            with st.expander("Party-by-party vote and rebellions", expanded=True):
+                import pandas as pd
+                rows = [{"Party": party, "Seats": row["seats"], "Ayes": row["ayes"],
+                         "Noes": row["noes"], "Rebels": row["rebels"]}
+                        for party, row in party_rows.items()]
+                st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+                st.caption("Rebels are MPs voting against their party's assumed line: government MPs voting No, or opposition MPs voting Aye. This is a simulated model, not a forecast of named MPs.")
 
     history = list(s.get("parliament_history", []))[-5:]
     if history:
