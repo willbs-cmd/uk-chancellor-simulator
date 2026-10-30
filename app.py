@@ -532,7 +532,9 @@ tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
 ])
 
 with tab_action:
-    if _is_budget_phase:
+    if s.get('local_election_due'):
+        local_elections.render()
+    elif _is_budget_phase:
         budget_screen()
     elif s.active_crisis is not None:
         crisis_screen()
