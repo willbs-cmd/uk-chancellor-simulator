@@ -362,7 +362,10 @@ def forecast(b, years=3):
         v = econ.step(v, now + i)                                   # ...then the economy moves on
         nominal_growth = ((1 + v['growth'] / 100.0) * (1 + v['inflation'] / 100.0) - 1) * 100
         next_index = max(0.55, tax_index * (1 + max(-8.0, min(12.0, nominal_growth * 0.85)) / 100.0))
-        growth_receipts = tax_receipts_base * (next_index - tax_index)
+        gross_growth_receipts = tax_receipts_base * (next_index - tax_index)
+        # Mirror the live Treasury rule: only 30% of positive buoyancy is free
+        # fiscal space after baseline spending pressures; recession losses pass through fully.
+        growth_receipts = gross_growth_receipts * 0.30 if gross_growth_receipts > 0 else gross_growth_receipts
         tax_index = next_index
         market_factor = max(0.55, min(1.15, 0.75 + v['market_conf'] / 200.0))
         investment_income = 0.0
@@ -522,7 +525,7 @@ def render_forecast(cur):
     rows = forecast(cur)
     df = pd.DataFrame([{
         'Year': r['year'], 'Growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
-        'Growth receipts': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
+        'Net growth dividend': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
         'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
         'Gilts': f"{r['gilt']:.1f}%", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
