@@ -577,6 +577,10 @@ with tab_government:
 with tab_treasury:
     st.markdown('### Treasury control room')
     st.caption('Manage public investments, fiscal tools and the cost of government borrowing.')
-    treasury.render()
-    with st.expander('Advanced fiscal tools', expanded=False):
+    treasury_tabs = st.tabs(['🏛️ Spending Review', '💷 Treasury & gilts', '⚙️ Fiscal tools'])
+    with treasury_tabs[0]:
+        budget.render_spending_review()
+    with treasury_tabs[1]:
+        treasury.render()
+    with treasury_tabs[2]:
         features.render()
