@@ -13,7 +13,6 @@ import country
 import econ
 import imf_outlook
 import state
-import features
 from content_store import load_json
 from theme import render_chips
 # Game-editable fiscal controls and policy choices live in data/policies.json.
@@ -655,8 +654,8 @@ def render(submit=None, after_summary=None):
     if after_summary:
         after_summary()
 
-    t_tax, t_spend, t_schemes, t_whips, t_charts, t_features = st.tabs(
-        ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book', 'Fiscal tools'])
+    t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
+        ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
 
     with t_tax:
         st.caption('Income-tax rates are marginal: each rate applies only to income inside its band. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
@@ -711,6 +710,4 @@ def render(submit=None, after_summary=None):
             _pie(spending_pie(cur))
         render_red_book(cur)
 
-    with t_features:
-        features.render()
     
