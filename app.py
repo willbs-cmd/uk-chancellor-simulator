@@ -14,6 +14,7 @@ import parliament
 import scenarios as scen
 import state
 import treasury
+import chancellor_office
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
@@ -475,40 +476,12 @@ def economy():
     country.render()
 
 
-def reshuffle_panel():
-    used_terms = s.setdefault('cabinet_reshuffle_terms', [])
-    with st.expander('🔀 Cabinet reshuffle', expanded=False):
-        if int(s.term) in used_terms:
-            st.info("You have already reshuffled your Cabinet this term. Ministers will need time to settle.")
-            return
-        st.caption("A reshuffle can reset a troubled government, but sidelined ministers and MPs may retaliate. Costs 2 political-capital points.")
-        if st.button("Conduct a Cabinet reshuffle", key="cabinet_reshuffle",
-                     disabled=int(s.get('political_capital_points', 0)) < 2, use_container_width=True):
-            state.checkpoint()
-            before = state.values()
-            state.snapshot()
-            s.political_capital_points = int(s.get('political_capital_points', 0)) - 2
-            s.cab_opinion = min(100.0, float(s.cab_opinion) + 8.0)
-            s.pm_opinion = min(100.0, float(s.pm_opinion) + 2.0)
-            if float(s.backbench_opinion) < 45:
-                s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 3.0)
-                s.party_opinion = max(0.0, float(s.party_opinion) - 2.0)
-                s.message = "The reshuffle steadies the Cabinet, but angry backbenchers accuse you of scapegoating ministers."
-            else:
-                s.backbench_opinion = max(0.0, float(s.backbench_opinion) - 1.0)
-                s.message = "The reshuffle refreshes the Cabinet. The Prime Minister welcomes the show of initiative, though some colleagues feel exposed."
-            used_terms.append(int(s.term))
-            state.log("event", "Cabinet reshuffle", choice="Refresh the ministerial team", before=before, note=s.message)
-            state.record()
-            st.rerun()
-
-
 if s.block == 3 and s.active_crisis is None:
     budget_screen()
 else:
     has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
     tab_decision, tab_briefing, tab_economy, tab_politics, tab_fiscal = st.tabs(
-        ['⚖️ Decision', '📰 Briefing' + (' •' if has_briefing else ''), '📊 Economy', '🏛️ Politics', '💷 Treasury tools']
+        ['⚖️ Decision', '📰 Briefing' + (' •' if has_briefing else ''), '📊 Economy', '🏛️ Chancellor’s Office', '💷 Treasury tools']
     )
     with tab_decision:
         if s.active_crisis is not None:
@@ -524,7 +497,7 @@ else:
     with tab_politics:
         render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
         parliament.render()
-        reshuffle_panel()
+        chancellor_office.render()
     with tab_fiscal:
         st.caption('Bank policy, gilt auctions, pay rounds, tax thresholds and devolved-government bargaining.')
         features.render()
