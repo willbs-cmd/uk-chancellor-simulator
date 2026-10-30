@@ -1124,6 +1124,68 @@ hr { border-color:rgba(222,197,158,.35)!important; }
   .hud {padding:5px}
 }
 
+
+/* GLOBAL SPACING + OVERFLOW REPAIR */
+*, *::before, *::after { box-sizing:border-box; }
+html, body, .stApp, [data-testid='stAppViewContainer'], [data-testid='stMain'],
+[data-testid='stMainBlockContainer'], .block-container { max-width:100%; min-width:0; }
+[data-testid='stMainBlockContainer'], .block-container { overflow-x:hidden!important; }
+[data-testid='stVerticalBlock'], [data-testid='stHorizontalBlock'],
+[data-testid='stElementContainer'], [data-testid='stMarkdown'],
+[data-testid='stMarkdownContainer'] { min-width:0; max-width:100%; }
+[data-testid='stVerticalBlock'] { gap:.8rem!important; }
+[data-testid='stElementContainer'] { margin-bottom:0!important; }
+[data-testid='stMarkdownContainer'] p { overflow-wrap:anywhere; }
+[data-testid='stButton'] { max-width:100%; }
+[data-testid='stButton'] button { white-space:normal!important; min-height:2.7rem; line-height:1.25; }
+
+/* Decision brief must wrap long effect strings instead of widening the page. */
+.st-key-decision_brief {
+  width:100%; max-width:100%; min-width:0;
+  padding:clamp(14px,2vw,22px)!important;
+  margin:8px 0 12px!important;
+  border:1px solid rgba(222,197,158,.38)!important;
+  border-radius:10px!important;
+  background:linear-gradient(135deg,rgba(76,31,27,.78),rgba(47,20,18,.76))!important;
+  overflow:hidden!important;
+}
+.st-key-decision_brief [data-testid='stVerticalBlock'] { gap:.65rem!important; }
+.st-key-decision_brief [data-testid='stMarkdownContainer'],
+.st-key-decision_brief [data-testid='stCaptionContainer'] { min-width:0!important; max-width:100%!important; }
+.st-key-decision_brief .decision-impact {
+  display:block; width:100%; max-width:100%; min-width:0;
+  white-space:normal!important; overflow-wrap:anywhere!important;
+  word-break:normal!important; line-height:1.55;
+  padding:12px 14px!important; margin:5px 0 9px!important;
+  border-radius:8px!important;
+}
+.st-key-decision_brief [data-testid='stMarkdownContainer'] p,
+.st-key-decision_brief [data-testid='stCaptionContainer'] p {
+  white-space:normal!important; overflow-wrap:anywhere!important;
+  line-height:1.5!important; margin-bottom:.25rem!important;
+}
+.st-key-decision_brief [data-testid='stMarkdownContainer'] strong { line-height:1.4; }
+.st-key-decision_authority {
+  width:100%; max-width:100%; min-width:0;
+  margin:5px 0 8px!important; padding:10px 12px!important;
+  border:1px solid rgba(222,197,158,.25);
+  border-radius:7px; background:rgba(44,20,18,.38);
+  overflow-wrap:anywhere;
+}
+.st-key-decision_authorise { width:100%; margin:4px 0 16px!important; }
+.st-key-decision_authorise [data-testid='stButton'] { width:100%; }
+.st-key-decision_authorise button { width:100%; min-height:48px!important; }
+
+/* Keep all game panels and controls inside their column on narrow screens. */
+[data-testid='stColumn'] { min-width:0!important; }
+[data-testid='stDataFrame'], [data-testid='stTable'] { max-width:100%; }
+@media(max-width:760px) {
+  [data-testid='stVerticalBlock'] { gap:.65rem!important; }
+  .st-key-decision_brief { padding:13px!important; margin:6px 0 10px!important; }
+  .st-key-decision_brief .decision-impact { padding:10px!important; font-size:.9rem!important; }
+  .briefing-heading { overflow-wrap:anywhere; }
+}
+
 </style>
 """
 
