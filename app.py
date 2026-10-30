@@ -235,6 +235,8 @@ if s.year > 5:
                       else f"+{government_majority}" if government_majority >= 0
                       else "Hung / minority")
     e3.metric("Working majority", majority_label)
+    st.markdown(f"### 🗳️ Government mandate · {r.get('mandate_label', 'Election result')}" )
+    st.caption(f"The next term begins with a modelled Commons mandate of {r.get('mandate_strength', 0):+d} votes. A larger majority makes it easier to pass legislation; coalition and minority governments receive a more cautious mandate.")
     election_rows = []
     for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True):
         election_rows.append({
