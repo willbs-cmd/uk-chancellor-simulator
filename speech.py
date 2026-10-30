@@ -73,7 +73,10 @@ def compose():
         opener = random.choice(['Mr Speaker, this is a Budget that balances ambition with prudence.',
                                 'Mr Speaker, this is a steady Budget for uncertain times.'])
 
-    parts = [opener]
+    strategy = budget.FISCAL_STRATEGIES.get(s.get('budget_strategy', 'balanced'), budget.FISCAL_STRATEGIES['balanced'])
+    parts = [opener, f"Our fiscal approach is {strategy['label'].lower()}: {strategy['description']}"]
+    if s.get('budget_message'):
+        parts.append(s.budget_message.strip())
     if taxes:
         parts.append('On tax: ' + _join([t[2] for t in taxes]) + '.')
     if spends:
