@@ -365,11 +365,16 @@ def economy_tick():
     """Once a year the economy moves on by itself: inflation, rates, gilts, growth and the knock-on drags."""
     s = st.session_state
     keys = ('inflation', 'interest_rate', 'gilt_yield', 'growth', 'debt', 'deficit', 'headroom', 'market_conf', 'approval')
+    # GDP provides the denominator for the sovereign deficit-risk calculation.
+    
     v = {k: s[k] for k in keys}
     v['cycle'] = s.get('macro_cycle')
+    v['gdp_trillion'] = float(s.get('gdp_trillion', 3.0))
     out = econ.step(v, econ.game_year(s.term, s.year) + 1)   # +1: the year we are moving into
     for k in ('inflation', 'interest_rate', 'gilt_yield', 'growth', 'debt', 'deficit', 'headroom', 'market_conf'):
         s[k] = out[k]
+    s.gilt_risk_premium = float(out.get('gilt_risk_premium', 0.0))
+    s.debt_interest_bill = float(out.get('debt_interest_bill', s.get('debt_interest_bill', 10.7)))
 
     # fiscal credibility: markets and voters punish a breached fiscal rule far harder than they reward prudence
     cred = out['cred']
