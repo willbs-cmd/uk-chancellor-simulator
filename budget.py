@@ -70,6 +70,11 @@ FISCAL_STRATEGIES = {
     'redistribution': {'label':'Redistribution & public services', 'description':'Prioritise fairness and frontline services, requiring more revenue or borrowing.', 'headroom':-1.3,'approval':1.8,'market':-0.3,'growth':0.01},
 }
 
+def _tax_slider_spec(tax):
+    """Return Streamlit-compatible bounds and step for a tax control."""
+    return float(tax['lo']), float(tax['hi']), float(tax['step'])
+
+
 def defaults():
     return {
         'strategy': 'balanced',
