@@ -424,6 +424,24 @@ def economy_tick():
         s.headroom = round(s.headroom - 1.0, 1)
         s.message += ' Spiking poverty has forced unbudgeted emergency welfare spending.'
 
+    # Labour-market automatic stabilisers: weak growth and high borrowing costs
+    # raise unemployment; a stronger expansion gradually creates jobs.
+    # Real wages respond to estimated nominal pay growth less inflation.
+    labour_growth = float(s.growth)
+    labour_rate_drag = max(0.0, float(s.interest_rate) - 4.5)
+    unemployment_change = -0.10 * (labour_growth - 1.2) + 0.025 * labour_rate_drag
+    nominal_pay_growth = 2.6 + 0.22 * (labour_growth - 1.2) - 0.08 * labour_rate_drag
+    real_wage_target = nominal_pay_growth - float(s.inflation)
+    real_wage_change = 0.25 * (real_wage_target - float(c.get('real_wages', 0.0)))
+    country.nudge({
+        'unemployment': round(unemployment_change, 2),
+        'real_wages': round(real_wage_change, 2),
+    }, snapshot=False)
+    if unemployment_change > 0.12:
+        s.message += ' A weak labour market is pushing unemployment higher.'
+    elif unemployment_change < -0.12:
+        s.message += ' Stronger economic activity is creating jobs and easing unemployment.'
+
 
 def proceed_to_spring():
     s = st.session_state
