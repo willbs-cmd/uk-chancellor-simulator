@@ -713,6 +713,57 @@ def render(submit=None, after_summary=None):
              desc='Votes for the Budget in the Commons. You need 326.'),
     ])
 
+    # Private Treasury briefing: the Chancellor sees the political and fiscal risks
+    # before deciding whether to send the package to Parliament.
+    briefing_rows = forecast(cur, years=3)
+    lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
+    end_debt = float(briefing_rows[-1]['debt'])
+    market_outlook = _clip(float(s.market_conf) + float(imp.get('market', 0.0)))
+    if lowest_headroom < 0:
+        obr_verdict = "Fiscal rules at risk"
+        obr_detail = f"The central forecast falls to £{lowest_headroom:.1f}bn of headroom. A weaker economy could make the breach worse."
+    elif lowest_headroom < 5:
+        obr_verdict = "Very little fiscal room"
+        obr_detail = f"The lowest projected headroom is £{lowest_headroom:.1f}bn. A small forecast downgrade could wipe it out."
+    else:
+        obr_verdict = "Fiscal rule met"
+        obr_detail = f"The central forecast retains at least £{lowest_headroom:.1f}bn of headroom over the three-year horizon."
+    if ayes < WIN:
+        commons_verdict = "Budget likely to fall"
+        commons_detail = f"Only {ayes} MPs are projected to support the package; {WIN} are needed. The Government would face a confidence crisis."
+    elif ayes < WIN + 15:
+        commons_verdict = "Knife-edge majority"
+        commons_detail = f"{ayes} projected Ayes. A modest rebellion could defeat the Budget."
+    else:
+        commons_verdict = "Likely to pass"
+        commons_detail = f"{ayes} projected Ayes, a working margin of {ayes - WIN} over the majority threshold."
+    if market_outlook < 35:
+        market_verdict = "Investors deeply uneasy"
+        market_detail = "The package is being judged against already weak confidence. Borrowing costs could rise quickly."
+    elif market_outlook < 55:
+        market_verdict = "Markets cautious"
+        market_detail = "Investors will look for credible funding and a believable path for debt."
+    else:
+        market_verdict = "Markets relatively confident"
+        market_detail = "There is some room for a positive reception, provided the fiscal arithmetic holds."
+    st.markdown("### The private Treasury briefing")
+    st.caption("A pre-delivery assessment for the Chancellor. These are modelled forecasts and political estimates, not official OBR or market statements.")
+    brief_cols = st.columns(3, gap="medium")
+    with brief_cols[0]:
+        st.markdown("**OBR · Fiscal outlook**")
+        st.markdown(f"**{obr_verdict}**")
+        st.caption(obr_detail)
+    with brief_cols[1]:
+        st.markdown("**Commons · Parliamentary arithmetic**")
+        st.markdown(f"**{commons_verdict}**")
+        st.caption(commons_detail)
+    with brief_cols[2]:
+        st.markdown("**City · Market reaction**")
+        st.markdown(f"**{market_verdict}**")
+        st.caption(market_detail)
+    debt_direction = "falling" if end_debt < float(s.debt) else "rising"
+    st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
+
     st.markdown('### Choose your fiscal strategy')
     strategy_keys = list(FISCAL_STRATEGIES)
     st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
