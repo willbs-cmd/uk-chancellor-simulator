@@ -321,6 +321,8 @@ def budget_screen():
 
         budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
     treasury.render()
+    st.divider()
+    chancellor_office.render()
 
 
 # ==================== DECISIONS & CRISES ====================
