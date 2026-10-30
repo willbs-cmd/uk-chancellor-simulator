@@ -207,6 +207,7 @@ def _defaults():
         local_election_due=False, local_election_result=None, local_election_history=[],
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], chancellor_actions=[],
+        cabinet_ministers={}, ministerial_loyalty={}, ministerial_resignations=[],
         spending_review_last_period='', spending_review_plan={}, spending_review_history=[],
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
