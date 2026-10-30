@@ -222,9 +222,16 @@ if s.year > 5:
         col.metric(labels[party], r['seats'][party])
     st.markdown("### 📊 The national result")
     e1, e2, e3 = st.columns(3, gap="small")
+    # Count coalition partners when displaying the government's parliamentary strength.
+    coalition_seats = r['seats'].get(r.get('coalition'), 0) if r.get('coalition') else 0
+    government_seats = r['player_seats'] + coalition_seats
+    government_majority = government_seats - engine.WIN_MAJORITY
     e1.metric("Estimated turnout", f"{r.get('turnout', 65.0):.1f}%")
-    e2.metric("Government seats", f"{r['player_seats']}/650")
-    e3.metric("Working majority", str(r['player_seats'] - engine.WIN_MAJORITY) if r['player_seats'] >= engine.WIN_MAJORITY else "Hung / minority")
+    e2.metric("Government seats", f"{government_seats}/650")
+    majority_label = (f"Coalition +{government_majority}" if r.get('coalition') and government_majority >= 0
+                      else f"+{government_majority}" if government_majority >= 0
+                      else "Hung / minority")
+    e3.metric("Working majority", majority_label)
     election_rows = []
     for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True):
         election_rows.append({
@@ -235,7 +242,7 @@ if s.year > 5:
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
     if r.get('coalition'):
-        st.info(f"Coalition arithmetic: {r['player_seats']} {s.party} MPs + {r['seats'][r['coalition']]} {r['coalition']} MPs = {r['player_seats'] + r['seats'][r['coalition']]} seats.")
+        st.success(f"Coalition majority: {r['player_seats']} {s.party} MPs + {coalition_seats} {r['coalition']} MPs = {government_seats} seats. That is {government_majority} above the 326-seat majority threshold.")
     elif r['player_seats'] < engine.WIN_MAJORITY and r['win']:
         st.warning("Minority government: you remain in office but need support from other parties on confidence and supply.")
     elif not r['win']:
