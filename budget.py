@@ -121,9 +121,23 @@ def ensure():
     s.setdefault("cabinet_ministers", {})
     s.setdefault("ministerial_loyalty", {})
     s.setdefault("ministerial_resignations", [])
+    s.setdefault("ministerial_vacancy_year", {})
     for key, (name, priority) in DEPARTMENT_MINISTERS.items():
         s.cabinet_ministers.setdefault(key, name)
         s.ministerial_loyalty.setdefault(key, 65.0)
+        # The Prime Minister, not the Chancellor, fills Cabinet vacancies.
+        if s.cabinet_ministers.get(key) == "Vacant — awaiting Prime Minister":
+            vacancy_year = int(s.ministerial_vacancy_year.get(key, s.get("year", 1)))
+            if int(s.get("year", 1)) > vacancy_year:
+                s.cabinet_ministers[key] = f"New appointment (PM)"
+                s.ministerial_loyalty[key] = 55.0
+                s.ministerial_vacancy_year.pop(key, None)
+                s.event_cards = list(s.get("event_cards", []))
+                s.event_cards.append({
+                    "title": f"Prime Minister appoints a new {SPEND_DEFAULTS[key]['label']} Secretary",
+                    "text": "The Prime Minister has filled the Cabinet vacancy. As Chancellor, you had no power to appoint the replacement.",
+                    "summary": "Cabinet reshuffle · Prime Minister's decision",
+                })
     if 'dept_spend' not in s:
         s.dept_spend = {k: v['default'] for k, v in SPEND_DEFAULTS.items()}
     else:
@@ -967,7 +981,8 @@ def render_spending_review():
                 if loyalty <= 15.0:
                     minister = s.cabinet_ministers.get(key, DEPARTMENT_MINISTERS[key][0])
                     resignations.append((key, minister))
-                    s.cabinet_ministers[key] = "Vacant — reshuffle required"
+                    s.cabinet_ministers[key] = "Vacant — awaiting Prime Minister"
+                    s.ministerial_vacancy_year[key] = int(s.get("year", 1))
                     s.ministerial_loyalty[key] = 0.0
             if resignations:
                 s.ministerial_resignations.extend([
@@ -980,8 +995,8 @@ def render_spending_review():
                 for key, minister in resignations:
                     s.event_cards.append({
                         "title": f"{minister} resigns from Cabinet",
-                        "text": f"The {SPEND_DEFAULTS[key]['label']} Secretary has resigned after repeated disputes over departmental funding. The post is vacant pending a reshuffle.",
-                        "summary": "Cabinet crisis · A replacement is required",
+                        "text": f"The {SPEND_DEFAULTS[key]['label']} Secretary has resigned after repeated disputes over departmental funding. The post is vacant. The Prime Minister will decide who replaces them; the Chancellor cannot appoint a successor.",
+                        "summary": "Cabinet crisis · Prime Minister to appoint",
                     })
             for key in departments:
                 requested = float(bid_rates.get(key, 3.0))
