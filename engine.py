@@ -798,6 +798,18 @@ def compute_election():
         else:
             r['gov_type'] = 'Sent to the Opposition Benches'
 
+    if r.get('win'):
+        government_seats = mine + sum(seats.get(p, 0) for p in (r.get('coalition_partners') or []))
+        majority = government_seats - WIN_MAJORITY
+        r['government_seats'] = government_seats
+        r['working_majority'] = majority
+        r['mandate_strength'] = max(-12, min(12, int(round(majority / 12))))
+        r['mandate_label'] = ('Strong mandate' if majority >= 80 else 'Working mandate' if majority >= 20 else 'Narrow mandate')
+    else:
+        r['government_seats'] = mine
+        r['working_majority'] = mine - WIN_MAJORITY
+        r['mandate_strength'] = 0
+        r['mandate_label'] = 'No governing mandate'
     if sacked:
         r['win'] = False
     s.election_result = r
@@ -820,6 +832,9 @@ def continue_term():
     for k in ('approval', 'pm_opinion', 'party_opinion', 'cab_opinion', 'backbench_opinion'):
         s[k] = round(_clip(s[k] + boost), 1)
     s.honeymoon = boost
+    s.general_election_mandate = int(r.get('mandate_strength', 0))
+    if r.get('kind') in ('coalition', 'minority'):
+        s.general_election_mandate = min(s.general_election_mandate, 2)
     s.term += 1
     s.year, s.block = 1, 1
     s.political_capital_points = 5
