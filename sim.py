@@ -215,6 +215,27 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Local election regression check failed: {exc}")
 
+    # Rendering/calculating a local result must be side-effect free; declaring it
+    # applies each political effect once, never twice on a Streamlit rerun.
+    try:
+        new_run('Labour', 'Normal', 24680)
+        before = {k: float(st.session_state[k]) for k in ('approval', 'pm_opinion', 'party_opinion', 'backbench_opinion')}
+        preview = local_elections.calculate()
+        after_preview = {k: float(st.session_state[k]) for k in before}
+        if before != after_preview:
+            failures.append("Previewing local election results unexpectedly changed political indicators.")
+        declared = local_elections.hold_election()
+        expected_approval = max(0.0, min(100.0, before['approval'] + declared['approval_change']))
+        expected_pm = max(0.0, min(100.0, before['pm_opinion'] + declared['approval_change'] * 0.7))
+        if abs(float(st.session_state.approval) - expected_approval) > 0.11:
+            failures.append("Local election approval impact was not applied exactly once.")
+        if abs(float(st.session_state.pm_opinion) - expected_pm) > 0.11:
+            failures.append("Local election PM standing impact was not applied exactly once.")
+        if st.session_state.get('local_election_result', {}).get('total_wards') != declared['total_wards']:
+            failures.append("Declared local election result was not saved consistently.")
+    except Exception as exc:
+        failures.append(f"Local election effects regression check failed: {exc}")
+
     if len(decisions.DECISIONS) < contract['minimum_decisions']:
         failures.append(f"Only {len(decisions.DECISIONS)} policy decisions; expected at least {contract['minimum_decisions']}.")
     if len(scen.CRISES) < contract['minimum_crises']:
