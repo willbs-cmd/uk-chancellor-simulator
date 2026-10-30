@@ -791,6 +791,36 @@ def render(submit=None, after_summary=None):
 
 
 # ---------------------------------------------------------------- Spending Review: multi-year departmental settlements
+
+def apply_spending_review_rollforward(s, target_year):
+    """Apply the approved year-two/year-three departmental settlement once per year."""
+    plan = s.get('spending_review_plan', {})
+    if not isinstance(plan, dict) or not plan.get('allocations'):
+        return 0.0
+    if int(plan.get('term', -1)) != int(s.get('term', 1)):
+        return 0.0
+    approved_year = int(plan.get('approved_year', target_year))
+    offset = int(target_year) - approved_year
+    if offset not in (2, 3) or int(plan.get('last_applied_year', approved_year)) >= int(target_year):
+        return 0.0
+    uplift_key = 'year2_uplift' if offset == 2 else 'year3_uplift'
+    uplift = float(plan.get(uplift_key, 0.0))
+    before = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
+    for key in SPEND_DEFAULTS:
+        s.dept_spend[key] = round(float(s.dept_spend.get(key, 0.0)) * (1.0 + uplift / 100.0), 1)
+    after = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
+    change = round(after - before, 1)
+    s.deficit = round(float(s.get('deficit', 0.0)) + change, 1)
+    s.headroom = round(float(s.get('headroom', 0.0)) - change * 0.22, 1)
+    if change > 0:
+        s.market_conf = round(_clip(float(s.get('market_conf', 50.0)) - min(3.0, change * 0.02)), 1)
+    elif change < 0:
+        s.market_conf = round(_clip(float(s.get('market_conf', 50.0)) + min(1.5, -change * 0.015)), 1)
+    plan['last_applied_year'] = int(target_year)
+    s.spending_review_plan = plan
+    s.message = str(s.get('message', '')) + f" The year {offset} Spending Review settlement applies a {uplift:+.1f}% departmental uplift (annual cost £{change:+.1f}bn)."
+    return change
+
 def render_spending_review():
     """Annual multi-year Spending Review. Approved settlements change the live departmental baselines."""
     ensure()
@@ -850,11 +880,17 @@ def render_spending_review():
     c3.metric("Change in spending", f"{(annual_change / max(current_total, 1)) * 100:+.2f}%")
 
     st.markdown("### Three-year spending path")
-    st.caption("Illustrative nominal totals: the approved settlement is the starting point, followed by the growth assumptions shown below. These are game projections, not OBR forecasts.")
-    path_rows = []
-    for yr, uplift in [(1, 0.0), (2, 1.5), (3, 2.5)]:
-        total = proposed_total * (1 + uplift / 100.0)
-        path_rows.append({"Spending year": f"Year {yr}", "Annual departmental budgets": f"£{total:,.1f}bn", "Assumed uplift": f"{uplift:+.1f}%"})
+    st.caption("Set the planned annual uplift for years two and three. Once approved, these increases automatically flow into future departmental baselines and the fiscal position.")
+    c_y2, c_y3 = st.columns(2)
+    with c_y2:
+        year2_uplift = st.slider("Year 2 annual uplift (%)", -2.0, 6.0, 1.5, 0.5, key=f"sr_y2_{period}")
+    with c_y3:
+        year3_uplift = st.slider("Year 3 annual uplift (%)", -2.0, 6.0, 2.5, 0.5, key=f"sr_y3_{period}")
+    path_rows = [
+        {"Spending year": "Year 1 · agreed settlement", "Annual departmental budgets": f"£{proposed_total:,.1f}bn", "Annual change": f"£{annual_change:+,.1f}bn"},
+        {"Spending year": "Year 2 · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100):,.1f}bn", "Annual change": f"{year2_uplift:+.1f}%"},
+        {"Spending year": "Year 3 · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100) * (1 + year3_uplift / 100):,.1f}bn", "Annual change": f"{year3_uplift:+.1f}%"},
+    ]
     st.dataframe(pd.DataFrame(path_rows), hide_index=True, use_container_width=True)
 
     with st.expander("What the settlement means", expanded=False):
@@ -879,7 +915,12 @@ def render_spending_review():
             elif annual_change < 0:
                 s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
             s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
-            s.spending_review_plan = {k: float(s.get(f"sr_{period}_{k}", 0.0)) for k in departments}
+            s.spending_review_plan = {
+                "term": int(s.get("term", 1)), "approved_year": int(s.get("year", 1)),
+                "year2_uplift": float(year2_uplift), "year3_uplift": float(year3_uplift),
+                "last_applied_year": int(s.get("year", 1)),
+                "allocations": {k: float(v) for k, v in draft.items()},
+            }
             s.spending_review_last_period = period
             s.spending_review_history.append({
                 "period": period, "annual_change": round(annual_change, 1),
