@@ -219,6 +219,26 @@ if s.year > 5:
               'Green Party': 'GRN', 'SNP': 'SNP', 'Plaid Cymru': 'PC'}
     for col, party in zip(st.columns(7), state.PARTIES):
         col.metric(labels[party], r['seats'][party])
+    st.markdown("### 📊 The national result")
+    e1, e2, e3 = st.columns(3, gap="small")
+    e1.metric("Estimated turnout", f"{r.get('turnout', 65.0):.1f}%")
+    e2.metric("Government seats", f"{r['player_seats']}/650")
+    e3.metric("Working majority", str(r['player_seats'] - engine.WIN_MAJORITY) if r['player_seats'] >= engine.WIN_MAJORITY else "Hung / minority")
+    election_rows = []
+    for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True):
+        election_rows.append({
+            "Party": party,
+            "Vote share": f"{r['polls'][party]:.1f}%",
+            "Change": f"{r.get('swings', {}).get(party, 0):+.1f}pp",
+            "Seats": r['seats'][party],
+        })
+    st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    if r.get('coalition'):
+        st.info(f"Coalition arithmetic: {r['player_seats']} {s.party} MPs + {r['seats'][r['coalition']]} {r['coalition']} MPs = {r['player_seats'] + r['seats'][r['coalition']]} seats.")
+    elif r['player_seats'] < engine.WIN_MAJORITY and r['win']:
+        st.warning("Minority government: you remain in office but need support from other parties on confidence and supply.")
+    elif not r['win']:
+        st.error(f"The largest party is {max(r['seats'], key=r['seats'].get)}. You do not have the numbers to remain in government.")
     st.divider()
 
     extra = ('Managing a coalition partner will be tedious' if r['coalition'] else
