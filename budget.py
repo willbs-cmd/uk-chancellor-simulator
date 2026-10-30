@@ -745,3 +745,112 @@ def render(submit=None, after_summary=None):
         render_red_book(cur)
 
     
+
+
+
+# ---------------------------------------------------------------- Spending Review: multi-year departmental settlements
+def render_spending_review():
+    """Annual multi-year Spending Review. Approved settlements change the live departmental baselines."""
+    ensure()
+    s = st.session_state
+    period = f"{s.get('term', 1)}-{s.get('year', 1)}"
+    s.setdefault('spending_review_history', [])
+    s.setdefault('spending_review_last_period', '')
+    s.setdefault('spending_review_plan', {})
+    done = s.spending_review_last_period == period
+
+    st.markdown("## 🏛️ The Spending Review")
+    st.caption("Set departmental budgets for the year ahead and publish a three-year spending path. Settlements change the live Treasury baseline, not just a forecast.")
+    if done:
+        st.success("The Spending Review for this year has been approved. You can review the settlement below, but cannot issue a second one in the same year.")
+    else:
+        st.info("The spending round is open. Departmental Secretaries have submitted their bids; you decide the final settlements.")
+
+    departments = list(SPEND_DEFAULTS.keys())
+    groups = [
+        ("Public services & security", ["health", "education", "welfare", "justice", "defence"]),
+        ("Growth & infrastructure", ["transport", "housing", "science", "climate"]),
+        ("Other services", ["aid", "culture", "other"]),
+    ]
+    draft = {}
+    st.markdown("### Departmental settlements · Year 1")
+    for group, keys in groups:
+        with st.expander(group, expanded=(group == groups[0][0])):
+            cols = st.columns(2)
+            for i, key in enumerate(keys):
+                if key not in SPEND_DEFAULTS:
+                    continue
+                base = float(s.dept_spend[key])
+                widget_key = f"sr_{period}_{key}"
+                default_pct = float(s.spending_review_plan.get(key, 0.0))
+                if widget_key not in s:
+                    s[widget_key] = default_pct
+                with cols[i % 2]:
+                    pct = st.slider(
+                        f"{SPEND_DEFAULTS[key]['label']} · £{base:,.1f}bn baseline",
+                        min_value=-8.0, max_value=15.0, step=0.5,
+                        key=widget_key, disabled=done,
+                        help="Change to this department's annual baseline, applied when you approve the review."
+                    )
+                    draft[key] = round(base * (1 + pct / 100.0), 1)
+
+    current_total = sum(float(s.dept_spend[k]) for k in departments)
+    proposed_total = sum(draft.values()) if draft else current_total
+    annual_change = proposed_total - current_total
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Current departmental spend", f"£{current_total:,.1f}bn")
+    c2.metric("Proposed settlement", f"£{proposed_total:,.1f}bn", f"£{annual_change:+,.1f}bn")
+    c3.metric("Change in spending", f"{(annual_change / max(current_total, 1)) * 100:+.2f}%")
+
+    st.markdown("### Three-year spending path")
+    st.caption("Illustrative nominal totals: the approved settlement is the starting point, followed by the growth assumptions shown below. These are game projections, not OBR forecasts.")
+    path_rows = []
+    for yr, uplift in [(1, 0.0), (2, 1.5), (3, 2.5)]:
+        total = proposed_total * (1 + uplift / 100.0)
+        path_rows.append({"Spending year": f"Year {yr}", "Annual departmental budgets": f"£{total:,.1f}bn", "Assumed uplift": f"{uplift:+.1f}%"})
+    st.dataframe(pd.DataFrame(path_rows), hide_index=True, use_container_width=True)
+
+    with st.expander("What the settlement means", expanded=False):
+        st.write("Higher allocations improve the capacity of services over time but increase the annual spending baseline. Large unfunded settlements can worsen borrowing, reduce fiscal headroom and unsettle markets.")
+        st.write("This review excludes welfare demand changes and debt interest, which continue to be modelled separately.")
+
+    if not done:
+        if st.button("Approve Spending Review", type="primary", use_container_width=True, key="approve_spending_review"):
+            # Apply a single annual settlement to the actual departmental baselines.
+            s.checkpoint = None
+            for key, amount in draft.items():
+                s.dept_spend[key] = amount
+                s[f"bs_{key}"] = 0.0
+                s.budget_applied.setdefault("spend", {})[key] = 0.0
+            # An unfunded increase worsens the annual deficit and uses fiscal room.
+            s.deficit = round(float(s.deficit) + annual_change, 1)
+            s.headroom = round(float(s.headroom) - annual_change * 0.22, 1)
+            if annual_change > 0:
+                s.market_conf = round(_clip(float(s.market_conf) - min(4.0, annual_change * 0.025)), 1)
+            elif annual_change < 0:
+                s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
+            frontline = sum(draft.get(k, s.dept_spend[k]) - float(s.dept_spend[k]) for k in ("health", "education", "justice"))
+            s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
+            s.spending_review_plan = {k: float(s.get(f"sr_{period}_{k}", 0.0)) for k in departments}
+            s.spending_review_last_period = period
+            s.spending_review_history.append({
+                "period": period, "annual_change": round(annual_change, 1),
+                "departmental_total": round(proposed_total, 1),
+                "allocations": {k: round(v, 1) for k, v in draft.items()},
+            })
+            s.event_cards = list(s.get("event_cards", []))
+            s.event_cards.append({
+                "title": "Spending Review approved",
+                "text": f"You approved departmental settlements worth £{proposed_total:,.1f}bn a year. The annual spending change is £{annual_change:+,.1f}bn.",
+                "summary": f"Headroom £{-annual_change * 0.22:+.1f}bn · Deficit £{annual_change:+.1f}bn",
+            })
+            s.message = f"Spending Review approved. Departmental budgets change by £{annual_change:+,.1f}bn a year."
+            st.rerun()
+
+    if s.spending_review_history:
+        with st.expander("Previous Spending Reviews", expanded=False):
+            rows = [{"Period": x["period"], "Departmental total (£bn)": x["departmental_total"], "Annual change (£bn)": x["annual_change"]} for x in reversed(s.spending_review_history)]
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+            latest = s.spending_review_history[-1]
+            st.caption("Latest settlement: " + ", ".join(f"{SPEND_DEFAULTS[k]['short']} £{v:,.1f}bn" for k, v in latest["allocations"].items()))
+
