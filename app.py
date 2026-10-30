@@ -243,6 +243,34 @@ if s.year > 5:
             "Seats": r['seats'][party],
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    # Constituency-level result: every seat is decided independently by the
+    # simulated local vote model, with a nation-by-nation breakdown.
+    local_results = r.get('constituency_results', [])
+    if local_results:
+        st.markdown("### 🗺️ Constituency results")
+        nation_order = ['England', 'Scotland', 'Wales', 'Northern Ireland']
+        nation_columns = st.columns(4)
+        for col, nation in zip(nation_columns, nation_order):
+            nation_rows = [row for row in local_results if row.get('nation') == nation]
+            counts = {}
+            for row in nation_rows:
+                counts[row['winner']] = counts.get(row['winner'], 0) + 1
+            leading = max(counts, key=counts.get) if counts else '—'
+            col.metric(nation, f"{len(nation_rows)} seats", f"{leading} leads" if counts else "No results")
+        with st.expander("Explore all 650 constituency results"):
+            local_frame = pd.DataFrame(local_results)
+            if not local_frame.empty:
+                nation_filter = st.selectbox("Filter by nation", ["All nations"] + nation_order, key="election_nation_filter")
+                party_filter = st.selectbox("Filter by winning party", ["All parties"] + state.PARTIES, key="election_party_filter")
+                if nation_filter != "All nations":
+                    local_frame = local_frame[local_frame["nation"] == nation_filter]
+                if party_filter != "All parties":
+                    local_frame = local_frame[local_frame["winner"] == party_filter]
+                st.dataframe(local_frame.rename(columns={
+                    "name": "Constituency", "nation": "Nation", "winner": "Winning party",
+                    "margin": "Modelled lead (pp)"
+                }), hide_index=True, use_container_width=True)
+        st.caption("Constituency winners use simulated local voting leanings, not historical constituency vote totals.")
     if r.get('coalition'):
         partner_text = ' + '.join(coalition_partners)
         st.success(f"Coalition majority: {r['player_seats']} {s.party} MPs + {coalition_seats} partner MPs ({partner_text}) = {government_seats} seats. That is {government_majority} above the 326-seat majority threshold.")
