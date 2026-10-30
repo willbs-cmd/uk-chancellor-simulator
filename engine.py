@@ -191,6 +191,61 @@ def current_options():
     return decisions.get_options(d, f"{s.seed}-{s.term}-{s.year}-{s.block}", s.show_tags)
 
 
+def assess_decision(opt):
+    """Estimate how deliverable a proposal is in the current political and fiscal climate.
+
+    This is deliberately a modest modifier: policy choice still matters most, but a weak
+    Treasury/Commons position makes ambitious promises harder to deliver.
+    """
+    s = st.session_state
+    ideology = opt.get('ideology', 'Centric')
+    core = PURITY.get(s.get('party'), ['Centric'])
+    alignment = 1.0 if ideology in core else (0.35 if ideology == 'Centric' else -0.65)
+    fiscal_pressure = max(0.0, min(1.0, (8.0 - float(s.get('headroom', 0.0))) / 20.0))
+    confidence = (
+        0.92
+        + (float(s.get('cab_opinion', 60)) - 50.0) * 0.0025
+        + (float(s.get('market_conf', 60)) - 50.0) * 0.0015
+        + (float(s.get('backbench_opinion', 60)) - 50.0) * 0.0015
+        + alignment * 0.035
+        - fiscal_pressure * 0.10
+    )
+    confidence = round(max(0.72, min(1.08, confidence)), 2)
+    projected = parliament.projected_ayes()
+    if projected >= parliament.CLEAR_PASS:
+        vote_label = "Likely clear passage"
+        vote_factor = 1.0
+    elif projected >= parliament.WIN:
+        vote_label = "Likely narrow passage"
+        vote_factor = 0.70
+    else:
+        vote_label = "Bill at risk"
+        vote_factor = 0.25
+    combined = round(confidence * vote_factor, 2)
+    risks = []
+    if fiscal_pressure >= 0.45:
+        risks.append("Limited fiscal headroom makes funding harder to sustain.")
+    if float(s.get('cab_opinion', 60)) < 40:
+        risks.append("Cabinet support is weak; delivery may be delayed or diluted.")
+    if float(s.get('backbench_opinion', 60)) < 40:
+        risks.append("Restive government MPs may demand concessions.")
+    if float(s.get('market_conf', 60)) < 35:
+        risks.append("Markets may react sharply to unfunded commitments.")
+    if alignment < 0:
+        risks.append("The proposal cuts across your party's usual instincts.")
+    if not risks:
+        risks.append("No exceptional delivery obstacle is currently visible.")
+    return {
+        "confidence": confidence,
+        "vote_label": vote_label,
+        "projected_ayes": projected,
+        "combined_factor": combined,
+        "risks": risks,
+        "fiscal_pressure": round(fiscal_pressure, 2),
+        "alignment": alignment,
+    }
+
+
 def execute_decision(opt):
     """Run one policy decision. ``opt`` is an option dict from ``current_options()``."""
     s = st.session_state
@@ -202,16 +257,19 @@ def execute_decision(opt):
     ideology, effect = opt['ideology'], opt['effect']
     decision = current_decision()
 
+    assessment = assess_decision(opt)
     vote = parliament.review_bill(decision, opt)
     implementation = vote['factor']
-    applied_effect = parliament.scale_effect(effect, implementation)
+    delivery_factor = assessment['confidence']
+    combined_factor = implementation * delivery_factor
+    applied_effect = parliament.scale_effect(effect, combined_factor)
     s.message = effect.get('message', 'Decision applied.')
     s.last_ideology = ideology
     s.headlines = generate_headlines(ideology)
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
     # Put each major proposal to a Commons vote before applying its full effects.
-    country.apply_decision(ideology, scale=implementation)
+    country.apply_decision(ideology, scale=combined_factor)
     apply_effect(applied_effect)
     parliament.apply_fallout(vote)
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
@@ -219,7 +277,7 @@ def execute_decision(opt):
     s.event_cards.append({
         'title': f"Commons vote · {vote['status']}",
         'text': f"{decision['title']}: {opt['label']}",
-        'summary': f"{vote['ayes']} ayes · {vote['noes']} noes · {implementation:.0%} of the proposal implemented"
+        'summary': f"{vote['ayes']} ayes · {vote['noes']} noes · {combined_factor:.0%} of the proposal delivered (Commons {implementation:.0%} × delivery {delivery_factor:.0%})"
     })
 
     d_app = s.approval - before['approval']
@@ -231,10 +289,10 @@ def execute_decision(opt):
     s.steps += 1
     if opt['delayed']:
         spec = dict(opt['delayed'])
-        spec['fx'] = parliament.scale_effect(spec['fx'], implementation)
+        spec['fx'] = parliament.scale_effect(spec['fx'], combined_factor)
         s.pending.append(dict(due=s.steps + spec['after'], title=spec['title'], text=spec['text'], fx=spec['fx']))
     state.log('decision', decision['title'], choice=opt['label'], ideology=ideology, before=before,
-              note=f"{effect.get('message', '')} {parliament_note}")
+              note=f"{effect.get('message', '')} {parliament_note} Delivery confidence {delivery_factor:.0%}; combined implementation {combined_factor:.0%}.")
 
     deliver_pending()
     settle()
