@@ -519,17 +519,43 @@ def end_run(kind, result=None):
 
 
 def compute_seats(polls):
-    seats = {}
-    lab, con = polls['Labour'], polls['Conservative']
-    seats['Labour'] = int((lab / 100) * SEATS * (1.1 if lab > 30 else 0.8))
-    seats['Conservative'] = int((con / 100) * SEATS * (1.1 if con > 30 else 0.8))
-    seats['Liberal Democrats'] = int(max(5, (polls['Liberal Democrats'] / 100) * SEATS * 0.6))
-    seats['Reform UK'] = int(max(0, (polls['Reform UK'] / 100) * SEATS * 0.3))
-    seats['Green Party'] = int(max(1, (polls['Green Party'] / 100) * SEATS * 0.2))
-    seats['SNP'] = int(min(57, max(4, (polls['SNP'] / 100) * SEATS * 3.5)))
-    seats['Plaid Cymru'] = int(min(32, max(2, (polls['Plaid Cymru'] / 100) * SEATS * 3.0)))
-    largest = max(seats, key=seats.get)
-    seats[largest] += SEATS - sum(seats.values())
+    """Convert national vote shares into a stylised FPTP seat result.
+
+    Regional parties receive a constituency-concentration bonus; national parties
+    receive different vote-to-seat efficiencies. Largest-remainder allocation
+    guarantees exactly 650 seats without handing every rounding error to one party.
+    This is a game model, not a constituency-level forecast.
+    """
+    # Effective seat weights approximate geographic concentration under FPTP.
+    weights = {
+        'Labour': 1.12,
+        'Conservative': 1.12,
+        'Liberal Democrats': 0.72,
+        'Reform UK': 0.48,
+        'Green Party': 0.32,
+        'SNP': 3.20,
+        'Plaid Cymru': 3.00,
+    }
+    regional_caps = {'SNP': 57, 'Plaid Cymru': 32}
+    seats = {p: 0 for p in state.PARTIES}
+    # Regional parties are concentrated in their home nations, but cannot exceed
+    # their approximate Westminster constituency totals.
+    for party, cap in regional_caps.items():
+        share = max(0.0, float(polls.get(party, 0)))
+        seats[party] = min(cap, int(round(SEATS * share / 100 * weights[party])))
+    remaining = SEATS - sum(seats.values())
+    national = [p for p in state.PARTIES if p not in regional_caps]
+    raw = {p: max(0.0, float(polls.get(p, 0))) * weights[p] for p in national}
+    total = sum(raw.values())
+    if total <= 0:
+        raw = {p: 1.0 for p in national}
+        total = float(len(national))
+    exact = {p: remaining * raw[p] / total for p in national}
+    for p in national:
+        seats[p] = int(math.floor(exact[p]))
+    leftovers = remaining - sum(seats[p] for p in national)
+    for p in sorted(national, key=lambda party: exact[party] - seats[party], reverse=True)[:leftovers]:
+        seats[p] += 1
     return seats
 
 
