@@ -525,7 +525,7 @@ def _spend_row(k, sp, s):
     with c1:
         st.markdown(f"<div class='lv'>{sp['short']}<br><small>base £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
     with c2:
-        st.slider(f"{sp['label']} slider", -15.0, 15.0, step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
+        st.slider(f"{sp['label']} slider", min_value=-15.0, max_value=15.0, value=0.0, step=0.5, key=f'bs_{k}', format="%+.1f%%", label_visibility="collapsed")
     with c3:
         pct = float(s[f'bs_{k}'])
         new_val = base * (1.0 + pct / 100.0)
