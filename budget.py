@@ -349,6 +349,8 @@ def forecast(b, years=3):
     tax_index = float(s.get('tax_base_index', 1.0))
     tax_receipts_base = sum(revenues(b).values()) / max(0.01, tax_index)
     portfolio = {k: float(v) for k, v in s.get('treasury_assets', {}).items()}
+    demographic_pressure = float(s.get('demographic_pressure', 0.0))
+    pension_pressure = float(s.get('pension_pressure', 0.0))
     rows = []
     for i in range(1, years + 1):
         new_int = interest_for(v['gilt_yield'], v['debt'])          # spring: debt interest is re-priced...
@@ -377,12 +379,23 @@ def forecast(b, years=3):
                 portfolio[key] = amount * (1 + spec['appreciation'] * market_factor)
         investment_income = max(0.0, investment_income)
         extra_receipts = growth_receipts + investment_income
-        v['headroom'] = round(v['headroom'] + extra_receipts, 1)
-        v['deficit'] = round(max(0.0, v['deficit'] - extra_receipts), 1)
+        # Match the annual Treasury and demographic costs applied in the live spring tick.
+        nhs_pressure = round(0.45 + 0.10 * max(0.0, v['inflation'] - 2.0) + 0.025 * demographic_pressure, 2)
+        public_pay_pressure = round(0.40 + 0.12 * max(0.0, v['inflation'] - 2.0)
+                                    + 0.015 * max(0.0, 2.0 - v['growth']), 2)
+        demographic_pressure = round(demographic_pressure + 0.6, 1)
+        pension_pressure = round(pension_pressure + 0.2 * demographic_pressure, 2)
+        pension_cost = round(0.25 * pension_pressure, 2)
+        recurring_costs = round(nhs_pressure + public_pay_pressure + pension_cost, 2)
+        net_fiscal_change = round(extra_receipts - recurring_costs, 2)
+        v['headroom'] = round(v['headroom'] + net_fiscal_change, 1)
+        v['deficit'] = round(max(0.0, v['deficit'] - net_fiscal_change), 1)
         rows.append(dict(year=imf_outlook.year_for_game(now + i), growth=v['growth'], inflation=v['inflation'],
                          headroom=v['headroom'], deficit=v['deficit'], debt=v['debt'], market=v['market_conf'],
                          gilt=v['gilt_yield'], growth_receipts=round(growth_receipts, 2),
-                         investment_income=round(investment_income, 2)))
+                         investment_income=round(investment_income, 2), nhs_pressure=nhs_pressure,
+                         public_pay_pressure=public_pay_pressure, pension_cost=pension_cost,
+                         recurring_costs=recurring_costs, net_fiscal_change=net_fiscal_change))
     return rows
 
 
