@@ -563,6 +563,13 @@ def render_forecast(cur):
         'Gilts': f"{r['gilt']:.1f}%", 'Risk premium': f"+{r['gilt_risk_premium']:.2f}pp",
         'Debt interest': f"£{r['debt_interest']:.1f}B", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
+    st.caption('Illustrative sensitivity range, not an official OBR confidence interval. It shows how weaker growth and higher borrowing costs could alter the central forecast.')
+    risk_rows = []
+    for i, row in enumerate(rows):
+        growth_margin = 0.35 + 0.1 * i
+        headroom_margin = 2.0 + i
+        risk_rows.append({'Year': row['year'], 'Growth downside': round(row['growth'] - growth_margin, 1), 'Growth upside': round(row['growth'] + growth_margin, 1), 'Headroom downside (£bn)': round(row['headroom'] - headroom_margin, 1), 'Headroom upside (£bn)': round(row['headroom'] + headroom_margin * 0.75, 1)})
+    st.dataframe(pd.DataFrame(risk_rows), hide_index=True, use_container_width=True)
     worst = min(r['headroom'] for r in rows)
     if worst < 0:
         st.error(f'❌ Fiscal rule at risk: headroom falls to £{worst:.1f}B. Markets and voters will punish a breach.')
