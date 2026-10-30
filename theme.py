@@ -949,6 +949,86 @@ h3 { margin-top: .35rem !important; }
   [data-testid='stTabs'] > div:first-child { top:2.1rem !important; }
 }
 
+
+/* ================= GAMEPLAY BRIEFINGS & DECISION PRESENTATION ================= */
+.briefing-kicker {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  color:var(--command-gold,#d6b36b); font-size:.66rem; font-weight:750;
+  letter-spacing:.14em; text-transform:uppercase; margin:3px 0 4px;
+}
+.briefing-kicker > span:last-child { margin-left:auto; color:#9fb3a6; font-size:.62rem; }
+.briefing-alert-dot { width:7px; height:7px; border-radius:50%; background:#d96a58; box-shadow:0 0 9px rgba(217,106,88,.65); }
+.briefing-heading {
+  font-family:'Newsreader',serif; font-size:clamp(1.65rem,2.5vw,2.35rem);
+  line-height:1.08; font-weight:700; color:#efe9da; letter-spacing:-.025em;
+  padding:0 0 10px; margin:0 0 8px;
+  border-bottom:1px solid rgba(159,179,166,.2);
+}
+.briefing-context {
+  max-width:1050px; color:#d0d9d0; font-size:.96rem; line-height:1.58;
+  padding:10px 14px; margin:8px 0 10px;
+  border-left:3px solid #c9a45c; border-radius:0 7px 7px 0;
+  background:linear-gradient(90deg,rgba(29,65,48,.62),rgba(17,41,29,.18));
+}
+.choice-instruction {
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 14px;
+  margin:12px 0 4px; color:#d6b36b; font-size:.68rem; font-weight:750; letter-spacing:.13em;
+}
+.choice-instruction span { color:#9fb3a6; font-size:.76rem; font-weight:400; letter-spacing:0; }
+.st-key-policy_options [data-testid='stRadio'] div[role='radiogroup'] { gap:8px !important; }
+.st-key-policy_options [data-testid='stRadio'] div[role='radiogroup'] > label {
+  min-height:62px; display:flex; align-items:center;
+  padding:11px 13px !important; background:linear-gradient(135deg,#163326,#10271b) !important;
+  border:1px solid rgba(159,179,166,.2) !important; border-radius:8px !important;
+}
+.st-key-policy_options [data-testid='stRadio'] div[role='radiogroup'] > label:hover {
+  background:linear-gradient(135deg,#214732,#173625) !important;
+  border-color:rgba(214,179,107,.65) !important; transform:translateY(-1px);
+}
+.st-key-policy_options [data-testid='stRadio'] div[role='radiogroup'] > label:has(input:checked) {
+  background:linear-gradient(135deg,#254a34,#173625) !important;
+  border:1px solid #d6b36b !important; box-shadow:inset 3px 0 0 #d6b36b,0 4px 14px rgba(0,0,0,.13) !important;
+}
+.st-key-policy_options [data-testid='stRadio'] label p { font-size:.91rem !important; line-height:1.35 !important; }
+.decision-brief-label {
+  margin:12px 0 4px; color:#d6b36b; font-size:.67rem; font-weight:750; letter-spacing:.14em;
+}
+.decision-impact {
+  padding:9px 11px; margin:5px 0 8px; border-radius:7px;
+  border:1px solid rgba(214,179,107,.24); background:rgba(214,179,107,.055);
+  color:#e8e1d2; line-height:1.55;
+}
+.decision-authority {
+  color:#9fb3a6; font-size:.7rem; letter-spacing:.06em;
+  border-top:1px solid rgba(159,179,166,.16); padding-top:7px; margin-top:3px;
+}
+.choice-confirm {
+  display:flex; flex-direction:column; gap:4px; margin:9px 0;
+  padding:11px 14px; border:1px solid rgba(214,179,107,.42);
+  border-left:3px solid #d6b36b; border-radius:7px; background:rgba(29,65,48,.45);
+}
+.choice-confirm span { color:#d6b36b; font-size:.64rem; font-weight:750; letter-spacing:.13em; }
+.choice-confirm strong { color:#efe9da; font-family:'Newsreader',serif; font-size:1.15rem; }
+.choice-confirm small { color:#9fb3a6; font-size:.76rem; }
+.budget-command-line {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:11px 14px; margin:2px 0 5px; border:1px solid rgba(159,179,166,.18);
+  border-left:3px solid #d6b36b; border-radius:8px;
+  background:linear-gradient(100deg,rgba(29,65,48,.78),rgba(16,39,28,.5));
+}
+.budget-command-line > div { display:flex; flex-direction:column; gap:2px; }
+.budget-kicker { color:#d6b36b; font-size:.62rem; font-weight:750; letter-spacing:.15em; }
+.budget-command-line strong { color:#efe9da; font-family:'Newsreader',serif; font-size:1.28rem; }
+.budget-command-line small { color:#9fb3a6; font-size:.73rem; }
+.budget-state { flex:none; border-radius:20px; padding:5px 9px; font-size:.62rem; font-weight:750; letter-spacing:.08em; }
+.budget-state.is-draft { color:#e8c97f; border:1px solid rgba(214,179,107,.45); background:rgba(214,179,107,.08); }
+.budget-state.is-baseline { color:#8fc99e; border:1px solid rgba(111,191,138,.35); background:rgba(111,191,138,.07); }
+@media(max-width:650px) {
+ .briefing-context { padding:9px 11px; font-size:.9rem; }
+ .st-key-policy_options [data-testid='stRadio'] div[role='radiogroup'] > label { min-height:54px; }
+ .budget-command-line { align-items:flex-start; flex-direction:column; }
+}
+
 </style>
 """
 
