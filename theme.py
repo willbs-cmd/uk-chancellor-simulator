@@ -1029,6 +1029,39 @@ h3 { margin-top: .35rem !important; }
  .budget-command-line { align-items:flex-start; flex-direction:column; }
 }
 
+
+/* PRIVATE CHANCELLOR'S OFFICE — traditional red room */
+:root{--bench:#2b100f;--leather:#54201d;--leather-2:#6a2b26;--brass:#c7a66a;--paper:#f3eadb;--muted:#d1bfb0;--alarm:#b83d32;--command-gold:#d2b477}
+.stApp{background:linear-gradient(90deg,rgba(25,8,8,.22),transparent 18%,transparent 82%,rgba(25,8,8,.22)),radial-gradient(ellipse at 50% -20%,#7b3931 0%,#54201d 42%,#2b100f 100%)!important;color:var(--paper)!important}
+.block-container{max-width:1680px}
+h1,h2,h3,h4{color:#f4eadb!important}
+[data-testid='stSidebar']{background:linear-gradient(180deg,#3d1715,#28100f)!important;border-right:5px solid #d8c6aa!important;box-shadow:inset -1px 0 rgba(199,166,106,.35)}
+[data-testid='stMetric'],.sc-card,.hud-note,.annual-progress{background:linear-gradient(145deg,#61302a,#47201d)!important;border-color:rgba(215,190,158,.32)!important;border-top-color:var(--brass)!important;box-shadow:0 5px 16px rgba(20,7,6,.22)!important}
+[data-testid='stExpander'],[data-testid='stExpander'] details,[data-testid='stExpander'] details>summary{background:#4a201d!important;border-color:rgba(215,190,158,.3)!important}
+[data-testid='stTabs'] [role='tablist']{border-bottom-color:#c7a66a!important}
+[data-testid='stTabs'] button[role='tab'][aria-selected='true']{background:#6a302a!important;border-bottom-color:#e0c58f!important}
+[data-baseweb='select']>div,[data-testid='stTextInput'] input,[data-testid='stNumberInput'] input,[data-testid='stTextArea'] textarea{background:#351615!important;border-color:#9a6d57!important;color:#f3eadb!important}
+div[role='radiogroup']>label,[data-testid='stRadio'] label{background:linear-gradient(135deg,#5a2924,#47201d)!important;border-color:rgba(224,201,174,.3)!important}
+div[role='radiogroup']>label:hover,[data-testid='stRadio'] label:hover{background:#71372f!important;border-color:#d6b77d!important}
+div[role='radiogroup']>label:has(input:checked),[data-testid='stRadio'] label:has(input:checked){background:#71372f!important;border-color:#e0c58f!important;box-shadow:inset 4px 0 #e0c58f!important}
+div.stButton>button{background:#4b201c!important;color:#f3eadb!important;border-color:#d0ae73!important}
+div.stButton>button[kind='primary']{background:#c7a66a!important;color:#28100f!important;border-color:#e1c58c!important}
+div.stButton>button:hover{background:#e0c58f!important;color:#28100f!important}
+.ch-banner,.treasury-command{background:linear-gradient(105deg,rgba(104,43,37,.98),rgba(54,19,18,.98))!important;border:1px solid rgba(218,190,151,.55)!important;border-left:6px solid var(--brass)!important;box-shadow:0 9px 24px rgba(20,7,6,.3),inset 0 1px rgba(255,255,255,.06)!important}
+.ch-banner:after{color:rgba(222,193,148,.12)!important}
+.command-crest{background:linear-gradient(145deg,#e0c58f,#a87c42)!important;color:#3a1715!important;border:2px solid #f0dfbd!important;box-shadow:0 2px 7px rgba(0,0,0,.25)}
+.briefing-context,.decision-impact,.choice-confirm,.budget-command-line{background:linear-gradient(100deg,rgba(107,49,42,.88),rgba(61,25,22,.82))!important;border-color:rgba(218,190,151,.36)!important}
+.ch-news,.sk-wrap{background:#4a201d!important;border-color:#c7a66a!important}
+.ch-event{background:#3d2520!important;border-color:#a77c60!important}
+.tl-item{border-bottom-color:rgba(215,190,158,.22)!important}
+.tl-soon,.sk-stat{background:#351816!important}
+.np-card{background:#f1e6d4!important}
+hr{border-color:rgba(220,194,158,.35)!important}
+[data-testid='stDataFrame'],[data-testid='stTable']{border:1px solid rgba(215,190,158,.3)!important;border-radius:7px;overflow:hidden}
+[data-testid='stAlert']{background:#4b211e!important;border-color:#b78a69!important}
+.command-location,.command-subtitle,.briefing-kicker>span:last-child{color:#d9c5ae!important}
+@media(max-width:700px){.stApp{background:radial-gradient(ellipse at 50% -10%,#71352e 0%,#351312 78%)!important}[data-testid='stSidebar']{border-right-width:3px!important}}
+
 </style>
 """
 
