@@ -724,7 +724,7 @@ def render(submit=None, after_summary=None):
         net_change = sum(float(s.dept_spend[k]) * spend_values[k] / 100.0 for k in SPEND_DEFAULTS)
         st.caption(f"Department budgets are changes against today's approved baseline. They only take effect when the Budget is delivered and compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
         control_cols = st.columns([2.2, 1, 1], gap='small')
-        control_cols[0].markdown(f"**{cut_count} departments cut · {rise_count} increased**  \\n<small>Net annual departmental change: £{net_change:+,.1f}bn</small>", unsafe_allow_html=True)
+        control_cols[0].markdown(f"<div class='spend-draft-summary'><strong>{cut_count} departments cut · {rise_count} increased</strong><small>Net annual departmental change: £{net_change:+,.1f}bn</small></div>", unsafe_allow_html=True)
         control_cols[1].button("Restore approved", key="restore_spend_draft", on_click=_reset_spending_draft,
                                use_container_width=True, help="Discard all departmental draft changes and restore the last approved settings.")
         control_cols[2].button("Reset all draft", key="reset_budget_draft", on_click=_reset,
@@ -811,7 +811,8 @@ def render_spending_review():
                     continue
                 base = float(s.dept_spend[key])
                 widget_key = f"sr_{period}_{key}"
-                # Each annual review starts from the current approved baseline; last year's percentage is not silently repeated.\n                default_pct = 0.0
+                # Each annual review starts from the current approved baseline; last year's percentage is not silently repeated.
+                default_pct = 0.0
                 if widget_key not in s:
                     s[widget_key] = default_pct
                 with cols[i % 2]:
