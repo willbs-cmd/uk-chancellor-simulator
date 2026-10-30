@@ -263,6 +263,19 @@ def assess_decision(opt):
 def execute_decision(opt):
     """Run one policy decision. ``opt`` is an option dict from ``current_options()``."""
     s = st.session_state
+    # Migrate older in-progress saves created before the branching decision system.
+    # Streamlit keeps session state alive across code deployments, so new keys
+    # must be initialised without resetting the player's existing game.
+    s.setdefault('policy_history', [])
+    s.setdefault('ideology_counts', {})
+    s.setdefault('pending', [])
+    s.setdefault('event_cards', [])
+    s.setdefault('parliament_history', [])
+    s.setdefault('parliament_actions', {})
+    s.setdefault('parliament_next_bonus', 0)
+    s.setdefault('backbench_opinion', 60.0)
+    s.setdefault('party_opinion', 65.0)
+    s.setdefault('cab_opinion', 60.0)
     state.checkpoint()
     reseed('decision')
     s.event_cards = []
