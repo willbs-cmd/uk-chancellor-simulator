@@ -88,7 +88,29 @@ def compose():
     within = 'within' if s.headroom >= 0 else 'outside'
     parts.append(f'The OBR confirms the Government remains {within} its fiscal rules, with headroom of £{s.headroom:.1f} billion.')
 
-    return dict(text=' '.join(parts), reactions=_reactions(imp, taxes, spends))
+    reactions = _reactions(imp, taxes, spends)
+    ayes = int(s.get('vote_ayes') or budget.commons_ayes())
+    amendments = [
+        {"title": "Opposition amendment: reverse the headline tax changes", "detail": "The Shadow Chancellor argues that the tax package hits households and businesses.", "ayes": max(80, min(320, int(ayes * 0.58 + random.randint(-12, 12)))), "result": "Defeated"},
+        {"title": "Opposition amendment: increase funding for public services", "detail": "The Opposition demands additional funding and challenges the Government's priorities.", "ayes": max(90, min(320, int(ayes * 0.63 + random.randint(-10, 10)))), "result": "Defeated"},
+    ]
+    if imp.get('headroom', 0) < -3:
+        market_line = "Investors demand a higher risk premium after a borrowing-heavy statement."
+    elif imp.get('market', 0) > 1:
+        market_line = "Investors welcome the fiscal package; gilt demand strengthens."
+    elif imp.get('market', 0) < -1:
+        market_line = "Investors are uneasy; sterling and gilts come under pressure."
+    else:
+        market_line = "Markets show a muted response as investors digest the detail."
+    day = [
+        ("08:00", "The Red Box arrives", "The final Budget papers are delivered to the House of Commons."),
+        ("12:30", "The Chancellor rises", "The Budget speech begins and the main tax and spending measures are announced."),
+        ("14:00", "Opposition response", "The Shadow Chancellor attacks the Government's choices and tables amendments."),
+        ("15:30", "The House divides", "MPs vote on the Opposition amendments before the main Budget motion."),
+        ("16:00", "The markets react", market_line),
+        ("18:00", "The evening headlines", "Broadcasters and newspapers deliver their verdict on the Chancellor's package."),
+    ]
+    return dict(text=' '.join(parts), reactions=reactions, amendments=amendments, budget_day=day, market_line=market_line)
 
 
 def _reactions(imp, taxes, spends):
