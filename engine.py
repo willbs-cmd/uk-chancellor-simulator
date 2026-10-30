@@ -515,6 +515,8 @@ def proceed_to_spring():
     s.feature_notice = ''
     s.feature_notice_phase = 0
     s.year += 1
+    # Annual local contests take place after the first full year in office.
+    s.local_election_due = s.year > 1
     s.block = 1
     s.budget_passed = False
     s.headlines = None
