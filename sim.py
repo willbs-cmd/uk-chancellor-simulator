@@ -50,6 +50,7 @@ import budget  # noqa: E402
 import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
+import econ  # noqa: E402
 import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
@@ -274,6 +275,22 @@ def check(n=None, difficulty=None):
     repeated_totals, repeated_results = engine.compute_seats(sample_polls, return_details=True)
     if seat_totals != repeated_totals or local_results != repeated_results:
         failures.append("The same polling inputs must produce a repeatable constituency result.")
+
+    # Gilt risk should rise when debt, borrowing and market confidence deteriorate.
+    calm_macro = dict(inflation=2.0, interest_rate=3.5, gilt_yield=3.8, growth=1.8,
+                      debt=75.0, deficit=35.0, headroom=10.0, market_conf=75.0,
+                      approval=55.0, cycle='Stagnation', gdp_trillion=3.0)
+    stressed_macro = dict(inflation=4.0, interest_rate=5.0, gilt_yield=4.7, growth=-0.5,
+                          debt=115.0, deficit=180.0, headroom=-15.0, market_conf=30.0,
+                          approval=35.0, cycle='Recession', gdp_trillion=3.0)
+    calm_out = econ.step(calm_macro, None)
+    stressed_out = econ.step(stressed_macro, None)
+    if stressed_out.get('gilt_risk_premium', 0) <= calm_out.get('gilt_risk_premium', 0):
+        failures.append("Sovereign gilt risk premium does not rise under fiscal stress.")
+    if stressed_out['gilt_yield'] <= stressed_macro['gilt_yield']:
+        failures.append("Gilt yields do not respond to elevated sovereign risk.")
+    if stressed_out.get('debt_interest_bill', 0) <= calm_out.get('debt_interest_bill', 0):
+        failures.append("Debt-interest costs do not rise under fiscal stress.")
 
     division_data = load_json('career_divisions.json')
     divisions = division_data.get('divisions', [])
