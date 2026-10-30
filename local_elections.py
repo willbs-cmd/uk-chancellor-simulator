@@ -106,7 +106,7 @@ def render():
     result = s.get("local_election_result")
     if s.get("local_election_due") and (not result or result.get("term") != s.term or result.get("year") != s.year):
         st.info(f"Local election day · Term {s.term}, Year {s.year}. The councils are going to the polls.")
-        if st.button("Hold local elections", type="primary", use_container_width=True):
+        if st.button("Hold local elections", type="primary", use_container_width=True, key="local_elections_hold_button"):
             hold_election()
             st.rerun()
         return
