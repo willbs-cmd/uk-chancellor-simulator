@@ -166,6 +166,19 @@ def render():
     b.metric("Latest annual investment income", f"£{float(s.treasury_last_investment_income):.2f}bn")
     c.metric("Extra receipts accumulated", f"£{float(s.treasury_cumulative_income):.1f}bn")
 
+    st.markdown("#### 🏦 Gilt markets and debt interest")
+    d1, d2, d3 = st.columns(3)
+    d1.metric("Estimated annual debt interest", f"£{float(s.get('debt_interest_bill', 10.7)):.1f}bn")
+    d2.metric("Sovereign risk premium", f"+{float(s.get('gilt_risk_premium', 0.0)):.2f}pp")
+    d3.metric("10-year gilt yield", f"{float(s.get('gilt_yield', 4.7)):.2f}%")
+    premium = float(s.get("gilt_risk_premium", 0.0))
+    if premium >= 1.25:
+        st.error("Gilt investors are demanding a substantial extra return for holding government debt. New borrowing and refinancing are becoming expensive.")
+    elif premium >= 0.60:
+        st.warning("Investors are pricing in additional fiscal risk. A credible medium-term plan could bring the premium down.")
+    else:
+        st.caption("The risk premium is contained. It rises when debt, the deficit or weak market confidence make the public finances look less sustainable.")
+
     pressures = s.get("treasury_last_cost_pressures", {})
     if pressures:
         st.markdown("#### Annual spending pressures")
