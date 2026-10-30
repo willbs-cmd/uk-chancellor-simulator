@@ -211,7 +211,21 @@ def assess_decision(opt):
         - fiscal_pressure * 0.10
     )
     confidence = round(max(0.72, min(1.08, confidence)), 2)
-    projected = parliament.projected_ayes()
+    # Keep the assessment resilient if an older saved session or deployment is
+    # missing the newer Parliament helper.
+    projected_fn = getattr(parliament, "projected_ayes", None)
+    if callable(projected_fn):
+        try:
+            projected = int(projected_fn())
+        except (AttributeError, KeyError, TypeError, ValueError):
+            projected = int(326 + 0.80 * (float(s.get('backbench_opinion', 60)) - 40)
+                            + 0.45 * (float(s.get('party_opinion', 65)) - 50)
+                            + 0.12 * (float(s.get('approval', 48)) - 50))
+    else:
+        projected = int(326 + 0.80 * (float(s.get('backbench_opinion', 60)) - 40)
+                        + 0.45 * (float(s.get('party_opinion', 65)) - 50)
+                        + 0.12 * (float(s.get('approval', 48)) - 50))
+    projected = max(0, min(650, projected))
     if projected >= parliament.CLEAR_PASS:
         vote_label = "Likely clear passage"
         vote_factor = 1.0
