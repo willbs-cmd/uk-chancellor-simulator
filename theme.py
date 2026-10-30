@@ -1062,6 +1062,68 @@ hr{border-color:rgba(220,194,158,.35)!important}
 .command-location,.command-subtitle,.briefing-kicker>span:last-child{color:#d9c5ae!important}
 @media(max-width:700px){.stApp{background:radial-gradient(ellipse at 50% -10%,#71352e 0%,#351312 78%)!important}[data-testid='stSidebar']{border-right-width:3px!important}}
 
+
+/* PRIVATE OFFICE: architectural depth, traditional timber and warm plaster. */
+:root {
+  --bench:#24100f;
+  --leather:#54231f;
+  --leather-2:#71352e;
+  --brass:#d1b17a;
+  --paper:#f2e8d8;
+  --muted:#d0bda8;
+  --alarm:#b84435;
+}
+.stApp {
+  background:
+    linear-gradient(180deg,rgba(35,12,11,.10) 0%,rgba(35,12,11,.18) 68%,rgba(24,12,10,.78) 100%),
+    repeating-linear-gradient(90deg,transparent 0,transparent 178px,rgba(35,10,9,.16) 179px,rgba(35,10,9,.16) 181px,transparent 182px),
+    radial-gradient(ellipse at 48% 8%,#8a473b 0%,#672d27 40%,#351714 100%) !important;
+  color:var(--paper)!important;
+}
+[data-testid='stAppViewContainer'] { background:transparent!important; }
+.block-container { max-width:1540px!important; padding-top:1.15rem!important; }
+.ch-banner,.treasury-command {
+  background:
+    linear-gradient(90deg,rgba(32,13,11,.25),transparent 28%,rgba(32,13,11,.18)),
+    linear-gradient(105deg,#71352e,#4a1e1a 70%,#351613)!important;
+  border:1px solid rgba(222,197,158,.62)!important;
+  border-left:5px solid #d7b77d!important;
+  box-shadow:0 8px 22px rgba(15,5,4,.28),inset 0 1px rgba(255,255,255,.09)!important;
+}
+.hud { background:rgba(38,17,14,.48);border:1px solid rgba(222,197,158,.38);border-radius:8px;padding:7px 8px 5px; }
+.sc-card.compact,[data-testid='stMetric'] {
+  background:linear-gradient(145deg,#71372f,#4c211d)!important;
+  border:1px solid rgba(224,198,158,.42)!important;
+  border-top:2px solid #c9a66d!important;
+  box-shadow:0 3px 10px rgba(20,7,5,.2)!important;
+}
+[data-testid='stExpander'],[data-testid='stExpander'] details,[data-testid='stExpander'] details>summary {
+  background:linear-gradient(100deg,#57251f,#421b18)!important;
+  border-color:rgba(222,197,158,.42)!important;
+}
+[data-testid='stTabs'] [role='tablist'] { border-bottom-color:rgba(231,210,177,.5)!important; }
+[data-testid='stTabs'] button[role='tab'][aria-selected='true'] { background:#6a3029!important;border-bottom-color:#e0c58f!important; }
+.briefing-context,.decision-impact,.choice-confirm,.budget-command-line {
+  background:linear-gradient(100deg,rgba(108,52,44,.94),rgba(65,27,23,.94))!important;
+  border-left:3px solid #d0ad73!important;
+}
+[data-testid='stSidebar'] { background:linear-gradient(180deg,#3d1916,#25100f)!important;border-right:1px solid rgba(222,197,158,.42)!important; }
+[data-testid='stRadio'] label,div[role='radiogroup']>label {
+  background:linear-gradient(100deg,#592720,#48201c)!important;
+  border-color:rgba(225,199,161,.42)!important;
+}
+[data-testid='stRadio'] label:has(input:checked),div[role='radiogroup']>label:has(input:checked) {
+  background:linear-gradient(100deg,#784037,#5b2923)!important;
+  border-color:#e0c58f!important;
+}
+.ch-event { background:linear-gradient(110deg,#49251f,#38201b)!important;border-color:#a98260!important; }
+.sk-wrap,.ch-news { background:linear-gradient(110deg,#592720,#3f1b18)!important; }
+hr { border-color:rgba(222,197,158,.35)!important; }
+@media(max-width:760px) {
+  .block-container {padding-top:.65rem!important}
+  .hud {padding:5px}
+}
+
 </style>
 """
 
