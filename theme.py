@@ -1186,6 +1186,75 @@ html, body, .stApp, [data-testid='stAppViewContainer'], [data-testid='stMain'],
   .briefing-heading { overflow-wrap:anywhere; }
 }
 
+
+/* Motion system: restrained Treasury-style transitions and entrances. */
+@keyframes treasury-enter {
+  from { opacity:0; transform:translateY(12px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes treasury-soft-glow {
+  0%, 100% { box-shadow:0 0 0 rgba(201,164,92,0); }
+  50% { box-shadow:0 0 22px rgba(201,164,92,.12); }
+}
+@keyframes treasury-pulse {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50% { opacity:.68; transform:scale(.96); }
+}
+@keyframes treasury-shimmer {
+  from { background-position:180% 0; }
+  to { background-position:-180% 0; }
+}
+main .block-container { animation:treasury-enter .55s cubic-bezier(.2,.7,.2,1) both; }
+.hud { animation:treasury-enter .55s .06s both; }
+.hud-row > * { animation:treasury-enter .45s both; }
+.hud-row > *:nth-child(1) { animation-delay:.04s; }
+.hud-row > *:nth-child(2) { animation-delay:.08s; }
+.hud-row > *:nth-child(3) { animation-delay:.12s; }
+.hud-row > *:nth-child(4) { animation-delay:.16s; }
+.hud-row > *:nth-child(5) { animation-delay:.20s; }
+.hud-row > *:nth-child(6) { animation-delay:.24s; }
+.ch-event, .sk-wrap, .tl-item, .budget-day-row, .decision-impact,
+.crisis-card, .news-card, .briefing-heading {
+  animation:treasury-enter .48s cubic-bezier(.2,.7,.2,1) both;
+}
+.tl-item:nth-child(2), .budget-day-row:nth-of-type(2) { animation-delay:.05s; }
+.tl-item:nth-child(3), .budget-day-row:nth-of-type(3) { animation-delay:.10s; }
+.tl-item:nth-child(4), .budget-day-row:nth-of-type(4) { animation-delay:.15s; }
+.tl-item:nth-child(5), .budget-day-row:nth-of-type(5) { animation-delay:.20s; }
+.tl-item:nth-child(6), .budget-day-row:nth-of-type(6) { animation-delay:.25s; }
+button, [role='button'], [data-testid='stExpander'] details,
+[data-testid='stMetric'], .hud-row > * {
+  transition:transform .18s ease, box-shadow .2s ease, border-color .2s ease,
+             background-color .2s ease, filter .2s ease!important;
+}
+button:hover, [role='button']:hover {
+  transform:translateY(-2px);
+  filter:brightness(1.07);
+}
+button:active, [role='button']:active { transform:translateY(0) scale(.985); }
+.hud-row > *:hover, [data-testid='stMetric']:hover {
+  transform:translateY(-3px);
+  box-shadow:0 9px 22px rgba(0,0,0,.2), 0 0 0 1px rgba(201,164,92,.22);
+}
+[data-testid='stExpander'] details { transition:border-color .2s ease, background .2s ease!important; }
+[data-testid='stExpander'] details:hover { border-color:rgba(201,164,92,.55)!important; }
+.budget-day-row { transition:background .2s ease, transform .2s ease; }
+.budget-day-row:hover { transform:translateX(4px); background:rgba(201,164,92,.07); }
+.decision-impact { animation:treasury-enter .4s ease both, treasury-soft-glow 2.8s 0.5s ease-in-out 1; }
+.st-key-decision_authorise button:not(:disabled) {
+  background-image:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.13) 50%,transparent 65%);
+  background-size:220% 100%;
+  animation:treasury-shimmer 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+  }
+}
+
 </style>
 """
 
