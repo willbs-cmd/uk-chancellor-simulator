@@ -247,8 +247,8 @@ def impact(old, new):
     bal += sd['headroom']
 
     household = (d['income'] + d['income_higher'] + d['income_additional'] + d['ni'] + d['vat'] + d['fuel'] + d['sin']
-                 + d['council_tax'] + d['sugar_duty'])
-    wealth = d['property'] + d['cgt'] + d['iht'] + d['land_value'] + d['financial_transaction']
+                 + d['council_tax'] + d['sugar_duty'] + d['vehicle_excise'] + d['air_passenger'])
+    wealth = d['property'] + d['cgt'] + d['iht'] + d['land_value'] + d['financial_transaction'] + d['stamp_duty']
     vat_pts = new['tax']['vat'] - old['tax']['vat']
 
     approval = (-0.10 * household - 0.03 * wealth
@@ -258,7 +258,7 @@ def impact(old, new):
                 + 0.025 * ds['social_care'] + 0.015 * ds['local_government'] + 0.015 * ds['public_sector_pay'] + 0.02 * ds['skills'])
     market = (max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
               - 0.10 * d['cgt'] - 0.05 * d['iht']
-              - 0.08 * d['land_value'] - 0.06 * d['financial_transaction'] - 0.04 * d['carbon_levy'])
+              - 0.08 * d['land_value'] - 0.06 * d['financial_transaction'] - 0.04 * d['carbon_levy'] - 0.05 * d['business_rates'])
     growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.003 * d['income_higher'] - 0.002 * d['income_additional'] - 0.008 * d['cgt'] - 0.003 * d['land_value']
               - 0.012 * d['financial_transaction'] - 0.015 * d['carbon_levy'] - 0.001 * d['sugar_duty'] - 0.002 * d['council_tax']
               - 0.002 * d['business_rates'] - 0.003 * d['stamp_duty'] - 0.001 * d['vehicle_excise'] - 0.002 * d['air_passenger']
