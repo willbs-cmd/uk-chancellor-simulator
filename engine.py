@@ -540,10 +540,52 @@ def economy_tick():
     nominal_pay_growth = 2.6 + 0.22 * (labour_growth - 1.2) - 0.08 * labour_rate_drag
     real_wage_target = nominal_pay_growth - float(s.inflation)
     real_wage_change = 0.25 * (real_wage_target - float(c.get('real_wages', 0.0)))
+    previous_country = dict(c)
+    previous_country = dict(c)
     country.nudge({
         'unemployment': round(unemployment_change, 2),
         'real_wages': round(real_wage_change, 2),
     }, snapshot=False)
+
+    # Economic transmission: the state of public services and household finances
+    # feeds back into productivity, demand and the public finances each spring.
+    current_country = s.get('country', {})
+    unemployment_delta = float(current_country.get('unemployment', 4.3)) - float(previous_country.get('unemployment', 4.3))
+    wage_delta = float(current_country.get('real_wages', 0.0)) - float(previous_country.get('real_wages', 0.0))
+
+    # A worsening labour market raises benefit spending and reduces income-tax
+    # receipts; falling unemployment provides a modest automatic-stabiliser dividend.
+    stabiliser_cost = round(max(-2.0, min(2.0, unemployment_delta * 1.35)), 2)
+    if abs(stabiliser_cost) >= 0.05:
+        s.deficit = round(max(0.0, float(s.deficit) + stabiliser_cost), 1)
+        s.headroom = round(float(s.headroom) - stabiliser_cost, 1)
+        if stabiliser_cost > 0:
+            s.message += f' Higher unemployment adds around £{stabiliser_cost:.2f}B to welfare costs and lost receipts.'
+        else:
+            s.message += f' Falling unemployment improves the fiscal position by around £{-stabiliser_cost:.2f}B.'
+
+    # Real wage gains support household demand; falling real pay weakens it.
+    demand_impulse = max(-0.08, min(0.08, wage_delta * 0.035))
+    if abs(demand_impulse) >= 0.01:
+        s.growth = round(float(s.growth) + demand_impulse, 2)
+        s.message += (' Stronger real pay is supporting consumer demand.' if demand_impulse > 0
+                      else ' Falling real pay is weighing on household demand.')
+
+    # Education, transport, housing supply and clean-energy infrastructure
+    # influence the productive capacity of the economy over several years.
+    service_levels = s.get('country', {})
+    productivity_signal = (
+        (float(service_levels.get('schools', 62.0)) - 62.0) * 0.0015
+        + (float(service_levels.get('rail', 82.0)) - 82.0) * 0.0012
+        + (float(service_levels.get('homes_built', 215.0)) - 215.0) * 0.00045
+        + (float(service_levels.get('netzero', 38.0)) - 38.0) * 0.0005
+    )
+    productivity_impulse = round(max(-0.12, min(0.18, productivity_signal)), 3)
+    if abs(productivity_impulse) >= 0.01:
+        s.growth = round(float(s.growth) + productivity_impulse, 2)
+        s.message += (f' Long-term investment and infrastructure add {productivity_impulse:+.2f} percentage points to productive capacity.'
+                      if productivity_impulse > 0 else
+                      f' Weak infrastructure and skills subtract {abs(productivity_impulse):.2f} percentage points from productive capacity.')
     if unemployment_change > 0.12:
         s.message += ' A weak labour market is pushing unemployment higher.'
     elif unemployment_change < -0.12:
