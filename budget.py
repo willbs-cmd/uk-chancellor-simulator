@@ -28,6 +28,10 @@ DEPARTMENT_MINISTERS = {
     "aid": ("Oliver Pembroke", "international development commitments"),
     "culture": ("Catherine Ellis", "museums, arts and national heritage"),
     "other": ("Thomas Reed", "local government and cross-department services"),
+    "social_care": ("Helen Foster", "adult social care capacity and support for unpaid carers"),
+    "local_government": ("Marcus Bell", "council finances, local services and financial resilience"),
+    "public_sector_pay": ("Rachel Okafor", "workforce retention and fair public-sector pay settlements"),
+    "skills": ("Dr Peter Lawson", "further education, apprenticeships and technical skills"),
 }
 from content_store import load_json
 from theme import render_chips
@@ -891,9 +895,10 @@ def apply_spending_review_rollforward(s, target_year):
         return 0.0
     approved_year = int(plan.get('approved_year', target_year))
     offset = int(target_year) - approved_year
-    if offset not in (2, 3) or int(plan.get('last_applied_year', approved_year)) >= int(target_year):
+    # Year 2 starts one simulated year after approval; Year 3 starts two years after.
+    if offset not in (1, 2) or int(plan.get('last_applied_year', approved_year)) >= int(target_year):
         return 0.0
-    uplift_key = 'year2_uplift' if offset == 2 else 'year3_uplift'
+    uplift_key = 'year2_uplift' if offset == 1 else 'year3_uplift'
     uplift = float(plan.get(uplift_key, 0.0))
     before = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     for key in SPEND_DEFAULTS:
@@ -930,8 +935,8 @@ def render_spending_review():
 
     departments = list(SPEND_DEFAULTS.keys())
     groups = [
-        ("Public services & security", ["health", "education", "welfare", "justice", "defence"]),
-        ("Growth & infrastructure", ["transport", "housing", "science", "climate"]),
+        ("Public services & security", ["health", "education", "welfare", "justice", "defence", "social_care", "public_sector_pay"]),
+        ("Growth & infrastructure", ["transport", "housing", "science", "climate", "local_government", "skills"]),
         ("Other services", ["aid", "culture", "other"]),
     ]
     draft = {}
