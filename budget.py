@@ -254,14 +254,17 @@ def impact(old, new):
     approval = (-0.10 * household - 0.03 * wealth
                 + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
                 + 0.02 * (ds['justice'] + ds['housing'] + ds['transport']) + 0.01 * ds['defence']
-                + 0.01 * (ds['science'] + ds['culture']) - 0.01 * ds['aid'])
+                + 0.01 * (ds['science'] + ds['culture']) - 0.01 * ds['aid']
+                + 0.025 * ds['social_care'] + 0.015 * ds['local_government'] + 0.015 * ds['public_sector_pay'] + 0.02 * ds['skills'])
     market = (max(-8, min(8, 0.10 * bal)) - 0.25 * d['corp'] - 0.12 * d['property']
               - 0.10 * d['cgt'] - 0.05 * d['iht']
               - 0.08 * d['land_value'] - 0.06 * d['financial_transaction'] - 0.04 * d['carbon_levy'])
     growth = (-0.012 * d['corp'] - 0.006 * d['ni'] - 0.004 * d['income'] - 0.003 * d['income_higher'] - 0.002 * d['income_additional'] - 0.008 * d['cgt'] - 0.003 * d['land_value']
               - 0.012 * d['financial_transaction'] - 0.015 * d['carbon_levy'] - 0.001 * d['sugar_duty'] - 0.002 * d['council_tax']
+              - 0.002 * d['business_rates'] - 0.003 * d['stamp_duty'] - 0.001 * d['vehicle_excise'] - 0.002 * d['air_passenger']
               + 0.008 * (ds['transport'] + ds['housing'] + ds['climate']) + 0.012 * ds['science']
-              + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'] + ds['culture'])
+              + 0.002 * (ds['health'] + ds['education'] + ds['other'] + ds['welfare'] + ds['culture'] + ds['social_care'] + ds['local_government'] + ds['public_sector_pay'])
+              + 0.010 * ds['skills']
               + 0.001 * ds['defence'])
 
     for key, table in (('tax_pol', TAX_POLICIES), ('spend_pol', SPEND_POLICIES)):
@@ -834,9 +837,9 @@ def render(submit=None, after_summary=None):
         elif cut_count:
             st.info(f"This draft cuts funding for {cut_count} of {len(SPEND_DEFAULTS)} departments. Check the service and political consequences before delivering it.")
         spend_groups = [
-            ("People & frontline services", ["welfare", "health", "education", "justice", "defence"]),
-            ("Infrastructure & transition", ["transport", "housing", "climate"]),
-            ("Science, culture & other", ["science", "aid", "culture", "other"]),
+            ("People & frontline services", ["welfare", "health", "education", "justice", "defence", "social_care", "public_sector_pay"]),
+            ("Infrastructure & transition", ["transport", "housing", "climate", "local_government"]),
+            ("Science, culture & other", ["science", "aid", "culture", "other", "skills"]),
         ]
         for group, keys in spend_groups:
             with st.expander(f"{group} · {len(keys)} departments", expanded=False):
@@ -937,6 +940,7 @@ def render_spending_review():
         "health": 5.0, "education": 4.0, "welfare": 3.0, "justice": 4.5,
         "defence": 6.0, "transport": 7.0, "housing": 8.0, "science": 9.0,
         "climate": 6.5, "aid": 2.0, "culture": 3.5, "other": 2.5,
+        "social_care": 5.0, "local_government": 3.5, "public_sector_pay": 4.0, "skills": 6.0,
     }
     st.markdown("### Departmental bids · Year 1")
     st.caption("Each Secretary of State has submitted a funding request. Negotiate the settlement: generous awards improve ministerial support but cost more, while rejecting bids risks cabinet tension and service pressure.")
