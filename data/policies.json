@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates. The other_receipts baseline is reduced to keep total model income unchanged when council tax, carbon levy and sugary-drinks duties are broken out into their own controls.",
+  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates. The other_receipts baseline is reduced to keep total model income unchanged when council tax, carbon levy and sugary-drinks duties are broken out into their own controls. Expanded with additional tax and departmental spending ledgers.",
   "taxes": {
     "income": {
       "group": "Income & consumption",
@@ -201,6 +201,58 @@
       "per": 0.04,
       "decay": 0.001,
       "help": "A stylised health-related levy on sugary drinks and similar products. Higher duty raises receipts but may raise some consumer prices."
+    },
+    "business_rates": {
+      "group": "Business, wealth & capital",
+      "label": "Business rates (% change)",
+      "short": "Business rates",
+      "default": 0,
+      "lo": -30,
+      "hi": 50,
+      "step": 5,
+      "base": 28,
+      "per": 0.28,
+      "decay": 0.004,
+      "help": "Adjusts the yield from business rates on commercial property. Relief can support high streets but reduces local revenue."
+    },
+    "stamp_duty": {
+      "group": "Property & transport",
+      "label": "Stamp Duty Land Tax (% change)",
+      "short": "Stamp duty",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 15,
+      "per": 0.15,
+      "decay": 0.004,
+      "help": "Changes receipts from property transactions. Higher rates can raise revenue but may discourage moves and transactions."
+    },
+    "vehicle_excise": {
+      "group": "Property & transport",
+      "label": "Vehicle excise duty (% change)",
+      "short": "Vehicle excise duty",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 8,
+      "per": 0.08,
+      "decay": 0.003,
+      "help": "Adjusts annual vehicle excise duty receipts. Higher charges can affect motorists and vehicle choices."
+    },
+    "air_passenger": {
+      "group": "Local & environmental",
+      "label": "Air passenger duty (% change)",
+      "short": "Air passenger duty",
+      "default": 0,
+      "lo": -50,
+      "hi": 100,
+      "step": 5,
+      "base": 4,
+      "per": 0.04,
+      "decay": 0.003,
+      "help": "Changes the yield from taxes on flights. Higher rates may reduce demand on some routes."
     }
   },
   "tax_policies": {
@@ -454,6 +506,26 @@
       "label": "Other departments & admin",
       "short": "Other departments & admin",
       "default": 105
+    },
+    "social_care": {
+      "label": "Adult social care",
+      "short": "Adult social care",
+      "default": 32
+    },
+    "local_government": {
+      "label": "Local government & councils",
+      "short": "Local government",
+      "default": 28
+    },
+    "public_sector_pay": {
+      "label": "Public sector pay & workforce",
+      "short": "Public sector pay",
+      "default": 18
+    },
+    "skills": {
+      "label": "Skills, further education & apprenticeships",
+      "short": "Skills & further education",
+      "default": 12
     }
   },
   "spend_policies": {
