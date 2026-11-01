@@ -541,7 +541,6 @@ def economy_tick():
     real_wage_target = nominal_pay_growth - float(s.inflation)
     real_wage_change = 0.25 * (real_wage_target - float(c.get('real_wages', 0.0)))
     previous_country = dict(c)
-    previous_country = dict(c)
     country.nudge({
         'unemployment': round(unemployment_change, 2),
         'real_wages': round(real_wage_change, 2),
