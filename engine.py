@@ -646,7 +646,31 @@ def proceed_to_spring():
         s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
         s.higher_rate_threshold = round(s.higher_rate_threshold * 1.025 / 10) * 10
         s.additional_rate_threshold = round(s.additional_rate_threshold * 1.025 / 10) * 10
-    # Demographic ageing adds a gradual pension cost every year; the triple lock magnifies it.
+    # State Pension uprating: each £1/week change adds an estimated £0.6bn annual cost.
+    s.setdefault('state_pension_weekly', 230.25)
+    uprating = s.get('state_pension_uprating', 'Triple lock')
+    if uprating == 'Triple lock':
+        pension_growth = max(float(s.growth), float(s.inflation), 2.5)
+    elif uprating == 'Earnings growth':
+        pension_growth = max(0.0, float(s.growth))
+    elif uprating == 'CPI inflation':
+        pension_growth = max(0.0, float(s.inflation))
+    else:
+        pension_growth = 0.0
+    old_weekly = float(s.state_pension_weekly)
+    s.state_pension_weekly = round(old_weekly * (1.0 + pension_growth / 100.0), 2)
+    pension_uprating_cost = (s.state_pension_weekly - old_weekly) * 0.6
+    if abs(pension_uprating_cost) > 0.001:
+        s.headroom = round(s.headroom - pension_uprating_cost, 1)
+        s.deficit = round(s.deficit + pension_uprating_cost, 1)
+        s.message += f' State Pension uprating ({uprating.lower()}) changes the modelled annual bill by £{pension_uprating_cost:.2f}bn.'
+    # Retirement-age savings persist as a recurring annual effect, not just a one-off bonus.
+    age_saving = float(s.get('retirement_age_annual_saving', 0.0))
+    if age_saving:
+        s.headroom = round(s.headroom + age_saving, 1)
+        s.deficit = round(s.deficit - age_saving, 1)
+        s.message += f' The State Pension age setting changes annual spending by £{age_saving:+.1f}bn.'
+    # Demographic ageing adds a gradual pension cost every year; the uprating rule affects the size of the bill.
     s.demographic_pressure = round(float(s.get('demographic_pressure', 0.0)) + 0.6, 1)
     s.pension_pressure = round(float(s.get('pension_pressure', 0.0)) + 0.2 * s.demographic_pressure, 2)
     annual_pension_cost = round(0.25 * s.pension_pressure, 2)
