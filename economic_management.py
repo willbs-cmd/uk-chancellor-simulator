@@ -55,7 +55,7 @@ def _stress_test():
 
 def render():
     ensure(); s=st.session_state
-    st.markdown("### OBR forecasts, the Bank of England & debt issuance")
+    st.markdown('### OBR forecasts and financial markets')
     st.caption("These are simplified gameplay models, not official OBR or Bank of England projections.")
     f=s.get("obr_latest")
     if f:
@@ -74,7 +74,7 @@ def render():
     st.caption(f"Perceived Bank independence: {float(s.get('boe_independence',75)):.0f}/100. The Chancellor cannot set Bank Rate.")
     if s.get("boe_history"): st.dataframe(s.boe_history[-6:],hide_index=True,use_container_width=True)
     st.info("The MPC sets interest rates independently. Political pressure on the Bank can damage confidence and increase gilt yields.")
-    st.divider(); st.markdown("#### Debt Management Office — gilt issuance")
+    st.divider(); st.markdown('#### Debt Management Office · gilt issuance')
     st.caption("Choose the broad shape of new borrowing. This affects refinancing and inflation-linked exposure, not the existing debt stock.")
     strategies=["Balanced issuance","Long-term stability","Short-term flexibility","Limit index-linked exposure"]
     strategy=st.selectbox("Issuance strategy",strategies,index=strategies.index(s.get("dmo_strategy","Balanced issuance")),key="dmo_strategy_choice")
