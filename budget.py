@@ -1272,6 +1272,14 @@ def render(submit=None, after_summary=None):
         last = history[-1]
         with st.expander(f"📜 Last delivered Budget · {last.get('label', 'Previous Budget')}", expanded=False):
             st.caption(f"Strategy: {FISCAL_STRATEGIES.get(last.get('strategy'), FISCAL_STRATEGIES['balanced'])['label']} · Commons: {last.get('ayes', 0)} ayes · Headroom after delivery: £{last.get('headroom_after', 0):.1f}bn")
+            scheme_record = last.get('scheme_delivery', {})
+            if scheme_record:
+                st.caption(
+                    f"Scheme portfolio: £{float(scheme_record.get('current_net_receipts', 0)):.2f}bn net receipts · "
+                    f"£{float(scheme_record.get('current_programme_cost', 0)):.2f}bn current costs · "
+                    f"£{float(scheme_record.get('mature_net_balance', 0)):+.2f}bn at maturity · "
+                    f"Delivery load {float(scheme_record.get('delivery_load', 0)):.1f}/{SCHEME_DELIVERY_CAPACITY:.1f}"
+                )
             h1, h2 = st.columns(2)
             with h1:
                 st.markdown("**Tax decisions**")
