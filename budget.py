@@ -458,7 +458,8 @@ def commit_budget(ayes):
         'ayes': int(ayes), 'headroom_after': round(float(s.get('headroom', 0)), 1),
         'deficit_after': round(float(s.get('deficit', 0)), 1),
         'impact': dict(s.get('budget_impact', {})),
-        'message': str(s.get('budget_message', '')),\n        'risk': dict(s.get('budget_risk_outcome') or {}),
+        'message': str(s.get('budget_message', '')),
+        'risk': dict(s.get('budget_risk_outcome') or {}),
     })
     s.budget_history = s.budget_history[-12:]
     s.budget_last_tax = dict(s.budget_applied['tax'])
