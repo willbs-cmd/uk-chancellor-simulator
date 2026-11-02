@@ -263,7 +263,44 @@ if s.year > 5:
     r = engine.compute_election()
     if s.get('game_over'):
         st.rerun()
+    # A staged broadcast: reveal the regional declarations one at a time.
+    s.setdefault('election_broadcast_stage', 0)
+    stage = int(s.election_broadcast_stage)
+    nation_order = ['England', 'Scotland', 'Wales', 'Northern Ireland']
+    local_results = r.get('constituency_results', [])
+    if stage < len(nation_order):
+        st.markdown("# 🗳️ ELECTION NIGHT LIVE")
+        st.caption("The national count is under way · Results are declared in stages")
+        st.markdown(f"## Declaration {stage + 1} of {len(nation_order)}")
+        st.markdown(f"### {nation_order[stage]} results")
+        for prior_nation in nation_order[:stage]:
+            rows = [row for row in local_results if row.get('nation') == prior_nation]
+            tally = {p: sum(1 for row in rows if row.get('winner') == p) for p in state.PARTIES}
+            declared = len(rows)
+            leading = max(tally, key=tally.get) if declared else "No declarations"
+            st.success(f"**{prior_nation}:** {declared} seats declared · largest party: **{leading}**")
+            st.caption(" · ".join(f"{p} {n}" for p, n in sorted(tally.items(), key=lambda item: item[1], reverse=True) if n))
+        current_rows = [row for row in local_results if row.get('nation') == nation_order[stage]]
+        current_tally = {p: sum(1 for row in current_rows if row.get('winner') == p) for p in state.PARTIES}
+        declared = len(current_rows)
+        leader = max(current_tally, key=current_tally.get) if declared else "No declarations"
+        st.markdown(f"**{declared} constituencies declared**")
+        st.metric("Leading party in this declaration", leader, f"{current_tally.get(leader, 0)} seats")
+        if current_rows:
+            close = sorted(current_rows, key=lambda row: float(row.get('margin', 999)), reverse=False)[:3]
+            st.markdown("**Closest contests in this region**")
+            for row in close:
+                st.write(f"• {row.get('name', 'Constituency')} — {row.get('winner', 'Unknown')} holds/wins by {float(row.get('margin', 0)):.1f} points")
+        national_tally = {p: sum(1 for row in local_results if row.get('winner') == p) for p in state.PARTIES}
+        projected = sorted(national_tally.items(), key=lambda item: item[1], reverse=True)
+        st.info("National seat tally is being held back until the regional declarations are complete. The count is modelled for gameplay; it is not a live or official forecast.")
+        if st.button(f"Declare {nation_order[stage]} results", type="primary", use_container_width=True):
+            s.election_broadcast_stage = stage + 1
+            st.rerun()
+        st.stop()
     st.markdown("# 🗳️ GENERAL ELECTION NIGHT")
+    st.caption(f"National broadcast · Campaign: {s.get('election_campaign_strategy', '—')} · Turnout {r.get('turnout', 65.0):.1f}%")
+    st.markdown("### The regional declarations are complete. Here is the national result.")
     st.caption(f"Official simulated count · Campaign: {s.get('election_campaign_strategy', '—')} · Turnout includes campaign mobilisation")
     st.subheader('The results are in')
     box = '#2b5440' if r['win'] else '#111111'
@@ -351,7 +388,30 @@ if s.year > 5:
     boost = round(min(15.0, max(5.0, r['margin'] / 10.0)), 1)
     st.success(f"**YOU SURVIVED!** You retained power.\n\n🎉 **HONEYMOON PERIOD:** +**{boost}%** to Public Approval and all Political Capital if you continue.")
     scorecard_block()
-    if st.button('Continue as Chancellor', type='primary'):
+    st.markdown("### 📺 Reactions from the party leaders")
+    largest_party = max(r['seats'], key=r['seats'].get)
+    for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True)[:3]:
+        if party == s.party and r['win']:
+            reaction = "The party celebrates the result and promises to deliver its programme."
+        elif party == largest_party:
+            reaction = "The leader claims a mandate to form the next government and begins consultations."
+        elif r['seats'][party] >= 50:
+            reaction = "The leader says the result gives the party a stronger voice in the new Parliament."
+        else:
+            reaction = "The leader acknowledges a difficult night and promises to reflect on the result."
+        st.write(f"**{party}:** {reaction}")
+    st.markdown("### 🏛️ Government formation")
+    if r.get('kind') == 'coalition':
+        partners = ' + '.join(r.get('coalition_partners', []))
+        st.warning(f"Hung Parliament: negotiations are required with **{partners}**. A coalition agreement would need policy compromises and a shared programme.")
+        st.caption("In this simulator the coalition is modelled as a viable parliamentary agreement; detailed ministerial portfolios and policy bargaining are simplified.")
+    elif r.get('kind') == 'minority':
+        st.warning("You can attempt to govern as a minority administration, but confidence votes and the Budget will be difficult.")
+    elif r.get('win'):
+        st.success("Your party has secured a Commons majority. The next administration can proceed with its mandate.")
+    else:
+        st.error("You have not secured a viable government. Your administration ends after the result.")
+    if st.button('Confirm result and continue as Chancellor', type='primary', disabled=not r['win']):
         engine.continue_term()
         st.rerun()
     st.stop()
