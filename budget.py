@@ -307,8 +307,9 @@ def scheme_profile(kind, key, item=None):
             admin_rate, admin_min, complexity = 0.055, 0.05, 0.55
             note = "The first-year figure is lower while systems, guidance and collection arrangements bed in."
             risk = "The realised yield may differ from the static estimate as households and firms respond."
+        political_ramp = [0.65 + 0.35 * index / max(1, len(ramp) - 1) for index in range(len(ramp))]
         return {
-            'ramp': ramp, 'benefit_ramp': ramp, 'political_ramp': [0.65, 0.86, 1.0],
+            'ramp': ramp, 'benefit_ramp': ramp, 'political_ramp': political_ramp,
             'admin': max(admin_min, float(item.get('yield_bn', 0.0)) * admin_rate),
             'complexity': complexity, 'sector': _TAX_SCHEME_SECTORS.get(key, 'other revenue'),
             'years': len(ramp), 'note': note, 'risk': risk,
@@ -339,8 +340,9 @@ def scheme_profile(kind, key, item=None):
         admin_rate, admin_min, complexity = 0.04, 0.06, 0.8
         note = "Recruitment, training and service capacity mean outcomes build over more than one year."
         risk = "Workforce shortages and implementation capacity may limit the early results."
+    political_ramp = [0.65 + 0.35 * index / max(1, len(ramp) - 1) for index in range(len(ramp))]
     return {
-        'ramp': ramp, 'benefit_ramp': benefit, 'political_ramp': [0.65, 0.86, 1.0],
+        'ramp': ramp, 'benefit_ramp': benefit, 'political_ramp': political_ramp,
         'admin': max(admin_min, cost * admin_rate), 'complexity': complexity,
         'sector': _SPEND_SCHEME_SECTORS.get(key, 'other services'), 'years': len(ramp),
         'note': note, 'risk': risk,
@@ -351,9 +353,13 @@ def _scheme_age(kind, key, draft, statuses=None):
     s = st.session_state
     if not draft.get(f'{kind}_pol', {}).get(key, False):
         return 0
+    # An explicit status map is used by the annual roll-forward and forecast simulator,
+    # including schemes just added to the draft. Respect it before consulting live state.
+    if statuses is not None and key in statuses.get(kind, {}):
+        return max(0, int(statuses[kind][key]))
     applied = s.get('budget_applied', {})
     if applied.get(f'{kind}_pol', {}).get(key, False):
-        current = (statuses if statuses is not None else s.get('budget_scheme_delivery', {})).get(kind, {})
+        current = s.get('budget_scheme_delivery', {}).get(kind, {})
         if key in current:
             return max(0, int(current[key]))
         item = (TAX_POLICIES if kind == 'tax' else SPEND_POLICIES)[key]
