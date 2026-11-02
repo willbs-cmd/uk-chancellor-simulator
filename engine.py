@@ -900,6 +900,12 @@ def proceed_to_spring():
     s.local_election_due = s.year > 1
     s.block = 1
     s.budget_passed = False
+    s.budget_day_stage = 0
+    s.budget_pm_choice = 'Compromise with the Prime Minister'
+    s.budget_day_negotiation = ''
+    s.budget_day_forecast = []
+    s.budget_day_speech = None
+    s.budget_risk_outcome = None
     s.headlines = None
     s.steps += 1
     state.log('event', f'Spring, year {s.year}', note=s.message, before=before)
