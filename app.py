@@ -503,6 +503,11 @@ def budget_screen():
                 st.markdown("#### Opposition amendments")
                 for amendment in speech.get('amendments', []):
                     st.markdown(f"**{amendment['title']}**  \n{amendment['detail']}  \nAyes: **{amendment['ayes']}** · Noes: **{650-amendment['ayes']}** · **{amendment['result']}**")
+                risk = (s.get('budget_risk_outcome') or {})
+                if risk:
+                    st.markdown("#### Treasury implementation surprise")
+                    st.warning(f"**{risk.get('title', 'Delivery risk')}** — {risk.get('detail', '')}")
+                    st.caption(f"Unexpected fiscal cost: £{float(risk.get('fiscal_cost', 0)):.1f}bn · Gilt-yield movement: {float(risk.get('gilt_move', 0)):+.2f} percentage points")
                 st.markdown("#### Immediate reactions")
                 for who, quote in speech['reactions']:
                     st.markdown(f"**{who}:** {quote}")
