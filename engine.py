@@ -607,6 +607,31 @@ def submit_budget():
     Returns 'ok', or 'sacked' if the Commons voted it down (or the fallout ended your career).
     """
     s = st.session_state
+    stage = int(s.get('budget_day_stage', 0))
+    if stage == 0:
+        choice = s.get('budget_pm_choice', 'Compromise with the Prime Minister')
+        if choice == 'Accept the Prime Minister’s priorities':
+            s.pm_opinion = round(_clip(s.pm_opinion + 5), 1)
+            s.approval = round(_clip(s.approval + 0.5), 1)
+            s.budget_day_negotiation = 'You accepted Number 10’s priorities. The PM is pleased, but the Treasury warns that the package may be harder to finance.'
+        elif choice == 'Stand firm on the Treasury plan':
+            s.pm_opinion = round(_clip(s.pm_opinion - 5), 1)
+            s.backbench_opinion = round(_clip(s.backbench_opinion + 1), 1)
+            s.budget_day_negotiation = 'You defended the Treasury plan. The PM is irritated, but fiscal discipline remains intact.'
+        else:
+            s.pm_opinion = round(_clip(s.pm_opinion + 2), 1)
+            s.budget_day_negotiation = 'You reached a compromise with Number 10. The PM secured selected priorities while the Treasury retained its core framework.'
+        s.budget_day_stage = 1
+        s.message = s.budget_day_negotiation
+        return 'negotiated'
+    if stage == 1:
+        s.budget_day_forecast = budget.forecast(budget.read(), years=1)
+        s.budget_day_stage = 2
+        return 'forecast'
+    if stage == 2:
+        s.budget_day_speech = speech.compose()
+        s.budget_day_stage = 3
+        return 'speech'
     state.checkpoint()
     reseed('budget')
     s.event_cards = []
@@ -638,6 +663,7 @@ def submit_budget():
     s.budget_speech['market_after'] = s.gilt_yield
     budget.resolve_budget_risks()\n    budget.commit_budget(ayes)
     s.budget_passed = True
+    s.budget_day_stage = 4
     s.headlines = generate_headlines(None, True, s.headroom)
     update_polls(_period_label())
     s.steps += 1
