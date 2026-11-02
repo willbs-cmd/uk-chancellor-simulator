@@ -280,6 +280,57 @@ def totals(b):
     return rev, spend
 
 
+
+def assess_pm_priorities(draft=None):
+    """Compare the live Budget draft with the last delivered Budget against Number 10's requests."""
+    stt = st.session_state
+    draft = draft or read()
+    old = stt.get('budget_applied') or defaults()
+    priorities = stt.get('budget_pm_priorities') or []
+    results = []
+    for item in priorities:
+        tag = item.get('tag', '')
+        met, detail = False, "The draft does not yet provide a clear response to this request."
+        if tag == 'health':
+            delta = float(draft['spend'].get('health', 0)) - float(old['spend'].get('health', 0))
+            care = float(draft['spend'].get('social_care', 0)) - float(old['spend'].get('social_care', 0))
+            met = delta >= 1 or (delta + care) >= 1.5
+            detail = f"NHS spending change: {delta:+.1f} percentage points; adult social care: {care:+.1f}."
+        elif tag == 'income_tax':
+            keys = ('income', 'income_higher', 'income_additional', 'ni')
+            changes = {k: float(draft['tax'].get(k, 0)) - float(old['tax'].get(k, 0)) for k in keys}
+            met = all(v <= 0.001 for v in changes.values())
+            detail = "Income tax and employee NI rates are " + ("held or cut." if met else "increased in at least one band.")
+        elif tag == 'investment':
+            keys = ('transport', 'housing', 'science', 'skills')
+            delta = sum(float(draft['spend'].get(k, 0)) - float(old['spend'].get(k, 0)) for k in keys)
+            met = delta >= 2
+            detail = f"Transport, housing, science and skills spending change: {delta:+.1f} percentage points combined."
+        elif tag == 'defence':
+            delta = float(draft['spend'].get('defence', 0)) - float(old['spend'].get('defence', 0))
+            met = delta >= 1
+            detail = f"Defence spending change: {delta:+.1f} percentage points."
+        elif tag == 'spending':
+            fiscal = impact(old, draft)
+            met = float(fiscal.get('headroom', 0)) >= 0
+            detail = f"Estimated change to fiscal headroom: £{float(fiscal.get('headroom', 0)):+.1f}bn."
+        elif tag == 'fair_tax':
+            keys = ('income', 'ni', 'vat')
+            changes = [float(draft['tax'].get(k, 0)) - float(old['tax'].get(k, 0)) for k in keys]
+            met = all(v <= 0.001 for v in changes)
+            detail = "Basic income tax, employee NI and VAT are " + ("held or cut." if met else "not all held or cut.")
+        elif tag == 'local':
+            keys = ('housing', 'local_government', 'transport')
+            delta = sum(float(draft['spend'].get(k, 0)) - float(old['spend'].get(k, 0)) for k in keys)
+            met = delta >= 2
+            detail = f"Housing, councils and transport spending change: {delta:+.1f} percentage points combined."
+        elif tag == 'green':
+            delta = float(draft['spend'].get('climate', 0)) - float(old['spend'].get('climate', 0))
+            met = delta >= 1
+            detail = f"Climate and clean-energy spending change: {delta:+.1f} percentage points."
+        results.append({'title': item.get('title', 'PM priority'), 'met': bool(met), 'detail': detail})
+    return results
+
 def impact(old, new):
     """What moving from Budget ``old`` to Budget ``new`` does to the headline numbers (applied once, when delivered)."""
     s = st.session_state
