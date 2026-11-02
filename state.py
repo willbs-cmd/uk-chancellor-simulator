@@ -303,7 +303,7 @@ SAVE_KEYS = [
     'message', 'humphrey_note', 'last_humphrey_quote', 'fallout_done', 'difficulty', 'seed', 'show_tags',
     'prev', 'pending', 'history', 'stat_hist', 'country_hist', 'event_cards', 'ideology_counts', 'policy_history',
     'crises_handled', 'achievements', 'new_achievements', 'poll_history', 'poll_anchor', 'term_start',
-    'country', 'country_prev', 'dept_spend', 'budget_applied', 'budget_interest', 'budget_last_tax', 'budget_strategy', 'budget_message',
+    'country', 'country_prev', 'dept_spend', 'budget_applied', 'budget_history', 'budget_interest', 'budget_last_tax', 'budget_strategy', 'budget_message',
     'whip_ayes', 'whip_used', 'vote_ayes', 'scenario', 'spad', 'pledges', 'broken_pledges', 'macro_cycle', 'active_request',
     'undos_left', 'budget_speech', 'budget_impact', 'budget_last_pol', 'initialized',
     'political_capital_points', 'longrun_productivity', 'pension_pressure', 'demographic_pressure', 'threshold_freeze_years',
