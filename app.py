@@ -445,6 +445,57 @@ def lords_memo():
                          "Though even if they hadn't, the Parliament Act of 1911 means they cannot vote down a Money Bill. The constitution is a wonderful thing.")
 
 
+def budget_day_scorecard(draft, heading="Budget impact & announcements"):
+    """Readable, live summary of the draft using the same calculations as delivery."""
+    old = s.get('budget_applied') or budget.defaults()
+    impact = budget.impact(old, draft)
+    old_revenue, old_spending = budget.totals(old)
+    new_revenue, new_spending = budget.totals(draft)
+
+    st.markdown(f"### {heading}")
+    st.caption("Illustrative game estimates against the last delivered Budget. Figures are not official OBR costings.")
+    cols = st.columns(4)
+    cols[0].metric("Annual receipts", f"£{new_revenue:,.1f}bn", f"£{new_revenue-old_revenue:+,.1f}bn")
+    cols[1].metric("Annual spending", f"£{new_spending:,.1f}bn", f"£{new_spending-old_spending:+,.1f}bn")
+    cols[2].metric("Fiscal headroom impact", f"£{impact['headroom']:+,.1f}bn")
+    cols[3].metric("Market confidence impact", f"{impact['market']:+.1f} pts")
+
+    cols2 = st.columns(4)
+    cols2[0].metric("Growth impact", f"{impact['growth']:+.2f}pp")
+    cols2[1].metric("Inflation impact", f"{impact['inflation']:+.2f}pp")
+    cols2[2].metric("Real-wage impact", f"{impact['real_wages']:+.2f}")
+    cols2[3].metric("Unemployment pressure", f"{impact['unemployment']:+.2f}")
+
+    announcements = []
+    for key, spec in budget.TAXES.items():
+        before = float(old.get('tax', {}).get(key, spec.get('default', 0.0)))
+        after = float(draft.get('tax', {}).get(key, spec.get('default', 0.0)))
+        delta = after - before
+        if abs(delta) >= 0.001:
+            unit = spec.get('unit', 'percentage points')
+            announcements.append({"Announcement": f"Tax · {spec.get('short', key)}", "Change": f"{delta:+.2f} {unit}"})
+    for key, spec in budget.SPEND_DEFAULTS.items():
+        before = float(old.get('spend', {}).get(key, 0.0))
+        after = float(draft.get('spend', {}).get(key, 0.0))
+        delta_pct = after - before
+        if abs(delta_pct) >= 0.001:
+            annual = float(s.dept_spend.get(key, 0.0)) * delta_pct / 100.0
+            announcements.append({"Announcement": f"Spending · {spec.get('label', key)}", "Change": f"{delta_pct:+.1f}% · £{annual:+.2f}bn"})
+    for kind, table, label in (
+        ("tax_pol", budget.TAX_POLICIES, "New tax measure"),
+        ("spend_pol", budget.SPEND_POLICIES, "New spending commitment"),
+    ):
+        for key, selected in draft.get(kind, {}).items():
+            if selected and not old.get(kind, {}).get(key, False) and key in table:
+                announcements.append({"Announcement": label, "Change": table[key].get("label", key)})
+    if announcements:
+        with st.expander(f"Individual Budget announcements · {len(announcements)} changes", expanded=True):
+            st.dataframe(pd.DataFrame(announcements), hide_index=True, use_container_width=True)
+    else:
+        st.info("No tax rates, departmental settlements or new schemes have changed from the previous Budget.")
+    return impact
+
+
 def budget_screen():
     stage = int(s.get('budget_day_stage', 0))
     if s.get('budget_passed'):
@@ -512,9 +563,18 @@ def budget_screen():
             engine.submit_budget(); st.rerun()
     elif stage == 2:
         st.markdown("### The Chancellor prepares the statement")
+        draft_budget = budget.read()
+        budget_day_scorecard(draft_budget, "The Budget at a glance")
         rows=s.get('budget_day_forecast') or []
-        if rows: st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
-        st.caption("The forecast reflects the current draft and simplified model assumptions. You can return to the Budget controls before delivery only by restarting this Budget stage.")
+        if rows:
+            st.markdown("#### Three-year economic and fiscal outlook")
+            forecast_frame = pd.DataFrame(rows)
+            visible = [c for c in ("year", "growth", "inflation", "headroom", "deficit", "debt", "gilt", "debt_interest") if c in forecast_frame.columns]
+            st.dataframe(forecast_frame[visible],hide_index=True,use_container_width=True)
+            if len(rows) >= 3:
+                first, last = rows[0], rows[-1]
+                st.caption(f"By {last.get('year', 'year three')}, projected headroom is £{float(last.get('headroom', 0)):.1f}bn and growth is {float(last.get('growth', 0)):.1f}%. This is a central gameplay scenario, not a guarantee.")
+        st.caption("The forecast reflects the current draft and simplified model assumptions. You can still return to the Budget controls and revise the package before delivering it.")
         if st.button("Prepare the Budget speech",type="primary"):
             engine.submit_budget(); st.rerun()
     elif stage == 3:
@@ -522,6 +582,7 @@ def budget_screen():
         draft=s.get('budget_day_speech') or {}
         if draft.get('text'):
             st.markdown("> "+draft['text'])
+        budget_day_scorecard(budget.read(), "Final Budget announcement sheet")
         st.warning("Once delivered, the Budget is put to the Commons. A failed vote ends the Chancellor’s career.")
         if st.button("Deliver Budget & open the markets",type="primary"):
             engine.submit_budget(); st.rerun()
