@@ -548,6 +548,23 @@ def crisis_screen():
         st.rerun()
 
 
+def gilt_emergency_screen():
+    emergency=s.get("active_gilt_emergency") or {}
+    st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> TREASURY · EMERGENCY MEETING</div><div class='briefing-heading'>The gilt market is in crisis</div>",unsafe_allow_html=True)
+    bid=float(emergency.get('bid_cover',0)); move=float(emergency.get('yield_move_pp',0))
+    st.error(f'The latest DMO auction attracted only {bid:.2f} bids for every £1 of debt offered. Yields jumped {move:.2f} percentage points. The Prime Minister wants an immediate response.')
+    humphrey_message("Chancellor, the markets have delivered their verdict. The Prime Minister is waiting on the telephone, the Treasury Board is assembled, and the press has already discovered the word crisis.")
+    st.markdown("### Choose your response")
+    st.caption("Each option trades off fiscal credibility, political support and market confidence.")
+    choices=[("Announce immediate spending restraint","Improve headroom and reassure investors, but anger public services and backbench MPs."),("Ask the Prime Minister for a united statement","Gain political cover and modestly steady markets, without major fiscal changes."),("Call an emergency Budget","Announce a limited consolidation package and promise revised forecasts. Markets may settle, but the PM faces another Budget.")]
+    for i,(title,detail) in enumerate(choices):
+        with st.container(border=True):
+            st.markdown(f"**{i+1}. {title}**")
+            st.caption(detail)
+            if st.button("Choose this response",key=f"gilt_emergency_{i}",type="primary" if i==2 else "secondary",use_container_width=True):
+                engine.resolve_gilt_emergency(i)
+                st.rerun()
+
 def request_screen():
     req = s.active_request
     st.markdown(f"<div class='dc-eyebrow'>Urgent request</div><div class='dc-title'>From the {req['minister']}</div>", unsafe_allow_html=True)
@@ -753,6 +770,8 @@ tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
 with tab_action:
     if s.get('local_election_due'):
         local_elections.render(widget_namespace='action')
+    elif s.get('active_gilt_emergency'):
+        gilt_emergency_screen()
     elif s.active_crisis is not None:
         crisis_screen()
     elif s.get('active_dispute'):
