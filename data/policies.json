@@ -457,6 +457,41 @@
       "app": 0.4,
       "mkt": 0.2,
       "gro": 0.02
+    },
+    "full_expensing": {
+      "label": "Make Full Expensing Permanent for Business Investment",
+      "yield_bn": -1.8,
+      "app": 1.2,
+      "mkt": 1,
+      "gro": 0.12
+    },
+    "employers_ni_relief": {
+      "label": "Temporary Employers’ National Insurance Relief for Small Firms",
+      "yield_bn": -2.2,
+      "app": 1.5,
+      "mkt": 0.8,
+      "gro": 0.1
+    },
+    "entrepreneurs_relief": {
+      "label": "Expand Entrepreneurs’ Relief for Business Founders",
+      "yield_bn": -0.7,
+      "app": 0.8,
+      "mkt": 0.5,
+      "gro": 0.06
+    },
+    "enterprise_investment": {
+      "label": "Expand Enterprise Investment Scheme Tax Relief",
+      "yield_bn": -0.5,
+      "app": 0.5,
+      "mkt": 0.6,
+      "gro": 0.07
+    },
+    "family_business_relief": {
+      "label": "Protect Family Businesses from Inheritance Tax",
+      "yield_bn": -0.9,
+      "app": 1,
+      "mkt": 0.2,
+      "gro": 0.02
     }
   },
   "spend_defaults": {
@@ -730,6 +765,55 @@
       "app": 1.8,
       "mkt": 0,
       "gro": 0.04
+    },
+    "border_security": {
+      "label": "Border Security Command & Returns Operations",
+      "cost_bn": 2.4,
+      "app": 1.8,
+      "mkt": 0.2,
+      "gro": 0.01
+    },
+    "police_recruitment": {
+      "label": "Neighbourhood Policing & Police Recruitment Drive",
+      "cost_bn": 2,
+      "app": 2.5,
+      "mkt": 0.1,
+      "gro": 0.02
+    },
+    "prison_places": {
+      "label": "Build New Prison Places & Expand Prison Capacity",
+      "cost_bn": 2.8,
+      "app": 1.5,
+      "mkt": 0.2,
+      "gro": 0.01
+    },
+    "defence_readiness": {
+      "label": "Defence Readiness & Armed Forces Equipment Fund",
+      "cost_bn": 3.5,
+      "app": 1.4,
+      "mkt": 0.7,
+      "gro": 0.04
+    },
+    "roads_upgrade": {
+      "label": "National Roads Upgrade & Maintenance Programme",
+      "cost_bn": 2.6,
+      "app": 1.8,
+      "mkt": 0.3,
+      "gro": 0.06
+    },
+    "welfare_to_work": {
+      "label": "Back-to-Work Support, Skills Checks & Employment Services",
+      "cost_bn": 1.4,
+      "app": 0.8,
+      "mkt": 0.4,
+      "gro": 0.08
+    },
+    "small_business_fund": {
+      "label": "Small Business Growth & Export Finance Guarantee",
+      "cost_bn": 1.2,
+      "app": 1,
+      "mkt": 0.5,
+      "gro": 0.08
     }
   },
   "policy_nudges": {
