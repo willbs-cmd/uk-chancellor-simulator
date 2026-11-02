@@ -18,6 +18,7 @@ import state
 import treasury
 import world_economy
 import weekly_events
+import treasury_officials
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -307,6 +308,7 @@ def execute_decision(opt):
 
     # Put each major proposal to a Commons vote before applying its full effects.
     country.apply_decision(ideology, scale=combined_factor)
+    treasury_officials.review_policy(decision.get('title', 'Policy decision'), opt.get('label', ''), applied_effect)
     apply_effect(applied_effect)
     parliament.apply_fallout(vote)
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
