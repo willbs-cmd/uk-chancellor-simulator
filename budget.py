@@ -201,6 +201,7 @@ def ensure():
     s.setdefault('budget_message', '')
     s.setdefault('whip_ayes', 0)
     s.setdefault('whip_used', [])
+    s.setdefault('whip_negotiations', [])
 
     for k, v in s.budget_applied['tax'].items(): s.setdefault(f'bt_{k}', v)
     for k, v in s.budget_applied['spend'].items(): s.setdefault(f'bs_{k}', float(v))
@@ -765,10 +766,35 @@ def rebel_risks(b):
                 if s.party in parties and test(dtax, dspend)]
     return existing + _policy_rebellion_risks(dtax, dspend)
 
-def apply_irritants():
-    """Deliver the revolt penalties for the Budget just applied (before the vote, so they can sink it)."""
+def effective_rebel_risks(b):
+    """Apply negotiated concessions to the relevant faction's remaining rebellion risk."""
     s = st.session_state
-    hits = rebel_risks(s.budget_applied)
+    negotiated = set(s.get('whip_negotiations', []))
+    return [(stat, round(size * (0.4 if msg in negotiated else 1.0), 1), msg)
+            for stat, size, msg in rebel_risks(b)]
+
+
+def _negotiate_rebel(msg, stat, size):
+    """Make a targeted concession to one rebel faction before the Budget vote."""
+    s = st.session_state
+    if msg in s.get('whip_negotiations', []) or float(s.get('headroom', 0.0)) < 0.75:
+        return
+    state.snapshot()
+    cost = 0.75 if stat == 'backbench_opinion' else 0.5
+    s.headroom = round(float(s.headroom) - cost, 1)
+    s.whip_negotiations = list(s.get('whip_negotiations', [])) + [msg]
+    s.event_cards = list(s.get('event_cards', []))
+    s.event_cards.append({
+        'title': 'Whips secure a Budget concession',
+        'text': f"The Government has offered a targeted £{cost:.2f}bn concession after talks with rebel MPs. The faction has agreed to reduce its threatened rebellion, though some opposition remains.",
+        'summary': 'Whips’ Office · Faction negotiation',
+    })
+
+
+def apply_irritants():
+    """Deliver the remaining revolt penalties after negotiated concessions."""
+    s = st.session_state
+    hits = effective_rebel_risks(s.budget_applied)
     for stat, size, _ in hits:
         s[stat] = round(_clip(s[stat] - size), 1)
     if hits:
@@ -788,7 +814,7 @@ def commons_ayes(backbench=None, whip=None):
 
 def projected_ayes(draft):
     s = st.session_state
-    bb = s.backbench_opinion - sum(size for stat, size, _ in rebel_risks(draft) if stat == 'backbench_opinion')
+    bb = s.backbench_opinion - sum(size for stat, size, _ in effective_rebel_risks(draft) if stat == 'backbench_opinion')
     return commons_ayes(max(0.0, bb))
 
 
@@ -843,6 +869,7 @@ def commit_budget(ayes):
     s.budget_impact = {}
     s.whip_ayes = 0
     s.whip_used = []
+    s.whip_negotiations = []
 
 
 # ---------------------------------------------------------------- the OBR forecast
@@ -1171,8 +1198,27 @@ def render_whips(cur):
     ayes = projected_ayes(cur)
     st.markdown(f"Backbench morale **{s.backbench_opinion:.0f}/100** · Projected ayes **{ayes}** ({ayes - WIN:+d} vs the {WIN} needed)"
                 f" · Whip votes **+{s.get('whip_ayes', 0)}**")
-    for _, size, msg in rebel_risks(cur):
-        st.warning(f'{msg} (-{size} when the Budget is delivered)')
+    risks = rebel_risks(cur)
+    negotiated = set(s.get('whip_negotiations', []))
+    if risks:
+        st.markdown("**Faction-by-faction negotiations**")
+        st.caption("Offer a small, targeted concession to reduce one faction’s threatened rebellion. Each issue can be negotiated once; concessions use fiscal headroom.")
+        for index, (stat, size, msg) in enumerate(risks):
+            done = msg in negotiated
+            remaining = round(size * (0.4 if done else 1.0), 1)
+            issue_col, action_col = st.columns([5, 2])
+            with issue_col:
+                st.warning(f'{msg} · remaining penalty: {remaining:.1f}')
+            with action_col:
+                st.button(
+                    "✓ Concession agreed" if done else f"Negotiate · £{0.75 if stat == 'backbench_opinion' else 0.5:.2f}bn",
+                    key=f"negotiate_rebel_{index}",
+                    on_click=_negotiate_rebel,
+                    args=(msg, stat, size),
+                    disabled=done or float(s.get('headroom', 0.0)) < 0.75,
+                    use_container_width=True,
+                    help="A targeted compromise reduces this faction’s rebellion penalty by 60%. It does not remove the underlying policy."
+                )
     if ayes < WIN:
         st.error(f'🚨 PROJECTED DEFEAT: {ayes} votes. A defeated Budget is a vote of no confidence. Soften it, or call in the Whips.')
     elif ayes < WIN + 15:
