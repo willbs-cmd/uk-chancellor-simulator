@@ -809,7 +809,10 @@ def compute_election():
     reseed('election')
     polls = {p: s.poll_history[p][-1] for p in state.PARTIES}
     seats, constituency_results = compute_seats(polls, return_details=True)
-    # Store constituency winners as incumbents for the next general election.
+    previous_seats = s.get('previous_election_seats', {})
+    seat_changes = {p: int(seats.get(p, 0)) - int(previous_seats.get(p, seats.get(p, 0))) for p in state.PARTIES}
+    # Store this parliament's results and winners for the next general election.
+    s.previous_election_seats = dict(seats)
     s.constituency_incumbents = {str(row.get('code', '')): row.get('winner') for row in constituency_results}
     largest = max(seats, key=seats.get)
     party = s.party
@@ -823,7 +826,7 @@ def compute_election():
     turnout = round(max(55.0, min(82.0, 65.0 + random.uniform(-1.8, 1.8) + (float(s.approval) - 50) * 0.04 + float(s.get('election_campaign_turnout', 0.0)))), 1)
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
-             constituency_results=constituency_results,
+             constituency_results=constituency_results, seat_changes=seat_changes,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
