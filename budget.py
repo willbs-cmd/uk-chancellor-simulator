@@ -988,7 +988,8 @@ def _tax_slider_spec(t):
 def _tax_row(k, t, s):
     c1, c2, c3 = st.columns([2.2, 3, 1.4], gap='small')
     with c1:
-        st.markdown(f"<div class='lv'>{t['label']}</div>", unsafe_allow_html=True)
+        display_label = "Business rates · change to existing receipts" if k == "business_rates" else t['label']
+        st.markdown(f"<div class='lv'>{display_label}</div>", unsafe_allow_html=True)
     with c2:
         lo, hi, step = _tax_slider_spec(t)
         key = f'bt_{k}'
@@ -998,13 +999,17 @@ def _tax_row(k, t, s):
         st.slider(
             f"{t['label']} slider", min_value=lo, max_value=hi, step=step,
             key=key, format="%g%%", label_visibility="collapsed",
-            help=t.get('help', 'Set this tax or duty rate as a percentage. The Treasury estimates the annual receipts; higher rates can reduce the tax base or discourage activity.')
+            help=("This is a percentage change in business-rates receipts from the existing system, not the business-rates tax rate. 0% keeps the current baseline." if k == "business_rates" else t.get('help', 'Set this tax or duty rate as a percentage. The Treasury estimates the annual receipts; higher rates can reduce the tax base or discourage activity.'))
         )
     with c3:
         d = float(s[f'bt_{k}']) - float(t['default'])
         rate = float(s[f'bt_{k}'])
         new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
-        st.markdown(_value_html(f'{rate:g}% · £{new_rev:,.1f}bn', new_rev - t['base']), unsafe_allow_html=True)
+        if k == "business_rates":
+            rate_label = "No change" if abs(rate) < 0.001 else f"{rate:+g}% receipts"
+            st.markdown(_value_html(f'{rate_label} · £{new_rev:,.1f}bn', new_rev - t['base']), unsafe_allow_html=True)
+        else:
+            st.markdown(_value_html(f'{rate:g}% · £{new_rev:,.1f}bn', new_rev - t['base']), unsafe_allow_html=True)
 
 
 def _spend_row(k, sp, s):
@@ -1309,7 +1314,7 @@ def render(submit=None, after_summary=None):
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
 
     with t_tax:
-        st.caption('Set each tax and duty as a percentage rate. Income-tax rates are marginal: each rate applies only to income inside its band. The £bn figure beside each slider is the estimated annual revenue, not the rate. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
+        st.caption('Set tax rates where the control represents a rate, or adjust receipts where the control is a percentage change to an existing tax. Business rates are already included in baseline receipts: 0% means no change, not that the tax is abolished. Income-tax rates are marginal: each rate applies only to income inside its band. The £bn figure beside each slider is estimated annual revenue. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
         groups = {}
         for k, tx in TAXES.items():
             groups.setdefault(tx['group'], []).append((k, tx))
