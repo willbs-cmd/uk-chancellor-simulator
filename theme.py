@@ -2082,6 +2082,290 @@ section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {min-he
   color:#294f50 !important;
   -webkit-text-fill-color:#294f50 !important;
 }
+
+/* ============================================================
+   GLOBAL COLOUR AUDIT — unified Cabinet Office light palette
+   This final layer intentionally overrides legacy dark/gold
+   rules above so every Streamlit widget and custom card agrees.
+   ============================================================ */
+:root {
+  --co-ink:#20364f;
+  --co-ink-strong:#172a42;
+  --co-muted:#64788e;
+  --co-paper:#ffffff;
+  --co-canvas:#f3f6f9;
+  --co-surface:#ffffff;
+  --co-surface-alt:#edf2f6;
+  --co-border:#d5dee7;
+  --co-border-strong:#b9c8d6;
+  --co-navy:#203b59;
+  --co-teal:#397b78;
+  --co-teal-soft:#e8f2f1;
+  --co-gold:#a77d32;
+  --co-green:#28734e;
+  --co-green-bg:#e8f4ed;
+  --co-red:#a33b3b;
+  --co-red-bg:#fbefef;
+  --co-amber:#8a6827;
+  --co-amber-bg:#fbf5e8;
+  --co-blue:#315f83;
+  --co-blue-bg:#edf4f9;
+}
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+  background:var(--co-canvas) !important;
+  color:var(--co-ink) !important;
+}
+.stApp { background-image:none !important; }
+.block-container { color:var(--co-ink) !important; }
+.stApp p, .stApp li, .stApp label, .stApp span, .stApp div,
+[data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li, [data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {
+  color:var(--co-ink);
+}
+.stApp h1,.stApp h2,.stApp h3,.stApp h4,
+[data-testid="stMarkdownContainer"] h1,[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3,[data-testid="stMarkdownContainer"] h4 {
+  color:var(--co-ink-strong) !important;
+}
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *,
+.stCaption,[data-testid="stHelp"],small,.tl-when {
+  color:var(--co-muted) !important;
+}
+a { color:var(--co-teal) !important; }
+a:hover { color:var(--co-navy) !important; }
+
+/* Main surfaces, sidebar and navigation */
+[data-testid="stSidebar"],section[data-testid="stSidebar"] {
+  background:var(--co-surface) !important;
+  border-right:1px solid var(--co-border) !important;
+}
+[data-testid="stSidebar"] * { color:var(--co-ink); }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 { color:var(--co-navy) !important; }
+[data-testid="stHeader"],header[data-testid="stHeader"] {
+  background:rgba(243,246,249,.94) !important;
+}
+[data-testid="stTabs"] [role="tablist"] {
+  border-bottom:1px solid var(--co-border) !important;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  color:var(--co-muted) !important;
+  background:transparent !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color:var(--co-navy) !important;
+  background:var(--co-teal-soft) !important;
+  border-bottom:3px solid var(--co-teal) !important;
+}
+[data-testid="stExpander"],[data-testid="stExpander"] details,
+[data-testid="stExpander"] details > summary {
+  background:var(--co-surface) !important;
+  border:1px solid var(--co-border) !important;
+  color:var(--co-ink) !important;
+}
+[data-testid="stExpander"] summary p,[data-testid="stExpander"] summary span {
+  color:var(--co-ink) !important;
+}
+[data-testid="stExpander"] summary svg { color:var(--co-muted) !important; fill:var(--co-muted) !important; }
+[data-testid="stExpander"] details > summary:hover { background:var(--co-surface-alt) !important; }
+
+/* Metric and data panels */
+[data-testid="stMetric"],.sc-card,.sk-wrap,.sk-stat,.annual-progress,
+.hud-note,.tl-soon,.ch-news {
+  background:var(--co-surface) !important;
+  border-color:var(--co-border) !important;
+  color:var(--co-ink) !important;
+  box-shadow:0 2px 8px rgba(32,54,79,.045);
+}
+[data-testid="stMetric"] { border-top:3px solid var(--co-teal) !important; }
+[data-testid="stMetricLabel"],[data-testid="stMetricLabel"] *,
+[data-testid="stMetricValue"],[data-testid="stMetricValue"] *,
+.sc-label,.sc-value,.sk-title,.sk-stat .v,.tl-title,.tl-choice,
+.hud-note b,.annual-progress-heading > span:first-child {
+  color:var(--co-ink) !important;
+}
+[data-testid="stMetricDelta"] { color:var(--co-muted) !important; }
+.sc-tip {
+  background:var(--co-navy) !important;
+  color:#ffffff !important;
+  border:1px solid #496987 !important;
+  box-shadow:0 8px 22px rgba(23,42,66,.2) !important;
+}
+.sc-tip * { color:#ffffff !important; }
+.sc-good,.tl-chip.good { color:var(--co-green) !important; background:var(--co-green-bg) !important; }
+.sc-bad,.tl-chip.bad { color:var(--co-red) !important; background:var(--co-red-bg) !important; }
+.sc-flat { color:var(--co-muted) !important; background:var(--co-surface-alt) !important; }
+.sk-grade { color:var(--co-teal) !important; }
+.sk-badge { background:var(--co-teal-soft) !important; color:var(--co-navy) !important; border-color:#c8dcda !important; }
+hr,[data-testid="stDivider"] { border-color:var(--co-border) !important; }
+
+/* Buttons and every native Streamlit input */
+.stButton > button,[data-testid="stDownloadButton"] button,
+[data-testid="stFormSubmitButton"] button {
+  background:var(--co-surface) !important;
+  color:var(--co-navy) !important;
+  border:1px solid var(--co-border-strong) !important;
+}
+.stButton > button:hover,[data-testid="stDownloadButton"] button:hover,
+[data-testid="stFormSubmitButton"] button:hover {
+  background:var(--co-teal-soft) !important;
+  color:var(--co-navy) !important;
+  border-color:var(--co-teal) !important;
+}
+.stButton > button[kind="primary"],button[kind="primary"],
+[data-testid="stFormSubmitButton"] button[kind="primary"] {
+  background:var(--co-navy) !important;
+  color:#ffffff !important;
+  border-color:var(--co-navy) !important;
+}
+.stButton > button[kind="primary"]:hover,button[kind="primary"]:hover {
+  background:var(--co-teal) !important;
+  color:#ffffff !important;
+  border-color:var(--co-teal) !important;
+}
+[data-testid="stAppViewContainer"] input:not([type="radio"]):not([type="checkbox"]),
+[data-testid="stAppViewContainer"] textarea,
+[data-baseweb="input"] input,[data-baseweb="textarea"] textarea,
+[data-testid="stDateInput"] input,[data-testid="stTimeInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea {
+  background:#ffffff !important;
+  color:var(--co-ink) !important;
+  -webkit-text-fill-color:var(--co-ink) !important;
+  border:1px solid var(--co-border-strong) !important;
+  caret-color:var(--co-teal) !important;
+}
+input::placeholder,textarea::placeholder {
+  color:#8997a7 !important;
+  -webkit-text-fill-color:#8997a7 !important;
+  opacity:1 !important;
+}
+input:focus,textarea:focus,[data-baseweb="select"] > div:focus-within {
+  border-color:var(--co-teal) !important;
+  box-shadow:0 0 0 2px rgba(57,123,120,.14) !important;
+}
+input:disabled,textarea:disabled {
+  background:var(--co-surface-alt) !important;
+  color:var(--co-muted) !important;
+  -webkit-text-fill-color:var(--co-muted) !important;
+}
+[data-baseweb="select"] > div,[data-baseweb="select"] input,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+  background:#ffffff !important;
+  color:var(--co-ink) !important;
+  border-color:var(--co-border-strong) !important;
+}
+[data-baseweb="select"] *,[data-testid="stSelectbox"] *,
+[data-testid="stMultiSelect"] * {
+  color:var(--co-ink) !important;
+  -webkit-text-fill-color:var(--co-ink) !important;
+}
+[data-baseweb="popover"],[data-baseweb="menu"],[data-baseweb="popover"] *,
+[data-baseweb="menu"] li,[role="listbox"],[role="option"] {
+  background:#ffffff !important;
+  color:var(--co-ink) !important;
+}
+[role="option"]:hover,[role="option"][aria-selected="true"] {
+  background:var(--co-teal-soft) !important;
+}
+[data-baseweb="tag"] {
+  background:var(--co-teal-soft) !important;
+  border:1px solid #c8dcda !important;
+}
+[data-baseweb="tag"] * { color:var(--co-navy) !important; }
+[data-testid="stRadio"] label,div[role="radiogroup"] > label {
+  background:var(--co-surface) !important;
+  color:var(--co-ink) !important;
+  border:1px solid var(--co-border) !important;
+}
+[data-testid="stRadio"] label:hover,div[role="radiogroup"] > label:hover {
+  background:var(--co-teal-soft) !important;
+  border-color:var(--co-teal) !important;
+}
+[data-testid="stRadio"] label:has(input:checked),
+div[role="radiogroup"] > label:has(input:checked) {
+  background:var(--co-teal-soft) !important;
+  border-color:var(--co-teal) !important;
+  box-shadow:inset 4px 0 0 var(--co-teal) !important;
+}
+[data-testid="stCheckbox"] label,[data-testid="stToggle"] label,
+[data-testid="stSlider"] label,[data-testid="stSelectSlider"] label {
+  color:var(--co-ink) !important;
+}
+[data-testid="stSlider"] [role="slider"] { background:var(--co-teal) !important; border-color:var(--co-teal) !important; }
+[data-testid="stProgress"] > div > div { background:var(--co-teal) !important; }
+[data-testid="stAlert"] { background:var(--co-blue-bg) !important; color:var(--co-ink) !important; border:1px solid #d2e0eb !important; }
+[data-testid="stAlert"] * { color:var(--co-ink) !important; }
+[data-testid="stDataFrame"],[data-testid="stTable"] { background:#ffffff !important; }
+[data-testid="stDataFrame"] *,[data-testid="stTable"] * { color:var(--co-ink) !important; }
+[data-testid="stCode"],pre,code { background:var(--co-surface-alt) !important; color:var(--co-ink) !important; }
+
+/* Custom game components: same surfaces, readable text, meaningful status colours */
+.ch-banner,.setup-hero {
+  background:linear-gradient(110deg,#ffffff 0%,#edf3f6 100%) !important;
+  border:1px solid var(--co-border) !important;
+  border-left:5px solid var(--co-teal) !important;
+  box-shadow:0 4px 14px rgba(32,54,79,.06) !important;
+}
+.ch-banner:after { color:rgba(32,59,89,.055) !important; }
+.ch-banner .eyebrow,.setup-hero .seal { color:var(--co-teal) !important; }
+.ch-banner h1,.ch-title,.setup-hero h1 { color:var(--co-ink-strong) !important; }
+.ch-banner .sub,.setup-hero p { color:var(--co-muted) !important; }
+.ch-pip { background:#dce5ec !important; }
+.ch-pip.done { background:var(--co-teal) !important; }
+.ch-pip.now { background:var(--co-gold) !important; }
+.office-masthead {
+  background:linear-gradient(115deg,#ffffff,#edf3f6) !important;
+  color:var(--co-ink) !important;
+  border:1px solid var(--co-border) !important;
+  border-left:5px solid var(--party-accent,var(--co-teal)) !important;
+}
+.office-masthead * { color:var(--co-ink) !important; }
+.office-masthead .office-live { color:var(--co-green) !important; }
+.office-masthead .office-progress { background:#dce5ec !important; }
+.office-masthead .office-progress span { background:var(--party-accent,var(--co-teal)) !important; }
+.office-masthead .office-monogram { background:var(--co-navy) !important; color:#ffffff !important; }
+.ch-event,.ch-news,.tl-soon {
+  background:var(--co-blue-bg) !important;
+  color:var(--co-ink) !important;
+  border-color:#cbdde9 !important;
+}
+.ch-event b,.ch-news b,.tl-soon b { color:var(--co-navy) !important; }
+.ch-event small { color:var(--co-muted) !important; }
+.ch-crisis {
+  background:var(--co-red-bg) !important;
+  color:var(--co-red) !important;
+  border-color:#e5bcbc !important;
+  border-left-color:var(--co-red) !important;
+}
+.ch-crisis small { color:#854747 !important; }
+.humphrey-note,.desk-diary,.desk-panel,.advisor-card,.treasury-card {
+  color:var(--co-ink) !important;
+}
+.np-card { background:#fffdf8 !important; color:#26384a !important; border-color:#d8d2c6 !important; }
+.np-card * { color:#26384a !important; }
+.np-card .np-masthead,.np-card .np-headline { color:#172a42 !important; }
+.np-card .np-paper-meta,.np-card .np-edition,.np-card .np-paper-footer { color:#64748e !important; }
+.ch-bar .name,.ch-bar .val { color:var(--co-ink) !important; }
+.ch-bar .track { background:#e3eaf0 !important; }
+.ch-bar .fill { opacity:.92; }
+.tl-item { border-bottom-color:var(--co-border) !important; }
+.tl-title,.tl-choice { color:var(--co-ink) !important; }
+.tl-when { color:var(--co-muted) !important; }
+.tl-dot { background:var(--co-gold) !important; }
+.tl-dot.crisis { background:var(--co-red) !important; }
+.tl-dot.budget { background:var(--co-green) !important; }
+.tl-dot.event { background:var(--co-blue) !important; }
+.annual-progress { background:#ffffff !important; border-color:var(--co-border) !important; }
+.annual-progress-heading,.annual-phase-name { color:var(--co-muted) !important; }
+.annual-segment { background:#dce5ec !important; }
+.annual-segment.complete { background:var(--co-teal) !important; }
+.annual-segment.current { background:linear-gradient(90deg,var(--co-teal),#a8cfca) !important; }
+
+/* Keep party identity confined to party-specific indicators; it must not recolour UI text. */
 </style>
 """
 
