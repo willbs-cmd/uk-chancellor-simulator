@@ -609,6 +609,37 @@ def submit_budget():
     s = st.session_state
     stage = int(s.get('budget_day_stage', 0))
     if stage == 0:
+        priorities = s.get('budget_pm_priorities') or []
+        if not priorities:
+            party = str(s.get('party', 'Labour'))
+            pools = {
+                'Labour': [
+                    ('Protect NHS funding', 'Increase health spending and reduce waiting lists.', 'health'),
+                    ('No rises in basic income tax', 'Avoid increasing the basic, higher or additional income tax rates.', 'income_tax'),
+                    ('Boost housebuilding and infrastructure', 'Prioritise capital investment, transport and new homes.', 'investment'),
+                    ('Keep defence spending on an upward path', 'Provide a credible multi-year settlement for defence.', 'defence'),
+                ],
+                'Conservative': [
+                    ('Keep taxes on working people down', 'Avoid increases to income tax and employee National Insurance.', 'income_tax'),
+                    ('Control public spending', 'Show a credible path to lower borrowing and departmental restraint.', 'spending'),
+                    ('Increase defence readiness', 'Protect defence capability and equipment budgets.', 'defence'),
+                    ('Support business investment', 'Prioritise capital allowances, skills and infrastructure.', 'investment'),
+                ],
+                'Liberal Democrats': [
+                    ('Improve NHS and social care', 'Provide additional support for health and care services.', 'health'),
+                    ('Fairer taxation', 'Avoid shifting the burden onto lower and middle earners.', 'fair_tax'),
+                    ('Invest in local communities', 'Support councils, housing and local transport.', 'local'),
+                    ('Accelerate climate investment', 'Back clean energy and low-carbon infrastructure.', 'green'),
+                ],
+                'default': [
+                    ('Protect public services', 'Avoid real-terms cuts to frontline services.', 'health'),
+                    ('Keep household taxes stable', 'Avoid increasing taxes on ordinary working households.', 'income_tax'),
+                    ('Support growth and investment', 'Prioritise infrastructure, skills and business investment.', 'investment'),
+                    ('Maintain fiscal credibility', 'Avoid a large unfunded increase in borrowing.', 'spending'),
+                ],
+            }
+            priorities = [dict(title=x[0], detail=x[1], tag=x[2]) for x in pools.get(party, pools['default'])]
+            s.budget_pm_priorities = priorities
         choice = s.get('budget_pm_choice', 'Compromise with the Prime Minister')
         if choice == 'Accept the Prime Minister’s priorities':
             s.pm_opinion = round(_clip(s.pm_opinion + 5), 1)
