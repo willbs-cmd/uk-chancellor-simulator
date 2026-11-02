@@ -302,6 +302,7 @@ if s.year > 5:
             "Vote share": f"{r['polls'][party]:.1f}%",
             "Change": f"{r.get('swings', {}).get(party, 0):+.1f}pp",
             "Seats": r['seats'][party],
+            "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get('seat_changes') and s.get('term', 1) > 1 else "—"),
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
     vote_total = sum(r['polls'].values())
