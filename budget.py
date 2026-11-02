@@ -1623,11 +1623,11 @@ def render(submit=None, after_summary=None):
             st.caption(profile['note'] + " " + profile['risk'])
 
         revenue_groups = {
-            "Households & wealth": ["vat_private", "nondom", "wealth", "mansion", "pension_relief_reform", "relief_cap", "landlord_relief", "property_empty", "luxury_goods_levy"],
-            "Business, banks & digital economy": ["windfall", "digital", "buyback_levy", "bank_surcharge", "bank_surcharge_reform", "vat_compliance", "online_marketplace", "tax_gap", "hmrc_enforcement"],
+            "Households & wealth": ["vat_private", "nondom", "wealth", "mansion", "pension_relief_reform", "relief_cap", "landlord_relief", "property_empty", "luxury_goods_levy", "family_business_relief"],
+            "Business, banks & digital economy": ["windfall", "digital", "buyback_levy", "bank_surcharge", "bank_surcharge_reform", "vat_compliance", "online_marketplace", "tax_gap", "hmrc_enforcement", "full_expensing", "employers_ni_relief", "entrepreneurs_relief", "enterprise_investment"],
             "Environment, transport & consumption": ["carbon", "close_fossil_relief", "aviation_levy", "ev_road_pricing", "gambling", "online_gambling", "packaging_levy", "carbon_border", "stamp_duty_reform"],
         }
-        st.markdown("#### Revenue-raising schemes")
+        st.markdown("#### Revenue measures & business tax reliefs")
         for group, keys in revenue_groups.items():
             available = [(k, TAX_POLICIES[k]) for k in keys if k in TAX_POLICIES]
             if not available: continue
@@ -1637,8 +1637,10 @@ def render(submit=None, after_summary=None):
         st.markdown("#### Spending commitments")
         spending_groups = {
             "NHS, education & family support": ["meals", "child_cap", "childcare", "winterfuel", "nhs_workforce", "primary_care", "nhs_diagnostics", "school_rebuild", "school_breakfast", "social_care"],
-            "Housing, communities & transport": ["hs2", "social_housing", "bus_network", "potholes", "regional_growth", "town_deal", "homelessness_prevention"],
-            "Energy, industry & national resilience": ["nuclear", "home_insulation", "grid_upgrade", "grid_storage", "defence_industry", "flood_defences", "technical_skills", "youth_opportunity", "prison_capacity", "water"],
+            "Housing, communities & transport": ["hs2", "social_housing", "bus_network", "potholes", "regional_growth", "town_deal", "homelessness_prevention", "roads_upgrade"],
+            "Law, borders & national security": ["border_security", "police_recruitment", "prison_places", "defence_readiness", "prison_capacity"],
+            "Business, employment & enterprise": ["welfare_to_work", "small_business_fund"],
+            "Energy, industry & national resilience": ["nuclear", "home_insulation", "grid_upgrade", "grid_storage", "defence_industry", "flood_defences", "technical_skills", "youth_opportunity", "water"],
         }
         for group, keys in spending_groups.items():
             available = [(k, SPEND_POLICIES[k]) for k in keys if k in SPEND_POLICIES]
