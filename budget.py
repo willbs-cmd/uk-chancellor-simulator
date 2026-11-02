@@ -689,16 +689,81 @@ def _reset_spending_draft():
 
 
 # ---------------------------------------------------------------- the Commons vote
+def _policy_rebellion_risks(dtax, dspend):
+    """Additional policy-specific pressure from factions within the governing party."""
+    party = st.session_state.get('party', 'Labour')
+    risks = []
+
+    def tax_up(key, threshold=0.01):
+        return float(dtax.get(key, 0.0)) > threshold
+
+    def tax_down(key, threshold=0.01):
+        return float(dtax.get(key, 0.0)) < -threshold
+
+    def spend_cut(key, threshold=-0.5):
+        return float(dspend.get(key, 0.0)) < threshold
+
+    def spend_rise(key, threshold=0.5):
+        return float(dspend.get(key, 0.0)) > threshold
+
+    def add(condition, stat, size, message):
+        if condition:
+            risks.append((stat, size, message))
+
+    # Labour: public-service, workforce and low/middle-income factions.
+    if party == 'Labour':
+        add(any(spend_cut(k) for k in ('health', 'social_care', 'education')), 'backbench_opinion', 7, 'Labour public-service MPs are threatening to rebel over cuts to the NHS, social care or schools.')
+        add(any(spend_cut(k) for k in ('local_government', 'housing', 'welfare')), 'party_opinion', 6, 'Labour MPs on the party’s local-government and anti-poverty wings oppose the proposed cuts.')
+        add(spend_cut('public_sector_pay'), 'backbench_opinion', 5, 'Labour MPs are warning that public-sector pay restraint will provoke unions and their constituents.')
+        add(tax_up('income') or tax_up('ni'), 'party_opinion', 4, 'Some Labour MPs fear that raising taxes on ordinary earnings breaks the party’s promise to working people.')
+        add(tax_down('income_higher') or tax_down('property') or tax_down('cgt'), 'party_opinion', 3, 'Labour’s left is unhappy that the Budget has reduced the contribution expected from higher earners or wealth.')
+    # Conservatives: low-tax, business and rural factions.
+    elif party == 'Conservative':
+        add(tax_up('income') or tax_up('ni') or tax_up('vat'), 'backbench_opinion', 8, 'Conservative low-tax MPs are rebelling against increases to income tax, National Insurance or VAT.')
+        add(tax_up('corp') or tax_up('business_rates'), 'party_opinion', 7, 'Conservative business-minded MPs warn that higher business taxes will damage investment and competitiveness.')
+        add(tax_up('fuel') or tax_up('vehicle_excise'), 'backbench_opinion', 5, 'Conservative rural and motoring MPs oppose higher motoring taxes.')
+        add(spend_rise('welfare') or spend_rise('aid'), 'party_opinion', 4, 'Fiscal conservatives question the expansion of welfare or overseas aid spending.')
+        add(spend_cut('defence'), 'backbench_opinion', 5, 'Conservative defence hawks oppose reducing the defence budget.')
+    # Liberal Democrats: local services, civil liberties and public-service investment.
+    elif party == 'Liberal Democrats':
+        add(spend_cut('health') or spend_cut('social_care'), 'backbench_opinion', 6, 'Liberal Democrat MPs oppose cuts to health and social care, particularly where they affect local communities.')
+        add(spend_cut('education') or spend_cut('local_government'), 'party_opinion', 5, 'Liberal Democrat MPs warn that cuts to schools and councils will hit their local-government base.')
+        add(tax_up('council_tax'), 'party_opinion', 5, 'Liberal Democrat MPs oppose a rise in council tax bills for local households.')
+        add(tax_up('vat'), 'backbench_opinion', 4, 'Liberal Democrat MPs are concerned that a VAT rise would fall hardest on lower-income households.')
+        add(spend_cut('climate'), 'party_opinion', 5, 'Liberal Democrat MPs oppose weakening climate and environmental programmes.')
+    # Greens: climate action, redistribution and public ownership.
+    elif party == 'Green Party':
+        add(spend_cut('climate') or spend_cut('transport'), 'backbench_opinion', 8, 'Green MPs are furious about cuts to climate action and sustainable transport.')
+        add(tax_down('carbon_levy'), 'party_opinion', 5, 'Green MPs oppose reducing the carbon levy and weakening the polluter-pays principle.')
+        add(tax_down('property') or tax_down('cgt') or tax_down('income_higher'), 'party_opinion', 5, 'Green MPs argue that the Budget has abandoned wealth redistribution.')
+        add(spend_cut('health') or spend_cut('education') or spend_cut('welfare'), 'backbench_opinion', 5, 'Green MPs oppose austerity in frontline public services and welfare.')
+        add(tax_up('fuel'), 'party_opinion', 2, 'Some Green MPs support the environmental case but are concerned about the cost of higher fuel duty to rural and poorer households.')
+    # SNP and Plaid Cymru: devolved services, regional fairness and constitutional priorities.
+    elif party in ('SNP', 'Plaid Cymru'):
+        add(spend_cut('other') or spend_cut('local_government'), 'backbench_opinion', 8, 'Nationalist MPs accuse the Treasury of squeezing devolved and local-government budgets.')
+        add(spend_cut('health') or spend_cut('education'), 'party_opinion', 5, 'Nationalist MPs warn that cuts to health and education will be felt acutely in devolved nations.')
+        add(spend_rise('aid') or spend_cut('regional_growth'), 'party_opinion', 3, 'Nationalist MPs question the Budget’s priorities for international aid or regional investment.')
+        add(tax_up('council_tax') or tax_up('fuel'), 'backbench_opinion', 4, 'Nationalist MPs oppose tax rises that would place additional pressure on households outside England.')
+    # Reform UK: anti-tax, anti-net-zero and public-spending restraint factions.
+    elif party == 'Reform UK':
+        add(tax_up('income') or tax_up('ni') or tax_up('vat') or tax_up('council_tax'), 'backbench_opinion', 9, 'Reform MPs accuse the Chancellor of breaking the party’s low-tax message.')
+        add(tax_up('carbon_levy') or tax_up('fuel'), 'party_opinion', 7, 'Reform MPs oppose green levies and higher fuel costs, calling them an attack on motorists and industry.')
+        add(spend_rise('aid') or spend_rise('welfare'), 'party_opinion', 5, 'Reform MPs question increased overseas aid or welfare spending.')
+        add(spend_cut('defence'), 'backbench_opinion', 4, 'Reform MPs object to cuts in defence and national security spending.')
+
+    return risks
+
+
 def rebel_risks(b):
-    """Who your own side will be angry about in Budget ``b``: a list of (stat, size, message)."""
+    """Who your own side will be angry about in Budget ``b``: (stat, size, message) risks."""
     s = st.session_state
     ensure()
     last = s.budget_last_tax
     dtax = {k: b['tax'][k] - last.get(k, TAXES[k]['default']) for k in TAXES}
     dspend = b['spend']
-    return [(stat, size, msg) for parties, test, stat, size, msg in IRRITANTS
-            if s.party in parties and test(dtax, dspend)]
-
+    existing = [(stat, size, msg) for parties, test, stat, size, msg in IRRITANTS
+                if s.party in parties and test(dtax, dspend)]
+    return existing + _policy_rebellion_risks(dtax, dspend)
 
 def apply_irritants():
     """Deliver the revolt penalties for the Budget just applied (before the vote, so they can sink it)."""
