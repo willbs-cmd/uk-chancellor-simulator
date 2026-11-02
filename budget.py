@@ -147,12 +147,13 @@ def ensure():
     else:
         _migrate_depts(s.dept_spend)
 
+    had_legacy_budget = 'budget_applied' in s and 'tax' in s.get('budget_applied', {})
     if 'budget_applied' not in s or 'tax_pol' not in s.get('budget_applied', {}):
         s.budget_applied = defaults()
     else:
         _migrate_applied(s.budget_applied)
     # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
-    if int(s.budget_applied.get('_tax_units_version', 0)) < 2:
+    if had_legacy_budget and int(s.budget_applied.get('_tax_units_version', 0)) < 2:
         conversions = {
             'fuel': (52.95, 0.5), 'sin': (100.0, 1.0), 'property': (0.5, 0.02),
             'council_tax': (2300.0, 10.0), 'carbon_levy': (25.0, 1.0),
