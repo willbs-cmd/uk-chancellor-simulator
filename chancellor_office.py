@@ -75,33 +75,34 @@ def render():
             st.markdown(f"**{title}**")
             st.write(body)
 
-    st.markdown("### Your performance as Chancellor")
-    credibility = max(0, min(100, 50 + headroom * 2.2 + (market - 50) * 0.35 - max(0, gilt - 4.5) * 5))
-    economic_competence = max(0, min(100, 55 + growth * 4 - max(0, inflation - 2) * 5))
-    business_confidence = max(0, min(100, market * 0.65 + (100 - max(0, gilt - 3) * 12) * 0.35))
-    public_standing = max(0, min(100, float(s.get("approval", 50)) * 0.65 + float(s.get("media_opinion", 50)) * 0.35))
-    cabinet_standing = max(0, min(100, float(s.get("pm_opinion", 50)) * 0.45 + float(s.get("cab_opinion", 50)) * 0.4 + float(s.get("party_opinion", 50)) * 0.15))
-    ratings = st.columns(5)
-    for col, label, value in zip(ratings, ["Fiscal credibility", "Economic competence", "Business confidence", "Public standing", "Cabinet confidence"], [credibility, economic_competence, business_confidence, public_standing, cabinet_standing]):
-        col.metric(label, f"{value:.0f}/100")
-    st.caption("These are simulated performance indicators, not official economic statistics. The Bank of England remains operationally independent.")
+    with st.expander('Chancellor performance indicators', expanded=False):
+        st.markdown('#### Performance indicators')
+        credibility = max(0, min(100, 50 + headroom * 2.2 + (market - 50) * 0.35 - max(0, gilt - 4.5) * 5))
+        economic_competence = max(0, min(100, 55 + growth * 4 - max(0, inflation - 2) * 5))
+        business_confidence = max(0, min(100, market * 0.65 + (100 - max(0, gilt - 3) * 12) * 0.35))
+        public_standing = max(0, min(100, float(s.get("approval", 50)) * 0.65 + float(s.get("media_opinion", 50)) * 0.35))
+        cabinet_standing = max(0, min(100, float(s.get("pm_opinion", 50)) * 0.45 + float(s.get("cab_opinion", 50)) * 0.4 + float(s.get("party_opinion", 50)) * 0.15))
+        ratings = st.columns(5)
+        for col, label, value in zip(ratings, ["Fiscal credibility", "Economic competence", "Business confidence", "Public standing", "Cabinet confidence"], [credibility, economic_competence, business_confidence, public_standing, cabinet_standing]):
+            col.metric(label, f"{value:.0f}/100")
+        st.caption("These are simulated performance indicators, not official economic statistics. The Bank of England remains operationally independent.")
 
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("PM's confidence", f"{float(s.pm_opinion):.0f}/100")
-    c2.metric("Cabinet support", f"{float(s.cab_opinion):.0f}/100")
-    c3.metric("Party unity", f"{float(s.party_opinion):.0f}/100")
-    c4.metric("Political capital", f"{int(s.get('political_capital_points', 0))}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("PM's confidence", f"{float(s.pm_opinion):.0f}/100")
+        c2.metric("Cabinet support", f"{float(s.cab_opinion):.0f}/100")
+        c3.metric("Party unity", f"{float(s.party_opinion):.0f}/100")
+        c4.metric("Political capital", f"{int(s.get('political_capital_points', 0))}")
 
-    pm = float(s.pm_opinion)
-    if pm >= 70:
-        st.success("The Prime Minister trusts your judgement. You have room to shape the Budget.")
-    elif pm >= 45:
-        st.info("Your position is workable, but major disagreements with the Prime Minister could become dangerous.")
-    elif pm >= 20:
-        st.warning("Your position is vulnerable. A Budget dispute or public disagreement could put your job at risk.")
-    else:
-        st.error("The Prime Minister has lost confidence in you. Your career is at risk.")
+        pm = float(s.pm_opinion)
+        if pm >= 70:
+            st.success("The Prime Minister trusts your judgement. You have room to shape the Budget.")
+        elif pm >= 45:
+            st.info("Your position is workable, but major disagreements with the Prime Minister could become dangerous.")
+        elif pm >= 20:
+            st.warning("Your position is vulnerable. A Budget dispute or public disagreement could put your job at risk.")
+        else:
+            st.error("The Prime Minister has lost confidence in you. Your career is at risk.")
 
     st.markdown("### Negotiations and scrutiny")
     st.caption(f"These actions are available once per financial year. Current period: Term {s.term}, Year {s.year}.")
