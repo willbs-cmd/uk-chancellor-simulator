@@ -875,7 +875,7 @@ def forecast(b, years=3):
         v['headroom'] = round(v['headroom'] + net_fiscal_change, 1)
         v['deficit'] = round(max(0.0, v['deficit'] - net_fiscal_change), 1)
         rows.append(dict(year=imf_outlook.year_for_game(now + i), growth=v['growth'], inflation=v['inflation'],
-                         headroom=v['headroom'], deficit=v['deficit'], debt=v['debt'], market=v['market_conf'],
+                         approval=v['approval'], headroom=v['headroom'], deficit=v['deficit'], debt=v['debt'], market=v['market_conf'],
                          gilt=v['gilt_yield'], gilt_risk_premium=v.get('gilt_risk_premium', 0.0),
                          debt_interest=round(interest_for(v['gilt_yield'], v['debt']), 1),
                          growth_receipts=round(growth_receipts, 2),
@@ -1260,6 +1260,32 @@ def render(submit=None, after_summary=None):
             st.caption(market_detail)
         debt_direction = "falling" if end_debt < float(s.debt) else "rising"
         st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
+        st.markdown("#### Policy consequences over the next three years")
+        consequence_rows = []
+        for index, row in enumerate(briefing_rows, start=1):
+            approval = float(row.get("approval", s.get("approval", 50.0)))
+            change = approval - float(s.get("approval", 50.0))
+            election_position = ("Strong position" if approval >= 60 else "Competitive" if approval >= 48 else "Under pressure" if approval >= 38 else "Electorally vulnerable")
+            consequence_rows.append({
+                "Year": f"Year {index} · {row['year']}",
+                "Real growth": f"{float(row['growth']):+.2f}%",
+                "Inflation": f"{float(row['inflation']):.2f}%",
+                "Public approval": f"{approval:.1f}/100",
+                "Change vs today": f"{change:+.1f} pts",
+                "Election outlook": election_position,
+                "Headroom": f"£{float(row['headroom']):.1f}bn",
+                "Debt interest": f"£{float(row.get('debt_interest', 0.0)):.1f}bn",
+            })
+        st.dataframe(consequence_rows, hide_index=True, use_container_width=True)
+        end_approval = float(briefing_rows[-1].get("approval", s.get("approval", 50.0)))
+        approval_change = end_approval - float(s.get("approval", 50.0))
+        if approval_change >= 5:
+            st.success(f"The model expects the Budget's combined economic and political effects to improve public approval by {approval_change:.1f} points over three years. That is a stronger starting position for an election campaign, not a guaranteed result.")
+        elif approval_change <= -5:
+            st.warning(f"The model expects public approval to fall by {abs(approval_change):.1f} points over three years. The Chancellor may face a difficult election campaign unless the economic or political outlook improves.")
+        else:
+            st.info(f"The projected approval effect is relatively limited ({approval_change:+.1f} points over three years). The election outcome would remain highly sensitive to events, party leadership and constituency-level factors.")
+        st.caption("Election outlook is an indicative national approval signal, not a seat forecast. It excludes constituency swings, opposition performance, campaign events and coalition arithmetic.")
 
 
     with st.expander('Compare alternative Budgets', expanded=False):
