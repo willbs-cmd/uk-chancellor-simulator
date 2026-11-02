@@ -406,6 +406,12 @@ def resolve_request(accept):
     minister = str(req.get('minister', 'Cabinet minister'))
     loyalty[minister] = round(_clip(float(loyalty.get(minister, 50.0)) + (8.0 if accept else -12.0)), 1)
     s.ministerial_loyalty = loyalty
+    refusal_counts = dict(s.get('ministerial_refusals', {}))
+    if accept:
+        refusal_counts[minister] = 0
+    else:
+        refusal_counts[minister] = int(refusal_counts.get(minister, 0)) + 1
+    s.ministerial_refusals = refusal_counts
     apply_effect({k: v for k, v in fx.items() if k not in OPINION_KEYS})
     for k in OPINION_KEYS:
         if k in fx:
@@ -415,8 +421,65 @@ def resolve_request(accept):
     s.message = verb
     s.headlines = None
     s.active_request = None
+    # A minister with low loyalty, or who has been refused repeatedly, escalates the dispute.
+    if not accept and (loyalty[minister] <= 38 or refusal_counts[minister] >= 2) and not s.get('active_dispute'):
+        s.active_dispute = {
+            'minister': minister, 'cost': float(req['cost']),
+            'text': f"{minister} is furious after repeated Treasury refusals. They are threatening to brief the press and challenge your spending priorities unless you offer a compromise.",
+            'loyalty': loyalty[minister], 'refusals': refusal_counts[minister],
+        }
     state.log('event', f"{req['minister']}: request for £{req['cost']:.1f}B", choice='Approved' if accept else 'Refused',
               before=before, note=verb)
+    state.record()
+    check_sacked()
+
+
+def resolve_ministerial_dispute(choice):
+    """Resolve an escalating Cabinet dispute: compromise, stand firm, or let the minister go public."""
+    s = st.session_state
+    dispute = s.get('active_dispute')
+    if not dispute:
+        return
+    state.checkpoint()
+    reseed('ministerial_dispute')
+    s.event_cards = []
+    before = state.values()
+    state.snapshot()
+    minister = str(dispute.get('minister', 'Cabinet minister'))
+    cost = float(dispute.get('cost', 1.0))
+    loyalty = dict(s.get('ministerial_loyalty', {}))
+    current = float(loyalty.get(minister, dispute.get('loyalty', 35.0)))
+    if choice == 'compromise':
+        concession = round(cost * 0.5, 1)
+        s.headroom = round(s.headroom - concession, 1)
+        s.deficit = round(s.deficit + concession, 1)
+        s.cab_opinion = round(_clip(s.cab_opinion + 3.0), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion + 1.0), 1)
+        loyalty[minister] = round(_clip(current + 18.0), 1)
+        outcome = f"You agree a £{concession:.1f}B compromise with the {minister}. The dispute is contained, but the Treasury has conceded ground."
+    elif choice == 'stand_firm':
+        loyalty[minister] = round(_clip(current - 10.0), 1)
+        s.cab_opinion = round(_clip(s.cab_opinion - 3.0), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion + 1.0), 1)
+        outcome = f"You refuse to change course. The {minister} remains in Cabinet for now, but relations have deteriorated."
+    elif choice == 'public':
+        loyalty[minister] = round(_clip(current - 18.0), 1)
+        s.media_opinion = round(_clip(s.media_opinion - 5.0), 1)
+        s.approval = round(_clip(s.approval - 1.5), 1)
+        s.cab_opinion = round(_clip(s.cab_opinion - 4.0), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion - 2.0), 1)
+        outcome = f"The {minister} publicly attacks the Treasury's approach. The row dominates the political news cycle."
+        if loyalty[minister] <= 15:
+            resignations = list(s.get('ministerial_resignations', []))
+            resignations.append({'minister': minister, 'year': int(s.get('year', 1)), 'term': int(s.get('term', 1)), 'reason': 'Resigned after a public dispute with the Chancellor'})
+            s.ministerial_resignations = resignations[-20:]
+            outcome += f" The {minister} resigns from Cabinet."
+    else:
+        return
+    s.ministerial_loyalty = loyalty
+    s.active_dispute = None
+    s.message = outcome
+    state.log('event', f'Cabinet dispute: {minister}', choice=choice.replace('_', ' ').title(), before=before, note=outcome)
     state.record()
     check_sacked()
 
