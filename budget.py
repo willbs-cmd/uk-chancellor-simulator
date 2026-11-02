@@ -214,8 +214,9 @@ def resolve_budget_risks():
     risks = []
     if tax_change > 4:
         risks.append(("Revenue underperforms", "Behavioural responses and weaker activity reduce the expected tax yield.", 2.0, 0.0, -1.0))
-    if scheme_count >= 3:
-        risks.append(("Implementation delays", "Several new schemes prove harder to deliver on schedule than departments expected.", 1.5, 0.0, -0.5))
+    delivery = scheme_financials(draft)
+    if delivery['load'] > delivery['capacity'] * 1.15:
+        risks.append(("Treasury delivery congestion", "The programme list exceeds Whitehall's practical capacity. Departments report delayed procurement, stretched specialist teams and weaker early results.", 1.0 + 0.2 * (delivery['load'] - delivery['capacity']), 0.02, -0.8))
     if spend_change > 30:
         risks.append(("Cost pressures emerge", "Pay, procurement and supplier costs push the package above its initial estimate.", 2.5, 0.0, -0.5))
     if float(imp.get('market', 0)) < -2 or float(s.market_conf) < 40:
@@ -722,6 +723,12 @@ def commit_budget(ayes):
         'tax': dict(delivered.get('tax', {})), 'tax_names': tax_names,
         'spend': dict(delivered.get('spend', {})), 'spend_names': spending_names,
         'revenue_schemes': revenue_schemes, 'spending_schemes': spending_schemes,
+        'scheme_delivery': {
+            'current_net_receipts': round(float(scheme_financials(delivered)['tax_net']), 2),
+            'current_programme_cost': round(float(scheme_financials(delivered)['spend_cost']), 2),
+            'delivery_load': round(float(scheme_financials(delivered)['load']), 2),
+            'mature_net_balance': round(float(scheme_financials(delivered, mature=True)['tax_net']) - float(scheme_financials(delivered, mature=True)['spend_cost']), 2),
+        },
         'ayes': int(ayes), 'headroom_after': round(float(s.get('headroom', 0)), 1),
         'deficit_after': round(float(s.get('deficit', 0)), 1),
         'impact': dict(s.get('budget_impact', {})),
@@ -756,10 +763,43 @@ def forecast(b, years=3):
     tax_index = float(s.get('tax_base_index', 1.0))
     tax_receipts_base = sum(revenues(b).values()) / max(0.01, tax_index)
     portfolio = {k: float(v) for k, v in s.get('treasury_assets', {}).items()}
+    projected_status = {'tax': {}, 'spend': {}}
+    current_status = s.get('budget_scheme_delivery', {'tax': {}, 'spend': {}})
+    for kind, table in (('tax', TAX_POLICIES), ('spend', SPEND_POLICIES)):
+        for key, item in table.items():
+            if not b.get(f'{kind}_pol', {}).get(key, False):
+                continue
+            if s.budget_applied.get(f'{kind}_pol', {}).get(key, False):
+                projected_status[kind][key] = int(current_status.get(kind, {}).get(key, len(scheme_profile(kind, key, item)['ramp']) - 1))
+            else:
+                projected_status[kind][key] = 0
     demographic_pressure = float(s.get('demographic_pressure', 0.0))
     pension_pressure = float(s.get('pension_pressure', 0.0))
     rows = []
     for i in range(1, years + 1):
+        # A scheme moves forward one delivery stage each year. Only the change in its
+        # annual net cashflow and economic effect alters the forecast from last year.
+        before_fin = scheme_financials(b, statuses=projected_status)
+        before_effects = scheme_effect_totals(b, statuses=projected_status)
+        next_status = {'tax': {}, 'spend': {}}
+        for kind, table in (('tax', TAX_POLICIES), ('spend', SPEND_POLICIES)):
+            for key, item in table.items():
+                if b.get(f'{kind}_pol', {}).get(key, False):
+                    age = int(projected_status.get(kind, {}).get(key, len(scheme_profile(kind, key, item)['ramp']) - 1))
+                    next_status[kind][key] = min(len(scheme_profile(kind, key, item)['ramp']) - 1, age + 1)
+        after_fin = scheme_financials(b, statuses=next_status)
+        after_effects = scheme_effect_totals(b, statuses=next_status)
+        scheme_cash_delta = (
+            float(after_fin['tax_net']) - float(before_fin['tax_net'])
+            - (float(after_fin['spend_cost']) - float(before_fin['spend_cost']))
+        )
+        v['headroom'] = round(v['headroom'] + scheme_cash_delta, 1)
+        v['deficit'] = round(max(0.0, v['deficit'] - scheme_cash_delta), 1)
+        v['growth'] = round(v['growth'] + after_effects['growth'] - before_effects['growth'], 2)
+        v['market_conf'] = round(_clip(v['market_conf'] + after_effects['market'] - before_effects['market']), 1)
+        v['approval'] = round(_clip(v['approval'] + after_effects['approval'] - before_effects['approval']), 1)
+        projected_status = next_status
+
         new_int = interest_for(v['gilt_yield'], v['debt'])          # spring: debt interest is re-priced...
         drift = new_int - booked
         if abs(drift) > 0.05:
