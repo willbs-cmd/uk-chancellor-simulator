@@ -1165,9 +1165,17 @@ def render_spending_review():
     st.markdown("## 🏛️ The Spending Review")
     st.caption("Set departmental budgets for the year ahead and publish a three-year spending path. Settlements change the live Treasury baseline, not just a forecast.")
     if done:
-        st.success("The Spending Review for this year has been approved. You can review the settlement below, but cannot issue a second one in the same year.")
+        st.markdown(
+            "<div class='treasury-notice success'><div><strong>Spending Review approved</strong>"
+            "The settlement for this year is final. You can review it below, but cannot issue a second round in the same year.</div></div>",
+            unsafe_allow_html=True,
+        )
     else:
-        st.info("The spending round is open. Departmental Secretaries have submitted their bids; you decide the final settlements.")
+        st.markdown(
+            "<div class='treasury-notice info'><div><strong>Spending round open</strong>"
+            "Departmental Secretaries have submitted their bids. Review the requests and set the final settlements.</div></div>",
+            unsafe_allow_html=True,
+        )
 
     departments = list(SPEND_DEFAULTS.keys())
     groups = [
