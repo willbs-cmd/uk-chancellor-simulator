@@ -211,6 +211,7 @@ def read():
     s = st.session_state
     return {
         'strategy': s.get('budget_strategy', s.budget_applied.get('strategy', 'balanced')),
+        '_tax_units_version': 2,
         'tax': {k: s[f'bt_{k}'] for k in TAXES},
         'spend': {k: float(s[f'bs_{k}']) for k in SPEND_DEFAULTS},
         'tax_pol': {k: s[f'btp_{k}'] for k in TAX_POLICIES},
