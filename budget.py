@@ -1292,29 +1292,71 @@ def render(submit=None, after_summary=None):
                         _spend_row(k, SPEND_DEFAULTS[k], s)
 
     with t_schemes:
+        delivery = scheme_financials(cur)
+        mature_delivery = scheme_financials(cur, mature=True)
         revenue_selected = [k for k, p in TAX_POLICIES.items() if cur['tax_pol'].get(k, False)]
         spending_selected = [k for k, p in SPEND_POLICIES.items() if cur['spend_pol'].get(k, False)]
-        revenue_yield = sum(float(TAX_POLICIES[k]['yield_bn']) for k in revenue_selected)
-        spending_cost = sum(float(SPEND_POLICIES[k]['cost_bn']) for k in spending_selected)
-        st.markdown("### Policy schemes & commitments")
-        st.caption("Schemes are separate from the main tax-rate and departmental spending controls. Selected schemes are part of this Budget draft and are only locked in when the Budget passes.")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Revenue schemes", len(revenue_selected), f"£{revenue_yield:.1f}bn annual yield")
-        m2.metric("Spending pledges", len(spending_selected), f"£{spending_cost:.1f}bn annual cost")
-        m3.metric("Net scheme impact", f"£{revenue_yield-spending_cost:+.1f}bn", "before wider economic effects")
-        st.markdown("#### Your current selections")
+        current_net = float(delivery['tax_net']) - float(delivery['spend_cost'])
+        mature_net = float(mature_delivery['tax_net']) - float(mature_delivery['spend_cost'])
+        st.markdown("### Policy programmes")
+        st.caption("Schemes are now modelled as programmes with real implementation periods, administrative overheads and limits on how much Whitehall can deliver at once. Headline figures are mature annual estimates, not instant cash.")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Programmes selected", f"{len(revenue_selected) + len(spending_selected)}", f"{len(revenue_selected)} revenue · {len(spending_selected)} spending")
+        m2.metric("Delivery capacity", f"{delivery['load']:.1f}/{delivery['capacity']:.1f}", f"{delivery['delivery_factor']*100:.0f}% effective rollout")
+        m3.metric("Current-year net impact", f"£{current_net:+.1f}bn", "receipts less programme costs")
+        m4.metric("At full maturity", f"£{mature_net:+.1f}bn", "steady-state annual impact")
+        if delivery['load'] > delivery['capacity']:
+            st.warning(f"Your programme list exceeds Treasury delivery capacity. Recruitment, procurement and oversight are stretched; effective rollout is reduced to {delivery['delivery_factor']*100:.0f}% and coordination adds about £{delivery['coordination_cost']:.2f}bn a year.")
+        else:
+            st.caption(f"Portfolio capacity is within the modelled limit. Current annual administration and coordination costs: £{delivery['tax_admin'] + delivery['spend_admin'] + delivery['coordination_cost']:.2f}bn.")
+        st.markdown("#### Current programme commitments")
         selected_left, selected_right = st.columns(2)
         with selected_left:
-            st.markdown("**Revenue raising**")
+            st.markdown("**Revenue measures**")
             if revenue_selected:
-                for k in revenue_selected: st.write(f"• {TAX_POLICIES[k]['label']} · +£{TAX_POLICIES[k]['yield_bn']:.1f}bn")
-            else: st.caption("No revenue schemes selected.")
+                for k in revenue_selected:
+                    row = delivery['rows'][('tax', k)]
+                    st.write(f"• {TAX_POLICIES[k]['label']} · £{row['current_net']:+.2f}bn net this year")
+            else:
+                st.caption("No revenue schemes selected.")
         with selected_right:
-            st.markdown("**Public spending commitments**")
+            st.markdown("**Spending programmes**")
             if spending_selected:
-                for k in spending_selected: st.write(f"• {SPEND_POLICIES[k]['label']} · £{SPEND_POLICIES[k]['cost_bn']:.1f}bn")
-            else: st.caption("No spending pledges selected.")
+                for k in spending_selected:
+                    row = delivery['rows'][('spend', k)]
+                    st.write(f"• {SPEND_POLICIES[k]['label']} · £{row['current_cost']:.2f}bn this year")
+            else:
+                st.caption("No spending commitments selected.")
         st.divider()
+
+        def render_scheme_choice(kind, key, item):
+            selected = bool(cur.get(f'{kind}_pol', {}).get(key, False))
+            candidate = {
+                'tax_pol': dict(cur.get('tax_pol', {})),
+                'spend_pol': dict(cur.get('spend_pol', {})),
+            }
+            candidate[f'{kind}_pol'][key] = True
+            candidate_delivery = scheme_financials(candidate)
+            row = candidate_delivery['rows'][(kind, key)]
+            profile = row['profile']
+            if kind == 'tax':
+                amount_line = (
+                    f"Estimated net receipts: £{row['current_net']:.2f}bn this year · "
+                    f"£{row['mature_net']:.2f}bn at maturity"
+                )
+            else:
+                amount_line = (
+                    f"Estimated cost: £{row['current_cost']:.2f}bn this year · "
+                    f"£{row['mature_cost']:.2f}bn annually at maturity"
+                )
+            years = int(profile['years'])
+            stage = int(row['age']) + 1
+            stage_line = f"Delivery stage {stage}/{years}" if selected else f"{years}-year implementation"
+            admin_label = "collection and compliance" if kind == 'tax' else "programme management"
+            st.checkbox(item['label'], key=f"{'btp' if kind == 'tax' else 'bsp'}_{key}")
+            st.caption(f"{amount_line} · {stage_line} · £{profile['admin']:.2f}bn annual {admin_label}")
+            st.caption(profile['note'] + " " + profile['risk'])
+
         revenue_groups = {
             "Households & wealth": ["vat_private", "nondom", "wealth", "mansion", "pension_relief_reform", "relief_cap", "landlord_relief", "property_empty", "luxury_goods_levy"],
             "Business, banks & digital economy": ["windfall", "digital", "buyback_levy", "bank_surcharge", "bank_surcharge_reform", "vat_compliance", "online_marketplace", "tax_gap", "hmrc_enforcement"],
@@ -1326,8 +1368,7 @@ def render(submit=None, after_summary=None):
             if not available: continue
             with st.expander(f"{group} · {sum(1 for k, p in available if cur['tax_pol'].get(k, False))}/{len(available)} selected", expanded=False):
                 for k, p in available:
-                    st.checkbox(f"{p['label']} (+£{p['yield_bn']:.1f}bn)", key=f"btp_{k}",
-                                help=f"Annual yield: £{p['yield_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+                    render_scheme_choice('tax', k, p)
         st.markdown("#### Spending commitments")
         spending_groups = {
             "NHS, education & family support": ["meals", "child_cap", "childcare", "winterfuel", "nhs_workforce", "primary_care", "nhs_diagnostics", "school_rebuild", "school_breakfast", "social_care"],
@@ -1339,23 +1380,20 @@ def render(submit=None, after_summary=None):
             if not available: continue
             with st.expander(f"{group} · {sum(1 for k, p in available if cur['spend_pol'].get(k, False))}/{len(available)} selected", expanded=False):
                 for k, p in available:
-                    st.checkbox(f"{p['label']} (−£{p['cost_bn']:.1f}bn)", key=f"bsp_{k}",
-                                help=f"Annual cost: £{p['cost_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+                    render_scheme_choice('spend', k, p)
         # Keep any future data-file options visible rather than silently omitting them.
         grouped_tax = {k for keys in revenue_groups.values() for k in keys}
         other_tax = [(k, p) for k, p in TAX_POLICIES.items() if k not in grouped_tax]
         if other_tax:
             with st.expander(f"Other revenue schemes · {len(other_tax)} options", expanded=False):
                 for k, p in other_tax:
-                    st.checkbox(f"{p['label']} (+£{p['yield_bn']:.1f}bn)", key=f"btp_{k}",
-                                help=f"Annual yield: £{p['yield_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+                    render_scheme_choice('tax', k, p)
         grouped_spend = {k for keys in spending_groups.values() for k in keys}
         other_spend = [(k, p) for k, p in SPEND_POLICIES.items() if k not in grouped_spend]
         if other_spend:
             with st.expander(f"Other spending pledges · {len(other_spend)} options", expanded=False):
                 for k, p in other_spend:
-                    st.checkbox(f"{p['label']} (−£{p['cost_bn']:.1f}bn)", key=f"bsp_{k}",
-                                help=f"Annual cost: £{p['cost_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+                    render_scheme_choice('spend', k, p)
 
     with t_whips:
         left, right = st.columns(2)
