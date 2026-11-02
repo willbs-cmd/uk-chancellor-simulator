@@ -203,12 +203,69 @@ if s.get('game_over'):
     st.stop()
 
 
+# ==================== GENERAL ELECTION CAMPAIGN ====================
+if s.year > 5 and not s.get('election_campaign_done', False):
+    st.markdown("# 🗳️ General Election Campaign")
+    st.caption(f"Term {s.term} · Five-year Parliament complete · Campaign headquarters")
+    st.markdown(f"""
+    <div style='background:linear-gradient(120deg,#182b42,#263d58);padding:24px;border-radius:14px;border:1px solid #c9a45c;color:white'>
+      <div style='font-size:12px;letter-spacing:2px;color:#e4c77e'>THE COUNTRY GOES TO THE POLLS</div>
+      <h2 style='color:white;margin:8px 0'>The campaign is under way.</h2>
+      <p style='font-size:16px;color:#e8edf4'>Your five-year record is now being judged. The economy, public services, leadership, manifesto promises and local campaigns all shape the result.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    current_polls = {p: float(s.poll_history[p][-1]) for p in state.PARTIES}
+    poll_cols = st.columns(len(state.PARTIES))
+    for col, party in zip(poll_cols, state.PARTIES):
+        col.metric(party, f"{current_polls[party]:.1f}%")
+    st.markdown("### Campaign strategy")
+    st.write("Choose one final campaign approach. Each has a different effect on support, turnout and the political narrative.")
+    strategies = {
+        "Ground campaign": ("Concentrate on marginal constituencies, local organisers and doorstep campaigning.", 1.2, 1.8, 0.0),
+        "Cost-of-living tour": ("Put household bills, wages and the economy at the centre of the campaign.", 0.7 + max(-0.5, min(0.8, (s.approval - 50) * 0.04)), 0.8, 0.4),
+        "Leadership and manifesto launch": ("Make the campaign about your leadership, programme and five-year record.", 0.5 + max(-0.8, min(0.8, (s.approval - 50) * 0.05)), 0.2, 0.8),
+    }
+    chosen = st.radio("Campaign plan", list(strategies), format_func=lambda k: f"{k} — {strategies[k][0]}", key="election_campaign_choice")
+    if st.button("Approve final campaign plan", type="primary", use_container_width=True):
+        label, swing, turnout_boost, approval_boost = strategies[chosen]
+        old = {p: float(s.poll_history[p][-1]) for p in state.PARTIES}
+        new = dict(old)
+        gov = s.party
+        new[gov] = max(1.0, new[gov] + swing)
+        others = [p for p in state.PARTIES if p != gov]
+        pool = sum(old[p] for p in others)
+        for p in others:
+            new[p] = max(0.5, old[p] - swing * old[p] / pool) if pool else old[p]
+        total = sum(new.values())
+        for p in state.PARTIES:
+            s.poll_history[p][-1] = round(new[p] / total * 100, 1)
+        s.election_campaign_done = True
+        s.election_campaign_strategy = chosen
+        s.election_campaign_turnout = float(turnout_boost)
+        s.election_campaign_approval = float(approval_boost)
+        s.approval = round(engine._clip(s.approval + approval_boost), 1)
+        st.rerun()
+    st.stop()
+
+if s.year > 5 and s.get('election_campaign_done', False) and not s.get('election_night_started', False):
+    st.markdown("# 🗳️ Election Day")
+    st.markdown("### The campaign is over. The country is voting.")
+    st.info(f"Your campaign strategy: **{s.get('election_campaign_strategy', 'Not recorded')}**. Polling-day turnout effect: +{s.get('election_campaign_turnout', 0):.1f} percentage points.")
+    st.markdown("The result will now be calculated constituency by constituency using the final polling position, local variation and incumbency.")
+    if st.button("🔔 Open the exit poll and declare the result", type="primary", use_container_width=True):
+        s.election_night_started = True
+        st.rerun()
+    st.stop()
+
+
 # ==================== ELECTION NIGHT ====================
 if s.year > 5:
     r = engine.compute_election()
     if s.get('game_over'):
         st.rerun()
-    st.subheader('🗳️ GENERAL ELECTION NIGHT: RESULTS')
+    st.markdown("# 🗳️ GENERAL ELECTION NIGHT")
+    st.caption(f"Official simulated count · Campaign: {s.get('election_campaign_strategy', '—')} · Turnout includes campaign mobilisation")
+    st.subheader('The results are in')
     box = '#2b5440' if r['win'] else '#111111'
     st.markdown(f"""
     <div style='background-color: {box}; padding: 20px; border-radius: 10px; color: white; text-align: center; border: 2px solid #c9a45c;'>
@@ -223,6 +280,7 @@ if s.year > 5:
     for col, party in zip(st.columns(7), state.PARTIES):
         col.metric(labels[party], r['seats'][party])
     st.markdown("### 📊 The national result")
+    st.info("This is a simulated result, not a forecast. Constituency outcomes reflect the game's polling, local variation and incumbency model.")
     e1, e2, e3 = st.columns(3, gap="small")
     # Count coalition partners when displaying the government's parliamentary strength.
     coalition_partners = r.get('coalition_partners') or ([r['coalition']] if r.get('coalition') in r['seats'] else [])
@@ -246,6 +304,8 @@ if s.year > 5:
             "Seats": r['seats'][party],
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    vote_total = sum(r['polls'].values())
+    st.caption(f"Vote shares are normalised to {vote_total:.1f}%. The UK uses first-past-the-post: seats depend on constituency-level pluralities, not national vote share alone.")
     # Constituency-level result: every seat is decided independently by the
     # simulated local vote model, with a nation-by-nation breakdown.
     local_results = r.get('constituency_results', [])
