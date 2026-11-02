@@ -562,6 +562,76 @@ def resolve_gilt_emergency(choice):
             s.message="The Prime Minister has demanded a private meeting and is questioning whether you can continue as Chancellor."
             state.record()
 
+
+# ================================================================ Number 10 relationship
+PM_MEETING_TOPICS = [
+    {"topic":"The spending settlement","prompt":"The Prime Minister wants a visible spending commitment before the next round of polling. The Treasury is concerned about the cost and the effect on fiscal headroom.","pm":"The public needs to see that this Government has priorities. I need you to find room for the commitment.","support":"Back the PM's spending priority","compromise":"Offer a smaller, targeted settlement","stand":"Defend the Treasury's fiscal limits"},
+    {"topic":"Tax policy disagreement","prompt":"Number 10 is pressing for a tax cut, while Treasury officials warn that the timing could unsettle the gilt market and leave little room for manoeuvre.","pm":"A tax cut would show ambition. I don't want another lecture about why nothing can be done.","support":"Agree to pursue the tax cut","compromise":"Offer a conditional tax cut if forecasts improve","stand":"Tell the PM the numbers do not add up"},
+    {"topic":"Party management","prompt":"The parliamentary party is restless. The Prime Minister wants a united front, but several of your colleagues believe the Treasury is moving too slowly.","pm":"I need you to help keep the party together. A public split between Number 10 and the Treasury would be disastrous.","support":"Publicly back the PM's line","compromise":"Arrange a joint meeting with concerned MPs","stand":"Insist the Treasury must speak frankly"},
+    {"topic":"Economic messaging","prompt":"The latest economic figures have created a difficult news cycle. Number 10 wants an optimistic message, but you are wary of promising more than the economy can deliver.","pm":"We need confidence, Chancellor. I want you beside me when we explain the plan.","support":"Echo the PM's optimistic message","compromise":"Agree a joint statement with caveats","stand":"Publish the Treasury's unvarnished assessment"},
+    {"topic":"A difficult Budget","prompt":"The Prime Minister is unhappy with parts of your Budget and believes the package does not reflect the Government's political priorities.","pm":"This is our Government's Budget, not simply the Treasury's. I expect you to make the case for it and own the choices.","support":"Accept the PM's requested changes","compromise":"Make limited changes and explain the trade-offs","stand":"Refuse to reopen the Budget"}
+]
+
+
+def open_pm_meeting():
+    """Open one annual private meeting with the Prime Minister."""
+    s=st.session_state
+    if s.get("active_pm_meeting") or int(s.get("pm_meeting_year",0))>=int(s.get("year",1)):
+        return False
+    topic=random.choice(PM_MEETING_TOPICS)
+    s.active_pm_meeting={**topic,"year":int(s.get("year",1))}
+    return True
+
+
+def resolve_pm_meeting(choice):
+    """Apply the political and policy consequences of the Chancellor's annual Number 10 meeting."""
+    s=st.session_state
+    meeting=s.get("active_pm_meeting")
+    if not meeting or choice not in ("support","compromise","stand"):
+        return
+    state.checkpoint(); state.snapshot()
+    before={k:float(s.get(k,0.0)) for k in ("pm_opinion","pm_trust","cab_opinion","party_opinion","backbench_opinion","market_conf","headroom")}
+    if choice=="support":
+        s.pm_trust=round(_clip(float(s.get("pm_trust",70))+10),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)+6),1)
+        s.cab_opinion=round(_clip(float(s.cab_opinion)+3),1)
+        s.party_opinion=round(_clip(float(s.party_opinion)+2),1)
+        s.backbench_opinion=round(_clip(float(s.backbench_opinion)-2),1)
+        s.headroom=round(float(s.headroom)-1.0,1)
+        outcome="You back the Prime Minister's position. Number 10 is pleased, but the Treasury has accepted a £1bn policy commitment and some MPs question the concession."
+        label="Back the Prime Minister"
+    elif choice=="compromise":
+        s.pm_trust=round(_clip(float(s.get("pm_trust",70))+5),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)+3),1)
+        s.cab_opinion=round(_clip(float(s.cab_opinion)+3),1)
+        s.party_opinion=round(_clip(float(s.party_opinion)+1),1)
+        s.market_conf=round(_clip(float(s.market_conf)+1),1)
+        outcome="You broker a compromise. The PM gets a political win, while the Treasury retains some control over the timing and cost."
+        label="Negotiate a compromise"
+    else:
+        s.pm_trust=round(_clip(float(s.get("pm_trust",70))-9),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)-6),1)
+        s.cab_opinion=round(_clip(float(s.cab_opinion)-2),1)
+        s.backbench_opinion=round(_clip(float(s.backbench_opinion)+3),1)
+        s.market_conf=round(_clip(float(s.market_conf)+1),1)
+        outcome="You stand firm. Treasury independence and fiscal credibility are protected, but the PM sees you as increasingly difficult to work with."
+        label="Defend the Treasury's position"
+    s.pm_meeting_year=int(meeting.get("year",s.year))
+    s.pm_meeting_history=(list(s.get("pm_meeting_history",[]))+[{
+        "year":int(meeting.get("year",s.year)),"topic":meeting.get("topic","Number 10 meeting"),
+        "decision":label,"pm_trust":float(s.pm_trust),"pm_confidence":float(s.pm_opinion),
+        "cabinet_support":float(s.cab_opinion)}])[-15:]
+    s.active_pm_meeting=None
+    s.message=f"NUMBER 10 MEETING — {meeting.get('topic','Private meeting')}. {outcome}"
+    s.humphrey_note="The Prime Minister will remember how you handled that conversation, Chancellor. Number 10 has a long memory, particularly when it is inconvenient."
+    state.log("politics","Private meeting with the Prime Minister",choice=label,note=outcome,before=before)
+    check_sacked()
+    if not s.get("game_over") and float(s.pm_trust)<22 and float(s.pm_opinion)<38 and not s.get("active_pm_ultimatum"):
+        s.active_pm_ultimatum={"year":meeting.get("year"),"pm_opinion":round(float(s.pm_opinion),1),"severity":"serious"}
+        s.message+=" The Prime Minister has requested an urgent follow-up meeting and is considering your future."
+    return outcome
+
+
 def resolve_pm_ultimatum(choice):
     """Resolve a direct ultimatum from Number 10 after a serious loss of confidence."""
     s=st.session_state
