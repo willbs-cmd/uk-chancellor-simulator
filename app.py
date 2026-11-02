@@ -612,6 +612,28 @@ def crisis_screen():
         st.rerun()
 
 
+
+def pm_meeting_screen():
+    meeting=s.get("active_pm_meeting") or {}
+    st.markdown("<div class='briefing-kicker'>NUMBER 10 · PRIVATE MEETING</div><div class='briefing-heading'>A conversation with the Prime Minister</div>",unsafe_allow_html=True)
+    st.markdown(f"**{meeting.get('topic','Private meeting')}**")
+    st.write(meeting.get("prompt","The Prime Minister has asked to discuss the direction of the Government."))
+    humphrey_message(meeting.get("pm","The Prime Minister is waiting for your response, Chancellor."))
+    st.markdown("### How will you handle it?")
+    options=[
+      ("support","Back the Prime Minister","Build trust and Cabinet unity, but you may have to accept political commitments."),
+      ("compromise","Negotiate a compromise","Balance Number 10's priorities with the Treasury's judgement."),
+      ("stand","Defend the Treasury's position","Protect your independence and fiscal credibility, but risk damaging the relationship.")
+    ]
+    for key,title,detail in options:
+        with st.container(border=True):
+            st.markdown(f"**{title}**")
+            st.caption(detail)
+            if st.button("Confirm position",key=f"pm_meeting_{key}",type="primary" if key=="compromise" else "secondary",use_container_width=True):
+                engine.resolve_pm_meeting(key)
+                st.rerun()
+
+
 def pm_ultimatum_screen():
     ultimatum=s.get("active_pm_ultimatum") or {}
     st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> NUMBER 10 · PRIVATE MEETING</div><div class='briefing-heading'>The Prime Minister's ultimatum</div>",unsafe_allow_html=True)
@@ -889,6 +911,8 @@ with tab_action:
         local_elections.render(widget_namespace='action')
     elif s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
+    elif s.get('active_pm_meeting'):
+        pm_meeting_screen()
     elif s.get('active_gilt_emergency'):
         gilt_emergency_screen()
     elif s.get('active_financial_crisis'):
@@ -915,7 +939,7 @@ with tab_economy:
 with tab_government:
     st.markdown('### Government')
     st.caption('Political support, parliamentary scrutiny, local elections and your record in office.')
-    gov_polls, gov_parliament, gov_local, gov_office, gov_reports = st.tabs(['Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Annual reports'])
+    gov_polls, gov_parliament, gov_local, gov_office, gov_number10, gov_reports = st.tabs(['Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Number 10', 'Annual reports'])
     with gov_polls:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
@@ -927,6 +951,33 @@ with tab_government:
         local_elections.render(widget_namespace='government')
     with gov_office:
         chancellor_office.render()
+    with gov_number10:
+        st.markdown("#### Your relationship with the Prime Minister")
+        pmc=st.columns(3)
+        pmc[0].metric("PM confidence",f"{float(s.pm_opinion):.0f}/100")
+        pmc[1].metric("Personal trust",f"{float(s.get('pm_trust',70)):.0f}/100")
+        pmc[2].metric("Cabinet support",f"{float(s.cab_opinion):.0f}/100")
+        trust=float(s.get('pm_trust',70))
+        if trust>=70:
+            st.success("Number 10 broadly trusts you. The PM is likely to give you room to manage the economy.")
+        elif trust>=45:
+            st.info("The relationship is workable, but disagreements are beginning to matter.")
+        elif trust>=25:
+            st.warning("Relations are strained. The PM may start bypassing the Treasury or questioning your judgement.")
+        else:
+            st.error("The relationship is close to breaking point. A serious disagreement could put your job at risk.")
+        if s.get('pm_meeting_history'):
+            with st.expander("Previous Number 10 meetings"):
+                st.dataframe(list(reversed(s.pm_meeting_history)),hide_index=True,use_container_width=True)
+        if s.get('active_pm_meeting'):
+            st.warning("A private meeting is waiting in the Decisions tab.")
+        elif int(s.get('pm_meeting_year',0))>=int(s.year):
+            st.caption("You have already held your private meeting with the PM this year. Another will be available next year.")
+        else:
+            st.caption("You can request one formal private meeting with the PM each year. The topic will reflect the political and economic pressures facing the Government.")
+            if st.button("Request a private meeting with the PM",type="primary",use_container_width=True):
+                engine.open_pm_meeting()
+                st.rerun()
     with gov_reports:
         performance_report.render()
 
