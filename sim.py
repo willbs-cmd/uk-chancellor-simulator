@@ -215,6 +215,44 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Local election regression check failed: {exc}")
 
+    # Budget schemes must be phased, cost administration and respect delivery capacity.
+    try:
+        new_run('Labour', 'Normal', 13579)
+        baseline = budget.read()
+        draft = {
+            'strategy': baseline['strategy'],
+            'tax': dict(baseline['tax']),
+            'spend': dict(baseline['spend']),
+            'tax_pol': dict(baseline['tax_pol']),
+            'spend_pol': dict(baseline['spend_pol']),
+        }
+        draft['tax_pol']['hmrc_enforcement'] = True
+        draft['spend_pol']['social_housing'] = True
+        first_status = {'tax': {'hmrc_enforcement': 0}, 'spend': {'social_housing': 0}}
+        next_status = {'tax': {'hmrc_enforcement': 1}, 'spend': {'social_housing': 1}}
+        first_fin = budget.scheme_financials(draft, statuses=first_status)
+        later_fin = budget.scheme_financials(draft, statuses=next_status)
+        first_effects = budget.scheme_effect_totals(draft, statuses=first_status)
+        later_effects = budget.scheme_effect_totals(draft, statuses=next_status)
+        if later_fin['tax_net'] <= first_fin['tax_net']:
+            failures.append("HMRC compliance scheme did not phase in higher net receipts over time.")
+        if later_fin['spend_cost'] <= first_fin['spend_cost']:
+            failures.append("Social housing programme did not phase in its full annual cost over time.")
+        if later_effects['growth'] <= first_effects['growth']:
+            failures.append("Scheme productivity effects did not improve as the programmes matured.")
+        if first_fin['rows'][('tax', 'hmrc_enforcement')]['admin'] <= 0:
+            failures.append("Revenue schemes are missing their administration cost.")
+
+        overloaded = dict(draft)
+        overloaded['spend_pol'] = dict(draft['spend_pol'])
+        for key in ('hs2', 'nuclear', 'school_rebuild', 'grid_upgrade', 'grid_storage', 'flood_defences', 'prison_capacity'):
+            overloaded['spend_pol'][key] = True
+        load_test = budget.scheme_financials(overloaded)
+        if load_test['load'] <= load_test['capacity'] or load_test['delivery_factor'] >= 1.0 or load_test['coordination_cost'] <= 0:
+            failures.append("An over-capacity scheme portfolio was not penalised for delivery congestion.")
+    except Exception as exc:
+        failures.append(f"Budget scheme delivery regression check failed: {exc}")
+
     # Rendering/calculating a local result must be side-effect free; declaring it
     # applies each political effect once, never twice on a Streamlit rerun.
     try:
