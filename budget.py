@@ -690,10 +690,13 @@ def _reset_spending_draft():
 
 
 # ---------------------------------------------------------------- the Commons vote
-def _policy_rebellion_risks(dtax, dspend):
+def _policy_rebellion_risks(dtax, dspend, selected_spend_policies=None):
     """Additional policy-specific pressure from factions within the governing party."""
     party = st.session_state.get('party', 'Labour')
     risks = []
+    selected_spend_policies = selected_spend_policies or {}
+    pension_reform = bool(selected_spend_policies.get('pension_uprating_reform', False))
+    welfare_reform = bool(selected_spend_policies.get('welfare_eligibility_reform', False))
 
     def tax_up(key, threshold=0.01):
         return float(dtax.get(key, 0.0)) > threshold
@@ -752,6 +755,22 @@ def _policy_rebellion_risks(dtax, dspend):
         add(spend_rise('aid') or spend_rise('welfare'), 'party_opinion', 5, 'Reform MPs question increased overseas aid or welfare spending.')
         add(spend_cut('defence'), 'backbench_opinion', 4, 'Reform MPs object to cuts in defence and national security spending.')
 
+    # Cross-party political consequences of the new structural reforms.
+    # Pension changes are particularly sensitive among older voters; Conservative
+    # MPs also face pressure from pensioner-heavy constituencies and party factions.
+    add(pension_reform, 'media_opinion', 5,
+        'Pension groups and older voters condemn the move away from the Triple Lock; the change dominates the political headlines.')
+    add(pension_reform and party == 'Conservative', 'backbench_opinion', 8,
+        'Conservative MPs in pensioner-heavy seats warn that abandoning the Triple Lock risks alienating a core part of the party’s electorate.')
+    add(pension_reform and party == 'Labour', 'backbench_opinion', 5,
+        'Labour MPs with large older electorates demand stronger protections for pensioners and threaten to oppose the reform.')
+    add(welfare_reform, 'media_opinion', 4,
+        'Disability charities and anti-poverty campaigners accuse the Government of making support harder to access; welfare reform becomes a major media controversy.')
+    add(welfare_reform and party == 'Labour', 'backbench_opinion', 8,
+        'Labour backbenchers warn that tighter welfare eligibility and work-search rules will punish vulnerable people and threaten to rebel.')
+    add(welfare_reform and party == 'Labour', 'party_opinion', 5,
+        'Labour’s left-wing and trade-union-aligned MPs demand safeguards for disabled people and people with complex barriers to work.')
+
     return risks
 
 
@@ -764,7 +783,7 @@ def rebel_risks(b):
     dspend = b['spend']
     existing = [(stat, size, msg) for parties, test, stat, size, msg in IRRITANTS
                 if s.party in parties and test(dtax, dspend)]
-    return existing + _policy_rebellion_risks(dtax, dspend)
+    return existing + _policy_rebellion_risks(dtax, dspend, b.get('spend_pol', {}))
 
 def effective_rebel_risks(b):
     """Apply negotiated concessions to the relevant faction's remaining rebellion risk."""
