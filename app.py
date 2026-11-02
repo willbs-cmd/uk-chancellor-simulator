@@ -515,7 +515,12 @@ def budget_screen():
     st.progress(min(stage,3)/3, text=f"Budget Day · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
     if stage == 0:
         st.markdown("### Final negotiations with the Prime Minister")
-        st.write("Number 10 wants a Budget that supports the Government’s wider political priorities. You must decide how far to accommodate the PM before the OBR forecast is revealed.")
+        st.write("The Prime Minister has sent the Treasury a private list of priorities for this Budget. These are political demands, not automatic changes to your figures.")
+        st.markdown("#### Prime Minister's Budget priorities")
+        for idx, item in enumerate(s.get('budget_pm_priorities', []), 1):
+            st.markdown(f"**{idx}. {item['title']}**")
+            st.caption(item['detail'])
+        st.info("Your draft will be assessed against these priorities. You remain the Chancellor: you can accept, negotiate or reject the PM's requests.")
         s.budget_pm_choice=st.radio("Your negotiating position",["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"],index=["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"].index(s.get('budget_pm_choice','Compromise with the Prime Minister')))
         st.info("Your choice affects the PM relationship and political atmosphere, not the arithmetic of the Budget draft.")
         def submit():
