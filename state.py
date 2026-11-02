@@ -215,6 +215,10 @@ def _defaults():
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], chancellor_actions=[],
         annual_reports=[], latest_annual_report=None,
+        obr_forecasts=[], obr_latest=None, boe_independence=75.0,
+        boe_last_statement='The Monetary Policy Committee is monitoring inflation and activity.', boe_history=[],
+        dmo_strategy='Balanced issuance', dmo_maturity=10, dmo_index_share=25,
+        dmo_last_action='No change to the issuance strategy yet.', stress_test_result=None,
         officials_confidence=70.0, officials_log=[], officials_last_advice='', officials_actions=[],
         cabinet_ministers={}, ministerial_loyalty={}, ministerial_resignations=[], ministerial_refusals={}, active_dispute=None,
         spending_review_last_period='', spending_review_plan={}, spending_review_history=[],
@@ -325,7 +329,7 @@ SAVE_KEYS = [
     'election_broadcast_stage',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
-    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 
