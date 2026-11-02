@@ -8,6 +8,7 @@ import streamlit as st
 
 import engine
 import state
+import treasury_officials
 
 def _year_key():
     s = st.session_state
@@ -192,6 +193,8 @@ def render():
             ("Launch a skills and apprenticeships compact", "Work with employers to address shortages and improve workforce productivity.", {"headroom": -0.5, "growth": 0.15, "approval": 1, "cab_opinion": 1}, "You agree a skills compact with employers. It requires upfront funding but supports the long-term workforce."),
         ],
     )
+    treasury_officials.render()
+
     with st.expander("📜 Your record at the Treasury"):
         history = [x for x in s.get("history", []) if x.get("kind") == "event" and any(k in x.get("title", "") for k in ("Prime Minister", "Treasury Select", "Departmental spending"))]
         if history:
