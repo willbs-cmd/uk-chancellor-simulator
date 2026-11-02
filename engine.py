@@ -1069,6 +1069,13 @@ def proceed_to_spring():
         s.personal_allowance = round(s.personal_allowance * 1.025 / 10) * 10
         s.higher_rate_threshold = round(s.higher_rate_threshold * 1.025 / 10) * 10
         s.additional_rate_threshold = round(s.additional_rate_threshold * 1.025 / 10) * 10
+    # Keep the approved Budget ledger and its widgets aligned with automatic annual uprating.
+    budget.ensure()
+    approved_thresholds = dict(s.budget_applied.get('thresholds', {}))
+    for key in ('personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold'):
+        approved_thresholds[key] = float(s.get(key, approved_thresholds.get(key, 0.0)))
+        s[f'bt_threshold_{key}'] = approved_thresholds[key]
+    s.budget_applied['thresholds'] = approved_thresholds
     # State Pension uprating: each £1/week change adds an estimated £0.6bn annual cost.
     s.setdefault('state_pension_weekly', 230.25)
     uprating = s.get('state_pension_uprating', 'Triple lock')
