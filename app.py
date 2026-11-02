@@ -490,7 +490,7 @@ def budget_day_scorecard(draft, heading="Budget impact & announcements"):
         after = float(new_thresholds.get(key, before))
         if abs(after - before) >= 0.001:
             announcements.append({"Announcement": f"Tax threshold · {label}", "Change": f"£{before:,.0f} → £{after:,.0f}"})
-    for key, label in (('thresholds_frozen', 'Freeze income-tax thresholds'), ('council_tax_revaluation', 'Revalue council tax bands'), ('pension_relief_reform', 'Reduce higher-rate pension relief')):
+    for key, label in (('thresholds_frozen', 'Freeze income-tax thresholds'), ('council_tax_revaluation', 'Revalue council tax bands')):
         before, after = bool(old_thresholds.get(key, False)), bool(new_thresholds.get(key, False))
         if before != after:
             announcements.append({"Announcement": label, "Change": "Introduced" if after else "Withdrawn"})
