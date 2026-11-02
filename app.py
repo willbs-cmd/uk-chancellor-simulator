@@ -472,7 +472,8 @@ def budget_day_scorecard(draft, heading="Budget impact & announcements"):
         after = float(draft.get('tax', {}).get(key, spec.get('default', 0.0)))
         delta = after - before
         if abs(delta) >= 0.001:
-            announcements.append({"Announcement": f"Tax · {spec.get('short', key)}", "Change": f"{delta:+.2f} percentage points"})
+            unit = spec.get('unit', 'percentage points')
+            announcements.append({"Announcement": f"Tax · {spec.get('short', key)}", "Change": f"{delta:+.2f} {unit}"})
     for key, spec in budget.SPEND_DEFAULTS.items():
         before = float(old.get('spend', {}).get(key, 0.0))
         after = float(draft.get('spend', {}).get(key, 0.0))
