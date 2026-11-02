@@ -205,46 +205,93 @@ if s.get('game_over'):
 
 # ==================== GENERAL ELECTION CAMPAIGN ====================
 if s.year > 5 and not s.get('election_campaign_done', False):
+    s.setdefault('election_campaign_week', 1)
+    s.setdefault('election_campaign_actions', [])
+    week = int(s.election_campaign_week)
+    total_weeks = 4
+    current_polls = {p: float(s.poll_history[p][-1]) for p in state.PARTIES}
+    opponents = [p for p in state.PARTIES if p != s.party]
+    main_rival = max(opponents, key=lambda p: current_polls[p]) if opponents else s.party
     st.markdown("# 🗳️ General Election Campaign")
-    st.caption(f"Term {s.term} · Five-year Parliament complete · Campaign headquarters")
+    st.caption(f"Term {s.term} · Campaign week {min(week, total_weeks)} of {total_weeks} · Campaign headquarters")
     st.markdown(f"""
-    <div style='background:linear-gradient(120deg,#182b42,#263d58);padding:24px;border-radius:14px;border:1px solid #c9a45c;color:white'>
+    <div style='background:linear-gradient(120deg,#182b42,#263d58);padding:22px;border-radius:14px;border:1px solid #c9a45c;color:white'>
       <div style='font-size:12px;letter-spacing:2px;color:#e4c77e'>THE COUNTRY GOES TO THE POLLS</div>
-      <h2 style='color:white;margin:8px 0'>The campaign is under way.</h2>
-      <p style='font-size:16px;color:#e8edf4'>Your five-year record is now being judged. The economy, public services, leadership, manifesto promises and local campaigns all shape the result.</p>
+      <h2 style='color:white;margin:8px 0'>Four weeks to make your case.</h2>
+      <p style='font-size:16px;color:#e8edf4'>Rallies, debates, manifesto launches and marginal-seat campaigning will shape the final result. Every week you must choose where to spend your political capital and campaign time.</p>
     </div>
     """, unsafe_allow_html=True)
-    current_polls = {p: float(s.poll_history[p][-1]) for p in state.PARTIES}
     poll_cols = st.columns(len(state.PARTIES))
     for col, party in zip(poll_cols, state.PARTIES):
-        col.metric(party, f"{current_polls[party]:.1f}%")
-    st.markdown("### Campaign strategy")
-    st.write("Choose one final campaign approach. Each has a different effect on support, turnout and the political narrative.")
-    strategies = {
-        "Ground campaign": ("Concentrate on marginal constituencies, local organisers and doorstep campaigning.", 1.2, 1.8, 0.0),
-        "Cost-of-living tour": ("Put household bills, wages and the economy at the centre of the campaign.", 0.7 + max(-0.5, min(0.8, (s.approval - 50) * 0.04)), 0.8, 0.4),
-        "Leadership and manifesto launch": ("Make the campaign about your leadership, programme and five-year record.", 0.5 + max(-0.8, min(0.8, (s.approval - 50) * 0.05)), 0.2, 0.8),
+        delta = None
+        if len(s.poll_history[party]) > 1:
+            delta = round(float(s.poll_history[party][-1]) - float(s.poll_history[party][-2]), 1)
+        col.metric(party, f"{current_polls[party]:.1f}%", delta=(f"{delta:+.1f} pts" if delta is not None else None))
+    st.progress(min(1.0, (week - 1) / total_weeks), text=f"Campaign progress · {week - 1}/{total_weeks} weeks completed")
+    week_briefings = {
+        1: ("The campaign launch", "Set the tone with a major announcement and the first national visits."),
+        2: ("The national debate", f"The televised debate is approaching. {main_rival} is currently your strongest polling rival."),
+        3: ("The manifesto week", "Voters want to know what the next Parliament would actually deliver."),
+        4: ("The final weekend", "The last days are about turnout, tactical visits and answering late campaign controversies."),
     }
-    chosen = st.radio("Campaign plan", list(strategies), format_func=lambda k: f"{k} — {strategies[k][0]}", key="election_campaign_choice")
-    if st.button("Approve final campaign plan", type="primary", use_container_width=True):
-        label, swing, turnout_boost, approval_boost = strategies[chosen]
+    heading, briefing = week_briefings.get(week, week_briefings[4])
+    st.markdown(f"### Week {week}: {heading}")
+    st.write(briefing)
+    action_pool = {
+        1: {
+            "Launch a cost-of-living tour": ("Visit towns and announce a focused household-cost package.", 0.65, 0.6, 0.2),
+            "Hold a major rally": ("Energise party members and volunteers with a high-profile rally.", 0.45, 1.0, 0.1),
+            "Target marginal constituencies": ("Put campaign resources into seats where small swings decide MPs.", 0.8, 1.1, 0.0),
+        },
+        2: {
+            "Prepare for the televised debate": ("A strong performance can shift undecided voters; a poor one can hand momentum to your rival.", 0.9 if s.approval >= 45 else 0.25, 0.25, 0.25 if s.approval >= 45 else -0.2),
+            "Go on a regional media tour": ("Reach voters outside the Westminster bubble and explain your record.", 0.55, 0.45, 0.15),
+            "Confront the opposition leader": ("Make a direct contrast with the leading rival. It is high-profile but can look negative.", 0.7, 0.1, -0.1),
+        },
+        3: {
+            "Launch a fully costed manifesto": ("Set out spending, tax and public-service commitments. Credibility matters.", 0.8 if s.headroom >= 0 else 0.25, 0.2, 0.35 if s.headroom >= 0 else -0.25),
+            "Focus on the NHS and public services": ("Put service performance and waiting times at the centre of the campaign.", 0.6, 0.3, 0.25 if s.approval >= 45 else -0.05),
+            "Make a major economic speech": ("Argue that your economic record offers stability and growth.", 0.65 if s.growth >= 0 else 0.3, 0.15, 0.2),
+        },
+        4: {
+            "Get out the vote operation": ("Mobilise supporters and concentrate on the closest seats.", 0.45, 1.8, 0.0),
+            "Final leader's rally": ("End the campaign with a high-energy national rally.", 0.55, 1.0, 0.1),
+            "Respond to a late campaign controversy": ("Take questions, publish evidence and try to stop a damaging story spreading.", 0.35 if s.approval < 50 else 0.6, 0.3, 0.25),
+        },
+    }
+    actions = action_pool.get(week, action_pool[4])
+    chosen = st.radio("This week's campaign decision", list(actions), format_func=lambda k: f"{k} — {actions[k][0]}", key=f"election_campaign_action_{week}")
+    if st.button("Commit campaign team to this week's plan", type="primary", use_container_width=True):
+        description, raw_swing, turnout, approval_change = actions[chosen]
+        # A campaign action moves support towards the incumbent government party;
+        # the size of the movement is deliberately modest and shared across rivals.
+        swing = max(-0.35, min(1.1, raw_swing + (float(s.approval) - 50.0) * 0.008))
         old = {p: float(s.poll_history[p][-1]) for p in state.PARTIES}
         new = dict(old)
-        gov = s.party
-        new[gov] = max(1.0, new[gov] + swing)
-        others = [p for p in state.PARTIES if p != gov]
-        pool = sum(old[p] for p in others)
-        for p in others:
-            new[p] = max(0.5, old[p] - swing * old[p] / pool) if pool else old[p]
-        total = sum(new.values())
-        for p in state.PARTIES:
-            s.poll_history[p][-1] = round(new[p] / total * 100, 1)
-        s.election_campaign_done = True
+        new[s.party] = max(0.5, new[s.party] + swing)
+        rivals = [p for p in state.PARTIES if p != s.party]
+        rival_pool = sum(old[p] for p in rivals)
+        for party in rivals:
+            new[party] = max(0.5, old[party] - swing * old[party] / rival_pool) if rival_pool else old[party]
+        total = sum(new.values()) or 100.0
+        for party in state.PARTIES:
+            s.poll_history[party][-1] = round(new[party] / total * 100.0, 1)
+        s.election_campaign_actions.append({"week": week, "action": chosen, "effect": round(swing, 2)})
+        s.election_campaign_turnout = float(s.get('election_campaign_turnout', 0.0)) + float(turnout)
+        s.election_campaign_approval = float(s.get('election_campaign_approval', 0.0)) + float(approval_change)
+        s.approval = round(engine._clip(float(s.approval) + float(approval_change)), 1)
         s.election_campaign_strategy = chosen
-        s.election_campaign_turnout = float(turnout_boost)
-        s.election_campaign_approval = float(approval_boost)
-        s.approval = round(engine._clip(s.approval + approval_boost), 1)
+        if week >= total_weeks:
+            s.election_campaign_done = True
+            s.message = "The four-week campaign is complete. The country now goes to the polls."
+        else:
+            s.election_campaign_week = week + 1
+            s.message = f"Campaign week {week} complete. The next phase of the election campaign begins."
         st.rerun()
+    if s.get('election_campaign_actions'):
+        st.markdown("#### Campaign diary")
+        for item in s.election_campaign_actions:
+            st.write(f"**Week {item['week']}:** {item['action']} · polling movement {item['effect']:+.2f} pts")
     st.stop()
 
 if s.year > 5 and s.get('election_campaign_done', False) and not s.get('election_night_started', False):
