@@ -1447,6 +1447,98 @@ section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {font-size:.
  .briefing-heading {font-size:1.45rem!important;}
  .stTabs [data-baseweb="tab"] {padding:0 9px!important;font-size:.75rem!important;}
 }
+
+/* FINAL PALETTE OVERRIDES — neutralise legacy burgundy/red/gold widget styling */
+html, body, .stApp { color-scheme: light !important; }
+[data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"] {
+  background: #f3f5f8 !important;
+}
+[data-testid="stRadio"] input[type="radio"],
+div[role="radiogroup"] input[type="radio"] {
+  accent-color: #397b78 !important;
+}
+[data-testid="stRadio"] label:has(input:checked),
+div[role="radiogroup"] > label:has(input:checked) {
+  background: #eef7f6 !important;
+  border-color: #397b78 !important;
+  box-shadow: inset 3px 0 0 #397b78 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] > div,
+div[role="radiogroup"] [data-baseweb="radio"] > div {
+  border-color: #8aa5a3 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] input:checked + div,
+div[role="radiogroup"] [data-baseweb="radio"] input:checked + div {
+  border-color: #397b78 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] input:checked + div > div,
+div[role="radiogroup"] [data-baseweb="radio"] input:checked + div > div {
+  background: #397b78 !important;
+}
+
+/* All expanders, including the saved-game panel, use white surfaces and navy text. */
+[data-testid="stExpander"],
+[data-testid="stExpander"] details,
+[data-testid="stExpander"] details > summary,
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] [data-testid="stExpanderDetails"],
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] > div {
+  background: #ffffff !important;
+  color: #20364f !important;
+  border-color: #dce3eb !important;
+}
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary svg,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {
+  color: #20364f !important;
+  fill: #647b91 !important;
+}
+[data-testid="stExpander"] summary:hover {
+  background: #f5f8fa !important;
+}
+
+/* Primary actions are navy with white text; brass is reserved for small accents. */
+[data-testid="stButton"] button[kind="primary"],
+[data-testid="stFormSubmitButton"] button,
+.stButton > button[kind="primary"] {
+  background: #203b59 !important;
+  background-color: #203b59 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #203b59 !important;
+  box-shadow: 0 2px 5px rgba(26,53,82,.12) !important;
+}
+[data-testid="stButton"] button[kind="primary"]:hover,
+[data-testid="stFormSubmitButton"] button:hover,
+.stButton > button[kind="primary"]:hover {
+  background: #2d506f !important;
+  background-color: #2d506f !important;
+  border-color: #2d506f !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-testid="stButton"] button:not([kind="primary"]),
+[data-testid="stDownloadButton"] button {
+  background: #ffffff !important;
+  color: #29435e !important;
+  -webkit-text-fill-color: #29435e !important;
+  border: 1px solid #d4dee8 !important;
+}
+[data-testid="stButton"] button:not([kind="primary"]):hover,
+[data-testid="stDownloadButton"] button:hover {
+  background: #f5f8fa !important;
+  color: #203b59 !important;
+  border-color: #91a6b9 !important;
+}
+[data-testid="stButton"] button:disabled {
+  background: #e7edf2 !important;
+  color: #8392a1 !important;
+  -webkit-text-fill-color: #8392a1 !important;
+  border-color: #dce3eb !important;
+  opacity: 1 !important;
+}
 </style>
 """
 
