@@ -717,6 +717,7 @@ def end_run(kind, result=None):
 
 
 def compute_seats(polls, return_details=False):
+    s = st.session_state
     """Run a stylised constituency-by-constituency FPTP election.
 
     The official register supplies all 650 seat names, codes and nations. It does
