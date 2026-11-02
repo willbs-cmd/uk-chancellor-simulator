@@ -17,6 +17,7 @@ import state
 import treasury
 import chancellor_office
 import performance_report
+import economic_management
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
@@ -801,10 +802,12 @@ with tab_government:
 with tab_treasury:
     st.markdown('### Treasury control room')
     st.caption('Manage public investments, fiscal tools and the cost of government borrowing.')
-    treasury_tabs = st.tabs(['🏛️ Spending Review', '💷 Treasury & gilts', '⚙️ Fiscal tools'])
+    treasury_tabs = st.tabs(['🏛️ Spending Review', '💷 Treasury & gilts', '⚙️ Fiscal tools', '📊 OBR & Markets'])
     with treasury_tabs[0]:
         budget.render_spending_review()
     with treasury_tabs[1]:
         treasury.render()
     with treasury_tabs[2]:
         features.render()
+    with treasury_tabs[3]:
+        economic_management.render()
