@@ -527,6 +527,15 @@ def budget_screen():
             if st.button("Conclude negotiations",type="primary",use_container_width=True):
                 engine.submit_budget(); st.rerun()
         budget.render(submit=submit,after_summary=lambda: politics.render_pledges(budget.read()))
+        st.markdown("#### How your draft measures up against Number 10")
+        live_assessment = budget.assess_pm_priorities()
+        for item in live_assessment:
+            if item['met']:
+                st.success(f"**Met · {item['title']}** — {item['detail']}")
+            else:
+                st.warning(f"**Not yet met · {item['title']}** — {item['detail']}")
+        st.caption(f"{sum(1 for item in live_assessment if item['met'])} of {len(live_assessment)} priorities currently met. This assessment updates as you change the Budget.")
+
     elif stage == 1:
         st.markdown("### OBR forecast: the numbers behind the Budget")
         st.info(s.get('budget_day_negotiation',''))
