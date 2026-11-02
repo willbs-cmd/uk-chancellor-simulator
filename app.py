@@ -552,11 +552,21 @@ def gilt_emergency_screen():
     emergency=s.get("active_gilt_emergency") or {}
     st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> TREASURY · EMERGENCY MEETING</div><div class='briefing-heading'>The gilt market is in crisis</div>",unsafe_allow_html=True)
     bid=float(emergency.get('bid_cover',0)); move=float(emergency.get('yield_move_pp',0))
-    st.error(f'The latest DMO auction attracted only {bid:.2f} bids for every £1 of debt offered. Yields jumped {move:.2f} percentage points. The Prime Minister wants an immediate response.')
-    humphrey_message("Chancellor, the markets have delivered their verdict. The Prime Minister is waiting on the telephone, the Treasury Board is assembled, and the press has already discovered the word crisis.")
+    severe=emergency.get('severity')=="severe"
+    pressure=bool(emergency.get('pm_pressure'))
+    st.error(f'The latest DMO auction attracted only {bid:.2f} bids for every £1 of debt offered. Yields jumped {move:.2f} percentage points.')
+    if severe:
+        st.warning("This is a severe market event. The Prime Minister has called an urgent meeting with the Cabinet and is demanding visible action.")
+    elif pressure:
+        st.warning("The Prime Minister is losing patience with the Treasury and wants a clear plan before the markets open again.")
+    else:
+        st.info("The Prime Minister is concerned but has not yet issued an ultimatum. Your handling of this meeting will shape the relationship.")
+    humphrey_message("Chancellor, the markets have delivered their verdict. Number 10 is waiting on the telephone, the Treasury Board is assembled, and the press has already discovered the word crisis.")
     st.markdown("### Choose your response")
     st.caption("Each option trades off fiscal credibility, political support and market confidence.")
     choices=[("Announce immediate spending restraint","Improve headroom and reassure investors, but anger public services and backbench MPs."),("Ask the Prime Minister for a united statement","Gain political cover and modestly steady markets, without major fiscal changes."),("Call an emergency Budget","Announce a limited consolidation package and promise revised forecasts. Markets may settle, but the PM faces another Budget.")]
+    if pressure:
+        choices.append(("Accept the Prime Minister's conditions","Make a costly political concession to restore Number 10's confidence and avoid an immediate leadership confrontation."))
     for i,(title,detail) in enumerate(choices):
         with st.container(border=True):
             st.markdown(f"**{i+1}. {title}**")
