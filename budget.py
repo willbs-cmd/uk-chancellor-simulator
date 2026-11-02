@@ -837,6 +837,44 @@ def render(submit=None, after_summary=None):
     debt_direction = "falling" if end_debt < float(s.debt) else "rising"
     st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
 
+    st.markdown("### Budget options & comparison")
+    st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
+    slots = dict(s.get('budget_alternatives', {}))
+    alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
+    save_col, clear_col = st.columns([1, 1])
+    if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
+        if alt_name not in slots and len(slots) >= 3:
+            st.warning("You can keep three alternatives. Replace or delete one before saving another.")
+        else:
+            save_budget_alternative(alt_name, cur)
+            st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
+            st.rerun()
+    if slots:
+        if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
+            slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
+        comparison = []
+        for name, item in slots.items():
+            package = item.get('draft', {})
+            totals_rev, totals_spend = totals(package)
+            package_impact = impact(s.budget_applied, package)
+            package_ayes = projected_ayes(package)
+            comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
+                "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
+                "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
+        st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
+        if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
+            selected = slots.get(alt_name)
+            if selected:
+                _reset()
+                for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
+                for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
+                for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
+                for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
+                s.budget_strategy = selected['draft'].get('strategy', 'balanced')
+                st.success(f"{alt_name} loaded into the live draft.")
+                st.rerun()
+    st.divider()
+
     st.markdown('### Choose your fiscal strategy')
     strategy_keys = list(FISCAL_STRATEGIES)
     st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
@@ -905,44 +943,6 @@ def render(submit=None, after_summary=None):
                 st.caption(f"Chancellor's message: {last['message']}")
     else:
         st.info("Your previous Budget decisions will be recorded here after your first Budget passes the Commons.")
-
-    st.markdown("### Budget options & comparison")
-    st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
-    slots = dict(s.get('budget_alternatives', {}))
-    alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
-    save_col, clear_col = st.columns([1, 1])
-    if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
-        if alt_name not in slots and len(slots) >= 3:
-            st.warning("You can keep three alternatives. Replace or delete one before saving another.")
-        else:
-            save_budget_alternative(alt_name, cur)
-            st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
-            st.rerun()
-    if slots:
-        if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
-            slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
-        comparison = []
-        for name, item in slots.items():
-            package = item.get('draft', {})
-            totals_rev, totals_spend = totals(package)
-            package_impact = impact(s.budget_applied, package)
-            package_ayes = projected_ayes(package)
-            comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
-                "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
-                "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
-        st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
-        if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
-            selected = slots.get(alt_name)
-            if selected:
-                _reset()
-                for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
-                for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
-                for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
-                for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
-                s.budget_strategy = selected['draft'].get('strategy', 'balanced')
-                st.success(f"{alt_name} loaded into the live draft.")
-                st.rerun()
-    st.divider()
 
     t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
