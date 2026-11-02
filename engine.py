@@ -717,13 +717,13 @@ def end_run(kind, result=None):
 
 
 def compute_seats(polls, return_details=False):
-    s = st.session_state
     """Run a stylised constituency-by-constituency FPTP election.
 
     The official register supplies all 650 seat names, codes and nations. It does
     not contain 2024 party results, so local candidate/party lean is simulated
     deterministically rather than presented as historical data.
     """
+    s = st.session_state
     import json
     from pathlib import Path
 
