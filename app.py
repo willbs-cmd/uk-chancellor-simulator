@@ -18,12 +18,13 @@ import treasury
 import chancellor_office
 import performance_report
 import economic_management
+import chancellors_desk
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
 
 st.set_page_config(page_title='The Chancellor’s Office', layout='wide', page_icon='🏛️',
-                   initial_sidebar_state='collapsed')
+                   initial_sidebar_state='expanded')
 apply_theme()
 state.ensure_init()
 s = st.session_state
@@ -34,44 +35,8 @@ def restart():
     st.rerun()
 
 
-# ==================== SIDEBAR: RUN INFO / SAVE / HELP ====================
-with st.sidebar:
-    if s.step == 'game':
-        st.markdown('### RUN CONTROL')
-        st.caption(f"{s.party} · {s.difficulty} · seed {s.seed}\n\n"
-                   f"📅 {state.SCENARIOS[s.get('scenario', 'fragile')]['label']}")
-        if s.get('spad') in politics.SPADS:
-            st.caption(f"🧑‍💼 **{politics.SPADS[s.spad]['label']}**: {politics.SPADS[s.spad]['blurb']}")
-        if s.get('pledges'):
-            kept = [k for k in s.pledges if k not in s.get('broken_pledges', [])]
-            with st.expander(f"📜 Pledges kept: {len(kept)}/{len(s.pledges)}"):
-                for k in s.pledges:
-                    broken = k in s.get('broken_pledges', [])
-                    st.caption(f"{'❌ ~~' if broken else '✅ '}{politics.PLEDGES[k]['label']}{'~~' if broken else ''}")
-        st.divider()
-        if state.diff().get('undos', 0) > 0:
-            if st.button(f"↩️ Undo last action ({s.get('undos_left', 0)} left)", disabled=not state.can_undo(), use_container_width=True,
-                         help='Roll back your last decision, crisis, request, Budget or spring. Same seed, so only a different choice changes what happens.'):
-                if state.undo():
-                    st.rerun()
-        st.download_button('💾 Download save file', state.export_save(), use_container_width=True,
-                           file_name=f'chancellor_{s.party.replace(" ", "")}_T{s.term}Y{s.year}.json',
-                           mime='application/json', help='Save your progress and load it again from the start screen.')
-        with st.expander('📖 How the annual cycle works'):
-            for num in (1, 2, 3):
-                phase = phase_info(num)
-                st.markdown(f"**{phase['title']}**")
-                st.caption(phase['guide'])
-            st.caption('Two major policy decisions lead into a Budget vote each year. Political capital is limited; use it where it matters most.')
-        with st.expander('⚠️ End this run'):
-            st.caption('Resigning ends your career and shows your scorecard. Abandoning discards the run with no scorecard.')
-            if st.button('Resign as Chancellor', use_container_width=True):
-                engine.resign()
-                st.rerun()
-            if st.button('Abandon run & start over', use_container_width=True):
-                restart()
-    else:
-        st.caption('Start a game to enable saving.')
+# ==================== PERMANENT CHANCELLOR'S DESK ====================
+chancellors_desk.render(restart)
 
 
 # ==================== SETUP SCREEN ====================
