@@ -137,10 +137,14 @@ def render(on_restart):
         with st.expander("Permanent Secretary · Fiscal advice", expanded=False):
             st.caption(_permanent_secretary_advice(s))
             st.caption(f"Officials' confidence: {float(s.get('officials_confidence', 70)):.0f}/100")
-            if st.button("Open full Treasury advice log", key="desk_officials_log", use_container_width=True):
-                s["office_focus"] = "officials"
-                st.session_state["desk_show_advice"] = True
-                st.rerun()
+            recent_advice = list(s.get("officials_log", []))
+            if recent_advice:
+                st.markdown("**Recent advice record**")
+                for item in reversed(recent_advice[-3:]):
+                    st.caption(f"{item.get('period', '')} · {item.get('source', 'Treasury')} · {item.get('view', '')}")
+                    st.write(item.get("note", ""))
+            else:
+                st.caption("Formal advice and disagreements will be recorded here as you make decisions.")
         with st.expander("Chief Economic Adviser · Outlook", expanded=False):
             forecast = s.get("obr_latest")
             if forecast:
