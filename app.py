@@ -19,6 +19,7 @@ import chancellor_office
 import performance_report
 import economic_management
 import household
+import regional_economy
 import chancellors_desk
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
@@ -899,13 +900,14 @@ def economy():
 _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
 _is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
 
-tab_action, tab_briefing, tab_economy, tab_government, tab_treasury, tab_household = st.tabs([
+tab_action, tab_briefing, tab_economy, tab_government, tab_treasury, tab_household, tab_regions = st.tabs([
     'Decisions' + (' •' if _is_budget_phase else ''),
     'Briefing' + (' •' if _has_briefing else ''),
     'Economy',
     'Government',
     'Treasury',
-    'Households'
+    'Households',
+    'Regions'
 ])
 
 with tab_action:
@@ -999,3 +1001,7 @@ with tab_treasury:
 
 with tab_household:
     household.render()
+
+
+with tab_regions:
+    regional_economy.render()

@@ -147,12 +147,24 @@ def ensure():
     else:
         _migrate_depts(s.dept_spend)
 
-    had_legacy_budget = 'budget_applied' in s and 'tax' in s.get('budget_applied', {})
-    if 'budget_applied' not in s or 'tax_pol' not in s.get('budget_applied', {}):
+    # Treat the approved ledger as durable state. Older saves may contain tax,
+    # spending and strategy decisions but pre-date one or both policy-selection
+    # dictionaries. Previously, the absence of tax_pol caused the entire
+    # approved Budget to be replaced with defaults, silently losing decisions.
+    raw_applied = s.get('budget_applied')
+    had_legacy_budget = isinstance(raw_applied, dict) and isinstance(raw_applied.get('tax'), dict)
+    if had_legacy_budget:
+        migrated = defaults()
+        for section, value in raw_applied.items():
+            if section in migrated and isinstance(migrated[section], dict) and isinstance(value, dict):
+                migrated[section].update(value)
+            else:
+                migrated[section] = value
+        s.budget_applied = migrated
+        _migrate_applied(s.budget_applied)
+    else:
         s.budget_applied = defaults()
         s.budget_applied['_tax_units_version'] = 2
-    else:
-        _migrate_applied(s.budget_applied)
     # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
     s.setdefault('budget_last_tax', dict(s.budget_applied['tax']))
     if had_legacy_budget and int(s.budget_applied.get('_tax_units_version', 0)) < 2:
