@@ -185,7 +185,7 @@ def _defaults():
         step='setup', party='Labour', year=1, block=1, term=1, steps=0,
         game_mode='chancellor', career_profile=None,
         active_crisis=None, active_weekly_event=None, last_weekly_event=None, ongoing_issues=[], last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
-        budget_passed=False, budget_day_stage=0, budget_pm_priorities=[], budget_pm_choice='Compromise with the Prime Minister', budget_day_negotiation='', budget_day_forecast=[], budget_day_speech=None, budget_strategy='balanced', budget_message='', sacked=False, sacked_reason='', game_over=None, election_result=None,
+        budget_passed=False, budget_day_stage=0, budget_pm_priorities=[], budget_pm_assessment=[], budget_pm_met_count=0, budget_pm_choice='Compromise with the Prime Minister', budget_day_negotiation='', budget_day_forecast=[], budget_day_speech=None, budget_strategy='balanced', budget_message='', sacked=False, sacked_reason='', game_over=None, election_result=None,
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
         difficulty='Hardcore', seed=random.randint(1000, 99999), show_tags=False,
         approval=48.0, market_conf=65.0, debt=98.2, deficit=125.4, inflation=3.2, interest_rate=5.0,
