@@ -753,14 +753,17 @@ def compute_seats(polls, return_details=False):
         scores = {}
         for party in parties:
             national = max(0.1, float(polls.get(party, 0.0)))
-            local_lean = rng.gauss(0.0, 9.0)
+            local_lean = rng.gauss(0.0, 5.8)
             regional = nation_effects.get(nation, {}).get(party, 0.0)
+            incumbents = s.get('constituency_incumbents', {})
+            incumbent_party = incumbents.get(str(seat.get('code', '')))
+            incumbency = 2.2 if incumbent_party == party else 0.0
             # Constituency voting differs substantially from the national poll:
             # local incumbency, candidates and tactical voting create meaningful
             # seat-level variation. A narrow national lead must not become a
             # near-total parliamentary sweep. Regional parties retain a geographic
             # advantage in their home nations.
-            scores[party] = max(0.01, national + local_lean + regional)
+            scores[party] = max(0.01, national + local_lean + regional + incumbency)
         winner = max(parties, key=lambda p: scores[p])
         seats[winner] += 1
         results.append({
@@ -805,6 +808,8 @@ def compute_election():
     reseed('election')
     polls = {p: s.poll_history[p][-1] for p in state.PARTIES}
     seats, constituency_results = compute_seats(polls, return_details=True)
+    # Store constituency winners as incumbents for the next general election.
+    s.constituency_incumbents = {str(row.get('code', '')): row.get('winner') for row in constituency_results}
     largest = max(seats, key=seats.get)
     party = s.party
     mine = seats[party]
@@ -814,7 +819,7 @@ def compute_election():
     history = s.get('poll_history', {})
     previous = {p: (history.get(p, [polls[p]])[-2] if len(history.get(p, [])) > 1 else polls[p]) for p in state.PARTIES}
     swings = {p: round(float(polls[p]) - float(previous[p]), 1) for p in state.PARTIES}
-    turnout = round(max(55.0, min(78.0, 65.0 + random.uniform(-2.5, 2.5) + (float(s.approval) - 50) * 0.04)), 1)
+    turnout = round(max(55.0, min(82.0, 65.0 + random.uniform(-1.8, 1.8) + (float(s.approval) - 50) * 0.04 + float(s.get('election_campaign_turnout', 0.0)))), 1)
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              constituency_results=constituency_results,
@@ -928,6 +933,11 @@ def continue_term():
     s.crises_handled = 0
     s.new_achievements = []
     s.poll_anchor = {p: s.poll_history[p][-1] for p in state.PARTIES}
+    s.election_campaign_done = False
+    s.election_night_started = False
+    s.election_campaign_strategy = ''
+    s.election_campaign_turnout = 0.0
+    s.election_campaign_approval = 0.0
     s.message = f'A new term begins. The honeymoon is worth +{boost} to approval and every measure of political capital.'
     state.snapshot()
     s.term_start = state.snapshot_all()
