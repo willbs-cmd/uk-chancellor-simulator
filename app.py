@@ -573,6 +573,34 @@ def request_screen():
             st.rerun()
 
 
+def ministerial_dispute_screen():
+    dispute = s.get('active_dispute') or {}
+    minister = dispute.get('minister', 'Cabinet minister')
+    st.markdown("<div class='dc-eyebrow'>Cabinet confrontation</div><div class='dc-title'>A minister is threatening to go public</div>", unsafe_allow_html=True)
+    st.warning(dispute.get('text', 'A Cabinet minister is challenging the Treasury.'))
+    st.metric("Ministerial loyalty", f"{float(dispute.get('loyalty', 35)):.0f}/100")
+    humphrey_message("A Cabinet row is the last thing the Government needs, Chancellor. You can buy peace, hold the line, or let the disagreement spill into public.")
+    c1, c2, c3 = st.columns(3, gap="medium")
+    with c1:
+        st.markdown("**Offer a compromise**")
+        st.caption(f"Concede half the original request (£{float(dispute.get('cost', 1.0)) * 0.5:.1f}B). Restore some Cabinet support.")
+        if st.button("Negotiate a settlement", key="dispute_compromise", type="primary", use_container_width=True):
+            engine.resolve_ministerial_dispute('compromise')
+            st.rerun()
+    with c2:
+        st.markdown("**Stand firm**")
+        st.caption("Protect the fiscal position, but risk losing the minister's support.")
+        if st.button("Reject the demand", key="dispute_stand", use_container_width=True):
+            engine.resolve_ministerial_dispute('stand_firm')
+            st.rerun()
+    with c3:
+        st.markdown("**Let them go public**")
+        st.caption("Refuse further concessions. Expect damaging headlines and a possible resignation.")
+        if st.button("Hold your ground publicly", key="dispute_public", use_container_width=True):
+            engine.resolve_ministerial_dispute('public')
+            st.rerun()
+
+
 def decision_screen():
     decision = engine.current_decision()
     if not decision:
@@ -704,7 +732,7 @@ def economy():
 # Keep the core action visible in one place; supporting information is separated
 # into compact workspaces so the player does not have to scroll through everything.
 _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
-_is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request'))
+_is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
 
 tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
     '⚖️  Action' + (' •' if _is_budget_phase else ''),
@@ -721,6 +749,8 @@ with tab_action:
         budget_screen()
     elif s.active_crisis is not None:
         crisis_screen()
+    elif s.get('active_dispute'):
+        ministerial_dispute_screen()
     elif s.get('active_request'):
         request_screen()
     else:
