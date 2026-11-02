@@ -1609,6 +1609,11 @@ def render(submit=None, after_summary=None):
                     f"Estimated net receipts: £{row['current_net']:.2f}bn this year · "
                     f"£{row['mature_net']:.2f}bn at maturity"
                 )
+            elif row['current_cost'] < 0:
+                amount_line = (
+                    f"Estimated net saving: £{-row['current_cost']:.2f}bn this year · "
+                    f"£{-row['mature_cost']:.2f}bn annually at maturity"
+                )
             else:
                 amount_line = (
                     f"Estimated cost: £{row['current_cost']:.2f}bn this year · "
@@ -1639,7 +1644,8 @@ def render(submit=None, after_summary=None):
             "NHS, education & family support": ["meals", "child_cap", "childcare", "winterfuel", "nhs_workforce", "primary_care", "nhs_diagnostics", "school_rebuild", "school_breakfast", "social_care"],
             "Housing, communities & transport": ["hs2", "social_housing", "bus_network", "potholes", "regional_growth", "town_deal", "homelessness_prevention", "roads_upgrade"],
             "Law, borders & national security": ["border_security", "police_recruitment", "prison_places", "defence_readiness", "prison_capacity"],
-            "Business, employment & enterprise": ["welfare_to_work", "small_business_fund"],
+            "Business, employment & enterprise": ["welfare_to_work", "small_business_fund", "welfare_eligibility_reform", "public_service_outsourcing"],
+            "Pensions, welfare & economic reform": ["pension_uprating_reform", "planning_deregulation"],
             "Energy, industry & national resilience": ["nuclear", "home_insulation", "grid_upgrade", "grid_storage", "defence_industry", "flood_defences", "technical_skills", "youth_opportunity", "water"],
         }
         for group, keys in spending_groups.items():
