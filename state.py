@@ -184,7 +184,7 @@ def _defaults():
     base = dict(
         step='setup', party='Labour', year=1, block=1, term=1, steps=0,
         game_mode='chancellor', career_profile=None,
-        active_crisis=None, last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
+        active_crisis=None, active_weekly_event=None, last_weekly_event=None, last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
         budget_passed=False, budget_strategy='balanced', budget_message='', sacked=False, sacked_reason='', game_over=None, election_result=None,
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
         difficulty='Hardcore', seed=random.randint(1000, 99999), show_tags=False,
@@ -299,7 +299,7 @@ def undo():
 # ---------------------------------------------------------------- save / load
 SAVE_KEYS = [
     'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile', 'active_crisis', 'last_ideology', 'last_crisis',
-    'crisis_reason', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
+    'crisis_reason', 'active_weekly_event', 'last_weekly_event', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
     'message', 'humphrey_note', 'last_humphrey_quote', 'fallout_done', 'difficulty', 'seed', 'show_tags',
     'prev', 'pending', 'history', 'stat_hist', 'country_hist', 'event_cards', 'ideology_counts', 'policy_history',
     'crises_handled', 'achievements', 'new_achievements', 'poll_history', 'poll_anchor', 'term_start',
