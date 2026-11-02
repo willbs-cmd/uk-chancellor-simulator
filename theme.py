@@ -1467,23 +1467,21 @@ def phase_info(block):
 
 def header(party, term, year, block):
     election_night = int(year) > 5
-    phase = (dict(name='General election', title='General election night',
-                  guide='Your five-year term is complete. The electorate decides whether you stay in government.')
+    phase = (dict(name='General election', title='General election night', guide='Your five-year term is complete.')
              if election_night else phase_info(block))
-    done = 15 if election_night else (year - 1) * 3 + (block - 1)
-    pips = ''.join(
-        f"<div class='ch-pip {'done' if i < done else ('now' if i == done else '')}'></div>"
-        for i in range(15)
-    )
-    colour = PARTY_COLOURS.get(party, '#c9a45c')
-    period = (f"TERM {term} &nbsp;·&nbsp; GENERAL ELECTION" if election_night else
-              f"TERM {term} &nbsp;·&nbsp; YEAR {min(year, 5)} OF 5 &nbsp;·&nbsp; {phase['name'].upper()} &nbsp;·&nbsp; PHASE {block} OF 3")
+    progress = 100 if election_night else max(0, min(100, ((int(year) - 1) * 3 + (int(block) - 1)) / 15 * 100))
+    colour = PARTY_COLOURS.get(party, '#a77d32')
+    period = f"Term {term} · General election" if election_night else f"Term {term} · Year {min(year, 5)} of 5"
+    current_phase = phase['name'] if election_night else phase_info(block)['name']
     st.markdown(
-        f"""<div class='ch-banner treasury-command' style='--party-accent:{colour};border-left-color:{colour}'>
-        <div class='command-topline'><span class='command-seal'>HM TREASURY</span><span class='command-location'>1 HORSE GUARDS ROAD · LONDON</span><span class='command-live'><i></i> SIMULATION LIVE</span></div>
-        <div class='ch-head'><div class='command-identity'><span class='command-crest'>£</span><div><div class='ch-title'>{party} Government</div><div class='command-subtitle'>The Chancellor's private office</div></div></div>
-        <span class='sub'>{period}</span></div>
-        <div class='ch-pips'>{pips}</div></div>""",
+        f"""<div class='office-masthead' style='--party-accent:{colour}'>
+          <div class='office-masthead-top'><span>HM Treasury · Chancellor's Office</span><span class='office-live'>Simulation live</span></div>
+          <div style='display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap'>
+            <div class='office-brand'><span class='office-monogram'>£</span><div><div class='office-name'>{party} Government</div><div class='office-subtitle'>The Chancellor's private office · Whitehall</div></div></div>
+            <div class='office-period'>{period}<strong>{current_phase}</strong></div>
+          </div>
+          <div class='office-progress'><span style='width:{progress:.1f}%'></span></div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
