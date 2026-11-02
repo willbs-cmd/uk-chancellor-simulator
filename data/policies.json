@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates. The other_receipts baseline is reduced to keep total model income unchanged when council tax, carbon levy and sugary-drinks duties are broken out into their own controls. Expanded with additional tax and departmental spending ledgers.",
+  "description": "Editable Budget policy content. Rate bases and effect coefficients are simplified game-balance parameters, not official fiscal estimates. The other_receipts baseline is reduced to keep total model income unchanged when council tax, carbon levy and sugary-drinks duties are broken out into their own controls. Expanded with additional tax and departmental spending ledgers. Scheme yield_bn and cost_bn values are mature annual estimates; the Budget engine phases cash effects in over multiple years, deducts administration costs and applies delivery-capacity and sector-overlap constraints.",
   "taxes": {
     "income": {
       "group": "Income & consumption",
