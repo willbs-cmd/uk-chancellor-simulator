@@ -834,7 +834,6 @@ def render(submit=None, after_summary=None):
     ])
 
     with st.expander('Treasury briefing · three-year outlook', expanded=False):
-        # before deciding whether to send the package to Parliament.
         briefing_rows = forecast(cur, years=3)
         lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
         end_debt = float(briefing_rows[-1]['debt'])
@@ -881,11 +880,11 @@ def render(submit=None, after_summary=None):
             st.markdown("**City · Market reaction**")
             st.markdown(f"**{market_verdict}**")
             st.caption(market_detail)
-        debt_direction = "falling" if end_debt < floa    with st.expander('Compare alternative Budgets', expanded=False):
-t(s.debt) else "rising"
-            st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
+        debt_direction = "falling" if end_debt < float(s.debt) else "rising"
+        st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
 
 
+    with st.expander('Compare alternative Budgets', expanded=False):
         st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
         slots = dict(s.get('budget_alternatives', {}))
         alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
