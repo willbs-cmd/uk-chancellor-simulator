@@ -174,6 +174,12 @@ def ensure():
                 migrated[section].update(value)
             else:
                 migrated[section] = value
+        # Older saves enacted thresholds through Fiscal tools, outside the Budget ledger.
+        # Adopt those existing values once rather than silently reverting them.
+        if not isinstance(raw_applied.get('thresholds'), dict):
+            migrated['thresholds'] = {
+                key: s.get(key, value) for key, value in defaults()['thresholds'].items()
+            }
         s.budget_applied = migrated
         _migrate_applied(s.budget_applied)
     else:
@@ -678,6 +684,8 @@ def impact(old, new):
         (float(new_thresholds.get('personal_allowance', 12570)) - float(old_thresholds.get('personal_allowance', 12570))) / 1000.0 * 0.20
         + (float(new_thresholds.get('higher_rate_threshold', 50270)) - float(old_thresholds.get('higher_rate_threshold', 50270))) / 1000.0 * 0.06
         + (float(new_thresholds.get('additional_rate_threshold', 125140)) - float(old_thresholds.get('additional_rate_threshold', 125140))) / 1000.0 * 0.02
+        - (1.5 if new_thresholds.get('council_tax_revaluation') and not old_thresholds.get('council_tax_revaluation') else 0.0)
+        - (1.0 if new_thresholds.get('pension_relief_reform') and not old_thresholds.get('pension_relief_reform') else 0.0)
     )
     approval = (-0.10 * household - 0.03 * wealth + threshold_household_change
                 + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
