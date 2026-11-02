@@ -154,6 +154,7 @@ def ensure():
     else:
         _migrate_applied(s.budget_applied)
     # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
+    s.setdefault('budget_last_tax', dict(s.budget_applied['tax']))
     if had_legacy_budget and int(s.budget_applied.get('_tax_units_version', 0)) < 2:
         conversions = {
             'fuel': (52.95, 0.5), 'sin': (100.0, 1.0), 'property': (0.5, 0.02),
