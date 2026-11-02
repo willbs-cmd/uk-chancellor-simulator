@@ -554,6 +554,51 @@ def resolve_gilt_emergency(choice):
     settle()
     state.record()
     check_sacked()
+    if not s.get("game_over") and not s.get("active_pm_ultimatum"):
+        pm=float(s.get("pm_opinion",50))
+        severe=emergency.get("severity")=="severe"
+        if pm<35 or (severe and pm<48):
+            s.active_pm_ultimatum={"year":emergency.get("year"),"pm_opinion":round(pm,1),"severity":emergency.get("severity","serious")}
+            s.message="The Prime Minister has demanded a private meeting and is questioning whether you can continue as Chancellor."
+            state.record()
+
+def resolve_pm_ultimatum(choice):
+    """Resolve a direct ultimatum from Number 10 after a serious loss of confidence."""
+    s=st.session_state
+    ultimatum=s.get('active_pm_ultimatum')
+    if not ultimatum: return
+    state.checkpoint()
+    before=state.values()
+    state.snapshot()
+    if choice==0:
+        s.active_pm_ultimatum=None
+        s.message="You have tendered your resignation as Chancellor. The Prime Minister has accepted."
+        state.log("pm_ultimatum","Resigned after PM ultimatum",choice="Tender resignation",before=before,note=s.message)
+        end_run("resigned")
+        state.record()
+        return
+    if choice==1:
+        cabinet=float(s.get("cab_opinion",50))
+        pm=float(s.get("pm_opinion",50))
+        s.active_pm_ultimatum=None
+        if cabinet>=45 or pm>=30:
+            s.pm_opinion=round(_clip(pm+5.0),1)
+            s.cab_opinion=round(_clip(cabinet+2.0),1)
+            s.backbench_opinion=round(_clip(float(s.get("backbench_opinion",50))-2.0),1)
+            s.message="You refuse to resign and secure enough Cabinet backing to remain at the Treasury. The PM gives you one final chance, but your authority is badly weakened."
+            state.log("pm_ultimatum","Survived PM ultimatum",choice="Refuse to resign",before=before,note=s.message)
+            settle()
+            state.record()
+            check_sacked()
+        else:
+            s.sacked=True
+            s.sacked_reason="You refused the Prime Minister's ultimatum but could not command enough Cabinet support. You were dismissed from the Treasury."
+            s.message=s.sacked_reason
+            state.log("pm_ultimatum","Dismissed after PM ultimatum",choice="Refuse to resign",before=before,note=s.message)
+            end_run("sacked")
+            state.record()
+        return
+    return
 
 def resolve_request(accept):
     """Answer a cabinet minister's request for money: approve it (costs headroom) or refuse (they remember)."""
