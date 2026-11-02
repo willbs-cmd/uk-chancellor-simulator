@@ -782,7 +782,7 @@ with tab_economy:
 
 with tab_government:
     st.markdown('### Government and Parliament')
-    gov_polls, gov_parliament, gov_local, gov_office = st.tabs(['Polling', 'Parliament', 'Local Elections', "Chancellor's Office"])
+    gov_polls, gov_parliament, gov_local, gov_office, gov_reports = st.tabs(['Polling', 'Parliament', 'Local Elections', "Chancellor's Office", 'Annual Reports'])
     with gov_polls:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
@@ -794,6 +794,8 @@ with tab_government:
         local_elections.render(widget_namespace='government')
     with gov_office:
         chancellor_office.render()
+    with gov_reports:
+        performance_report.render()
 
 with tab_treasury:
     st.markdown('### Treasury control room')
