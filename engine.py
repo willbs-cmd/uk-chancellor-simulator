@@ -942,6 +942,7 @@ def continue_term():
     s.election_campaign_strategy = ''
     s.election_campaign_turnout = 0.0
     s.election_campaign_approval = 0.0
+    s.election_broadcast_stage = 0
     s.message = f'A new term begins. The honeymoon is worth +{boost} to approval and every measure of political capital.'
     state.snapshot()
     s.term_start = state.snapshot_all()
