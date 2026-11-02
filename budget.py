@@ -997,13 +997,14 @@ def _tax_row(k, t, s):
             s[key] = float(s[key])
         st.slider(
             f"{t['label']} slider", min_value=lo, max_value=hi, step=step,
-            key=key, label_visibility="collapsed",
-            help=t.get('help', 'Changing this rate changes estimated annual receipts. Higher rates can reduce the tax base or discourage activity.')
+            key=key, format="%g%%", label_visibility="collapsed",
+            help=t.get('help', 'Set this tax or duty rate as a percentage. The Treasury estimates the annual receipts; higher rates can reduce the tax base or discourage activity.')
         )
     with c3:
         d = float(s[f'bt_{k}']) - float(t['default'])
+        rate = float(s[f'bt_{k}'])
         new_rev = t['base'] + t['per'] * d - t['decay'] * t['per'] * max(d, 0) ** 2
-        st.markdown(_value_html(f'£{new_rev:,.1f}b', new_rev - t['base']), unsafe_allow_html=True)
+        st.markdown(_value_html(f'{rate:g}% · £{new_rev:,.1f}bn', new_rev - t['base']), unsafe_allow_html=True)
 
 
 def _spend_row(k, sp, s):
@@ -1308,7 +1309,7 @@ def render(submit=None, after_summary=None):
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
 
     with t_tax:
-        st.caption('Income-tax rates are marginal: each rate applies only to income inside its band. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
+        st.caption('Set each tax and duty as a percentage rate. Income-tax rates are marginal: each rate applies only to income inside its band. The £bn figure beside each slider is the estimated annual revenue, not the rate. Threshold freezes are controlled in Fiscal tools. Each group opens separately to keep the Budget usable on smaller screens.')
         groups = {}
         for k, tx in TAXES.items():
             groups.setdefault(tx['group'], []).append((k, tx))
@@ -1323,7 +1324,7 @@ def render(submit=None, after_summary=None):
         cut_count = sum(1 for v in spend_values.values() if v < -0.05)
         rise_count = sum(1 for v in spend_values.values() if v > 0.05)
         net_change = sum(float(s.dept_spend[k]) * spend_values[k] / 100.0 for k in SPEND_DEFAULTS)
-        st.caption(f"Department budgets are changes against today's approved baseline. They only take effect when the Budget is delivered and compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
+        st.caption(f"Set each department's spending change as a percentage of its approved budget: negative percentages cut funding and positive percentages increase it. Changes take effect only when the Budget is delivered and compound into next year's baseline. Total draft spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
         control_cols = st.columns([2.2, 1, 1], gap='small')
         control_cols[0].markdown(f"<div class='spend-draft-summary'><strong>{cut_count} departments cut · {rise_count} increased</strong><small>Net annual departmental change: £{net_change:+,.1f}bn</small></div>", unsafe_allow_html=True)
         control_cols[1].button("Restore approved", key="restore_spend_draft", on_click=_reset_spending_draft,
