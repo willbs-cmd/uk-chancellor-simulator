@@ -19,7 +19,7 @@ import treasury
 import world_economy
 
 SEATS = 650
-REQUEST_CHANCE = 0.35
+REQUEST_CHANCE = 0.48
 
 # fiscal credibility, applied once a year: approval gained/lost per £B of headroom (and its cap)
 CRED_GAIN, CRED_GAIN_CAP = 0.5, 10.0
@@ -401,11 +401,17 @@ def resolve_request(accept):
     if accept:
         s.headroom = round(s.headroom - req['cost'], 1)
         s.deficit = round(s.deficit + req['cost'], 1)
+    # Ministers remember whether the Treasury backed their department.
+    loyalty = dict(s.get('ministerial_loyalty', {}))
+    minister = str(req.get('minister', 'Cabinet minister'))
+    loyalty[minister] = round(_clip(float(loyalty.get(minister, 50.0)) + (8.0 if accept else -12.0)), 1)
+    s.ministerial_loyalty = loyalty
     apply_effect({k: v for k, v in fx.items() if k not in OPINION_KEYS})
     for k in OPINION_KEYS:
         if k in fx:
             s[k] = round(_clip(s[k] + fx[k]), 1)
-    verb = f"You approve the {req['minister']}'s request (£{req['cost']:.1f}B)." if accept else f"You refuse the {req['minister']}'s request."
+    verb = (f"You approve the {req['minister']}'s request (£{req['cost']:.1f}B). The minister is now more likely to back your next difficult decision."
+            if accept else f"You refuse the {req['minister']}'s request. The minister will lobby colleagues and may brief against the Treasury.")
     s.message = verb
     s.headlines = None
     s.active_request = None
