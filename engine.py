@@ -641,17 +641,22 @@ def submit_budget():
             priorities = [dict(title=x[0], detail=x[1], tag=x[2]) for x in pools.get(party, pools['default'])]
             s.budget_pm_priorities = priorities
         choice = s.get('budget_pm_choice', 'Compromise with the Prime Minister')
+
+        assessment = budget.assess_pm_priorities()
+        met_count = sum(1 for item in assessment if item['met'])
+        total_count = len(assessment)
+        s.budget_pm_assessment = assessment
         if choice == 'Accept the Prime Minister’s priorities':
-            s.pm_opinion = round(_clip(s.pm_opinion + 5), 1)
+            s.pm_opinion = round(_clip(s.pm_opinion + (5 if met_count == total_count else 1)), 1)
             s.approval = round(_clip(s.approval + 0.5), 1)
-            s.budget_day_negotiation = 'You accepted Number 10’s priorities. The PM is pleased, but the Treasury warns that the package may be harder to finance.'
         elif choice == 'Stand firm on the Treasury plan':
-            s.pm_opinion = round(_clip(s.pm_opinion - 5), 1)
+            s.pm_opinion = round(_clip(s.pm_opinion - (5 if met_count < total_count else 1)), 1)
             s.backbench_opinion = round(_clip(s.backbench_opinion + 1), 1)
-            s.budget_day_negotiation = 'You defended the Treasury plan. The PM is irritated, but fiscal discipline remains intact.'
         else:
-            s.pm_opinion = round(_clip(s.pm_opinion + 2), 1)
-            s.budget_day_negotiation = 'You reached a compromise with Number 10. The PM secured selected priorities while the Treasury retained its core framework.'
+            s.pm_opinion = round(_clip(s.pm_opinion + (2 if met_count >= max(1, total_count // 2) else -1)), 1)
+        s.budget_pm_met_count = met_count
+
+        s.budget_day_negotiation = f"Your draft meets {met_count} of {total_count} Prime Ministerial priorities. " + ("Number 10 welcomes the package." if met_count == total_count else "The PM's team has identified gaps that will need explaining.")
         s.budget_day_stage = 1
         s.message = s.budget_day_negotiation
         return 'negotiated'
