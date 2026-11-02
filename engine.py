@@ -333,10 +333,10 @@ def execute_decision(opt):
 
     deliver_pending()
     settle()
-    _advance_ongoing_issues()
     s.active_crisis = scen.pick_next(s.year, s.block, ideology)
-    s.active_weekly_event = None
-    if s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'):
+    if s.active_crisis is None:
+        _advance_ongoing_issues()
+    if not s.get('active_weekly_event') and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'):
         s.active_weekly_event = weekly_events.pick(s.get('seed', 0), s.steps, s.get('last_weekly_event'))
         if s.active_weekly_event:
             s.last_weekly_event = s.active_weekly_event.get('id')
