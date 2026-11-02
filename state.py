@@ -215,7 +215,7 @@ def _defaults():
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], chancellor_actions=[],
         annual_reports=[], latest_annual_report=None,
-        budget_alternatives={}, budget_risk_outcome=None,
+        budget_alternatives={}, budget_risk_outcome=None, budget_scheme_delivery={'tax': {}, 'spend': {}},
         obr_forecasts=[], obr_latest=None, boe_independence=75.0,
         boe_last_statement='The Monetary Policy Committee is monitoring inflation and activity.', boe_history=[],
         dmo_strategy='Balanced issuance', dmo_maturity=10, dmo_index_share=25,
@@ -330,7 +330,7 @@ SAVE_KEYS = [
     'election_broadcast_stage',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
-    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report', 'budget_alternatives', 'budget_risk_outcome', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 
