@@ -62,7 +62,7 @@ def create_report():
 
 def render():
     s = st.session_state
-    st.markdown("### 📋 End-of-year performance reports")
+    st.markdown('### Annual performance reports')
     st.caption("An annual assessment of your record as Chancellor. Each category is scored out of 100; the overall rating weights all four equally.")
     reports = list(s.get("annual_reports", []))
     if not reports:
