@@ -956,6 +956,7 @@ def proceed_to_spring():
     economy_tick()
     economic_management.annual_update()
     economic_management.run_gilt_auction()
+    economic_management.advance_financial_stability()
     world_drag = float(s.get('world_cycle', 0.0))
     s.growth = round(s.growth + world_drag * 0.12, 2)
     s.market_conf = round(_clip(s.market_conf + world_drag * 0.8), 1)
