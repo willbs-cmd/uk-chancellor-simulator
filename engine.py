@@ -536,6 +536,16 @@ def resolve_gilt_emergency(choice):
         s.pm_opinion=round(_clip(float(s.pm_opinion)-1.5),1)
         label="Call an emergency Budget"
         note="You announce an emergency fiscal package: £1.5bn of near-term consolidation and a promise of revised forecasts. Markets recover slightly, but the PM is uneasy about another Budget."
+    elif choice==3 and emergency.get("pm_pressure"):
+        s.headroom=round(float(s.headroom)-1.5,1)
+        s.deficit=round(float(s.deficit)+1.5,1)
+        s.market_conf=round(_clip(float(s.market_conf)+2.0),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)+12.0),1)
+        s.cab_opinion=round(_clip(float(s.cab_opinion)+3.0),1)
+        s.backbench_opinion=round(_clip(float(s.backbench_opinion)-2.0),1)
+        s.approval=round(_clip(float(s.approval)-1.0),1)
+        label="Accept the Prime Minister's conditions"
+        note="You accept Number 10's conditions: a tighter fiscal plan, closer political coordination and a limited concession to the PM's priorities. The Government is publicly united, but the Treasury has less room to manoeuvre."
     else: return
     s.message=note
     s.active_gilt_emergency=None
