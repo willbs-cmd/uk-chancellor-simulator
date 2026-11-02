@@ -88,7 +88,8 @@ def run_gilt_auction():
       "extra_interest_bn":extra_interest,"outcome":outcome}
     s.gilt_auction_latest=record
     if outcome=="Failed auction":
-        s.active_gilt_emergency={"year":record["year"],"bid_cover":record["bid_cover"],"yield_move_pp":yield_move,"issuance_bn":record["issuance_bn"]}
+        severity="severe" if demand_cover<0.80 or yield_move>=0.55 else "serious"
+        s.active_gilt_emergency={"year":record["year"],"bid_cover":record["bid_cover"],"yield_move_pp":yield_move,"issuance_bn":record["issuance_bn"],"severity":severity,"pm_pressure":severity=="severe" or float(s.get("pm_opinion",50))<40}
     s.gilt_auction_history=(list(s.get("gilt_auction_history",[]))+[record])[-12:]
     if outcome=="Failed auction":
         s.message+=f" DMO gilt auction crisis: demand covered only {demand_cover:.2f} times the amount offered. Yields jumped {yield_move:.2f}pp and refinancing costs increased."
