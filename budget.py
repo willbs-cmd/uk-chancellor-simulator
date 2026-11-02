@@ -150,6 +150,7 @@ def ensure():
     had_legacy_budget = 'budget_applied' in s and 'tax' in s.get('budget_applied', {})
     if 'budget_applied' not in s or 'tax_pol' not in s.get('budget_applied', {}):
         s.budget_applied = defaults()
+        s.budget_applied['_tax_units_version'] = 2
     else:
         _migrate_applied(s.budget_applied)
     # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
