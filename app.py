@@ -22,7 +22,7 @@ from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
 
-st.set_page_config(page_title='UK Chancellor Simulator - Hardcore', layout='wide', page_icon='🏛️',
+st.set_page_config(page_title='The Chancellor’s Office', layout='wide', page_icon='🏛️',
                    initial_sidebar_state='collapsed')
 apply_theme()
 state.ensure_init()
@@ -37,7 +37,7 @@ def restart():
 # ==================== SIDEBAR: RUN INFO / SAVE / HELP ====================
 with st.sidebar:
     if s.step == 'game':
-        st.markdown('### 🏛️ Your run')
+        st.markdown('### RUN CONTROL')
         st.caption(f"{s.party} · {s.difficulty} · seed {s.seed}\n\n"
                    f"📅 {state.SCENARIOS[s.get('scenario', 'fragile')]['label']}")
         if s.get('spad') in politics.SPADS:
@@ -76,7 +76,7 @@ with st.sidebar:
 
 # ==================== SETUP SCREEN ====================
 def setup_screen():
-    st.markdown("""<div class='setup-hero'><div class='seal'>HM Treasury · Cabinet Office Simulation</div><h1>🏛️ The Chancellor's Office</h1><p>Manage the economy, make policy choices and steer your government through Parliament.</p><span class='stamp'>The Chancellor's Office</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class='setup-hero'><div class='seal'>HM TREASURY · SIMULATION</div><h1>The Chancellor's Office</h1><p>Manage the economy, make policy choices and steer your government through Parliament.</p><span class='stamp'>The Chancellor's Office</span></div>""", unsafe_allow_html=True)
     st.markdown("### Step 1 · Form your government")
     party = st.selectbox("Select Governing Party:", state.PARTIES)
     difficulty = st.radio(
@@ -703,7 +703,7 @@ def briefing():
             render_newspapers(*s.headlines)
     else:
         st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
-    with st.expander('📜 Full timeline', expanded=False):
+    with st.expander('Decision history', expanded=False):
         render_timeline(s.history, sorted(s.pending, key=lambda p: p['due']))
 
 
@@ -721,7 +721,7 @@ def economy():
     if shock:
         st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
 
-    st.markdown('#### 🌍 Global economy league')
+    st.markdown('#### Global economy')
     st.caption('Cumulative real growth since you took office. Output index starts at 100; GDP values are illustrative game estimates.')
     world_economy.ensure(s)
     uk_index = 100.0
@@ -752,7 +752,7 @@ def economy():
                      'Growth': st.column_config.TextColumn('GROWTH'),
                      'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
                  })
-    with st.expander('📈 History: your GDP and the world economy'):
+    with st.expander('Economic history'):
         if s.get('gdp_history'):
             st.caption('Your GDP over time')
             st.dataframe(pd.DataFrame(s.gdp_history), hide_index=True, use_container_width=True)
@@ -761,7 +761,7 @@ def economy():
             st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
         if not (s.get('gdp_history') or s.get('world_history')):
             st.caption('History builds up as the years pass.')
-    with st.expander('🌍 IMF outlook (external baseline)'):
+    with st.expander('IMF baseline and assumptions'):
         st.markdown(
             f"[{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · vintage published {imf_outlook.IMF_PUBLISHED}. "
             "A fixed data-file vintage: the annual tick nudges growth and inflation towards it, but it does not forecast your playthrough."
@@ -778,11 +778,11 @@ _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note')
 _is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
 
 tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
-    '⚖️  Action' + (' •' if _is_budget_phase else ''),
-    '📰  Briefing' + (' •' if _has_briefing else ''),
-    '📊  Economy',
-    '🏛️  Government',
-    '💷  Treasury'
+    'Decisions' + (' •' if _is_budget_phase else ''),
+    'Briefing' + (' •' if _has_briefing else ''),
+    'Economy',
+    'Government',
+    'Treasury'
 ])
 
 with tab_action:
@@ -808,8 +808,9 @@ with tab_economy:
     economy()
 
 with tab_government:
-    st.markdown('### Government and Parliament')
-    gov_polls, gov_parliament, gov_local, gov_office, gov_reports = st.tabs(['Polling', 'Parliament', 'Local Elections', "Chancellor's Office", 'Annual Reports'])
+    st.markdown('### Government')
+    st.caption('Political support, parliamentary scrutiny, local elections and your record in office.')
+    gov_polls, gov_parliament, gov_local, gov_office, gov_reports = st.tabs(['Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Annual reports'])
     with gov_polls:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
@@ -825,9 +826,9 @@ with tab_government:
         performance_report.render()
 
 with tab_treasury:
-    st.markdown('### Treasury control room')
-    st.caption('Manage public investments, fiscal tools and the cost of government borrowing.')
-    treasury_tabs = st.tabs(['🏛️ Spending Review', '💷 Treasury & gilts', '⚙️ Fiscal tools', '📊 OBR & Markets'])
+    st.markdown('### Treasury')
+    st.caption('Budgets, spending settlements, public investments and the cost of government borrowing.')
+    treasury_tabs = st.tabs(['Spending review', 'Investments & gilts', 'Fiscal tools', 'OBR & markets'])
     with treasury_tabs[0]:
         budget.render_spending_review()
     with treasury_tabs[1]:
