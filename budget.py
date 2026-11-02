@@ -1046,8 +1046,21 @@ def _tax_row(k, t, s):
     with c2:
         lo, hi, step = _tax_slider_spec(t)
         key = f'bt_{k}'
-        if isinstance(step, float) and key in s and not isinstance(s[key], float):
-            s[key] = float(s[key])
+        # Saved drafts and existing Streamlit sessions can retain values from an
+        # older tax-unit/range definition. Streamlit validates keyed widget state
+        # before rendering, so bring it inside the current bounds first.
+        if key in s:
+            try:
+                current = float(s[key])
+            except (TypeError, ValueError):
+                current = float(t['default'])
+            if not math.isfinite(current):
+                current = float(t['default'])
+            current = min(float(hi), max(float(lo), current))
+            if isinstance(step, float) and not step.is_integer():
+                s[key] = float(current)
+            else:
+                s[key] = int(round(current))
         st.slider(
             f"{t['label']} slider", min_value=lo, max_value=hi, step=step,
             key=key, format=_tax_slider_format(t), label_visibility='collapsed',
