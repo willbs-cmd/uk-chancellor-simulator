@@ -761,8 +761,6 @@ tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
 with tab_action:
     if s.get('local_election_due'):
         local_elections.render(widget_namespace='action')
-    elif _is_budget_phase:
-        budget_screen()
     elif s.active_crisis is not None:
         crisis_screen()
     elif s.get('active_dispute'):
@@ -771,6 +769,8 @@ with tab_action:
         weekly_event_screen()
     elif s.get('active_request'):
         request_screen()
+    elif _is_budget_phase:
+        budget_screen()
     else:
         decision_screen()
 
