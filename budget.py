@@ -1574,16 +1574,12 @@ def render(submit=None, after_summary=None):
     if not thresholds_valid:
         st.error("Correct the income-tax threshold order before applying this Budget.")
     with st.container(key="budget_actions"):
-        apply_col, reset_col = st.columns(2, gap="medium")
-        apply_col.button(
-            "Apply Budget", type="primary", on_click=_apply,
-            disabled=(not changed or not thresholds_valid), use_container_width=True,
-            help="Apply the current slider values to the draft forecast."
-        )
+        _, reset_col = st.columns([1, 1], gap="medium")
+        st.caption("All figures above update as you edit. Your changes remain a draft until the Budget reaches the Commons vote.")
         reset_col.button(
-            "Reset sliders", on_click=_reset,
+            "Discard draft changes", on_click=_reset,
             disabled=not changed, use_container_width=True,
-            help="Return tax rates, spending changes and schemes to the previously applied draft."
+            help="Discard all proposed tax, threshold, spending and scheme changes."
         )
         # Submission sits on its own full-width row so the label never gets clipped
         # by a narrow third column, especially on mobile.
