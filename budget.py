@@ -142,7 +142,8 @@ def ensure():
                     "text": "The Prime Minister has filled the Cabinet vacancy. As Chancellor, you had no power to appoint the replacement.",
                     "summary": "Cabinet reshuffle · Prime Minister's decision",
                 })
-    if 'dept_spend' not in s:
+    had_department_ledger = isinstance(s.get('dept_spend'), dict)
+    if not had_department_ledger:
         s.dept_spend = {k: v['default'] for k, v in SPEND_DEFAULTS.items()}
     else:
         _migrate_depts(s.dept_spend)
@@ -165,6 +166,15 @@ def ensure():
     else:
         s.budget_applied = defaults()
         s.budget_applied['_tax_units_version'] = 2
+
+    # If an older save has the approved Budget but not the separate department
+    # ledger, reconstruct the actual £bn allocations from the approved changes.
+    # This avoids silently reverting departments to their opening-year budgets.
+    if not had_department_ledger:
+        for key, spec in SPEND_DEFAULTS.items():
+            approved_change = float(s.budget_applied.get('spend', {}).get(key, 0.0))
+            s.dept_spend[key] = round(float(spec['default']) * (1.0 + approved_change / 100.0), 1)
+
     # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
     s.setdefault('budget_last_tax', dict(s.budget_applied['tax']))
     if had_legacy_budget and int(s.budget_applied.get('_tax_units_version', 0)) < 2:
@@ -1337,6 +1347,7 @@ def render(submit=None, after_summary=None):
         f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
         unsafe_allow_html=True,
     )
+    st.caption('Approved tax rates and tax/spending schemes carry forward automatically. Departmental percentage changes are applied to the actual £bn allocation at the start of the next year; those sliders then return to 0% because the new allocation is the baseline, not because the money has been removed.')
     render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'),
              num=(rev_now - rev_app) if changed else 0, desc='Estimated annual tax and other government receipts.'),
