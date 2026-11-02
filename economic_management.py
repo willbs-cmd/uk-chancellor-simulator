@@ -11,6 +11,7 @@ def ensure():
     s.setdefault("dmo_strategy","Balanced issuance"); s.setdefault("dmo_maturity",10); s.setdefault("dmo_index_share",25)
     s.setdefault("dmo_last_action","No change to the issuance strategy yet.")
     s.setdefault("stress_test_result",None)
+    s.setdefault("gilt_auction_history",[]); s.setdefault("gilt_auction_latest",None)
 
 def annual_update():
     ensure(); s=st.session_state
@@ -41,6 +42,62 @@ def annual_update():
     if float(s.get("boe_independence",75))<40:
         s.market_conf=round(max(0,min(100,float(s.market_conf)-1)),1); s.gilt_yield=round(float(s.gilt_yield)+0.05,2)
         s.message+=" Markets are questioning the perceived independence of the Bank of England."
+
+
+def run_gilt_auction():
+    """Simulate the annual DMO financing round and the cost of refinancing maturing debt."""
+    ensure(); s=st.session_state
+    import random
+    rng=random.Random(int(s.get("seed",1))+int(s.get("term",1))*7919+int(s.get("year",1))*104729)
+    debt_bn=max(100.0,float(s.get("gdp_trillion",3.0))*1000.0*float(s.get("debt",0.0))/100.0)
+    maturity=max(2.0,float(s.get("dmo_maturity",10)))
+    refinance_share=max(0.08,min(0.40,1.0/maturity+0.12))
+    refinancing=debt_bn*refinance_share
+    new_borrowing=max(0.0,float(s.get("deficit",0.0)))
+    issuance=max(1.0,refinancing+new_borrowing)
+    confidence=float(s.get("market_conf",50.0))
+    premium=float(s.get("gilt_risk_premium",0.0))
+    deficit_ratio=new_borrowing/max(500.0,float(s.get("gdp_trillion",3.0))*1000.0)
+    demand_cover=max(0.65,min(4.0,2.35+(confidence-50.0)*0.018-premium*0.42-deficit_ratio*2.0+rng.uniform(-0.18,0.18)))
+    if demand_cover >= 2.0:
+        outcome="Strong demand"; yield_move=-0.04
+        confidence_move=0.8
+    elif demand_cover >= 1.35:
+        outcome="Orderly auction"; yield_move=0.02
+        confidence_move=0.0
+    elif demand_cover >= 1.0:
+        outcome="Weak demand"; yield_move=0.16+(1.35-demand_cover)*0.18
+        confidence_move=-2.0
+    else:
+        outcome="Failed auction"; yield_move=0.35+(1.0-demand_cover)*0.35
+        confidence_move=-5.0
+    tail=round(max(0.0,2.0-demand_cover)*0.12,3)
+    yield_move=round(yield_move+tail,3)
+    old_yield=float(s.get("gilt_yield",4.7))
+    s.gilt_yield=round(max(0.1,min(15.0,old_yield+yield_move)),2)
+    s.market_conf=round(max(0.0,min(100.0,confidence+confidence_move)),1)
+    # Only the refinanced/newly issued portion reprices immediately; the rest of the debt stock is fixed-rate.
+    extra_interest=round((refinancing+new_borrowing)*yield_move/100.0,2)
+    s.debt_interest_bill=round(max(0.0,float(s.get("debt_interest_bill",10.7))+extra_interest),2)
+    if extra_interest:
+        s.headroom=round(float(s.get("headroom",0.0))-extra_interest,1)
+        s.deficit=round(max(0.0,float(s.get("deficit",0.0))+extra_interest),1)
+    record={"year":f"Term {s.term}, Year {s.year}","issuance_bn":round(issuance,1),
+      "refinanced_bn":round(refinancing,1),"new_borrowing_bn":round(new_borrowing,1),
+      "bid_cover":round(demand_cover,2),"yield_move_pp":yield_move,"yield_after":s.gilt_yield,
+      "extra_interest_bn":extra_interest,"outcome":outcome}
+    s.gilt_auction_latest=record
+    s.gilt_auction_history=(list(s.get("gilt_auction_history",[]))+[record])[-12:]
+    if outcome=="Failed auction":
+        s.message+=f" DMO gilt auction crisis: demand covered only {demand_cover:.2f} times the amount offered. Yields jumped {yield_move:.2f}pp and refinancing costs increased."
+    elif outcome=="Weak demand":
+        s.message+=f" DMO gilt auction drew weak demand ({demand_cover:.2f}x cover). Investors demanded a higher yield."
+    elif outcome=="Strong demand":
+        s.message+=f" DMO gilt auction was strongly covered at {demand_cover:.2f}x, easing borrowing costs."
+    else:
+        s.message+=f" DMO gilt auction completed orderly at {demand_cover:.2f}x bid-to-cover."
+    return record
+
 
 def _stress_test():
     """Run illustrative macro-fiscal shocks against the current Budget draft."""
@@ -129,6 +186,22 @@ def render():
         s.dmo_last_action=f"{strategy}: {maturity}-year average maturity and {share}% index-linked issuance."
         s.message="The DMO has adopted your revised issuance remit. "+s.dmo_last_action
         st.success(s.dmo_last_action)
+    st.divider(); st.markdown("#### DMO gilt auctions & refinancing")
+    latest=s.get("gilt_auction_latest")
+    if latest:
+        ac=st.columns(4)
+        ac[0].metric("Latest bid-to-cover",f"{latest['bid_cover']:.2f}x")
+        ac[1].metric("Auction result",latest["outcome"])
+        ac[2].metric("Yield movement",f"{latest['yield_move_pp']:+.2f}pp")
+        ac[3].metric("Extra annual interest",f"£{latest['extra_interest_bn']:.2f}bn")
+        st.caption(f"{latest['year']} · £{latest['issuance_bn']:.1f}bn issued/refinanced, including £{latest['refinanced_bn']:.1f}bn of maturing debt.")
+    else:
+        st.info("The first DMO auction result will appear after the next annual economic update.")
+    with st.expander("Auction history"):
+        if s.get("gilt_auction_history"):
+            st.dataframe(list(reversed(s.gilt_auction_history)),hide_index=True,use_container_width=True)
+        else:
+            st.caption("No auctions have taken place yet.")
     st.divider(); st.markdown("#### Fiscal stress testing")
     st.caption("Tests your live Budget draft against illustrative economic shocks. This is a forecast exercise only and does not alter your saved finances.")
     if st.button("Run fiscal stress tests",key="economic_stress_test",type="primary"):
