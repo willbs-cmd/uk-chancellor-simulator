@@ -478,65 +478,71 @@ def lords_memo():
 
 
 def budget_screen():
+    stage = int(s.get('budget_day_stage', 0))
     if s.get('budget_passed'):
         left, right = st.columns([3, 2], gap='large')
         with left:
             st.markdown("<div class='pane-title'>Parliamentary vote</div>", unsafe_allow_html=True)
             ayes = s.get('vote_ayes') or budget.commons_ayes()
             txt = f'**Ayes:** {ayes} | **Noes:** {650 - ayes}'
-            if ayes >= budget.WIN + 40:
-                st.success(f'**House of Commons:** The Budget passed with a thumping majority! Your backbenchers cheered you to the rafters.\n\n{txt}')
-            elif ayes >= budget.WIN + 15:
-                st.info(f'**House of Commons:** The Budget passed. There was some grumbling from the backbenches, but the whips kept them in line.\n\n{txt}')
-            else:
-                st.warning(f'**House of Commons:** The Budget barely scraped through! A massive backbench rebellion nearly brought the government down.\n\n{txt}')
-            if st.button('Proceed to Spring', type='primary'):
-                engine.proceed_to_spring()
-                st.rerun()
-            speech = s.get('budget_speech')
-            if speech:
-                with st.expander('🎙️ The Budget speech', expanded=True):
-                    st.markdown('> ' + speech['text'])
-                st.markdown("<div class='budget-day-heading'><span>THE HOUSE OF COMMONS · BUDGET DAY</span><h3>From the Red Box to the evening headlines</h3></div>", unsafe_allow_html=True)
-                for clock, title, detail in speech.get('budget_day', []):
-                    st.markdown(f"<div class='budget-day-row'><span>{clock}</span><div><strong>{title}</strong><small>{detail}</small></div></div>", unsafe_allow_html=True)
-                st.markdown("#### Opposition amendments")
-                for amendment in speech.get('amendments', []):
-                    st.markdown(f"**{amendment['title']}**  \n{amendment['detail']}  \nAyes: **{amendment['ayes']}** · Noes: **{650-amendment['ayes']}** · **{amendment['result']}**")
-                risk = (s.get('budget_risk_outcome') or {})
-                if risk:
-                    st.markdown("#### Treasury implementation surprise")
-                    st.warning(f"**{risk.get('title', 'Delivery risk')}** — {risk.get('detail', '')}")
-                    st.caption(f"Unexpected fiscal cost: £{float(risk.get('fiscal_cost', 0)):.1f}bn · Gilt-yield movement: {float(risk.get('gilt_move', 0)):+.2f} percentage points")
-                st.markdown("#### Immediate reactions")
-                for who, quote in speech['reactions']:
-                    st.markdown(f"**{who}:** {quote}")
-                move = float(speech.get('market_move', 0.0))
-                direction = "rose" if move > 0 else "fell" if move < 0 else "was unchanged"
-                st.caption(f"10-year gilt yield {direction} by {abs(move):.2f} percentage points · now {speech.get('market_after', s.gilt_yield):.2f}%")
+            if ayes >= budget.WIN + 40: st.success(f'**House of Commons:** The Budget passed with a thumping majority!\\n\\n{txt}')
+            elif ayes >= budget.WIN + 15: st.info(f'**House of Commons:** The Budget passed.\\n\\n{txt}')
+            else: st.warning(f'**House of Commons:** The Budget barely scraped through!\\n\\n{txt}')
+            speech_data=s.get('budget_speech') or {}
+            st.markdown("#### Budget speech")
+            if speech_data.get('text'): st.markdown('> '+speech_data['text'])
+            st.markdown("#### The Budget Day timeline")
+            for clock,title,detail in speech_data.get('budget_day',[]): st.markdown(f"**{clock} · {title}**  \\n{detail}")
+            st.markdown("#### Opposition amendments")
+            for item in speech_data.get('amendments',[]): st.markdown(f"**{item['title']}** — {item['detail']}  \\nAyes: {item['ayes']} · Noes: {650-item['ayes']} · {item['result']}")
+            risk=s.get('budget_risk_outcome') or {}
+            if risk: st.warning(f"**Treasury implementation surprise: {risk.get('title','Delivery risk')}** — {risk.get('detail','')}")
+            move=float(speech_data.get('market_move',0))
+            st.metric("Opening 10-year gilt yield",f"{float(speech_data.get('market_after',s.gilt_yield)):.2f}%",f"{move:+.2f} percentage points")
+            for who,quote in speech_data.get('reactions',[]): st.write(f"**{who}:** {quote}")
+            if st.button('Proceed to Spring',type='primary'):
+                engine.proceed_to_spring(); st.rerun()
         with right:
-            st.markdown("<div class='pane-title'>The morning after</div>", unsafe_allow_html=True)
-            for ev in s.event_cards:
-                event_card(ev['title'], ev['text'], ev['summary'])
+            st.markdown("#### The morning after")
+            for ev in s.event_cards: event_card(ev['title'],ev['text'],ev['summary'])
             lords_memo()
-            if s.get('headlines'):
-                render_newspapers(*s.headlines)
-    else:
-        st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase 3 · Spring Budget</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
-        budget.ensure()
+            if s.get('headlines'): render_newspapers(*s.headlines)
+        return
 
+    st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase 3 · Spring Budget</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
+    budget.ensure()
+    stages=['Number 10 negotiations','OBR forecast','Budget speech','Commons vote & markets']
+    st.progress(min(stage,3)/3, text=f"Budget Day · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
+    if stage == 0:
+        st.markdown("### Final negotiations with the Prime Minister")
+        st.write("Number 10 wants a Budget that supports the Government’s wider political priorities. You must decide how far to accommodate the PM before the OBR forecast is revealed.")
+        s.budget_pm_choice=st.radio("Your negotiating position",["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"],index=["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"].index(s.get('budget_pm_choice','Compromise with the Prime Minister')))
+        st.info("Your choice affects the PM relationship and political atmosphere, not the arithmetic of the Budget draft.")
         def submit():
-            if st.button(
-                'Submit Budget to the Commons & Lords',
-                type='primary',
-                use_container_width=True,
-                help='Any slider changes you have not applied are applied automatically when you submit.'
-            ):
-                engine.submit_budget()
-                st.rerun()
-
-        budget.render(submit=submit, after_summary=lambda: politics.render_pledges(budget.read()))
-
+            if st.button("Conclude negotiations",type="primary",use_container_width=True):
+                engine.submit_budget(); st.rerun()
+        budget.render(submit=submit,after_summary=lambda: politics.render_pledges(budget.read()))
+    elif stage == 1:
+        st.markdown("### OBR forecast: the numbers behind the Budget")
+        st.info(s.get('budget_day_negotiation',''))
+        st.write("The independent forecast assesses the current draft. It is a central projection, not a guarantee.")
+        if st.button("Receive the OBR forecast",type="primary"):
+            engine.submit_budget(); st.rerun()
+    elif stage == 2:
+        st.markdown("### The Chancellor prepares the statement")
+        rows=s.get('budget_day_forecast') or []
+        if rows: st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
+        st.caption("The forecast reflects the current draft and simplified model assumptions. You can return to the Budget controls before delivery only by restarting this Budget stage.")
+        if st.button("Prepare the Budget speech",type="primary"):
+            engine.submit_budget(); st.rerun()
+    elif stage == 3:
+        st.markdown("### Deliver the Budget to Parliament")
+        draft=s.get('budget_day_speech') or {}
+        if draft.get('text'):
+            st.markdown("> "+draft['text'])
+        st.warning("Once delivered, the Budget is put to the Commons. A failed vote ends the Chancellor’s career.")
+        if st.button("Deliver Budget & open the markets",type="primary"):
+            engine.submit_budget(); st.rerun()
 
 
 # ==================== DECISIONS & CRISES ====================
