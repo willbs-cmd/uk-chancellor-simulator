@@ -16,6 +16,7 @@ import scenarios as scen
 import state
 import treasury
 import chancellor_office
+import performance_report
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
