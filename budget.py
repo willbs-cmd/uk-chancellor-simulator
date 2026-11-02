@@ -179,6 +179,51 @@ def read():
     }
 
 
+
+def save_budget_alternative(name, draft=None):
+    """Save a named, independent copy of the current Budget draft for comparison."""
+    s = st.session_state
+    draft = draft or read()
+    slots = dict(s.get('budget_alternatives', {}))
+    slots[name] = {
+        'draft': {k: (dict(v) if isinstance(v, dict) else v) for k, v in draft.items()},
+        'saved_at': f"Term {int(s.get('term', 1))}, Year {int(s.get('year', 1))}",
+    }
+    s.budget_alternatives = slots
+
+
+def resolve_budget_risks():
+    """Reveal one possible implementation risk when the Budget is delivered."""
+    import random
+    s = st.session_state
+    draft = s.get('budget_applied', read())
+    imp = impact(draft, draft)
+    tax_change = sum(abs(float(draft['tax'][k]) - float(TAXES[k]['default'])) for k in TAXES)
+    scheme_count = sum(bool(v) for v in draft.get('tax_pol', {}).values()) + sum(bool(v) for v in draft.get('spend_pol', {}).values())
+    spend_change = sum(abs(float(v)) for v in draft.get('spend', {}).values())
+    risks = []
+    if tax_change > 4:
+        risks.append(("Revenue underperforms", "Behavioural responses and weaker activity reduce the expected tax yield.", 2.0, 0.0, -1.0))
+    if scheme_count >= 3:
+        risks.append(("Implementation delays", "Several new schemes prove harder to deliver on schedule than departments expected.", 1.5, 0.0, -0.5))
+    if spend_change > 30:
+        risks.append(("Cost pressures emerge", "Pay, procurement and supplier costs push the package above its initial estimate.", 2.5, 0.0, -0.5))
+    if float(imp.get('market', 0)) < -2 or float(s.market_conf) < 40:
+        risks.append(("Gilt-market nerves", "Investors demand a small additional premium after scrutinising the financing plan.", 0.0, 0.05, -1.5))
+    if not risks:
+        risks = [("Delivery risk", "A limited number of departmental programmes cost slightly more to implement.", 0.5, 0.0, 0.0)]
+    rng = random.Random(int(s.get('seed', 1)) + int(s.get('year', 1))*701 + int(s.get('term', 1))*997)
+    risk = rng.choice(risks)
+    label, detail, fiscal_cost, yield_move, confidence = risk
+    s.deficit = round(max(0.0, float(s.deficit) + fiscal_cost), 1)
+    s.headroom = round(float(s.headroom) - fiscal_cost, 1)
+    s.gilt_yield = round(max(0.1, float(s.gilt_yield) + yield_move), 2)
+    s.market_conf = round(_clip(float(s.market_conf) + confidence), 1)
+    result = {'title': label, 'detail': detail, 'fiscal_cost': fiscal_cost, 'gilt_move': yield_move}
+    s.budget_risk_outcome = result
+    return result
+
+
 def revenues(b):
     out = {}
     for k, t in TAXES.items():
@@ -413,7 +458,7 @@ def commit_budget(ayes):
         'ayes': int(ayes), 'headroom_after': round(float(s.get('headroom', 0)), 1),
         'deficit_after': round(float(s.get('deficit', 0)), 1),
         'impact': dict(s.get('budget_impact', {})),
-        'message': str(s.get('budget_message', '')),
+        'message': str(s.get('budget_message', '')),\n        'risk': dict(s.get('budget_risk_outcome') or {}),
     })
     s.budget_history = s.budget_history[-12:]
     s.budget_last_tax = dict(s.budget_applied['tax'])
@@ -860,6 +905,44 @@ def render(submit=None, after_summary=None):
                 st.caption(f"Chancellor's message: {last['message']}")
     else:
         st.info("Your previous Budget decisions will be recorded here after your first Budget passes the Commons.")
+
+    st.markdown("### Budget options & comparison")
+    st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
+    slots = dict(s.get('budget_alternatives', {}))
+    alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
+    save_col, clear_col = st.columns([1, 1])
+    if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
+        if alt_name not in slots and len(slots) >= 3:
+            st.warning("You can keep three alternatives. Replace or delete one before saving another.")
+        else:
+            save_budget_alternative(alt_name, cur)
+            st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
+            st.rerun()
+    if slots:
+        if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
+            slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
+        comparison = []
+        for name, item in slots.items():
+            package = item.get('draft', {})
+            totals_rev, totals_spend = totals(package)
+            package_impact = impact(s.budget_applied, package)
+            package_ayes = projected_ayes(package)
+            comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
+                "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
+                "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
+        st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
+        if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
+            selected = slots.get(alt_name)
+            if selected:
+                _reset()
+                for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
+                for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
+                for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
+                for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
+                s.budget_strategy = selected['draft'].get('strategy', 'balanced')
+                st.success(f"{alt_name} loaded into the live draft.")
+                st.rerun()
+    st.divider()
 
     t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
