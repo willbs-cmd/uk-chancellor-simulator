@@ -813,6 +813,42 @@ def apply_ongoing():
     s = st.session_state
     ensure()
 
+    # Mature active schemes one stage at the start of each financial year.
+    # Their extra receipts/costs and economic effects arrive only as delivery progresses.
+    previous_status = {
+        'tax': dict(s.budget_scheme_delivery.get('tax', {})),
+        'spend': dict(s.budget_scheme_delivery.get('spend', {})),
+    }
+    applied_schemes = s.budget_applied
+    previous_financials = scheme_financials(applied_schemes, statuses=previous_status)
+    previous_effects = scheme_effect_totals(applied_schemes, statuses=previous_status)
+    next_status = {'tax': {}, 'spend': {}}
+    newly_maturing = []
+    for kind, table in (('tax', TAX_POLICIES), ('spend', SPEND_POLICIES)):
+        for key, item in table.items():
+            if not applied_schemes.get(f'{kind}_pol', {}).get(key, False):
+                continue
+            profile = scheme_profile(kind, key, item)
+            old_age = int(previous_status.get(kind, {}).get(key, len(profile['ramp']) - 1))
+            new_age = min(len(profile['ramp']) - 1, old_age + 1)
+            next_status[kind][key] = new_age
+            if new_age > old_age:
+                newly_maturing.append(item['label'])
+    next_financials = scheme_financials(applied_schemes, statuses=next_status)
+    next_effects = scheme_effect_totals(applied_schemes, statuses=next_status)
+    cash_improvement = (
+        float(next_financials['tax_net']) - float(previous_financials['tax_net'])
+        - (float(next_financials['spend_cost']) - float(previous_financials['spend_cost']))
+    )
+    if abs(cash_improvement) > 0.001:
+        s.headroom = round(float(s.headroom) + cash_improvement, 1)
+        s.deficit = round(max(0.0, float(s.deficit) - cash_improvement), 1)
+    s.approval = round(_clip(float(s.approval) + next_effects['approval'] - previous_effects['approval']), 1)
+    s.market_conf = round(_clip(float(s.market_conf) + next_effects['market'] - previous_effects['market']), 1)
+    s.growth = round(float(s.growth) + next_effects['growth'] - previous_effects['growth'], 2)
+    s.budget_scheme_delivery = next_status
+    if newly_maturing:
+        s.message = str(s.get('message', '')) + f" Scheme delivery advanced this year: {', '.join(newly_maturing[:3])}{' and other programmes' if len(newly_maturing) > 3 else ''}."
     # A Budget's tax settings and policy choices are recurring settings. Department
     # percentages are annual changes, so compound them once and then start the next
     # year's draft at zero against the newly approved departmental baseline.
@@ -851,10 +887,16 @@ def apply_ongoing():
         'netzero': 0.06 * dv['climate'],
         'energy_bills': -1.5 * dv['climate'],
     }
-    for pk, effects in POLICY_NUDGES.items():
-        if s.budget_applied['spend_pol'].get(pk):
-            for stat, val in effects.items():
-                nudges[stat] = nudges.get(stat, 0.0) + val
+    delivery = scheme_financials(s.budget_applied)
+    for (kind, pk), row in delivery['rows'].items():
+        if kind != 'spend':
+            continue
+        effects = POLICY_NUDGES.get(pk, {})
+        profile = row['profile']
+        benefit_factor = profile['benefit_ramp'][min(row['age'], len(profile['benefit_ramp']) - 1)]
+        effective = benefit_factor * row['delivery_factor'] * row['overlap']
+        for stat, val in effects.items():
+            nudges[stat] = nudges.get(stat, 0.0) + float(val) * effective
     country.nudge(nudges, snapshot=False)
 
     # 3. Interest check: reprice debt interest only against the last recorded bill.
