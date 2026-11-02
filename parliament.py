@@ -179,14 +179,20 @@ def apply_fallout(record):
     status = record["status"]
     if status == "Passed":
         s.backbench_opinion = round(_clip(s.backbench_opinion + 0.5), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion + 1.0), 1)
+        s.cab_opinion = round(_clip(s.cab_opinion + 0.5), 1)
     elif status == "Passed with amendments":
         s.backbench_opinion = round(_clip(s.backbench_opinion + 1.5), 1)
         s.party_opinion = round(_clip(s.party_opinion + 0.5), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion - 1.0), 1)
+        s.cab_opinion = round(_clip(s.cab_opinion - 1.0), 1)
     else:
         s.backbench_opinion = round(_clip(s.backbench_opinion - 4), 1)
         s.party_opinion = round(_clip(s.party_opinion - 3), 1)
         s.approval = round(_clip(s.approval - 1.5), 1)
         s.market_conf = round(_clip(s.market_conf - 1), 1)
+        s.pm_opinion = round(_clip(s.pm_opinion - 4.0), 1)
+        s.cab_opinion = round(_clip(s.cab_opinion - 2.5), 1)
 
 
 def _use_strategy(key, label, cost, bonus, effect):
@@ -287,7 +293,7 @@ def render():
         elif used:
             st.success(f"Intervention used this phase: {used}. You can prepare again in the next phase.")
         else:
-            c1, c2, c3 = st.columns(3, gap="medium")
+            c1, c2, c3, c4 = st.columns(4, gap="small")
             with c1:
                 st.markdown("**Issue a three-line whip**")
                 st.caption("Cost 1 political capital · +14 votes · backbench morale −1")
@@ -314,6 +320,16 @@ def render():
                         x.market_conf = round(_clip(x.market_conf + 2), 1)
                         x.approval = round(_clip(x.approval + 0.5), 1)
                     _use_strategy("committee", "Committee evidence report", 1, 8, committee)
+                    st.rerun()
+            with c4:
+                st.markdown("**Defend the decision**")
+                st.caption("Cost 1 political capital · +12 votes · PM confidence +2")
+                if st.button("Make the case to MPs", key="parl_defence", disabled=capital < 1, use_container_width=True):
+                    def defend(x):
+                        x.pm_opinion = round(_clip(x.pm_opinion + 2.0), 1)
+                        x.approval = round(_clip(x.approval + 0.5), 1)
+                        x.media_opinion = round(_clip(x.media_opinion + 1.0), 1)
+                    _use_strategy("defence", "Parliamentary defence speech", 1, 12, defend)
                     st.rerun()
 
     if int(s.get("block", 1)) >= 3:
