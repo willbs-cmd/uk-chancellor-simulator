@@ -1620,6 +1620,332 @@ div[data-baseweb="notification"] svg {
 .treasury-notice.info { border-left:4px solid #397b78; }
 .treasury-notice.success { background:#f0f7f3; border-color:#d1e5d9; border-left:4px solid #4c8a68; }
 .treasury-notice.success strong { color:#315f49 !important; }
+
+/* THIRD PASS — all remaining legacy elements use the Treasury light palette. */
+:root {
+  --primary-color:#397b78 !important;
+  --office-ink:#172a42;
+  --office-navy:#203b59;
+  --office-teal:#397b78;
+  --office-line:#dce3eb;
+  --office-paper:#ffffff;
+}
+
+/* Cabinet assessment: remove the old dark keyed panel and dark metric surfaces. */
+.st-key-decision_brief,
+.st-key-decision_brief [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-decision_brief [data-testid="stVerticalBlock"],
+.st-key-decision_brief [data-testid="stElementContainer"] {
+  background:#ffffff !important;
+  color:#20364f !important;
+}
+.st-key-decision_brief {
+  border:1px solid #dce3eb !important;
+  border-left:4px solid #397b78 !important;
+  border-radius:14px !important;
+  padding:18px !important;
+  box-shadow:0 3px 12px rgba(20,39,60,.045) !important;
+}
+.st-key-decision_brief [data-testid="stMetric"] {
+  background:#f7f9fb !important;
+  border:1px solid #e1e7ee !important;
+  border-radius:12px !important;
+  box-shadow:none !important;
+}
+.st-key-decision_brief [data-testid="stMetricLabel"],
+.st-key-decision_brief [data-testid="stMetricLabel"] p,
+.st-key-decision_brief [data-testid="stMetricValue"],
+.st-key-decision_brief [data-testid="stMarkdownContainer"],
+.st-key-decision_brief [data-testid="stMarkdownContainer"] p,
+.st-key-decision_brief li,
+.decision-brief-label,
+.decision-authority {
+  color:#344b63 !important;
+}
+.decision-brief-label {
+  color:#397b78 !important;
+  font-weight:800 !important;
+  letter-spacing:.14em !important;
+}
+.decision-impact {
+  color:#29445d !important;
+  background:#f2f6f9 !important;
+  border:1px solid #dce5ec !important;
+  border-radius:10px !important;
+}
+.decision-authority {
+  color:#64788e !important;
+  background:#f7f9fb !important;
+  border:1px solid #e1e7ee !important;
+  border-radius:9px !important;
+  padding:9px 11px !important;
+}
+.st-key-decision_brief [data-testid="stAlert"] {
+  background:#f2f7fa !important;
+}
+
+/* Campaign choices: stop the red selection dot and red widget-label strip. */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] > div,
+[data-testid="stWidgetLabel"] p,
+.stRadio > label,
+.stRadio > label p {
+  color:#344b63 !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+[data-testid="stRadio"] input[type="radio"],
+div[role="radiogroup"] input[type="radio"] {
+  accent-color:#397b78 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] > div,
+div[role="radiogroup"] [data-baseweb="radio"] > div {
+  border-color:#8aa5a3 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] input:checked + div,
+div[role="radiogroup"] [data-baseweb="radio"] input:checked + div {
+  border-color:#397b78 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] input:checked + div > div,
+div[role="radiogroup"] [data-baseweb="radio"] input:checked + div > div {
+  background:#397b78 !important;
+}
+.st-key-policy_options [role="radiogroup"] > label,
+[data-testid="stRadio"] [role="radiogroup"] > label {
+  background:#ffffff !important;
+  border:1px solid #dce3eb !important;
+  border-radius:10px !important;
+  color:#344b63 !important;
+}
+.st-key-policy_options [role="radiogroup"] > label:has(input:checked),
+[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
+  background:#eef7f6 !important;
+  border-color:#397b78 !important;
+  box-shadow:inset 3px 0 0 #397b78 !important;
+}
+
+/* Local election count: replace burgundy with a restrained navy campaign banner. */
+.local-election-banner,
+.local-election-banner.results {
+  background:linear-gradient(115deg,#203b59 0%,#315875 100%) !important;
+  border:1px solid #b9cbd9 !important;
+  border-left:5px solid #397b78 !important;
+  border-radius:15px !important;
+  box-shadow:0 5px 18px rgba(25,50,76,.09) !important;
+}
+.local-election-banner > span {
+  color:#c9dce6 !important;
+}
+.local-election-banner h2,
+.local-election-banner h2 *,
+.local-election-banner p {
+  color:#ffffff !important;
+}
+.local-election-banner h2 {
+  font-family:'Manrope',sans-serif !important;
+  font-weight:800 !important;
+}
+.local-election-countdown {
+  background:#ffffff !important;
+  border:1px solid #dce3eb !important;
+  border-left:4px solid #397b78 !important;
+  border-radius:10px !important;
+  color:#29445d !important;
+}
+.local-election-countdown strong { color:#203b59 !important; }
+.local-election-countdown span { color:#64788e !important; }
+
+/* Treasury and Cabinet notices, cards, notes, forecast tables. */
+.ch-news,.ch-event,.sk-wrap,.tl-soon,.sk-stat,
+.briefing-context,.spend-draft-summary,.budget-command-line,
+.budget-day-heading,.budget-day-row {
+  color:#29445d !important;
+  background:#ffffff !important;
+  border-color:#dce3eb !important;
+  box-shadow:none !important;
+}
+.ch-news *, .ch-event *, .sk-wrap *, .tl-soon *, .sk-stat *,
+.briefing-context *, .spend-draft-summary *, .budget-command-line *,
+.budget-day-heading *, .budget-day-row * {
+  color:#344b63 !important;
+}
+.ch-event { border-left:4px solid #397b78 !important; }
+.ch-news { border-left:4px solid #a77d32 !important; }
+.sk-wrap { border-left:4px solid #397b78 !important; }
+.sk-stat { background:#f7f9fb !important; }
+.lv b,.spend-draft-summary strong { color:#203b59 !important; }
+.lv small,.spend-draft-summary small { color:#64788e !important; }
+
+/* Private Secretary memo: bright, readable paper rather than dark green inline styling. */
+.humphrey-note {
+  margin:9px 0 13px;
+  padding:15px 18px;
+  border:1px solid #dce3eb;
+  border-left:4px solid #a77d32;
+  border-radius:12px;
+  background:#ffffff;
+  box-shadow:0 3px 10px rgba(20,39,60,.035);
+  animation:treasury-enter .45s cubic-bezier(.2,.7,.2,1) both;
+}
+.humphrey-note-top {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#203b59;
+  margin-bottom:7px;
+}
+.humphrey-note-top strong {
+  font-family:'Manrope',sans-serif;
+  font-size:.98rem;
+  font-weight:800;
+  color:#203b59 !important;
+}
+.humphrey-note-icon { font-size:1.1rem; }
+.humphrey-note-label {
+  margin-left:auto;
+  color:#8a6b34;
+  font-size:.61rem;
+  font-weight:800;
+  letter-spacing:.13em;
+}
+.humphrey-note p {
+  margin:0;
+  color:#42576d !important;
+  font-style:italic;
+  line-height:1.55;
+}
+
+/* New newspaper front pages: consistent mastheads, modern editorial cards and subtle viewpoint accents. */
+.np-strip {
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:13px !important;
+  margin:14px 0 18px !important;
+}
+.np-card {
+  display:flex !important;
+  flex-direction:column !important;
+  min-width:0;
+  min-height:205px;
+  padding:14px 16px 12px !important;
+  border:1px solid #dce3eb !important;
+  border-top:4px solid #8297aa !important;
+  border-radius:12px !important;
+  background:#ffffff !important;
+  color:#20364f !important;
+  box-shadow:0 3px 11px rgba(20,39,60,.045) !important;
+  animation:news-card-in .48s cubic-bezier(.2,.7,.2,1) both;
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease !important;
+}
+.np-card:nth-child(2) { animation-delay:.08s; }
+.np-card:nth-child(3) { animation-delay:.16s; }
+.np-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 10px 22px rgba(20,39,60,.09) !important;
+}
+.np-left { border-top-color:#658a9e !important; }
+.np-centre { border-top-color:#a77d32 !important; }
+.np-right { border-top-color:#647b91 !important; }
+.np-paper-meta,.np-edition {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  color:#8391a0 !important;
+  font-size:.58rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.np-masthead {
+  margin:8px 0 4px;
+  color:#172a42 !important;
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(1.05rem,1.35vw,1.42rem);
+  font-weight:900;
+  line-height:1.05;
+  letter-spacing:-.035em;
+  text-align:center;
+  text-transform:uppercase;
+}
+.np-paper-rule {
+  height:1px;
+  margin:5px 0 9px;
+  background:#263d54;
+}
+.np-edition { color:#64788e !important; font-size:.59rem; }
+.np-headline {
+  margin:12px 0 8px !important;
+  color:#20364f !important;
+  font-family:'Manrope',sans-serif !important;
+  font-size:clamp(.95rem,1.2vw,1.13rem) !important;
+  font-weight:800 !important;
+  line-height:1.28 !important;
+  text-align:left;
+}
+.np-description {
+  margin:auto 0 12px !important;
+  color:#64788e !important;
+  font-size:.75rem !important;
+  line-height:1.4 !important;
+}
+.np-paper-footer {
+  border-top:1px solid #e5eaf0;
+  padding-top:8px;
+  color:#8a98a7 !important;
+  font-size:.56rem;
+  font-weight:800;
+  letter-spacing:.1em;
+}
+@keyframes news-card-in {
+  from { opacity:0; transform:translateY(10px) scale(.985); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* Tooltip and dropdown readability on every page. */
+[data-testid="stTooltipContent"],[data-testid="stTooltipContent"] *,
+div[data-baseweb="tooltip"],div[data-baseweb="tooltip"] * {
+  background:#ffffff !important;
+  color:#29445d !important;
+  -webkit-text-fill-color:#29445d !important;
+}
+div[data-baseweb="tooltip"] { border:1px solid #dce3eb !important; border-radius:9px !important; }
+[data-baseweb="popover"],[data-baseweb="menu"],[role="listbox"],
+[data-baseweb="popover"] li,[data-baseweb="menu"] li,[role="option"] {
+  background:#ffffff !important;
+  color:#20364f !important;
+}
+[role="option"]:hover,[aria-selected="true"][role="option"] {
+  background:#eef7f6 !important;
+  color:#20364f !important;
+}
+
+/* Smooth but restrained interaction feedback. */
+@keyframes news-card-in { from { opacity:0; transform:translateY(10px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+.stTabs [data-baseweb="tab"] { transition:background .18s ease,color .18s ease,box-shadow .18s ease !important; }
+.stTabs [data-baseweb="tab"]:hover { transform:translateY(-1px); }
+[data-testid="stMetric"],[data-testid="stExpander"],[data-testid="stVerticalBlockBorderWrapper"] {
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease !important;
+}
+[data-testid="stExpander"] summary { transition:background .18s ease,color .18s ease !important; }
+[data-testid="stButton"] button {
+  transition:transform .16s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+}
+[data-testid="stButton"] button:active { transform:scale(.985) !important; }
+.local-election-banner { animation:treasury-enter .5s cubic-bezier(.2,.7,.2,1) both; }
+.local-election-countdown { animation:treasury-enter .4s .08s ease both; }
+.st-key-decision_brief { animation:treasury-enter .42s cubic-bezier(.2,.7,.2,1) both; }
+@media(max-width:850px) {
+  .np-strip { grid-template-columns:1fr !important; }
+  .np-card { min-height:unset; }
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
 </style>
 """
 
@@ -1722,27 +2048,50 @@ def render_polls(df, chart_height=185, chart_in_expander=False):
 
 
 def humphrey_message(text, title='Memo from Sir Humphrey Appleby'):
-    st.markdown(f"""
-    <div style='background-color: #1a221f; border-left: 5px solid #c9a45c; padding: 10px 14px; margin: 4px 0px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-        <div style='color: #c9a45c; font-family: "Newsreader", serif; font-weight: bold; font-size: 1rem; margin-bottom: 3px;'>
-            <span style='font-size: 1.15rem; margin-right: 6px;'>&#128188;</span>{title}
-        </div>
-        <div style='font-style: italic; color: #efe9da; font-size: .95rem; line-height: 1.4;'>
-            "{text}"
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    import html
+    safe_title = html.escape(str(title))
+    safe_text = html.escape(str(text))
+    st.markdown(
+        f"<section class='humphrey-note' aria-label='Private note from Sir Humphrey'>"
+        f"<div class='humphrey-note-top'><span class='humphrey-note-icon'>&#128188;</span>"
+        f"<strong>{safe_title}</strong><span class='humphrey-note-label'>PRIVATE OFFICE</span></div>"
+        f"<p>“{safe_text}”</p></section>",
+        unsafe_allow_html=True,
+    )
 
 
-PAPERS = [('The Clarion', 'Left', '#e4003b'), ('The Statesman', 'Centre', '#faa61a'), ('Daily Standard', 'Right', '#0087dc')]
+PAPERS = [
+    ('The Clarion', 'Left', 'left', 'LEFT COMMENTARY', 'A progressive reading of the Government’s choices.'),
+    ('The Statesman', 'Centre', 'centre', 'CENTRE COVERAGE', 'A measured account of the political and economic implications.'),
+    ('Daily Standard', 'Right', 'right', 'RIGHT COMMENTARY', 'A critical view focused on spending, tax and state intervention.'),
+]
 
 
 def render_newspapers(left_hl, centre_hl, right_hl):
-    cards = ''.join(
-        f"<div class='np-card' style='border-top-color:{colour}'><div class='np-name'>{name} <span>({lean})</span></div>"
-        f"<div class='np-head'>&ldquo;{hl}&rdquo;</div></div>"
-        for (name, lean, colour), hl in zip(PAPERS, (left_hl, centre_hl, right_hl)))
-    st.markdown(f"<div class='np-strip'>{cards}</div>", unsafe_allow_html=True)
+    import html
+    headlines = (left_hl, centre_hl, right_hl)
+    cards = []
+    for (name, lean, side, desk, description), headline in zip(PAPERS, headlines):
+        safe_name = html.escape(name)
+        safe_lean = html.escape(lean)
+        safe_desk = html.escape(desk)
+        safe_headline = html.escape(str(headline))
+        safe_description = html.escape(description)
+        cards.append(
+            f"<article class='np-card np-{side}'>"
+            f"<div class='np-paper-meta'><span>THE DAILY PRESS</span><span>POLITICAL DESK</span></div>"
+            f"<div class='np-masthead'>{safe_name}</div>"
+            f"<div class='np-paper-rule'></div>"
+            f"<div class='np-edition'><span>{safe_desk}</span><span>{safe_lean.upper()}</span></div>"
+            f"<h3 class='np-headline'>“{safe_headline}”</h3>"
+            f"<p class='np-description'>{safe_description}</p>"
+            f"<div class='np-paper-footer'>TREASURY &amp; WESTMINSTER · COMMENT</div>"
+            f"</article>"
+        )
+    st.markdown(
+        "<div class='np-strip' aria-label='Newspaper front pages'>" + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ---------------------------------------------------------------- stat cards
