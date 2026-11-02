@@ -128,7 +128,8 @@ def apply_policy(key):
     s = ensure()
     policy = POLICIES.get(key)
     year = int(s.get("year", 1))
-    if not policy or int(s.get("household_policy_year", 0)) >= year:
+    period = int(s.get("term", 1)) * 10 + year
+    if not policy or int(s.get("household_policy_year", 0)) >= period:
         return False
     state.checkpoint()
     state.snapshot()
@@ -141,7 +142,7 @@ def apply_policy(key):
     s.household_bill_pressure = round(_clip(float(s.get("household_bill_pressure", 50.0)) + policy["effects"].get("bills", 0.0)), 1)
     s.mortgage_pressure = round(_clip(float(s.get("mortgage_pressure", 48.0)) + policy["effects"].get("mortgage", 0.0)), 1)
     s.approval = round(_clip(float(s.get("approval", 50.0)) + 1.0), 1)
-    s.household_policy_year = year
+    s.household_policy_year = period
     entry = {"Year": f"Term {s.get('term', 1)}, Year {year}", "Policy": policy["title"], "Cost (£bn)": cost}
     s.household_policy_history = (list(s.get("household_policy_history", [])) + [entry])[-20:]
     s.message = policy["message"]
@@ -179,7 +180,8 @@ def render():
         st.warning("Households are under significant pressure. Weak purchasing power, housing costs or unemployment are feeding into public discontent.")
 
     st.markdown("#### Treasury household support")
-    if int(s.get("household_policy_year", 0)) >= int(s.get("year", 1)):
+    current_period = int(s.get("term", 1)) * 10 + int(s.get("year", 1))
+    if int(s.get("household_policy_year", 0)) >= current_period:
         st.caption("You have already announced one household support package this year. Another will be available next year.")
     else:
         st.caption("You may introduce one targeted package each year. Each costs money and improves a different pressure point.")
