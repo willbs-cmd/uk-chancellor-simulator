@@ -818,114 +818,111 @@ def render(submit=None, after_summary=None):
         unsafe_allow_html=True,
     )
     render_chips([
-        dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'), num=(rev_now - rev_app) if changed else 0,
-             desc='Estimated annual tax and other receipts received by the government.'),
-        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'), num=(spend_now - spend_app) if changed else 0,
-             inverse=True, desc='Estimated annual outgoings across departments, welfare, pensions, debt interest and selected schemes.'),
-        dict(label='Deficit' if deficit_now > 0 else 'Surplus', value=f'£{abs(deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
-             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The gap between annual spending and income. A surplus means income exceeds spending.'),
-        dict(label='Approval', value=f"{_clip(s.approval + imp['approval']):.1f}%", delta=delta(imp['approval']), num=imp['approval'] if changed else 0,
-             desc='Estimated public support for the government. It affects polling and political survival.'),
-        dict(label='Market conf.', value=f"{_clip(s.market_conf + imp['market']):.1f}%", delta=delta(imp['market']), num=imp['market'] if changed else 0,
-             desc='Investor confidence. Weak confidence can raise government borrowing costs and make new debt more expensive.'),
-        dict(label='Growth', value=f"{s.growth + imp['growth']:.1f}%", delta=(f"{imp['growth']:+.2f}" if changed else '\u2014'),
-             num=imp['growth'] if changed else 0, desc='The annual rate at which the economy produces more goods and services, after adjusting for inflation.'),
-        dict(label='Inflation', value=f"{s.inflation + imp['inflation']:.1f}%", delta=(f"{imp['inflation']:+.2f}" if changed else '\u2014'),
-             num=imp['inflation'] if changed else 0, inverse=True, desc='How quickly prices are rising. High inflation squeezes household budgets and can keep interest rates elevated.'),
-        dict(label='OBR headroom', value=f"£{s.headroom + imp['headroom']:.1f}B", delta=delta(imp['headroom']), num=imp['headroom'] if changed else 0,
-             desc='The amount of fiscal room left before your chosen fiscal rule is breached. Negative headroom means the rule is missed.'),
-        dict(label='Projected ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs {WIN}', num=ayes - WIN,
-             desc='Votes for the Budget in the Commons. You need 326.'),
+        dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'),
+             num=(rev_now - rev_app) if changed else 0, desc='Estimated annual tax and other government receipts.'),
+        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'),
+             num=(spend_now - spend_app) if changed else 0, inverse=True, desc='Estimated annual government spending.'),
+        dict(label='Deficit', value=f'£{max(0, deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
+             num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The gap between annual spending and receipts.'),
+        dict(label='Fiscal headroom', value=f"£{s.headroom + imp['headroom']:.1f}bn", delta=delta(imp['headroom']),
+             num=imp['headroom'] if changed else 0, desc='Your remaining margin against the fiscal rule.'),
+        dict(label='Projected Ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs majority',
+             num=ayes - WIN, desc='Estimated MPs supporting the Budget. 326 votes are required.'),
+        dict(label='Market confidence', value=f"{_clip(s.market_conf + imp['market']):.0f}/100",
+             delta=delta(imp['market']), num=imp['market'] if changed else 0,
+             desc='Investor confidence and the likely market reception.'),
     ])
 
-    # Private Treasury briefing: the Chancellor sees the political and fiscal risks
-    # before deciding whether to send the package to Parliament.
-    briefing_rows = forecast(cur, years=3)
-    lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
-    end_debt = float(briefing_rows[-1]['debt'])
-    market_outlook = _clip(float(s.market_conf) + float(imp.get('market', 0.0)))
-    if lowest_headroom < 0:
-        obr_verdict = "Fiscal rules at risk"
-        obr_detail = f"The central forecast falls to £{lowest_headroom:.1f}bn of headroom. A weaker economy could make the breach worse."
-    elif lowest_headroom < 5:
-        obr_verdict = "Very little fiscal room"
-        obr_detail = f"The lowest projected headroom is £{lowest_headroom:.1f}bn. A small forecast downgrade could wipe it out."
-    else:
-        obr_verdict = "Fiscal rule met"
-        obr_detail = f"The central forecast retains at least £{lowest_headroom:.1f}bn of headroom over the three-year horizon."
-    if ayes < WIN:
-        commons_verdict = "Budget likely to fall"
-        commons_detail = f"Only {ayes} MPs are projected to support the package; {WIN} are needed. The Government would face a confidence crisis."
-    elif ayes < WIN + 15:
-        commons_verdict = "Knife-edge majority"
-        commons_detail = f"{ayes} projected Ayes. A modest rebellion could defeat the Budget."
-    else:
-        commons_verdict = "Likely to pass"
-        commons_detail = f"{ayes} projected Ayes, a working margin of {ayes - WIN} over the majority threshold."
-    if market_outlook < 35:
-        market_verdict = "Investors deeply uneasy"
-        market_detail = "The package is being judged against already weak confidence. Borrowing costs could rise quickly."
-    elif market_outlook < 55:
-        market_verdict = "Markets cautious"
-        market_detail = "Investors will look for credible funding and a believable path for debt."
-    else:
-        market_verdict = "Markets relatively confident"
-        market_detail = "There is some room for a positive reception, provided the fiscal arithmetic holds."
-    st.markdown("### The private Treasury briefing")
-    st.caption("A pre-delivery assessment for the Chancellor. These are modelled forecasts and political estimates, not official OBR or market statements.")
-    brief_cols = st.columns(3, gap="medium")
-    with brief_cols[0]:
-        st.markdown("**OBR · Fiscal outlook**")
-        st.markdown(f"**{obr_verdict}**")
-        st.caption(obr_detail)
-    with brief_cols[1]:
-        st.markdown("**Commons · Parliamentary arithmetic**")
-        st.markdown(f"**{commons_verdict}**")
-        st.caption(commons_detail)
-    with brief_cols[2]:
-        st.markdown("**City · Market reaction**")
-        st.markdown(f"**{market_verdict}**")
-        st.caption(market_detail)
-    debt_direction = "falling" if end_debt < float(s.debt) else "rising"
-    st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
-
-    st.markdown("### Budget options & comparison")
-    st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
-    slots = dict(s.get('budget_alternatives', {}))
-    alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
-    save_col, clear_col = st.columns([1, 1])
-    if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
-        if alt_name not in slots and len(slots) >= 3:
-            st.warning("You can keep three alternatives. Replace or delete one before saving another.")
+    with st.expander('Treasury briefing · three-year outlook', expanded=False):
+        # before deciding whether to send the package to Parliament.
+        briefing_rows = forecast(cur, years=3)
+        lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
+        end_debt = float(briefing_rows[-1]['debt'])
+        market_outlook = _clip(float(s.market_conf) + float(imp.get('market', 0.0)))
+        if lowest_headroom < 0:
+            obr_verdict = "Fiscal rules at risk"
+            obr_detail = f"The central forecast falls to £{lowest_headroom:.1f}bn of headroom. A weaker economy could make the breach worse."
+        elif lowest_headroom < 5:
+            obr_verdict = "Very little fiscal room"
+            obr_detail = f"The lowest projected headroom is £{lowest_headroom:.1f}bn. A small forecast downgrade could wipe it out."
         else:
-            save_budget_alternative(alt_name, cur)
-            st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
-            st.rerun()
-    if slots:
-        if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
-            slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
-        comparison = []
-        for name, item in slots.items():
-            package = item.get('draft', {})
-            totals_rev, totals_spend = totals(package)
-            package_impact = impact(s.budget_applied, package)
-            package_ayes = projected_ayes(package)
-            comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
-                "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
-                "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
-        st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
-        if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
-            selected = slots.get(alt_name)
-            if selected:
-                _reset()
-                for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
-                for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
-                for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
-                for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
-                s.budget_strategy = selected['draft'].get('strategy', 'balanced')
-                st.success(f"{alt_name} loaded into the live draft.")
+            obr_verdict = "Fiscal rule met"
+            obr_detail = f"The central forecast retains at least £{lowest_headroom:.1f}bn of headroom over the three-year horizon."
+        if ayes < WIN:
+            commons_verdict = "Budget likely to fall"
+            commons_detail = f"Only {ayes} MPs are projected to support the package; {WIN} are needed. The Government would face a confidence crisis."
+        elif ayes < WIN + 15:
+            commons_verdict = "Knife-edge majority"
+            commons_detail = f"{ayes} projected Ayes. A modest rebellion could defeat the Budget."
+        else:
+            commons_verdict = "Likely to pass"
+            commons_detail = f"{ayes} projected Ayes, a working margin of {ayes - WIN} over the majority threshold."
+        if market_outlook < 35:
+            market_verdict = "Investors deeply uneasy"
+            market_detail = "The package is being judged against already weak confidence. Borrowing costs could rise quickly."
+        elif market_outlook < 55:
+            market_verdict = "Markets cautious"
+            market_detail = "Investors will look for credible funding and a believable path for debt."
+        else:
+            market_verdict = "Markets relatively confident"
+            market_detail = "There is some room for a positive reception, provided the fiscal arithmetic holds."
+        st.markdown("### The private Treasury briefing")
+        st.caption("A pre-delivery assessment for the Chancellor. These are modelled forecasts and political estimates, not official OBR or market statements.")
+        brief_cols = st.columns(3, gap="medium")
+        with brief_cols[0]:
+            st.markdown("**OBR · Fiscal outlook**")
+            st.markdown(f"**{obr_verdict}**")
+            st.caption(obr_detail)
+        with brief_cols[1]:
+            st.markdown("**Commons · Parliamentary arithmetic**")
+            st.markdown(f"**{commons_verdict}**")
+            st.caption(commons_detail)
+        with brief_cols[2]:
+            st.markdown("**City · Market reaction**")
+            st.markdown(f"**{market_verdict}**")
+            st.caption(market_detail)
+        debt_direction = "falling" if end_debt < floa    with st.expander('Compare alternative Budgets', expanded=False):
+t(s.debt) else "rising"
+            st.caption(f"Three-year debt trajectory: {float(s.debt):.1f}% now → {end_debt:.1f}% of GDP ({debt_direction}). The final decision remains yours, Chancellor.")
+
+
+        st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
+        slots = dict(s.get('budget_alternatives', {}))
+        alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
+        save_col, clear_col = st.columns([1, 1])
+        if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
+            if alt_name not in slots and len(slots) >= 3:
+                st.warning("You can keep three alternatives. Replace or delete one before saving another.")
+            else:
+                save_budget_alternative(alt_name, cur)
+                st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
                 st.rerun()
-    st.divider()
+        if slots:
+            if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
+                slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
+            comparison = []
+            for name, item in slots.items():
+                package = item.get('draft', {})
+                totals_rev, totals_spend = totals(package)
+                package_impact = impact(s.budget_applied, package)
+                package_ayes = projected_ayes(package)
+                comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
+                    "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
+                    "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
+            st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
+            if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
+                selected = slots.get(alt_name)
+                if selected:
+                    _reset()
+                    for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
+                    for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
+                    for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
+                    for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
+                    s.budget_strategy = selected['draft'].get('strategy', 'balanced')
+                    st.success(f"{alt_name} loaded into the live draft.")
+                    st.rerun()
+        st.divider()
+
 
     st.markdown('### Choose your fiscal strategy')
     strategy_keys = list(FISCAL_STRATEGIES)
