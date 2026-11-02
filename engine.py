@@ -661,7 +661,8 @@ def submit_budget():
     s.gilt_yield = round(max(0.1, s.gilt_yield + gilt_move), 2)
     s.budget_speech['market_move'] = gilt_move
     s.budget_speech['market_after'] = s.gilt_yield
-    budget.resolve_budget_risks()\n    budget.commit_budget(ayes)
+    budget.resolve_budget_risks()
+    budget.commit_budget(ayes)
     s.budget_passed = True
     s.budget_day_stage = 4
     s.headlines = generate_headlines(None, True, s.headroom)
