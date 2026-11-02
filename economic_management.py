@@ -12,6 +12,10 @@ def ensure():
     s.setdefault("dmo_last_action","No change to the issuance strategy yet.")
     s.setdefault("stress_test_result",None)
     s.setdefault("gilt_auction_history",[]); s.setdefault("gilt_auction_latest",None)
+    s.setdefault("financial_stability",82.0); s.setdefault("credit_spread_bps",70.0)
+    s.setdefault("rating_outlook","Stable"); s.setdefault("active_financial_crisis",None)
+    s.setdefault("financial_crisis_last_year",""); s.setdefault("financial_crisis_history",[])
+    s.setdefault("market_intervention_history",[])
 
 def annual_update():
     ensure(); s=st.session_state
@@ -100,6 +104,99 @@ def run_gilt_auction():
     else:
         s.message+=f" DMO gilt auction completed orderly at {demand_cover:.2f}x bid-to-cover."
     return record
+
+
+
+def advance_financial_stability():
+    """Update banking/credit-market resilience and raise a playable crisis when stress becomes acute."""
+    ensure(); s=st.session_state
+    growth=float(s.get("growth",0.0)); inflation=float(s.get("inflation",2.0))
+    bank_rate=float(s.get("interest_rate",4.5)); gilt=float(s.get("gilt_yield",4.5))
+    confidence=float(s.get("market_conf",50.0))
+    unemployment=float((s.get("country") or {}).get("unemployment",4.5))
+    stress=(18.0 + max(0.0,bank_rate-4.5)*4.5 + max(0.0,gilt-4.5)*3.8
+            + max(0.0,-growth)*7.0 + max(0.0,45.0-confidence)*0.65
+            + max(0.0,unemployment-5.0)*2.2 + max(0.0,inflation-4.0)*1.5)
+    previous=float(s.get("financial_stability",82.0))
+    stress=max(0.0,min(100.0,0.55*(100.0-previous)+0.45*stress))
+    s.financial_stability=round(100.0-stress,1)
+    s.credit_spread_bps=round(45.0+stress*3.1,0)
+    outlook="Negative" if stress>=72.0 else ("Watch" if stress>=52.0 else "Stable")
+    s.rating_outlook=outlook
+    extra_premium=min(0.45,max(0.0,stress-50.0)*0.009)
+    if extra_premium>0:
+        s.gilt_risk_premium=round(float(s.get("gilt_risk_premium",0.0))+extra_premium,2)
+        yield_bump=round(extra_premium*0.30,2)
+        s.gilt_yield=round(min(15.0,float(s.get("gilt_yield",4.5))+yield_bump),2)
+        debt_bn=max(100.0,float(s.get("gdp_trillion",3.0))*1000.0*float(s.get("debt",0.0))/100.0)
+        refinance=max(0.08,min(0.40,1.0/max(2.0,float(s.get("dmo_maturity",10)))+0.12))
+        interest_cost=round(debt_bn*refinance*yield_bump/100.0,2)
+        s.debt_interest_bill=round(float(s.get("debt_interest_bill",10.7))+interest_cost,2)
+        s.headroom=round(float(s.get("headroom",0.0))-interest_cost,1)
+        s.deficit=round(max(0.0,float(s.get("deficit",0.0))+interest_cost),1)
+    year_label=f"Term {int(s.get('term',1))}, Year {int(s.get('year',1))}"
+    if (stress>=72.0 and not s.get("active_financial_crisis")
+            and not s.get("active_gilt_emergency")
+            and s.get("financial_crisis_last_year")!=year_label):
+        s.active_financial_crisis={
+            "year":year_label,"severity":"severe" if stress>=86.0 else "serious",
+            "stress":round(stress,1),"credit_spread_bps":int(s.credit_spread_bps),
+            "title":"Banking and credit-market stress"}
+        s.message=str(s.get("message",""))+" Credit conditions have deteriorated sharply. The Treasury must agree a financial-stability response."
+    return {"stress":round(stress,1),"stability":s.financial_stability,
+            "credit_spread_bps":int(s.credit_spread_bps),"rating_outlook":outlook}
+
+
+def resolve_financial_crisis(choice):
+    """Resolve a systemic credit event; the Chancellor cannot direct the MPC."""
+    ensure(); s=st.session_state
+    crisis=s.get("active_financial_crisis")
+    if not crisis or choice not in (0,1,2,3): return
+    state.checkpoint(); state.snapshot()
+    before=float(s.get("headroom",0.0))
+    if choice==0:
+        cost=3.0
+        s.headroom=round(float(s.headroom)-cost,1); s.deficit=round(float(s.deficit)+cost,1)
+        s.financial_stability=round(min(100.0,float(s.financial_stability)+18.0),1)
+        s.market_conf=round(min(100.0,float(s.market_conf)+7.0),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.10),2)
+        label="Temporary deposit guarantee"
+        note="A time-limited guarantee reassures depositors and prevents a wider loss of confidence. It creates a £3bn contingent fiscal exposure."
+    elif choice==1:
+        cost=7.0
+        s.headroom=round(float(s.headroom)-cost,1); s.deficit=round(float(s.deficit)+cost,1)
+        s.financial_stability=round(min(100.0,float(s.financial_stability)+27.0),1)
+        s.market_conf=round(min(100.0,float(s.market_conf)+10.0),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.18),2)
+        s.growth=round(float(s.growth)+0.12,2)
+        label="Capital backstop for systemically important lenders"
+        note="A targeted recapitalisation stabilises key lenders and credit supply, but commits £7bn of public funds and angers fiscal hawks."
+    elif choice==2:
+        s.financial_stability=round(min(100.0,float(s.financial_stability)+12.0),1)
+        s.market_conf=round(min(100.0,float(s.market_conf)+5.0),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.07),2)
+        s.boe_last_statement="The Bank is coordinating with the authorities to maintain market functioning and the flow of credit. Monetary policy remains an independent MPC decision."
+        label="Coordinate a Bank-led liquidity response"
+        note="The Bank leads on liquidity and market functioning while the Treasury provides a united public message. No direct fiscal outlay is recorded."
+    else:
+        s.financial_stability=round(min(100.0,float(s.financial_stability)+4.0),1)
+        s.market_conf=round(max(0.0,float(s.market_conf)-6.0),1)
+        s.gilt_yield=round(min(15.0,float(s.gilt_yield)+0.10),2)
+        s.growth=round(float(s.growth)-0.20,2)
+        s.approval=round(max(0.0,float(s.approval)-1.5),1)
+        label="Allow a private-sector-led resolution"
+        note="The Treasury avoids an immediate taxpayer rescue, but uncertainty persists and tighter credit conditions weigh on growth."
+    s.credit_spread_bps=round(max(45.0,45.0+(100.0-float(s.financial_stability))*3.1),0)
+    s.rating_outlook="Negative" if s.financial_stability<35 else ("Watch" if s.financial_stability<65 else "Stable")
+    s.financial_crisis_last_year=str(crisis.get("year",""))
+    s.financial_crisis_history=(list(s.get("financial_crisis_history",[]))+[{
+        "year":crisis.get("year"),"response":label,"stability":float(s.financial_stability),
+        "market_conf":round(float(s.market_conf),1),"headroom_change":round(float(s.headroom)-before,1)}])[-12:]
+    s.market_intervention_history=(list(s.get("market_intervention_history",[]))+[{
+        "year":crisis.get("year"),"action":label,"fiscal_cost":round(max(0.0,before-float(s.headroom)),1)}])[-12:]
+    s.message=f"{label}. {note}"
+    state.log("financial_stability","Financial stability response",choice=label,note=note)
+    s.active_financial_crisis=None
 
 
 def _stress_test():
@@ -205,6 +302,23 @@ def render():
             st.dataframe(list(reversed(s.gilt_auction_history)),hide_index=True,use_container_width=True)
         else:
             st.caption("No auctions have taken place yet.")
+    st.divider(); st.markdown("#### Financial stability & credit conditions")
+    st.caption("A separate indicator of banking-system resilience and private-sector credit stress. It feeds into the marginal cost of government borrowing.")
+    stability=float(s.get("financial_stability",82.0))
+    fc=st.columns(4)
+    fc[0].metric("Financial stability",f"{stability:.1f}/100","Resilient" if stability>=65 else ("Under pressure" if stability>=40 else "Severe stress"))
+    fc[1].metric("Credit spread",f"{float(s.get('credit_spread_bps',70)):.0f} bps")
+    fc[2].metric("Rating outlook",str(s.get("rating_outlook","Stable")))
+    fc[3].metric("Debt interest",f"£{float(s.get('debt_interest_bill',10.7)):.1f}bn")
+    if stability<40:
+        st.error("Credit markets are severely impaired. Banks are tightening lending and the Treasury faces a material risk of a wider financial crisis.")
+    elif stability<65:
+        st.warning("Credit conditions are strained. A further downturn or sharp rise in borrowing costs could trigger a banking and lending crisis.")
+    else:
+        st.success("The financial system is broadly resilient. Credit spreads and market confidence remain manageable.")
+    if s.get("financial_crisis_history"):
+        with st.expander("Previous financial-stability interventions"):
+            st.dataframe(list(reversed(s.financial_crisis_history)),hide_index=True,use_container_width=True)
     st.divider(); st.markdown("#### Fiscal stress testing")
     st.caption("Tests your live Budget draft against illustrative economic shocks. This is a forecast exercise only and does not alter your saved finances.")
     if st.button("Run fiscal stress tests",key="economic_stress_test",type="primary"):
