@@ -214,7 +214,7 @@ def _defaults():
         election_broadcast_stage=0,
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], chancellor_actions=[],
-        cabinet_ministers={}, ministerial_loyalty={}, ministerial_resignations=[],
+        cabinet_ministers={}, ministerial_loyalty={}, ministerial_resignations=[], ministerial_refusals={}, active_dispute=None,
         spending_review_last_period='', spending_review_plan={}, spending_review_history=[],
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
@@ -316,7 +316,7 @@ SAVE_KEYS = [
     'thresholds_frozen', 'personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold', 'gdp_trillion', 'gdp_history', 'world_economy', 'world_history', 'world_cycle', 'temporary_shock',
     'threshold_freeze_scope', 'inheritance_nil_rate_band', 'vat_registration_threshold',
     'retirement_age', 'retirement_age_annual_saving', 'state_pension_weekly', 'state_pension_uprating',
-    'cabinet_ministers', 'ministerial_loyalty', 'ministerial_resignations', 'ministerial_vacancy_year',
+    'cabinet_ministers', 'ministerial_loyalty', 'ministerial_resignations', 'ministerial_vacancy_year', 'ministerial_refusals', 'active_dispute',
     'election_campaign_done', 'election_night_started', 'election_campaign_strategy',
     'election_campaign_turnout', 'election_campaign_approval', 'election_campaign_week', 'election_campaign_actions',
     'constituency_incumbents', 'previous_election_seats',
