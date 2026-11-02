@@ -43,14 +43,55 @@ def annual_update():
         s.message+=" Markets are questioning the perceived independence of the Bank of England."
 
 def _stress_test():
-    s=st.session_state; growth=float(s.get("growth",0)); inflation=float(s.get("inflation",2)); headroom=float(s.get("headroom",0)); deficit=float(s.get("deficit",0)); debt=float(s.get("debt",0))
-    cases=[("Recession",-2.0,-0.4,8.0),("Interest-rate shock",-0.5,1.0,12.0),("Weak productivity",-1.0,0.0,5.0),("Combined severe shock",-3.0,1.5,20.0)]
+    """Run illustrative macro-fiscal shocks against the current Budget draft."""
+    s=st.session_state
+    import budget
+    approved=s.get("budget_applied",budget.read())
+    draft=budget.read()
+    baseline=budget.impact(approved,draft)
+    headroom=float(s.get("headroom",0))+float(baseline.get("headroom",0))
+    deficit=max(0.0,float(s.get("deficit",0))+float(baseline.get("deficit",0)))
+    growth=float(s.get("growth",0))+float(baseline.get("growth",0))
+    inflation=float(s.get("inflation",2))+float(baseline.get("inflation",0))
+    gdp_bn=max(100.0,float(s.get("gdp_trillion",3.0))*1000.0)
+    debt_bn=gdp_bn*float(s.get("debt",0))/100.0
+    maturity=max(2.0,float(s.get("dmo_maturity",s.get("gilt_maturity_years",10))))
+    refinancing_share=max(0.08,min(0.40,1.0/maturity+0.12))
+    cases=[
+        ("Mild slowdown",-1.0,0.0,0.0),
+        ("Recession",-2.5,-0.5,0.5),
+        ("Inflation returns",-0.5,2.0,1.5),
+        ("Gilt-market shock",-1.0,0.5,2.0),
+        ("Severe combined shock",-4.0,2.5,3.0),
+    ]
     rows=[]
-    for name,gh,ih,cost in cases:
-        hit=cost+max(0,ih)*1.5
-        rows.append({"Scenario":name,"Growth after shock":round(growth+gh,2),"Inflation after shock":round(inflation+ih,2),
-          "Headroom after shock (£bn)":round(headroom-hit,1),"Deficit after shock (£bn)":round(deficit+hit,1),
-          "Debt risk":"High" if debt>100 or headroom-hit<0 else "Moderate"})
+    for name,g_shock,i_shock,r_shock in cases:
+        receipts_loss=max(0.0,-g_shock)*0.38*gdp_bn*0.010
+        inflation_cost=max(0.0,i_shock)*0.44*gdp_bn*0.0025
+        interest_cost=debt_bn*max(0.0,r_shock)/100.0*refinancing_share
+        hit=receipts_loss+inflation_cost+interest_cost
+        stressed_headroom=headroom-hit
+        stressed_deficit=deficit+hit
+        debt_after=(debt_bn+hit)/max(1.0,gdp_bn*(1+(growth+g_shock)/100.0))*100.0
+        if stressed_headroom<0:
+            status="Breach"
+        elif stressed_headroom<3:
+            status="Thin"
+        else:
+            status="Resilient"
+        rows.append({
+            "Scenario":name,
+            "Assumptions":f"Growth {g_shock:+.1f}pp; inflation {i_shock:+.1f}pp; rates {r_shock:+.1f}pp",
+            "Growth after shock (%)":round(growth+g_shock,2),
+            "Inflation after shock (%)":round(inflation+i_shock,2),
+            "Receipts loss (£bn)":round(receipts_loss,1),
+            "Inflation cost (£bn)":round(inflation_cost,1),
+            "Extra debt interest (£bn)":round(interest_cost,1),
+            "Headroom after shock (£bn)":round(stressed_headroom,1),
+            "Deficit after shock (£bn)":round(stressed_deficit,1),
+            "Debt ratio after shock (%)":round(debt_after,1),
+            "Fiscal position":status,
+        })
     return rows
 
 def render():
@@ -89,10 +130,22 @@ def render():
         s.message="The DMO has adopted your revised issuance remit. "+s.dmo_last_action
         st.success(s.dmo_last_action)
     st.divider(); st.markdown("#### Fiscal stress testing")
-    st.caption("Test the current fiscal position against adverse scenarios before committing to a Budget.")
-    if st.button("Run four economic stress tests",key="economic_stress_test"): s.stress_test_result=_stress_test()
+    st.caption("Tests your live Budget draft against illustrative economic shocks. This is a forecast exercise only and does not alter your saved finances.")
+    if st.button("Run fiscal stress tests",key="economic_stress_test",type="primary"):
+        s.stress_test_result=_stress_test()
+        s.stress_test_run_label="Term " + str(int(s.get("term",1))) + ", Year " + str(int(s.get("year",1)))
     if s.get("stress_test_result"):
+        st.caption("Latest test: " + str(s.get("stress_test_run_label","Current game position")) + " · includes your uncommitted Budget draft.")
         st.dataframe(s.stress_test_result,hide_index=True,use_container_width=True)
-        worst=min(x["Headroom after shock (£bn)"] for x in s.stress_test_result)
-        if worst<0: st.warning(f"The worst scenario pushes headroom to £{worst:.1f}bn.")
-        else: st.success(f"All four scenarios retain positive headroom; lowest margin £{worst:.1f}bn.")
+        worst=min(s.stress_test_result,key=lambda x:x["Headroom after shock (£bn)"])
+        cols=st.columns(3)
+        cols[0].metric("Worst-case headroom","£" + str(worst["Headroom after shock (£bn)"]) + "bn")
+        cols[1].metric("Worst-case deficit","£" + str(worst["Deficit after shock (£bn)"]) + "bn")
+        cols[2].metric("Worst-case debt ratio",str(worst["Debt ratio after shock (%)"]) + "%")
+        if worst["Headroom after shock (£bn)"]<0:
+            st.error(str(worst["Scenario"]) + " would breach the fiscal rule by £" + str(abs(worst["Headroom after shock (£bn)"])) + "bn.")
+        elif worst["Headroom after shock (£bn)"]<3:
+            st.warning("The buffer is thin: the worst scenario leaves only £" + str(worst["Headroom after shock (£bn)"]) + "bn.")
+        else:
+            st.success("The fiscal position survives all tested shocks. Lowest remaining buffer: £" + str(worst["Headroom after shock (£bn)"]) + "bn.")
+        st.caption("Debt-interest exposure reflects only the estimated share of debt refinanced during the year. Longer average gilt maturity cushions rate shocks.")
