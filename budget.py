@@ -157,6 +157,7 @@ def ensure():
         s.budget_last_tax.setdefault(k, TAXES[k]['default'])
     s.setdefault('budget_last_pol', {'tax_pol': {k: False for k in TAX_POLICIES}, 'spend_pol': {k: False for k in SPEND_POLICIES}})
     s.setdefault('budget_impact', {})
+    s.setdefault('budget_history', [])
     s.setdefault('budget_message', '')
     s.setdefault('whip_ayes', 0)
     s.setdefault('whip_used', [])
@@ -393,9 +394,28 @@ def _whip(key):
 
 
 def commit_budget(ayes):
-    """Called once a Budget has passed the Commons: remember the vote and this year's tax rates, reset the whips."""
+    """Archive the delivered Budget so the Chancellor can inspect previous decisions."""
     s = st.session_state
     s.vote_ayes = ayes
+    delivered = s.budget_applied
+    tax_names = {k: TAXES[k]['short'] for k in TAXES}
+    spending_names = {k: SPEND_DEFAULTS[k]['label'] for k in SPEND_DEFAULTS}
+    revenue_schemes = [TAX_POLICIES[k]['label'] for k, on in delivered.get('tax_pol', {}).items() if on and k in TAX_POLICIES]
+    spending_schemes = [SPEND_POLICIES[k]['label'] for k, on in delivered.get('spend_pol', {}).items() if on and k in SPEND_POLICIES]
+    s.budget_history = list(s.get('budget_history', []))
+    s.budget_history.append({
+        'term': int(s.get('term', 1)), 'year': int(s.get('year', 1)),
+        'label': f"Term {int(s.get('term', 1))} · Year {int(s.get('year', 1))}",
+        'strategy': delivered.get('strategy', 'balanced'),
+        'tax': dict(delivered.get('tax', {})), 'tax_names': tax_names,
+        'spend': dict(delivered.get('spend', {})), 'spend_names': spending_names,
+        'revenue_schemes': revenue_schemes, 'spending_schemes': spending_schemes,
+        'ayes': int(ayes), 'headroom_after': round(float(s.get('headroom', 0)), 1),
+        'deficit_after': round(float(s.get('deficit', 0)), 1),
+        'impact': dict(s.get('budget_impact', {})),
+        'message': str(s.get('budget_message', '')),
+    })
+    s.budget_history = s.budget_history[-12:]
     s.budget_last_tax = dict(s.budget_applied['tax'])
     s.budget_last_pol = {'tax_pol': dict(s.budget_applied['tax_pol']), 'spend_pol': dict(s.budget_applied['spend_pol'])}
     s.budget_impact = {}
@@ -811,6 +831,36 @@ def render(submit=None, after_summary=None):
     if after_summary:
         after_summary()
 
+    # A read-only record of the last delivered settlement, separate from the live draft.
+    history = list(s.get('budget_history', []))
+    if history:
+        last = history[-1]
+        with st.expander(f"📜 Last delivered Budget · {last.get('label', 'Previous Budget')}", expanded=False):
+            st.caption(f"Strategy: {FISCAL_STRATEGIES.get(last.get('strategy'), FISCAL_STRATEGIES['balanced'])['label']} · Commons: {last.get('ayes', 0)} ayes · Headroom after delivery: £{last.get('headroom_after', 0):.1f}bn")
+            h1, h2 = st.columns(2)
+            with h1:
+                st.markdown("**Tax decisions**")
+                for key, value in last.get('tax', {}).items():
+                    name = last.get('tax_names', {}).get(key, key.replace('_', ' ').title())
+                    st.write(f"• {name}: {value:g}")
+                st.markdown("**Revenue schemes**")
+                for name in last.get('revenue_schemes', []):
+                    st.write(f"• {name}")
+                if not last.get('revenue_schemes'): st.caption("No revenue schemes selected.")
+            with h2:
+                st.markdown("**Departmental spending changes**")
+                for key, value in last.get('spend', {}).items():
+                    name = last.get('spend_names', {}).get(key, key.replace('_', ' ').title())
+                    st.write(f"• {name}: {float(value):+g}%")
+                st.markdown("**Spending pledges**")
+                for name in last.get('spending_schemes', []):
+                    st.write(f"• {name}")
+                if not last.get('spending_schemes'): st.caption("No spending pledges selected.")
+            if last.get('message'):
+                st.caption(f"Chancellor's message: {last['message']}")
+    else:
+        st.info("Your previous Budget decisions will be recorded here after your first Budget passes the Commons.")
+
     t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
         ['Taxes', 'Spending', 'Schemes', 'Whips & forecast', 'Charts & Red Book'])
 
@@ -853,16 +903,70 @@ def render(submit=None, after_summary=None):
                         _spend_row(k, SPEND_DEFAULTS[k], s)
 
     with t_schemes:
-        with st.expander(f"Revenue-raising schemes · {len(TAX_POLICIES)} options", expanded=False):
-            st.caption("Select policy ideas that affect annual receipts. Hover over an option for the simplified approval, market and growth effects.")
-            for k, p in TAX_POLICIES.items():
-                st.checkbox(f"{p['label']} (+£{p['yield_bn']}bn)", key=f"btp_{k}",
-                            help=f"Estimated annual yield: £{p['yield_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
-        with st.expander(f"Spending pledges · {len(SPEND_POLICIES)} options", expanded=False):
-            st.caption("Choose programmes that add recurring costs to the Budget. These are stylised scenario costs, not official costings.")
-            for k, p in SPEND_POLICIES.items():
-                st.checkbox(f"{p['label']} (-£{p['cost_bn']}bn)", key=f"bsp_{k}",
-                            help=f"Annual cost: £{p['cost_bn']:.1f}bn. Approval {p['app']:+g}, market confidence {p['mkt']:+g}, growth {p['gro']:+g}pp.")
+        revenue_selected = [k for k, p in TAX_POLICIES.items() if cur['tax_pol'].get(k, False)]
+        spending_selected = [k for k, p in SPEND_POLICIES.items() if cur['spend_pol'].get(k, False)]
+        revenue_yield = sum(float(TAX_POLICIES[k]['yield_bn']) for k in revenue_selected)
+        spending_cost = sum(float(SPEND_POLICIES[k]['cost_bn']) for k in spending_selected)
+        st.markdown("### Policy schemes & commitments")
+        st.caption("Schemes are separate from the main tax-rate and departmental spending controls. Selected schemes are part of this Budget draft and are only locked in when the Budget passes.")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Revenue schemes", len(revenue_selected), f"£{revenue_yield:.1f}bn annual yield")
+        m2.metric("Spending pledges", len(spending_selected), f"£{spending_cost:.1f}bn annual cost")
+        m3.metric("Net scheme impact", f"£{revenue_yield-spending_cost:+.1f}bn", "before wider economic effects")
+        st.markdown("#### Your current selections")
+        selected_left, selected_right = st.columns(2)
+        with selected_left:
+            st.markdown("**Revenue raising**")
+            if revenue_selected:
+                for k in revenue_selected: st.write(f"• {TAX_POLICIES[k]['label']} · +£{TAX_POLICIES[k]['yield_bn']:.1f}bn")
+            else: st.caption("No revenue schemes selected.")
+        with selected_right:
+            st.markdown("**Public spending commitments**")
+            if spending_selected:
+                for k in spending_selected: st.write(f"• {SPEND_POLICIES[k]['label']} · £{SPEND_POLICIES[k]['cost_bn']:.1f}bn")
+            else: st.caption("No spending pledges selected.")
+        st.divider()
+        revenue_groups = {
+            "Households & wealth": ["vat_private", "nondom", "wealth", "mansion", "pension_relief_reform", "relief_cap", "landlord_relief", "property_empty", "luxury_goods_levy"],
+            "Business, banks & digital economy": ["windfall", "digital", "buyback_levy", "bank_surcharge", "bank_surcharge_reform", "vat_compliance", "online_marketplace", "tax_gap", "hmrc_enforcement"],
+            "Environment, transport & consumption": ["carbon", "close_fossil_relief", "aviation_levy", "ev_road_pricing", "gambling", "online_gambling", "packaging_levy", "carbon_border", "stamp_duty_reform"],
+        }
+        st.markdown("#### Revenue-raising schemes")
+        for group, keys in revenue_groups.items():
+            available = [(k, TAX_POLICIES[k]) for k in keys if k in TAX_POLICIES]
+            if not available: continue
+            with st.expander(f"{group} · {sum(1 for k, p in available if cur['tax_pol'].get(k, False))}/{len(available)} selected", expanded=False):
+                for k, p in available:
+                    st.checkbox(f"{p['label']} (+£{p['yield_bn']:.1f}bn)", key=f"btp_{k}",
+                                help=f"Annual yield: £{p['yield_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+        st.markdown("#### Spending commitments")
+        spending_groups = {
+            "NHS, education & family support": ["meals", "child_cap", "childcare", "winterfuel", "nhs_workforce", "primary_care", "nhs_diagnostics", "school_rebuild", "school_breakfast", "social_care"],
+            "Housing, communities & transport": ["hs2", "social_housing", "bus_network", "potholes", "regional_growth", "town_deal", "homelessness_prevention"],
+            "Energy, industry & national resilience": ["nuclear", "home_insulation", "grid_upgrade", "grid_storage", "defence_industry", "flood_defences", "technical_skills", "youth_opportunity", "prison_capacity", "water"],
+        }
+        for group, keys in spending_groups.items():
+            available = [(k, SPEND_POLICIES[k]) for k in keys if k in SPEND_POLICIES]
+            if not available: continue
+            with st.expander(f"{group} · {sum(1 for k, p in available if cur['spend_pol'].get(k, False))}/{len(available)} selected", expanded=False):
+                for k, p in available:
+                    st.checkbox(f"{p['label']} (−£{p['cost_bn']:.1f}bn)", key=f"bsp_{k}",
+                                help=f"Annual cost: £{p['cost_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+        # Keep any future data-file options visible rather than silently omitting them.
+        grouped_tax = {k for keys in revenue_groups.values() for k in keys}
+        other_tax = [(k, p) for k, p in TAX_POLICIES.items() if k not in grouped_tax]
+        if other_tax:
+            with st.expander(f"Other revenue schemes · {len(other_tax)} options", expanded=False):
+                for k, p in other_tax:
+                    st.checkbox(f"{p['label']} (+£{p['yield_bn']:.1f}bn)", key=f"btp_{k}",
+                                help=f"Annual yield: £{p['yield_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
+        grouped_spend = {k for keys in spending_groups.values() for k in keys}
+        other_spend = [(k, p) for k, p in SPEND_POLICIES.items() if k not in grouped_spend]
+        if other_spend:
+            with st.expander(f"Other spending pledges · {len(other_spend)} options", expanded=False):
+                for k, p in other_spend:
+                    st.checkbox(f"{p['label']} (−£{p['cost_bn']:.1f}bn)", key=f"bsp_{k}",
+                                help=f"Annual cost: £{p['cost_bn']:.1f}bn · Approval {p['app']:+g} · Markets {p['mkt']:+g} · Growth {p['gro']:+g}pp")
 
     with t_whips:
         left, right = st.columns(2)
