@@ -1946,6 +1946,53 @@ div[data-baseweb="tooltip"] { border:1px solid #dce3eb !important; border-radius
     scroll-behavior:auto !important;
   }
 }
+
+/* Permanent Chancellor's Desk sidebar */
+section[data-testid="stSidebar"] {
+  width:340px !important;
+  min-width:320px !important;
+  background:#f8fafc !important;
+  border-right:1px solid #dce3eb !important;
+}
+section[data-testid="stSidebar"] > div {
+  padding:1rem .85rem 1.4rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap:.52rem !important; }
+.desk-brand {display:flex;align-items:center;gap:11px;padding:5px 3px 13px;border-bottom:1px solid #dce3eb;margin-bottom:6px;}
+.desk-monogram {width:39px;height:39px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#203b59;color:#fff;font-family:'Manrope',sans-serif;font-size:1.3rem;font-weight:800;}
+.desk-kicker {font-size:.57rem;letter-spacing:.14em;font-weight:800;color:#8a6b34;}
+.desk-title {font-family:'Manrope',sans-serif;color:#203b59;font-size:1.13rem;font-weight:800;line-height:1.2;}
+.desk-period {display:flex;flex-direction:column;gap:2px;padding:9px 11px;border-radius:10px;background:#edf3f7;border:1px solid #dce5ec;margin:1px 0 3px;}
+.desk-period span {font-size:.7rem;color:#64788e;font-weight:700;}
+.desk-period strong {font-family:'Manrope',sans-serif;font-size:.93rem;color:#203b59;}
+.desk-period small {font-size:.66rem;color:#7c8b9a;}
+.desk-section-title {display:flex;align-items:center;justify-content:space-between;margin:9px 0 2px;color:#8290a0;font-size:.61rem;font-weight:800;letter-spacing:.13em;}
+.desk-count {display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:#edf1f5;color:#64788e;font-size:.62rem;}
+.desk-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+.desk-tile {display:flex;flex-direction:column;gap:2px;min-width:0;padding:8px 9px;border:1px solid #e0e7ee;border-radius:9px;background:#fff;}
+.desk-tile-label {color:#8290a0;font-size:.59rem;font-weight:700;letter-spacing:.035em;}
+.desk-tile strong {color:#20364f;font-family:'Manrope',sans-serif;font-size:1rem;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;}
+.desk-tile small {color:#8a98a7;font-size:.58rem;line-height:1.2;}
+section[data-testid="stSidebar"] [data-testid="stExpander"] {background:#fff!important;border:1px solid #dce3eb!important;border-radius:9px!important;}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {padding:.48rem .65rem!important;font-size:.76rem!important;}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {padding:.3rem .65rem .7rem!important;}
+section[data-testid="stSidebar"] [data-testid="stExpander"] p {font-size:.72rem!important;line-height:1.4!important;}
+section[data-testid="stSidebar"] [data-testid="stMetric"] {padding:8px!important;min-height:auto!important;}
+section[data-testid="stSidebar"] [data-testid="stMetricValue"] {font-size:1.05rem!important;}
+.desk-warning {display:flex;align-items:center;gap:8px;margin:4px 0;padding:7px 9px;border:1px solid #e5e9ee;border-radius:8px;background:#fff;color:#52667b;font-size:.68rem;line-height:1.3;}
+.desk-warning span {width:7px;height:7px;flex:none;border-radius:50%;background:#b48a3f;}
+.desk-warning.urgent {background:#fff7f6;border-color:#f0d8d5;color:#8e4943;}
+.desk-warning.urgent span {background:#bd6258;}
+.desk-clear {padding:8px 9px;border:1px solid #d7e8de;border-radius:8px;background:#f2f8f4;color:#467459;font-size:.7rem;}
+.desk-clear span {font-weight:900;margin-right:6px;}
+.desk-diary {display:flex;align-items:center;gap:8px;padding:6px 1px;border-bottom:1px solid #e8edf2;}
+.desk-diary span {min-width:51px;color:#8a6b34;font-size:.55rem;font-weight:800;letter-spacing:.08em;}
+.desk-diary strong {color:#435970;font-size:.69rem;font-weight:650;}
+section[data-testid="stSidebar"] [data-testid="stButton"] button,
+section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {min-height:2.15rem!important;font-size:.72rem!important;}
+@media(max-width:700px) {
+  section[data-testid="stSidebar"] {width:min(88vw,340px)!important;min-width:min(88vw,340px)!important;}
+}
 </style>
 """
 
