@@ -1539,6 +1539,87 @@ div[role="radiogroup"] [data-baseweb="radio"] input:checked + div > div {
   border-color: #dce3eb !important;
   opacity: 1 !important;
 }
+
+/* SECOND PASS: remove remaining Streamlit default red accents and legacy notice colours */
+:root,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+  --primary-color: #397b78 !important;
+  --secondary-background-color: #ffffff !important;
+  --text-color: #20364f !important;
+}
+[data-testid="stTabs"] [role="tablist"] {
+  border-bottom: 1px solid #dce3eb !important;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  color: #52657a !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 3px solid transparent !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+[data-testid="stTabs"] button[role="tab"]:hover {
+  color: #203b59 !important;
+  background: #edf3f6 !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color: #203b59 !important;
+  background: #ffffff !important;
+  border-bottom: 3px solid #397b78 !important;
+  box-shadow: none !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-testid="stTabHighlight"] {
+  display: none !important;
+  background: transparent !important;
+  height: 0 !important;
+  border: 0 !important;
+}
+
+/* Standard Streamlit alerts: readable pale surfaces, no dark burgundy fills. */
+[data-testid="stAlert"],
+[data-testid="stAlert"] > div,
+[data-testid="stAlert"] [role="alert"],
+div[data-baseweb="notification"] {
+  background: #f2f7fa !important;
+  background-color: #f2f7fa !important;
+  color: #29445d !important;
+  border: 1px solid #d7e3ec !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] span,
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
+div[data-baseweb="notification"] * {
+  color: #29445d !important;
+  -webkit-text-fill-color: #29445d !important;
+}
+[data-testid="stAlert"] svg,
+div[data-baseweb="notification"] svg {
+  color: #397b78 !important;
+  fill: #397b78 !important;
+}
+
+/* Deliberate semantic variants while keeping every alert inside the light theme. */
+[data-testid="stAlert"]:has(svg[viewBox]) { color: #29445d !important; }
+.treasury-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 18px;
+  border-radius: 11px;
+  margin: 10px 0 16px;
+  border: 1px solid #d7e3ec;
+  background: #f2f7fa;
+  color: #29445d !important;
+  line-height: 1.5;
+}
+.treasury-notice strong { color: #203b59 !important; display:block; margin-bottom:2px; }
+.treasury-notice.info { border-left:4px solid #397b78; }
+.treasury-notice.success { background:#f0f7f3; border-color:#d1e5d9; border-left:4px solid #4c8a68; }
+.treasury-notice.success strong { color:#315f49 !important; }
 </style>
 """
 
