@@ -17,6 +17,7 @@ import scenarios as scen
 import state
 import treasury
 import world_economy
+import weekly_events
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -333,12 +334,46 @@ def execute_decision(opt):
     deliver_pending()
     settle()
     s.active_crisis = scen.pick_next(s.year, s.block, ideology)
+    s.active_weekly_event = None
+    if s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'):
+        s.active_weekly_event = weekly_events.pick(s.get('seed', 0), s.steps, s.get('last_weekly_event'))
+        if s.active_weekly_event:
+            s.last_weekly_event = s.active_weekly_event.get('id')
     s.block += 1
     if s.block == 2 and random.random() < REQUEST_CHANCE:
         s.active_request = politics.pick_request()      # a minister wants money before the year's second decision
     state.record()
     check_sacked()
 
+
+
+def resolve_weekly_event(choice_index):
+    """Resolve a dynamic political/economic event and apply its consequences."""
+    s = st.session_state
+    event = s.get('active_weekly_event')
+    if not event:
+        return
+    options = event.get('options', [])
+    if choice_index < 0 or choice_index >= len(options):
+        return
+    state.checkpoint()
+    reseed('weekly_event')
+    s.event_cards = []
+    before = state.values()
+    state.snapshot()
+    label, fx, note = options[choice_index]
+    apply_effect(fx)
+    # A real tax miss is a revenue loss, not just a political headline.
+    if event.get('id') in ('tax_shortfall', 'retail_tax_warning'):
+        s.deficit = round(float(s.get('deficit', 0)) + max(0.0, -float(fx.get('headroom', 0))), 1)
+    s.message = note
+    s.event_cards.append({'title': event.get('title', 'Weekly event'), 'text': label, 'summary': state.fmt_fx(fx) or 'Political consequences recorded'})
+    state.log('event', event.get('title', 'Weekly event'), choice=label, before=before, note=note)
+    s.active_weekly_event = None
+    s.steps += 1
+    settle()
+    state.record()
+    check_sacked()
 
 def resolve_crisis(idx):
     s = st.session_state
