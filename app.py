@@ -291,8 +291,6 @@ if s.year > 5:
             st.markdown("**Closest contests in this region**")
             for row in close:
                 st.write(f"• {row.get('name', 'Constituency')} — {row.get('winner', 'Unknown')} holds/wins by {float(row.get('margin', 0)):.1f} points")
-        national_tally = {p: sum(1 for row in local_results if row.get('winner') == p) for p in state.PARTIES}
-        projected = sorted(national_tally.items(), key=lambda item: item[1], reverse=True)
         st.info("National seat tally is being held back until the regional declarations are complete. The count is modelled for gameplay; it is not a live or official forecast.")
         if st.button(f"Declare {nation_order[stage]} results", type="primary", use_container_width=True):
             s.election_broadcast_stage = stage + 1
