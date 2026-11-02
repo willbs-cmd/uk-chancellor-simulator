@@ -756,6 +756,22 @@ def compute_seats(polls, return_details=False):
             national = max(0.1, float(polls.get(party, 0.0)))
             local_lean = rng.gauss(0.0, 5.8)
             regional = nation_effects.get(nation, {}).get(party, 0.0)
+
+            # First Past the Post rewards parties whose support is concentrated.
+            # Model Lib Dem target seats separately from their national average:
+            # a stable subset has a strong local base, while support is thinner
+            # elsewhere. The stable seed keeps the same map across reruns.
+            if party == 'Liberal Democrats':
+                stronghold_rng = random.Random('libdem-target:' + str(seat.get('code', seat.get('name', ''))))
+                in_stronghold = stronghold_rng.random() < 0.20
+                local_concentration = 24.0 if in_stronghold else -6.0
+            elif party == 'Green Party':
+                stronghold_rng = random.Random('green-target:' + str(seat.get('code', seat.get('name', ''))))
+                in_stronghold = stronghold_rng.random() < 0.10
+                local_concentration = 18.0 if in_stronghold else -2.0
+            else:
+                local_concentration = 0.0
+
             incumbents = s.get('constituency_incumbents', {})
             incumbent_party = incumbents.get(str(seat.get('code', '')))
             incumbency = 2.2 if incumbent_party == party else 0.0
@@ -764,7 +780,7 @@ def compute_seats(polls, return_details=False):
             # seat-level variation. A narrow national lead must not become a
             # near-total parliamentary sweep. Regional parties retain a geographic
             # advantage in their home nations.
-            scores[party] = max(0.01, national + local_lean + regional + incumbency)
+            scores[party] = max(0.01, national + local_lean + regional + local_concentration + incumbency)
         winner = max(parties, key=lambda p: scores[p])
         seats[winner] += 1
         results.append({
