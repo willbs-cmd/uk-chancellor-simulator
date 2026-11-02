@@ -153,7 +153,10 @@ def scorecard_block(show_share=True):
 # ==================== GAME OVER (sacked / lost / resigned) ====================
 if s.get('game_over'):
     over = s.game_over
-    if over['kind'] == 'sacked':
+    if over['kind'] == 'resigned':
+        humphrey_message("A difficult day, Chancellor. You have left the Treasury by your own decision, rather than wait to be removed.")
+        st.info("You resigned following a direct ultimatum from the Prime Minister.")
+    elif over['kind'] == 'sacked':
         humphrey_message("I am so sorry, Chancellor. The Prime Minister feels that your continued presence at the Treasury "
                          "is... politically sub-optimal. The removal van is waiting at the back door of Number 11.")
         st.error(s.get('sacked_reason') or 'You have been sacked.')
@@ -548,6 +551,27 @@ def crisis_screen():
         st.rerun()
 
 
+def pm_ultimatum_screen():
+    ultimatum=s.get("active_pm_ultimatum") or {}
+    st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> NUMBER 10 · PRIVATE MEETING</div><div class='briefing-heading'>The Prime Minister's ultimatum</div>",unsafe_allow_html=True)
+    st.error("The Prime Minister has told you that confidence in your handling of the economy has collapsed. Your position as Chancellor is no longer secure.")
+    st.markdown(f"**PM confidence:** {float(ultimatum.get('pm_opinion',s.get('pm_opinion',0))):.0f}/100")
+    humphrey_message("Chancellor, the Prime Minister has been quite direct. They want to know whether you intend to offer your resignation. I would advise choosing your words very carefully.")
+    st.markdown("### You must decide")
+    with st.container(border=True):
+        st.markdown("**Tender your resignation**")
+        st.caption("Leave the Treasury with immediate effect. Your career as Chancellor ends, but you avoid being publicly dismissed.")
+        if st.button("Offer my resignation",type="secondary",use_container_width=True):
+            engine.resolve_pm_ultimatum(0)
+            st.rerun()
+    with st.container(border=True):
+        st.markdown("**Refuse to resign and fight for your position**")
+        st.caption("You need sufficient Cabinet or PM support to survive. If you lack it, the PM will dismiss you.")
+        if st.button("Refuse to resign",type="primary",use_container_width=True):
+            engine.resolve_pm_ultimatum(1)
+            st.rerun()
+
+
 def gilt_emergency_screen():
     emergency=s.get("active_gilt_emergency") or {}
     st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> TREASURY · EMERGENCY MEETING</div><div class='briefing-heading'>The gilt market is in crisis</div>",unsafe_allow_html=True)
@@ -780,6 +804,8 @@ tab_action, tab_briefing, tab_economy, tab_government, tab_treasury = st.tabs([
 with tab_action:
     if s.get('local_election_due'):
         local_elections.render(widget_namespace='action')
+    elif s.get('active_pm_ultimatum'):
+        pm_ultimatum_screen()
     elif s.get('active_gilt_emergency'):
         gilt_emergency_screen()
     elif s.active_crisis is not None:
