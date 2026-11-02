@@ -102,7 +102,7 @@ def defaults():
             'additional_rate_threshold': 125140.0, 'inheritance_nil_rate_band': 325000.0,
             'vat_registration_threshold': 90000.0, 'thresholds_frozen': False,
             'threshold_freeze_scope': 'Personal allowance and all bands',
-            'council_tax_revaluation': False, 'pension_relief_reform': False,
+            'council_tax_revaluation': False,
         },
     }
 
@@ -271,7 +271,6 @@ def read():
             'thresholds_frozen': bool(s['bt_threshold_thresholds_frozen']),
             'threshold_freeze_scope': str(s['bt_threshold_threshold_freeze_scope']),
             'council_tax_revaluation': bool(s['bt_threshold_council_tax_revaluation']),
-            'pension_relief_reform': bool(s['bt_threshold_pension_relief_reform']),
         },
     }
 
@@ -583,7 +582,7 @@ def threshold_budget_balance(thresholds):
         + (float(t.get('inheritance_nil_rate_band', 325000)) - 325000.0) / 1000.0 * 0.08
         + (float(t.get('vat_registration_threshold', 90000)) - 90000.0) / 1000.0 * 0.05
     )
-    return -cost + (0.5 if t.get('council_tax_revaluation') else 0.0) + (0.8 if t.get('pension_relief_reform') else 0.0)
+    return -cost + (0.5 if t.get('council_tax_revaluation') else 0.0)
 
 
 def totals(b):
@@ -685,7 +684,6 @@ def impact(old, new):
         + (float(new_thresholds.get('higher_rate_threshold', 50270)) - float(old_thresholds.get('higher_rate_threshold', 50270))) / 1000.0 * 0.06
         + (float(new_thresholds.get('additional_rate_threshold', 125140)) - float(old_thresholds.get('additional_rate_threshold', 125140))) / 1000.0 * 0.02
         - (1.5 if new_thresholds.get('council_tax_revaluation') and not old_thresholds.get('council_tax_revaluation') else 0.0)
-        - (1.0 if new_thresholds.get('pension_relief_reform') and not old_thresholds.get('pension_relief_reform') else 0.0)
     )
     approval = (-0.10 * household - 0.03 * wealth + threshold_household_change
                 + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
@@ -1653,11 +1651,7 @@ def render(submit=None, after_summary=None):
             if (float(s['bt_threshold_personal_allowance']) >= float(s['bt_threshold_higher_rate_threshold'])
                     or float(s['bt_threshold_higher_rate_threshold']) >= float(s['bt_threshold_additional_rate_threshold'])):
                 st.error('Tax thresholds must be ordered: personal allowance < higher-rate threshold < additional-rate threshold.')
-            extra1, extra2 = st.columns(2)
-            with extra1:
-                st.checkbox('Revalue council tax bands', key='bt_threshold_council_tax_revaluation', help='A modelled revenue increase, with a political cost for affected households.')
-            with extra2:
-                st.checkbox('Reduce higher-rate pension tax relief', key='bt_threshold_pension_relief_reform', help='Raises revenue but may make pension saving less attractive to some higher-rate taxpayers.')
+            st.checkbox('Revalue council tax bands', key='bt_threshold_council_tax_revaluation', help='A modelled revenue increase, with a political cost for affected households. This is a recurring measure once approved.')
             threshold_change = threshold_budget_balance(read().get('thresholds', {})) - threshold_budget_balance(applied.get('thresholds', {}))
             st.caption(f'Estimated annual change from threshold measures: £{threshold_change:+.2f}bn. These are simplified gameplay estimates.')
         groups = {}
