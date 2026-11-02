@@ -223,6 +223,18 @@ def render():
                     x.backbench_opinion = _clip(x.backbench_opinion - 3)
                 x.pay_settlement = pay
             _act("pay_round", 2, "Public-sector pay round", pay_fx); st.rerun()
+        st.markdown("**Current tax thresholds · Budget-controlled**")
+        st.caption(
+            f"Personal allowance £{float(s.get('personal_allowance', 12570)):,.0f} · "
+            f"Higher-rate threshold £{float(s.get('higher_rate_threshold', 50270)):,.0f} · "
+            f"Additional-rate threshold £{float(s.get('additional_rate_threshold', 125140)):,.0f}"
+        )
+        st.caption(
+            f"Inheritance tax nil-rate band £{float(s.get('inheritance_nil_rate_band', 325000)):,.0f} · "
+            f"VAT registration threshold £{float(s.get('vat_registration_threshold', 90000)):,.0f} · "
+            + ("Income-tax thresholds currently frozen." if s.get('thresholds_frozen', False) else "Income-tax thresholds currently uprate annually.")
+        )
+        st.caption("These figures are read-only here. Propose changes in the Budget's Tax & revenue section; they take effect only when the Budget is delivered.")
         st.markdown("**State pension & retirement age**")
         s.setdefault("retirement_age", 66)
         s.setdefault("retirement_age_annual_saving", 0.0)
