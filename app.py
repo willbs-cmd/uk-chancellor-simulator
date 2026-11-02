@@ -573,6 +573,22 @@ def request_screen():
             st.rerun()
 
 
+
+def weekly_event_screen():
+    event = s.get('active_weekly_event') or {}
+    st.markdown(f"<div class='briefing-kicker'>WEEKLY TREASURY BRIEFING · {event.get('category', 'Government')}</div><div class='briefing-heading'>{event.get('title', 'An unexpected development')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='briefing-context'>{event.get('text', '')}</div>", unsafe_allow_html=True)
+    humphrey_message("An awkward development, Chancellor. None of these options is entirely painless. The consequences will be felt in the Treasury and beyond.")
+    options = event.get('options', [])
+    labels = [item[0] for item in options]
+    choice = st.radio("Choose your response:", labels, index=None, key=f"weekly_event_{s.steps}", label_visibility="collapsed")
+    if choice is not None:
+        st.caption(options[labels.index(choice)][2])
+    if st.button("Confirm response", type="primary", disabled=choice is None, use_container_width=True):
+        engine.resolve_weekly_event(labels.index(choice))
+        st.rerun()
+
+
 def ministerial_dispute_screen():
     dispute = s.get('active_dispute') or {}
     minister = dispute.get('minister', 'Cabinet minister')
@@ -751,6 +767,8 @@ with tab_action:
         crisis_screen()
     elif s.get('active_dispute'):
         ministerial_dispute_screen()
+    elif s.get('active_weekly_event'):
+        weekly_event_screen()
     elif s.get('active_request'):
         request_screen()
     else:
