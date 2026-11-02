@@ -308,7 +308,8 @@ def _apply():
     s.inflation = round(s.inflation + imp['inflation'], 2)
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
     s.budget_applied = new
-    s.budget_strategy = new.get('strategy', 'balanced')
+    # budget_strategy is a Streamlit widget key. Its value already came from read();
+    # assigning it here after widget creation raises StreamlitWidgetAlreadyInstantiatedError.
     acc = dict(s.get('budget_impact') or {})
     for k, v in imp.items():
         acc[k] = round(acc.get(k, 0.0) + v, 4)
