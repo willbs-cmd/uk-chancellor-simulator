@@ -502,6 +502,49 @@ def resolve_crisis(idx):
 OPINION_KEYS = ('pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion', 'media_opinion')
 
 
+def resolve_gilt_emergency(choice):
+    """Resolve the emergency Treasury meeting triggered by a failed gilt auction."""
+    s=st.session_state
+    emergency=s.get("active_gilt_emergency")
+    if not emergency: return
+    state.checkpoint()
+    before=state.values()
+    state.snapshot()
+    if choice==0:
+        s.headroom=round(float(s.headroom)+3.0,1)
+        s.deficit=round(max(0.0,float(s.deficit)-3.0),1)
+        s.market_conf=round(_clip(float(s.market_conf)+5.0),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.12),2)
+        s.approval=round(_clip(float(s.approval)-2.5),1)
+        s.backbench_opinion=round(_clip(float(s.backbench_opinion)-4.0),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)+1.0),1)
+        label="Announce immediate spending restraint"
+        note="The Treasury announces £3bn of immediate restraint. Investors welcome the signal, but public services and backbenchers are angry."
+    elif choice==1:
+        s.pm_opinion=round(_clip(float(s.pm_opinion)+5.0),1)
+        s.market_conf=round(_clip(float(s.market_conf)+1.5),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.04),2)
+        s.backbench_opinion=round(_clip(float(s.backbench_opinion)+1.0),1)
+        label="Ask the Prime Minister for a united statement"
+        note="The PM joins you in promising a credible fiscal plan. The show of unity steadies markets, although it does not solve the borrowing problem."
+    elif choice==2:
+        s.headroom=round(float(s.headroom)+1.5,1)
+        s.deficit=round(max(0.0,float(s.deficit)-1.5),1)
+        s.market_conf=round(_clip(float(s.market_conf)+3.0),1)
+        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.08),2)
+        s.approval=round(_clip(float(s.approval)-1.0),1)
+        s.pm_opinion=round(_clip(float(s.pm_opinion)-1.5),1)
+        label="Call an emergency Budget"
+        note="You announce an emergency fiscal package: £1.5bn of near-term consolidation and a promise of revised forecasts. Markets recover slightly, but the PM is uneasy about another Budget."
+    else: return
+    s.message=note
+    s.active_gilt_emergency=None
+    s.gilt_emergency_history=(list(s.get("gilt_emergency_history",[]))+[{"year":emergency.get("year"),"response":label,"market_conf":round(float(s.market_conf),1),"gilt_yield":round(float(s.gilt_yield),2)}])[-12:]
+    state.log("gilt_emergency","Emergency Treasury meeting",choice=label,before=before,note=note)
+    settle()
+    state.record()
+    check_sacked()
+
 def resolve_request(accept):
     """Answer a cabinet minister's request for money: approve it (costs headroom) or refuse (they remember)."""
     s = st.session_state
