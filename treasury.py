@@ -151,6 +151,56 @@ def invest(key, amount):
     return True, s.message
 
 
+
+def fiscal_outlook(years=3):
+    """Build an illustrative, non-mutating medium-term fiscal projection."""
+    s = st.session_state
+    gdp = max(0.1, float(s.get("gdp_trillion", 3.0)))
+    growth = float(s.get("growth", 1.0))
+    inflation = float(s.get("inflation", 2.0))
+    deficit = max(0.0, float(s.get("deficit", 0.0)))
+    debt_ratio = max(0.0, float(s.get("debt", 90.0)))
+    headroom = float(s.get("headroom", 0.0))
+    rate = max(0.1, float(s.get("gilt_yield", 4.5)))
+    interest = max(0.0, float(s.get("debt_interest_bill", 10.7)))
+    pressure = float(s.get("treasury_last_cost_pressures", {}).get("Total recurring pressures (£bn)", 1.0))
+    cases = {
+        "Baseline": (growth, inflation, 0.0),
+        "Stronger growth": (growth + 1.0, max(0.0, inflation - 0.2), 0.0),
+        "Downturn": (growth - 1.5, inflation + 0.8, 0.65),
+    }
+    rows = []
+    for scenario, (g, inf, rate_shock) in cases.items():
+        case_gdp = gdp
+        case_deficit = deficit
+        case_headroom = headroom
+        case_debt = gdp * debt_ratio / 100.0
+        case_interest = interest
+        for year in range(1, years + 1):
+            nominal = max(-8.0, min(15.0, g + inf))
+            case_gdp *= max(0.5, 1.0 + nominal / 100.0)
+            # Approximate automatic tax buoyancy; only 30% of positive receipts
+            # growth becomes fiscal headroom, while downturn losses pass through.
+            receipt_change = case_gdp * 0.16 * (nominal / 100.0)
+            receipt_change = receipt_change * 0.30 if receipt_change > 0 else receipt_change
+            spending_pressure = pressure * (1.0 + max(0.0, inf - 2.0) * 0.08) * (1.04 ** (year - 1))
+            refinancing_cost = case_debt * (0.15 * rate_shock / 100.0)
+            annual_balance_hit = spending_pressure + refinancing_cost - receipt_change
+            case_deficit = max(0.0, case_deficit + annual_balance_hit)
+            case_headroom -= annual_balance_hit
+            case_debt += case_deficit
+            # Gradual repricing only: most outstanding gilts do not reset at once.
+            case_interest += case_debt * 0.15 * (rate_shock / 100.0)
+        rows.append({
+            "Scenario": scenario,
+            "GDP after 3 years (£tn)": round(case_gdp, 2),
+            "Annual deficit (£bn)": round(case_deficit, 1),
+            "Fiscal headroom (£bn)": round(case_headroom, 1),
+            "Debt (£bn)": round(case_debt, 1),
+            "Debt interest (£bn)": round(max(0.0, case_interest), 1),
+        })
+    return rows
+
 def render():
     """Treasury investment desk and a transparent record of passive receipts."""
     ensure()
@@ -158,6 +208,33 @@ def render():
     if s.get("treasury_notice"):
         st.success(s.treasury_notice)
         s.treasury_notice = ""
+    st.markdown("### Treasury dashboard")
+    st.caption("A consolidated view of the public finances. Figures are gameplay estimates, not official forecasts.")
+    debt_bn = max(0.0, float(s.get("gdp_trillion", 3.0)) * 1000.0 * float(s.get("debt", 0.0)) / 100.0)
+    snap = st.columns(4)
+    snap[0].metric("Fiscal headroom", f"£{float(s.get('headroom', 0.0)):.1f}bn", help="Current buffer against the game's fiscal rule.")
+    snap[1].metric("Annual deficit", f"£{float(s.get('deficit', 0.0)):.1f}bn")
+    snap[2].metric("Debt-to-GDP", f"{float(s.get('debt', 0.0)):.1f}%")
+    snap[3].metric("Debt interest", f"£{float(s.get('debt_interest_bill', 10.7)):.1f}bn")
+    if float(s.get("headroom", 0.0)) < 0:
+        st.error("The fiscal buffer is already in deficit. New permanent commitments will make the position harder to restore.")
+    elif float(s.get("headroom", 0.0)) < 5:
+        st.warning("The fiscal buffer is thin. A modest forecast downgrade could eliminate it.")
+    else:
+        st.success("There is a positive fiscal buffer. Stress-test it before committing to permanent spending.")
+    with st.expander("Three-year fiscal outlook", expanded=True):
+        st.caption("Illustrative scenario model using current growth, inflation, debt and recurring spending pressures. It is a planning aid, not an OBR forecast; it does not alter your live finances.")
+        outlook = fiscal_outlook(3)
+        st.dataframe(outlook, hide_index=True, use_container_width=True)
+        base = next(row for row in outlook if row["Scenario"] == "Baseline")
+        downside = next(row for row in outlook if row["Scenario"] == "Downturn")
+        oc = st.columns(3)
+        oc[0].metric("Baseline headroom in year 3", f"£{base['Fiscal headroom (£bn)']:.1f}bn")
+        oc[1].metric("Downturn headroom in year 3", f"£{downside['Fiscal headroom (£bn)']:.1f}bn")
+        oc[2].metric("Baseline debt interest", f"£{base['Debt interest (£bn)']:.1f}bn")
+        if downside["Fiscal headroom (£bn)"] < 0:
+            st.warning("The downturn scenario exhausts the current fiscal buffer. Consider rebuilding headroom or reducing exposure to permanent commitments.")
+    st.divider()
     st.markdown("### 🏦 Treasury investment fund")
     st.caption("Invest available fiscal headroom in public assets. Capital is committed upfront; income and asset values update each spring.")
     total_assets = sum(float(v) for v in s.treasury_assets.values())
