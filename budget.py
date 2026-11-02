@@ -157,6 +157,16 @@ def ensure():
         s.budget_last_tax.setdefault(k, TAXES[k]['default'])
     s.setdefault('budget_last_pol', {'tax_pol': {k: False for k in TAX_POLICIES}, 'spend_pol': {k: False for k in SPEND_POLICIES}})
     s.setdefault('budget_impact', {})
+    s.setdefault('budget_scheme_delivery', {'tax': {}, 'spend': {}})
+    if not isinstance(s.budget_scheme_delivery, dict):
+        s.budget_scheme_delivery = {'tax': {}, 'spend': {}}
+    for kind, table in (('tax', TAX_POLICIES), ('spend', SPEND_POLICIES)):
+        s.budget_scheme_delivery.setdefault(kind, {})
+        for key, active in s.budget_applied.get(f'{kind}_pol', {}).items():
+            if active and key not in s.budget_scheme_delivery[kind]:
+                # Existing saves pre-date delivery stages; grandfather their schemes at maturity.
+                s.budget_scheme_delivery[kind][key] = len(scheme_profile(kind, key, table[key])['ramp']) - 1
+
     s.setdefault('budget_history', [])
     s.setdefault('budget_message', '')
     s.setdefault('whip_ayes', 0)
@@ -243,6 +253,207 @@ def interest():
     return interest_for(s.gilt_yield, s.debt)
 
 
+
+# ---------------------------------------------------------------- scheme design and delivery model
+SCHEME_DELIVERY_CAPACITY = 7.0
+
+_TAX_SCHEME_SECTORS = {
+    'hmrc_enforcement':'compliance', 'tax_gap':'compliance', 'vat_compliance':'compliance',
+    'online_marketplace':'compliance', 'vat_private':'consumption', 'nondom':'wealth',
+    'wealth':'wealth', 'pension_relief_reform':'wealth', 'relief_cap':'wealth',
+    'mansion':'property', 'landlord_relief':'property', 'property_empty':'property',
+    'stamp_duty_reform':'property', 'digital':'business', 'buyback_levy':'business',
+    'bank_surcharge':'business', 'bank_surcharge_reform':'business', 'windfall':'business',
+    'carbon':'environment', 'close_fossil_relief':'environment', 'carbon_border':'environment',
+    'packaging_levy':'environment', 'aviation_levy':'transport', 'ev_road_pricing':'transport',
+    'gambling':'consumption', 'online_gambling':'consumption', 'luxury_goods_levy':'consumption',
+}
+_SPEND_SCHEME_SECTORS = {
+    'meals':'education', 'school_breakfast':'education', 'school_rebuild':'education',
+    'child_cap':'family', 'childcare':'family', 'winterfuel':'family', 'youth_opportunity':'family',
+    'nhs_workforce':'health', 'primary_care':'health', 'nhs_diagnostics':'health', 'social_care':'health',
+    'social_housing':'housing', 'homelessness_prevention':'housing', 'town_deal':'housing',
+    'hs2':'transport', 'bus_network':'transport', 'potholes':'transport',
+    'nuclear':'energy', 'home_insulation':'energy', 'grid_upgrade':'energy', 'grid_storage':'energy',
+    'defence_industry':'defence', 'flood_defences':'resilience', 'prison_capacity':'justice',
+    'technical_skills':'skills', 'regional_growth':'regional',
+}
+_TAX_COMPLIANCE = {'hmrc_enforcement', 'tax_gap', 'vat_compliance', 'online_marketplace'}
+_TAX_COMPLEX_REFORM = {'wealth', 'nondom', 'pension_relief_reform', 'relief_cap', 'carbon_border', 'stamp_duty_reform'}
+_SPEND_MAJOR_CAPITAL = {'hs2', 'nuclear', 'social_housing', 'school_rebuild', 'grid_upgrade',
+                        'grid_storage', 'flood_defences', 'prison_capacity', 'water', 'defence_industry'}
+_SPEND_CAPITAL = {'home_insulation', 'regional_growth', 'town_deal', 'homelessness_prevention',
+                  'nhs_diagnostics', 'potholes', 'bus_network'}
+_SPEND_DIRECT = {'meals', 'school_breakfast', 'winterfuel', 'child_cap'}
+
+
+def scheme_profile(kind, key, item=None):
+    """Return transparent delivery assumptions for a scheme; headline data is steady-state, not instant."""
+    item = item or (TAX_POLICIES if kind == 'tax' else SPEND_POLICIES).get(key, {})
+    if kind == 'tax':
+        if key in _TAX_COMPLIANCE:
+            ramp = [0.25, 0.55, 0.82, 1.0]
+            admin_rate, admin_min, complexity = 0.12, 0.12, 1.0
+            note = "HMRC recruitment, data systems and compliance cases take time to produce receipts."
+            risk = "Delivery depends on skilled compliance staff, usable data and successful enforcement."
+        elif key in _TAX_COMPLEX_REFORM:
+            ramp = [0.40, 0.72, 1.0]
+            admin_rate, admin_min, complexity = 0.09, 0.08, 0.9
+            note = "Legislation, consultation and behavioural responses delay the full yield."
+            risk = "Legal challenge, avoidance and changes in taxpayer behaviour may reduce the yield."
+        else:
+            ramp = [0.60, 0.86, 1.0]
+            admin_rate, admin_min, complexity = 0.055, 0.05, 0.55
+            note = "The first-year figure is lower while systems, guidance and collection arrangements bed in."
+            risk = "The realised yield may differ from the static estimate as households and firms respond."
+        return {
+            'ramp': ramp, 'benefit_ramp': ramp, 'political_ramp': [0.65, 0.86, 1.0],
+            'admin': max(admin_min, float(item.get('yield_bn', 0.0)) * admin_rate),
+            'complexity': complexity, 'sector': _TAX_SCHEME_SECTORS.get(key, 'other revenue'),
+            'years': len(ramp), 'note': note, 'risk': risk,
+        }
+
+    cost = float(item.get('cost_bn', 0.0))
+    if key in _SPEND_MAJOR_CAPITAL:
+        ramp = [0.15, 0.35, 0.60, 0.83, 1.0]
+        benefit = [0.0, 0.08, 0.25, 0.60, 1.0]
+        admin_rate, admin_min, complexity = 0.055, 0.10, 1.35
+        note = "A multi-year capital programme: procurement and construction spend build gradually; public benefits arrive later."
+        risk = "Planning, procurement, contractor capacity and cost overruns are the principal risks."
+    elif key in _SPEND_CAPITAL:
+        ramp = [0.30, 0.62, 0.86, 1.0]
+        benefit = [0.0, 0.20, 0.65, 1.0]
+        admin_rate, admin_min, complexity = 0.05, 0.07, 1.0
+        note = "Local delivery and procurement mean the full programme cannot be deployed in its first year."
+        risk = "Land, planning, suppliers and local delivery capacity could slow progress."
+    elif key in _SPEND_DIRECT:
+        ramp = [0.80, 1.0]
+        benefit = [0.75, 1.0]
+        admin_rate, admin_min, complexity = 0.025, 0.035, 0.45
+        note = "Most payments or provision can start quickly, although eligibility and take-up affect the final bill."
+        risk = "Take-up may be higher than forecast and create pressure on the annual cost."
+    else:
+        ramp = [0.45, 0.78, 1.0]
+        benefit = [0.18, 0.62, 1.0]
+        admin_rate, admin_min, complexity = 0.04, 0.06, 0.8
+        note = "Recruitment, training and service capacity mean outcomes build over more than one year."
+        risk = "Workforce shortages and implementation capacity may limit the early results."
+    return {
+        'ramp': ramp, 'benefit_ramp': benefit, 'political_ramp': [0.65, 0.86, 1.0],
+        'admin': max(admin_min, cost * admin_rate), 'complexity': complexity,
+        'sector': _SPEND_SCHEME_SECTORS.get(key, 'other services'), 'years': len(ramp),
+        'note': note, 'risk': risk,
+    }
+
+
+def _scheme_age(kind, key, draft, statuses=None):
+    s = st.session_state
+    if not draft.get(f'{kind}_pol', {}).get(key, False):
+        return 0
+    applied = s.get('budget_applied', {})
+    if applied.get(f'{kind}_pol', {}).get(key, False):
+        current = (statuses if statuses is not None else s.get('budget_scheme_delivery', {})).get(kind, {})
+        if key in current:
+            return max(0, int(current[key]))
+        item = (TAX_POLICIES if kind == 'tax' else SPEND_POLICIES)[key]
+        return len(scheme_profile(kind, key, item)['ramp']) - 1
+    return 0
+
+
+def scheme_financials(draft, statuses=None, mature=False):
+    """Current-year net receipts and annual costs after ramp-up, administration and capacity pressure."""
+    statuses = statuses if statuses is not None else st.session_state.get('budget_scheme_delivery', {})
+    selected = []
+    for kind, table, field in (('tax', TAX_POLICIES, 'yield_bn'), ('spend', SPEND_POLICIES, 'cost_bn')):
+        for key, item in table.items():
+            if draft.get(f'{kind}_pol', {}).get(key, False):
+                profile = scheme_profile(kind, key, item)
+                age = len(profile['ramp']) - 1 if mature else _scheme_age(kind, key, draft, statuses)
+                selected.append((kind, key, item, profile, age, float(item.get(field, 0.0))))
+    load = sum(row[3]['complexity'] for row in selected)
+    delivery_factor = 1.0 if load <= SCHEME_DELIVERY_CAPACITY or load <= 0 else max(0.55, SCHEME_DELIVERY_CAPACITY / load)
+    coordination_cost = max(0.0, load - SCHEME_DELIVERY_CAPACITY) * 0.12
+    sector_counts = {}
+    for kind, key, item, profile, age, amount in selected:
+        token = (kind, profile['sector'])
+        sector_counts[token] = sector_counts.get(token, 0) + 1
+
+    rows = {}
+    tax_gross = tax_admin = tax_net = 0.0
+    spend_base = spend_admin = 0.0
+    for kind, key, item, profile, age, amount in selected:
+        ramp = profile['ramp']
+        stage = min(len(ramp) - 1, age)
+        current_ramp = 1.0 if mature else ramp[stage]
+        overlap = max(0.58, 1.0 - 0.11 * (sector_counts[(kind, profile['sector'])] - 1)) if kind == 'tax' else max(0.68, 1.0 - 0.10 * (sector_counts[(kind, profile['sector'])] - 1))
+        cash_factor = current_ramp * delivery_factor
+        admin_factor = max(0.72, cash_factor)
+        admin = profile['admin'] * admin_factor
+        if kind == 'tax':
+            gross = amount * cash_factor * overlap
+            net = gross - admin
+            tax_gross += gross
+            tax_admin += admin
+            tax_net += net
+            mature_gross = amount * delivery_factor * overlap
+            first_gross = amount * ramp[0] * delivery_factor * overlap
+            rows[(kind, key)] = {
+                'age': stage, 'years': len(ramp), 'current_net': net, 'first_year_net': first_gross - profile['admin'] * max(0.72, ramp[0] * delivery_factor),
+                'mature_net': mature_gross - profile['admin'] * max(0.72, delivery_factor),
+                'gross': gross, 'admin': admin, 'sector': profile['sector'], 'complexity': profile['complexity'],
+                'delivery_factor': delivery_factor, 'overlap': overlap, 'profile': profile,
+            }
+        else:
+            base_cost = amount * cash_factor
+            annual_cost = base_cost + admin
+            spend_base += base_cost
+            spend_admin += admin
+            first_cost = amount * ramp[0] * delivery_factor + profile['admin'] * max(0.72, ramp[0] * delivery_factor)
+            mature_cost = amount * delivery_factor + profile['admin'] * max(0.72, delivery_factor)
+            rows[(kind, key)] = {
+                'age': stage, 'years': len(ramp), 'current_cost': annual_cost, 'first_year_cost': first_cost,
+                'mature_cost': mature_cost, 'admin': admin, 'sector': profile['sector'],
+                'complexity': profile['complexity'], 'delivery_factor': delivery_factor, 'overlap': overlap,
+                'profile': profile,
+            }
+    return {
+        'tax_gross': tax_gross, 'tax_admin': tax_admin, 'tax_net': tax_net,
+        'spend_base': spend_base, 'spend_admin': spend_admin,
+        'coordination_cost': coordination_cost, 'spend_cost': spend_base + spend_admin + coordination_cost,
+        'load': load, 'capacity': SCHEME_DELIVERY_CAPACITY, 'delivery_factor': delivery_factor,
+        'rows': rows,
+    }
+
+
+def scheme_effect_totals(draft, statuses=None):
+    """Political effects phase in after announcement; productivity and service effects arrive later."""
+    financials = scheme_financials(draft, statuses=statuses)
+    effects = {'approval': 0.0, 'market': 0.0, 'growth': 0.0}
+    for (kind, key), row in financials['rows'].items():
+        item = (TAX_POLICIES if kind == 'tax' else SPEND_POLICIES)[key]
+        profile = row['profile']
+        age = row['age']
+        political = profile['political_ramp'][min(age, len(profile['political_ramp']) - 1)] * row['delivery_factor'] * row['overlap']
+        benefits = profile['benefit_ramp'][min(age, len(profile['benefit_ramp']) - 1)] * row['delivery_factor'] * row['overlap']
+        effects['approval'] += float(item.get('app', 0.0)) * political
+        effects['market'] += float(item.get('mkt', 0.0)) * political
+        effects['growth'] += float(item.get('gro', 0.0)) * benefits
+    return effects
+
+
+def _set_scheme_delivery_after_budget(old, new):
+    statuses = st.session_state.get('budget_scheme_delivery', {'tax': {}, 'spend': {}})
+    updated = {'tax': {}, 'spend': {}}
+    for kind, table in (('tax', TAX_POLICIES), ('spend', SPEND_POLICIES)):
+        for key in table:
+            if new.get(f'{kind}_pol', {}).get(key, False):
+                if old.get(f'{kind}_pol', {}).get(key, False):
+                    updated[kind][key] = int(statuses.get(kind, {}).get(key, len(scheme_profile(kind, key, table[key])['ramp']) - 1))
+                else:
+                    updated[kind][key] = 0
+    st.session_state.budget_scheme_delivery = updated
+
+
 def _policy_sum(b, key, table, field):
     return sum(table[k][field] for k, on in b[key].items() if on and k in table)
 
@@ -251,8 +462,9 @@ def revenue_pie(b):
     r = revenues(b)
     data = {TAXES[k]['short']: round(v, 1) for k, v in r.items()}
     data['Other receipts'] = OTHER_RECEIPTS
-    pol_rev = _policy_sum(b, 'tax_pol', TAX_POLICIES, 'yield_bn')
-    if pol_rev > 0: data['Special Tax Schemes'] = round(pol_rev, 1)
+    scheme_data = scheme_financials(b)
+    pol_rev = float(scheme_data['tax_net'])
+    if abs(pol_rev) > 0.05: data['Special Tax Schemes · net'] = round(pol_rev, 1)
     return data
 
 
@@ -261,8 +473,9 @@ def spending_pie(b):
     ensure()
     data = {SPEND_DEFAULTS[k]['short']: round(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0), 1) for k in SPEND_DEFAULTS}
     data['Debt interest'] = round(interest(), 1)
-    pol_spend = _policy_sum(b, 'spend_pol', SPEND_POLICIES, 'cost_bn')
-    if pol_spend > 0: data['Special Spending Pledges'] = round(pol_spend, 1)
+    scheme_data = scheme_financials(b)
+    pol_spend = float(scheme_data['spend_cost'])
+    if pol_spend > 0.05: data['Policy programmes · including delivery overhead'] = round(pol_spend, 1)
     return data
 
 
@@ -270,13 +483,14 @@ def totals(b):
     """(receipts, spending) in £bn for a Budget draft, at today's debt interest."""
     s = st.session_state
     ensure()
-    rev = sum(revenues(b).values()) + OTHER_RECEIPTS + _policy_sum(b, 'tax_pol', TAX_POLICIES, 'yield_bn')
+    scheme_data = scheme_financials(b)
+    rev = sum(revenues(b).values()) + OTHER_RECEIPTS + float(scheme_data['tax_net'])
     # Frozen thresholds create extra receipts through fiscal drag; this is separate from changing a tax rate.
     if s.get('thresholds_frozen', False):
         drag_rate = 0.35 if s.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
         rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
     spend = (sum(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0) for k in SPEND_DEFAULTS) + interest()
-             + _policy_sum(b, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
+             + float(scheme_data['spend_cost']))
     return rev, spend
 
 
@@ -339,8 +553,10 @@ def impact(old, new):
     d = {k: rn[k] - ro[k] for k in ro}
     ds = {k: s.dept_spend[k] * ((new['spend'][k] - old['spend'][k]) / 100.0) for k in SPEND_DEFAULTS}
 
-    tax_pol_diff = (_policy_sum(new, 'tax_pol', TAX_POLICIES, 'yield_bn') - _policy_sum(old, 'tax_pol', TAX_POLICIES, 'yield_bn'))
-    spend_pol_diff = (_policy_sum(new, 'spend_pol', SPEND_POLICIES, 'cost_bn') - _policy_sum(old, 'spend_pol', SPEND_POLICIES, 'cost_bn'))
+    old_schemes = scheme_financials(old)
+    new_schemes = scheme_financials(new)
+    tax_pol_diff = float(new_schemes['tax_net']) - float(old_schemes['tax_net'])
+    spend_pol_diff = float(new_schemes['spend_cost']) - float(old_schemes['spend_cost'])
     bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff
     old_st = FISCAL_STRATEGIES.get(old.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
     new_st = FISCAL_STRATEGIES.get(new.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
@@ -368,12 +584,11 @@ def impact(old, new):
               + 0.010 * ds['skills']
               + 0.001 * ds['defence'])
 
-    for key, table in (('tax_pol', TAX_POLICIES), ('spend_pol', SPEND_POLICIES)):
-        for k, p in table.items():
-            if new[key][k] and not old[key][k]:
-                approval += p['app']; market += p['mkt']; growth += p['gro']
-            elif not new[key][k] and old[key][k]:
-                approval -= p['app']; market -= p['mkt']; growth -= p['gro']
+    old_scheme_effects = scheme_effect_totals(old)
+    new_scheme_effects = scheme_effect_totals(new)
+    approval += new_scheme_effects['approval'] - old_scheme_effects['approval']
+    market += new_scheme_effects['market'] - old_scheme_effects['market']
+    growth += new_scheme_effects['growth'] - old_scheme_effects['growth']
 
     inflation = (0.12 * vat_pts + 0.003 * sum(ds.values()) + 0.015 * d['fuel'] + 0.005 * d['sin']
                  + 0.004 * d['carbon_levy'] + 0.002 * d['sugar_duty'])
@@ -404,6 +619,7 @@ def _apply():
     s.growth = round(s.growth + imp['growth'], 2)
     s.inflation = round(s.inflation + imp['inflation'], 2)
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
+    _set_scheme_delivery_after_budget(old, new)
     s.budget_applied = new
     # budget_strategy is a Streamlit widget key. Its value already came from read();
     # assigning it here after widget creation raises StreamlitWidgetAlreadyInstantiatedError.
