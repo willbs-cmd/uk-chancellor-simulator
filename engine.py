@@ -19,6 +19,7 @@ import treasury
 import world_economy
 import weekly_events
 import treasury_officials
+import performance_report
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -864,6 +865,7 @@ def proceed_to_spring():
     s.political_capital_points = 5
     s.feature_notice = ''
     s.feature_notice_phase = 0
+    performance_report.create_report()
     s.year += 1
     budget.apply_spending_review_rollforward(s, s.year)
     # Annual local contests take place after the first full year in office.
