@@ -660,6 +660,28 @@ def gilt_emergency_screen():
                 engine.resolve_gilt_emergency(i)
                 st.rerun()
 
+def financial_crisis_screen():
+    crisis=s.get("active_financial_crisis") or {}
+    stress=float(crisis.get("stress",100.0))
+    severe=crisis.get("severity")=="severe"
+    st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> TREASURY · FINANCIAL STABILITY COMMITTEE</div><div class='briefing-heading'>Credit markets are under pressure</div>",unsafe_allow_html=True)
+    st.error(f"Financial stability has fallen to {float(s.get('financial_stability',100.0)):.1f}/100. Credit spreads are around {float(s.get('credit_spread_bps',0)):.0f} basis points.")
+    if severe:
+        st.warning("The stress is severe. Banks are restricting lending, investors are nervous and the Prime Minister wants an immediate plan.")
+    else:
+        st.warning("The Bank and Treasury are monitoring deteriorating credit conditions. A decisive response may prevent a wider crisis.")
+    humphrey_message("Chancellor, this is no longer just a matter of gilt traders having a difficult morning. Credit is tightening across the economy. We need to decide whether the taxpayer, the Bank, or private investors should carry the burden.")
+    st.markdown("### Choose the Treasury response")
+    choices=[("Introduce a temporary deposit guarantee","Cost: £3bn. Reassure depositors and prevent panic, while creating a contingent fiscal exposure."),("Provide a capital backstop for key lenders","Cost: £7bn. Strongest stabilisation option; protects lending but uses fiscal headroom."),("Coordinate a Bank-led liquidity response","No direct fiscal outlay. The Bank leads on liquidity; monetary policy remains independent."),("Allow a private-sector-led resolution","No immediate taxpayer rescue. Risks a deeper credit squeeze and weaker growth.")]
+    for i,(title,detail) in enumerate(choices):
+        with st.container(border=True):
+            st.markdown(f"**{i+1}. {title}**")
+            st.caption(detail)
+            if st.button("Choose this response",key=f"financial_crisis_{i}",type="primary" if i==2 else "secondary",use_container_width=True):
+                economic_management.resolve_financial_crisis(i)
+                st.rerun()
+
+
 def request_screen():
     req = s.active_request
     st.markdown(f"<div class='dc-eyebrow'>Urgent request</div><div class='dc-title'>From the {req['minister']}</div>", unsafe_allow_html=True)
@@ -869,6 +891,8 @@ with tab_action:
         pm_ultimatum_screen()
     elif s.get('active_gilt_emergency'):
         gilt_emergency_screen()
+    elif s.get('active_financial_crisis'):
+        financial_crisis_screen()
     elif s.active_crisis is not None:
         crisis_screen()
     elif s.get('active_dispute'):
