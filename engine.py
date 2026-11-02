@@ -333,6 +333,7 @@ def execute_decision(opt):
 
     deliver_pending()
     settle()
+    _advance_ongoing_issues()
     s.active_crisis = scen.pick_next(s.year, s.block, ideology)
     s.active_weekly_event = None
     if s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'):
@@ -346,6 +347,79 @@ def execute_decision(opt):
     check_sacked()
 
 
+
+
+def _advance_ongoing_issues():
+    """Age unresolved political disputes and surface their next escalation as a decision."""
+    s = st.session_state
+    issues = list(s.get('ongoing_issues', []))
+    if not issues or s.get('active_weekly_event'):
+        return
+    for issue in issues:
+        issue['weeks_left'] = int(issue.get('weeks_left', 1)) - 1
+        if issue['weeks_left'] <= 0:
+            if issue['kind'] == 'nhs':
+                event = {
+                    'id': 'followup_nhs_strike', 'category': 'Escalating dispute',
+                    'title': 'NHS strike action spreads',
+                    'text': 'The initial dispute has widened. More hospitals face disruption and the Health Secretary warns that waiting lists and public confidence are deteriorating.',
+                    'options': [
+                        ('Fund an emergency settlement', {'headroom': -2.2, 'deficit': 2.2, 'approval': 1.8, 'cab_opinion': 1}, 'An emergency deal ends the immediate escalation, at a substantial cost.'),
+                        ('Appoint an independent mediator', {'headroom': -0.6, 'approval': 0.5, 'media_opinion': 0.5}, 'Mediation pauses further action, but a settlement is not guaranteed.'),
+                        ('Refuse to reopen negotiations', {'approval': -2.5, 'growth': -0.08, 'cab_opinion': -1.5}, 'The walkout expands and the Government faces mounting criticism.'),
+                    ]}
+            elif issue['kind'] == 'teachers':
+                event = {
+                    'id': 'followup_teachers_strike', 'category': 'Escalating dispute',
+                    'title': 'School closures spread across the country',
+                    'text': 'Teachers have moved from ballots to coordinated strike days. Parents and school leaders are demanding a settlement.',
+                    'options': [
+                        ('Offer a funded pay settlement', {'headroom': -1.8, 'deficit': 1.8, 'approval': 1.5}, 'The settlement brings the immediate dispute to an end.'),
+                        ('Agree workload reforms and talks', {'headroom': -0.5, 'approval': 0.5, 'growth': 0.03}, 'A package of reforms creates space for negotiations.'),
+                        ('Hold the line again', {'approval': -2, 'media_opinion': -1.5, 'growth': -0.05}, 'Disruption continues and the dispute becomes a defining political issue.'),
+                    ]}
+            elif issue['kind'] == 'union':
+                event = {
+                    'id': 'followup_union_campaign', 'category': 'Escalating dispute',
+                    'title': 'Public-sector unions coordinate walkouts',
+                    'text': 'Several unions have aligned their industrial action. The Cabinet is warning that disruption could spread across essential services.',
+                    'options': [
+                        ('Negotiate a staged pay deal', {'headroom': -1.8, 'deficit': 1.8, 'cab_opinion': 1.5, 'approval': 1}, 'A staged settlement reduces the immediate risk of coordinated strikes.'),
+                        ('Offer independent pay review', {'headroom': -0.5, 'approval': 0.4, 'media_opinion': 0.5}, 'The review creates a route to talks, though unions reserve their position.'),
+                        ('Reject the unions’ demands', {'approval': -2, 'cab_opinion': -1.5, 'party_opinion': 0.5}, 'The coordinated campaign escalates into widespread industrial action.'),
+                    ]}
+            else:
+                event = {
+                    'id': 'followup_boe_dispute', 'category': 'Bank of England',
+                    'title': 'The Bank-Treasury dispute deepens',
+                    'text': 'The Governor repeats the criticism and markets are questioning whether the Government respects the Bank’s independence.',
+                    'options': [
+                        ('Issue a joint statement with the Governor', {'market_conf': 2, 'gilt_yield': -0.08, 'pm_opinion': -0.5}, 'A joint statement restores some confidence.'),
+                        ('Refer the dispute to the Treasury Committee', {'media_opinion': 0.5, 'market_conf': 0.5, 'pm_opinion': 0.5}, 'Parliamentary scrutiny cools the immediate row.'),
+                        ('Escalate the public criticism', {'market_conf': -3, 'gilt_yield': 0.15, 'media_opinion': -1.5}, 'The public row unsettles markets and damages the Bank’s relationship with the Treasury.'),
+                    ]}
+            s.active_weekly_event = event
+            s.ongoing_issues = [x for x in issues if x is not issue]
+            return
+    s.ongoing_issues = issues
+
+
+def _schedule_ongoing_issue(event_id, choice_index):
+    """Some choices leave a live dispute which can escalate in a later week."""
+    mapping = {
+        ('nhs_strike', 2): ('nhs', 'NHS industrial dispute'),
+        ('teacher_strike', 2): ('teachers', 'Teachers’ industrial dispute'),
+        ('union_pay_pressure', 2): ('union', 'Public-sector pay campaign'),
+        ('boe_dispute', 1): ('boe', 'Bank of England dispute'),
+    }
+    item = mapping.get((event_id, choice_index))
+    if not item:
+        return
+    kind, title = item
+    issues = list(st.session_state.get('ongoing_issues', []))
+    if not any(x.get('kind') == kind for x in issues):
+        issues.append({'kind': kind, 'title': title, 'weeks_left': 2})
+    st.session_state.ongoing_issues = issues
 
 def resolve_weekly_event(choice_index):
     """Resolve a dynamic political/economic event and apply its consequences."""
@@ -362,6 +436,7 @@ def resolve_weekly_event(choice_index):
     before = state.values()
     state.snapshot()
     label, fx, note = options[choice_index]
+    _schedule_ongoing_issue(event.get('id'), choice_index)
     apply_effect(fx)
     # A real tax miss is a revenue loss, not just a political headline.
     if event.get('id') in ('tax_shortfall', 'retail_tax_warning'):
@@ -372,6 +447,7 @@ def resolve_weekly_event(choice_index):
     s.active_weekly_event = None
     s.steps += 1
     settle()
+    _advance_ongoing_issues()
     state.record()
     check_sacked()
 
@@ -414,6 +490,7 @@ def resolve_crisis(idx):
     s.active_crisis = None
     deliver_pending()
     settle()
+    _advance_ongoing_issues()
     state.record()
     check_sacked()
 
