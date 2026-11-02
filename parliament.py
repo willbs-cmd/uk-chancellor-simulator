@@ -272,10 +272,18 @@ def render():
             st.caption(detail)
     st.caption(f"Simulated parliamentary calendar · Term {int(s.get('term', 1))}, Year {int(s.get('year', 1))}, Phase {int(s.get('block', 1))}. These headlines react to your game state; they are not real-world news.")
 
-    m1, m2, m3 = st.columns(3, gap="medium")
+    m1, m2, m3, m4, m5 = st.columns(5, gap="small")
     m1.metric("Projected ayes", f"{votes}/650", help="A bill needs 326 votes to pass. A result of 346 or more is treated as a clear passage.")
-    m2.metric("Backbench morale", f"{float(s.get('backbench_opinion', 60)):.0f}/100", help="Measures willingness among your own MPs to support government legislation.")
-    m3.metric("Party unity", f"{float(s.get('party_opinion', 65)):.0f}/100", help="Measures whether the parliamentary party is staying behind the government.")
+    m2.metric("PM confidence", f"{float(s.get('pm_opinion', 70)):.0f}/100", help="The Prime Minister's confidence in you. Repeated defeats and Cabinet disputes can put your job at risk.")
+    m3.metric("Cabinet support", f"{float(s.get('cab_opinion', 60)):.0f}/100", help="How strongly fellow ministers support your approach.")
+    m4.metric("Backbench morale", f"{float(s.get('backbench_opinion', 60)):.0f}/100", help="Measures willingness among your own MPs to support government legislation.")
+    m5.metric("Party unity", f"{float(s.get('party_opinion', 65)):.0f}/100", help="Measures whether the parliamentary party is staying behind the government.")
+    loyalty = s.get("ministerial_loyalty", {})
+    if loyalty:
+        least_loyal = sorted(loyalty.items(), key=lambda item: float(item[1]))[:2]
+        strained = [f"{name} ({float(score):.0f}/100)" for name, score in least_loyal if float(score) < 45]
+        if strained:
+            st.warning("Cabinet lobbying risk: " + ", ".join(strained) + ". These ministers are increasingly likely to oppose Treasury decisions behind the scenes.")
 
     if votes >= CLEAR_PASS:
         st.success(f"Projected result: clear passage ({votes} ayes).")
