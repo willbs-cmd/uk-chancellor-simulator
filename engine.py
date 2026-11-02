@@ -20,6 +20,7 @@ import world_economy
 import weekly_events
 import treasury_officials
 import performance_report
+import economic_management
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -792,6 +793,7 @@ def proceed_to_spring():
     world_economy.ensure(s)
     world_economy.advance(s)
     economy_tick()
+    economic_management.annual_update()
     world_drag = float(s.get('world_cycle', 0.0))
     s.growth = round(s.growth + world_drag * 0.12, 2)
     s.market_conf = round(_clip(s.market_conf + world_drag * 0.8), 1)
