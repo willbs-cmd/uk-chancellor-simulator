@@ -1568,11 +1568,18 @@ def render(submit=None, after_summary=None):
             st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
             st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
 
+    thresholds_for_validation = cur.get('thresholds', {})
+    thresholds_valid = (
+        float(thresholds_for_validation.get('personal_allowance', 12570)) < float(thresholds_for_validation.get('higher_rate_threshold', 50270))
+        < float(thresholds_for_validation.get('additional_rate_threshold', 125140))
+    )
+    if not thresholds_valid:
+        st.error("Correct the income-tax threshold order before applying this Budget.")
     with st.container(key="budget_actions"):
         apply_col, reset_col = st.columns(2, gap="medium")
         apply_col.button(
             "Apply Budget", type="primary", on_click=_apply,
-            disabled=not changed, use_container_width=True,
+            disabled=(not changed or not thresholds_valid), use_container_width=True,
             help="Apply the current slider values to the draft forecast."
         )
         reset_col.button(
