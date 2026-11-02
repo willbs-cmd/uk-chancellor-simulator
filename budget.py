@@ -151,6 +151,33 @@ def ensure():
         s.budget_applied = defaults()
     else:
         _migrate_applied(s.budget_applied)
+    # One-time conversion of legacy percentage-adjustment sliders to the new real-world units.
+    if int(s.budget_applied.get('_tax_units_version', 0)) < 2:
+        conversions = {
+            'fuel': (52.95, 0.5), 'sin': (100.0, 1.0), 'property': (0.5, 0.02),
+            'council_tax': (2300.0, 10.0), 'carbon_levy': (25.0, 1.0),
+            'sugar_duty': (18.0, 0.5), 'business_rates': (50.0, 0.2),
+            'stamp_duty': (3.0, 0.05), 'vehicle_excise': (195.0, 2.0),
+            'air_passenger': (15.0, 0.5),
+        }
+        for key, (baseline, scale) in conversions.items():
+            old_default = 0.0
+            for section in ('tax',):
+                old_value = float(s.budget_applied.get(section, {}).get(key, old_default))
+                converted = baseline if old_value == old_default else baseline + old_value * scale
+                spec = TAXES[key]
+                converted = max(float(spec['lo']), min(float(spec['hi']), converted))
+                s.budget_applied[section][key] = round(converted, 2)
+            old_value = float(s.get('budget_last_tax', {}).get(key, old_default))
+            converted = baseline if old_value == old_default else baseline + old_value * scale
+            spec = TAXES[key]
+            s.budget_last_tax[key] = round(max(float(spec['lo']), min(float(spec['hi']), converted)), 2)
+            widget_key = f'bt_{key}'
+            if widget_key in s:
+                old_value = float(s[widget_key])
+                converted = baseline if old_value == old_default else baseline + old_value * scale
+                s[widget_key] = round(max(float(spec['lo']), min(float(spec['hi']), converted)), 2)
+        s.budget_applied['_tax_units_version'] = 2
     s.setdefault('budget_interest', BASE_INTEREST)
     s.setdefault('budget_last_tax', dict(s.budget_applied['tax']))
     for k in TAXES:
