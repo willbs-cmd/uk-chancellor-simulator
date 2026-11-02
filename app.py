@@ -485,16 +485,16 @@ def budget_screen():
             st.markdown("<div class='pane-title'>Parliamentary vote</div>", unsafe_allow_html=True)
             ayes = s.get('vote_ayes') or budget.commons_ayes()
             txt = f'**Ayes:** {ayes} | **Noes:** {650 - ayes}'
-            if ayes >= budget.WIN + 40: st.success(f'**House of Commons:** The Budget passed with a thumping majority!\\n\\n{txt}')
-            elif ayes >= budget.WIN + 15: st.info(f'**House of Commons:** The Budget passed.\\n\\n{txt}')
-            else: st.warning(f'**House of Commons:** The Budget barely scraped through!\\n\\n{txt}')
+            if ayes >= budget.WIN + 40: st.success(f'**House of Commons:** The Budget passed with a thumping majority!\n\n{txt}')
+            elif ayes >= budget.WIN + 15: st.info(f'**House of Commons:** The Budget passed.\n\n{txt}')
+            else: st.warning(f'**House of Commons:** The Budget barely scraped through!\n\n{txt}')
             speech_data=s.get('budget_speech') or {}
             st.markdown("#### Budget speech")
             if speech_data.get('text'): st.markdown('> '+speech_data['text'])
             st.markdown("#### The Budget Day timeline")
-            for clock,title,detail in speech_data.get('budget_day',[]): st.markdown(f"**{clock} · {title}**  \\n{detail}")
+            for clock,title,detail in speech_data.get('budget_day',[]): st.markdown(f"**{clock} · {title}**  \n{detail}")
             st.markdown("#### Opposition amendments")
-            for item in speech_data.get('amendments',[]): st.markdown(f"**{item['title']}** — {item['detail']}  \\nAyes: {item['ayes']} · Noes: {650-item['ayes']} · {item['result']}")
+            for item in speech_data.get('amendments',[]): st.markdown(f"**{item['title']}** — {item['detail']}  \nAyes: {item['ayes']} · Noes: {650-item['ayes']} · {item['result']}")
             risk=s.get('budget_risk_outcome') or {}
             if risk: st.warning(f"**Treasury implementation surprise: {risk.get('title','Delivery risk')}** — {risk.get('detail','')}")
             move=float(speech_data.get('market_move',0))
