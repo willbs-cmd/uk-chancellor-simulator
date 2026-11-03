@@ -624,7 +624,8 @@ def budget_screen():
         draft=s.get('budget_day_speech') or {}
         if draft.get('text'):
             st.markdown("> "+draft['text'])
-        budget_day_scorecard(budget.read(), "Final Budget announcement sheet")
+        final_draft = s.get("budget_day_draft") or budget.read()
+        budget_day_scorecard(final_draft, "Final Budget announcement sheet")
         st.warning("Once delivered, the Budget is put to the Commons. A failed vote ends the Chancellor’s career.")
         if st.button("← Return to Budget controls", use_container_width=True):
             s.budget_day_stage = 0; st.rerun()
