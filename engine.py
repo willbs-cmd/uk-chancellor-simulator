@@ -92,23 +92,38 @@ def generate_headlines(ideology, is_budget=False, headroom=0):
 
 
 # ================================================================ political capital & polls
+def party_alignment(party, ideology):
+    """Return the political fit of a policy without treating every non-core choice as betrayal.
+
+    Parties contain factions and governments routinely make cross-ideological
+    compromises. Core policies should be rewarded, centrist deals tolerated,
+    and genuinely distant choices carry a modest cost.
+    """
+    core = PURITY.get(party, ['Centric'])
+    if ideology in core:
+        return 1.0
+    if ideology == 'Centric':
+        return 0.55
+    return -0.35
+
+
 def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
     s = st.session_state
-    core = PURITY.get(s.party, ['Centric'])
-    if ideology_chosen in core:
-        # Reward a recognisable party programme without allowing a short run of
-        # aligned choices to push every political indicator straight to 100.
-        s.backbench_opinion += random.uniform(1.5, 3.5)
-        s.party_opinion += random.uniform(0.8, 2.4)
-    elif ideology_chosen == 'Centric':
-        # A centrist compromise should usually be tolerable to most parties.
-        s.backbench_opinion += random.uniform(-0.5, 0.8)
-        s.party_opinion += random.uniform(-0.4, 0.5)
+    alignment = party_alignment(s.party, ideology_chosen)
+    if alignment >= 1.0:
+        # Reward a recognisable party programme, without allowing it to dominate
+        # public approval or make every party's MPs uniformly obedient.
+        s.backbench_opinion += random.uniform(1.2, 2.8)
+        s.party_opinion += random.uniform(0.6, 1.8)
+    elif alignment > 0:
+        # Centrist compromises are usually tolerable, even in ideological parties.
+        s.backbench_opinion += random.uniform(0.0, 1.0)
+        s.party_opinion += random.uniform(-0.1, 0.6)
     else:
-        # Parties contain factions: one off-message decision should hurt, but
-        # should not trigger an automatic leadership crisis after a few weeks.
-        s.backbench_opinion -= random.uniform(1.0, 2.5)
-        s.party_opinion -= random.uniform(0.4, 1.4)
+        # A cross-party compromise costs support, but a single vote should not
+        # create the same rebellion risk as a sustained ideological betrayal.
+        s.backbench_opinion -= random.uniform(0.6, 1.6)
+        s.party_opinion -= random.uniform(0.2, 0.8)
 
     market_diff = s.market_conf - s.prev.get('market_conf', s.market_conf)
     # Political confidence should respond to the direction of the economy,
@@ -219,8 +234,7 @@ def assess_decision(opt):
     """
     s = st.session_state
     ideology = opt.get('ideology', 'Centric')
-    core = PURITY.get(s.get('party'), ['Centric'])
-    alignment = 1.0 if ideology in core else (0.35 if ideology == 'Centric' else -0.65)
+    alignment = party_alignment(s.get('party', 'Labour'), ideology)
     fiscal_pressure = max(0.0, min(1.0, (8.0 - float(s.get('headroom', 0.0))) / 20.0))
     confidence = (
         0.92
