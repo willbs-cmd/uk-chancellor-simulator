@@ -108,8 +108,13 @@ def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
         s.party_opinion -= random.uniform(0.4, 1.4)
 
     market_diff = s.market_conf - s.prev.get('market_conf', s.market_conf)
-    s.pm_opinion += (approval_diff * 1.0) + (headroom_diff * 0.8)
-    s.cab_opinion += approval_diff + random.uniform(-2, 3)
+    # Political confidence should respond to the direction of the economy,
+    # not mechanically collapse because a fiscal forecast moved by several
+    # billion pounds. Approval is the strongest signal; headroom is a smaller,
+    # capped consideration for the PM and Cabinet.
+    fiscal_signal = max(-6.0, min(6.0, float(headroom_diff)))
+    s.pm_opinion += (approval_diff * 0.7) + (fiscal_signal * 0.22)
+    s.cab_opinion += (approval_diff * 0.65) + random.uniform(-1.5, 2.0)
     s.media_opinion += (approval_diff * 0.8) + (market_diff * 0.5)
 
     for k in ('pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion', 'media_opinion'):
