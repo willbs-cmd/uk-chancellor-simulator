@@ -14,39 +14,42 @@ def _pts(n):
     return f"{n:g} point{'s' if n != 1 else ''}"
 
 
-def _tax_changes():
+def _tax_changes(draft=None):
     s = st.session_state
+    draft = draft or s.get('budget_applied', budget.defaults())
     last = s.get('budget_last_tax', {})
     out = []
     for k, t in budget.TAXES.items():
-        d = s.budget_applied['tax'][k] - last.get(k, t['default'])
+        d = draft['tax'][k] - last.get(k, t['default'])
         if d == 0:
             continue
         up = d > 0
         if k in RATE_TAXES:
-            out.append((k, up, f"{t['short']} will {'rise' if up else 'fall'} by {_pts(d)} to {s.budget_applied['tax'][k]:g}%"))
+            out.append((k, up, f"{t['short']} will {'rise' if up else 'fall'} by {_pts(d)} to {draft['tax'][k]:g}%"))
         else:
             out.append((k, up, f"{t['short']} will {'rise' if up else 'fall'} by {abs(d):g}%"))
     return out
 
 
-def _spend_changes():
+def _spend_changes(draft=None):
     s = st.session_state
+    draft = draft or s.get('budget_applied', budget.defaults())
     out = []
     for k, sp in budget.SPEND_DEFAULTS.items():
-        pct = s.budget_applied['spend'].get(k, 0.0)
+        pct = draft['spend'].get(k, 0.0)
         if pct:
             out.append((k, pct > 0, f"{sp['short']} funding will {'rise' if pct > 0 else 'fall'} by {abs(pct):g}%"))
     return out
 
 
-def _new_schemes():
+def _new_schemes(draft=None):
     s = st.session_state
+    draft = draft or s.get('budget_applied', budget.defaults())
     last = s.get('budget_last_pol') or {}
     out = []
     for key, table in (('tax_pol', budget.TAX_POLICIES), ('spend_pol', budget.SPEND_POLICIES)):
         for k, p in table.items():
-            if s.budget_applied[key].get(k) and not last.get(key, {}).get(k):
+            if draft.get(f'{key[:-4]}_pol', {}).get(k, False) and not last.get(key, {}).get(k, {}):
                 out.append(p['label'])
     return out
 
@@ -56,17 +59,19 @@ def _join(items):
     return '; '.join(items)
 
 
-def compose():
-    """Returns {'text': speech, 'reactions': [(who, quote), ...]}. Uses the session's seeded RNG."""
+def compose(draft=None):
+    """Compose the speech from a proposed draft, before it is enacted."""
     s = st.session_state
-    imp = s.get('budget_impact') or {}
-    head = imp.get('headroom', 0.0)
-    taxes, spends, schemes = _tax_changes(), _spend_changes(), _new_schemes()
+    draft = draft or s.get('budget_applied', budget.defaults())
+    old = s.get('budget_applied', budget.defaults())
+    imp = budget.impact(old, draft)
+    projected_headroom = float(s.get('headroom', 0.0)) + float(imp.get('headroom', 0.0))
+    taxes, spends, schemes = _tax_changes(draft), _spend_changes(draft), _new_schemes(draft)
 
-    if head >= 3:
+    if imp.get('headroom', 0.0) >= 3:
         opener = random.choice(['Mr Speaker, this is a Budget of fiscal responsibility.',
                                 'Mr Speaker, today I put the public finances on a sound footing.'])
-    elif head <= -3:
+    elif imp.get('headroom', 0.0) <= -3:
         opener = random.choice(['Mr Speaker, this is a Budget for investment and renewal.',
                                 'Mr Speaker, I will not apologise for choosing to invest in Britain.'])
     else:
@@ -85,8 +90,8 @@ def compose():
         parts.append('And I can announce: ' + _join(schemes) + '.')
     if not (taxes or spends or schemes):
         parts.append('I am making no changes to tax or spending this year.')
-    within = 'within' if s.headroom >= 0 else 'outside'
-    parts.append(f'The OBR confirms the Government remains {within} its fiscal rules, with headroom of £{s.headroom:.1f} billion.')
+    within = 'within' if projected_headroom >= 0 else 'outside'
+    parts.append(f'The OBR confirms the Government remains {within} its fiscal rules, with projected headroom of £{projected_headroom:.1f} billion.')
 
     reactions = _reactions(imp, taxes, spends)
     ayes = int(s.get('vote_ayes') or budget.commons_ayes())
