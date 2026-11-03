@@ -2366,6 +2366,38 @@ div[role="radiogroup"] > label:has(input:checked) {
 .annual-segment.current { background:linear-gradient(90deg,var(--co-teal),#a8cfca) !important; }
 
 /* Keep party identity confined to party-specific indicators; it must not recolour UI text. */
+/* Chancellor's Office — compact Budget command workspace */
+.st-key-budget_financial_summary {
+  position: sticky !important;
+  top: 0.35rem !important;
+  z-index: 80 !important;
+  background: rgba(246,248,251,.97) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid #dce4ed !important;
+  border-radius: 12px !important;
+  padding: .35rem .45rem !important;
+  margin: .35rem 0 .7rem !important;
+  box-shadow: 0 5px 18px rgba(31,52,76,.08) !important;
+}
+.st-key-budget_financial_summary .chip-row {
+  grid-template-columns: repeat(7,minmax(0,1fr)) !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+.st-key-budget_financial_summary .sc-card.compact { min-height: 62px !important; padding: 8px 10px !important; }
+.st-key-budget_financial_summary .sc-card.compact .v { font-size: 1.12rem !important; }
+[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .25rem !important; border-bottom: 1px solid #dce3eb !important; }
+[data-testid="stTabs"] button[data-baseweb="tab"] { padding: .55rem .8rem !important; font-weight: 650 !important; }
+[data-testid="stExpander"] { border-radius: 10px !important; }
+[data-testid="stExpander"] summary { padding: .62rem .85rem !important; }
+[data-testid="stVerticalBlock"] { gap: .72rem; }
+@media (max-width: 1100px) {
+  .st-key-budget_financial_summary .chip-row { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+}
+@media (max-width: 700px) {
+  .st-key-budget_financial_summary { position: static !important; }
+  .st-key-budget_financial_summary .chip-row { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
 </style>
 """
 
@@ -2645,38 +2677,3 @@ def render_scorecard(data):
       <div>{new}{badges}</div>
     </div>""", unsafe_allow_html=True)
 
-
-
-
-/* Chancellor's Office — compact Budget command workspace */
-.st-key-budget_financial_summary {
-  position: sticky !important;
-  top: 0.35rem !important;
-  z-index: 80 !important;
-  background: rgba(246,248,251,.97) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid #dce4ed !important;
-  border-radius: 12px !important;
-  padding: .35rem .45rem !important;
-  margin: .35rem 0 .7rem !important;
-  box-shadow: 0 5px 18px rgba(31,52,76,.08) !important;
-}
-.st-key-budget_financial_summary .chip-row {
-  grid-template-columns: repeat(7,minmax(0,1fr)) !important;
-  gap: 6px !important;
-  margin: 0 !important;
-}
-.st-key-budget_financial_summary .sc-card.compact { min-height: 62px !important; padding: 8px 10px !important; }
-.st-key-budget_financial_summary .sc-card.compact .v { font-size: 1.12rem !important; }
-[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .25rem !important; border-bottom: 1px solid #dce3eb !important; }
-[data-testid="stTabs"] button[data-baseweb="tab"] { padding: .55rem .8rem !important; font-weight: 650 !important; }
-[data-testid="stExpander"] { border-radius: 10px !important; }
-[data-testid="stExpander"] summary { padding: .62rem .85rem !important; }
-[data-testid="stVerticalBlock"] { gap: .72rem; }
-@media (max-width: 1100px) {
-  .st-key-budget_financial_summary .chip-row { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
-}
-@media (max-width: 700px) {
-  .st-key-budget_financial_summary { position: static !important; }
-  .st-key-budget_financial_summary .chip-row { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-}
