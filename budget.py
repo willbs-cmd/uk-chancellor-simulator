@@ -1428,6 +1428,9 @@ def render(submit=None, after_summary=None):
         dict(label='Market confidence', value=f"{_clip(s.market_conf + imp['market']):.0f}/100",
              delta=delta(imp['market']), num=imp['market'] if changed else 0,
              desc='Investor confidence and the likely market reception.'),
+        dict(label='GDP growth rate', value=f"{s.growth + imp['growth']:+.1f}%",
+             delta=delta(imp['growth'], 'pp'), num=imp['growth'] if changed else 0,
+             desc='Projected annual real GDP growth after this draft Budget.'),
     ])
 
     with st.expander('Treasury briefing · three-year outlook', expanded=False):
