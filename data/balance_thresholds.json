@@ -45,5 +45,36 @@
       "maximum_sack_percent": 65
     }
   },
-  "note": "Guardrails are deliberately broad; they catch large balance regressions, not small tuning differences. Adjust only after reviewing the sim.py check results."
+  "note": "The party thresholds remain the desired balance targets. The baseline values record the measured main-branch results from 20 sensible-strategy Hardcore runs (2 November 2026); CI fails if a change moves a party more than 10 percentage points worse than that baseline. Balance-target misses remain visible and should be addressed in a dedicated gameplay-balancing update.",
+  "balance_regression_tolerance_pp": 10,
+  "balance_baseline": {
+    "Labour": {
+      "win_percent": 35,
+      "sack_percent": 65
+    },
+    "Conservative": {
+      "win_percent": 80,
+      "sack_percent": 20
+    },
+    "Liberal Democrats": {
+      "win_percent": 25,
+      "sack_percent": 75
+    },
+    "Reform UK": {
+      "win_percent": 75,
+      "sack_percent": 25
+    },
+    "Green Party": {
+      "win_percent": 5,
+      "sack_percent": 95
+    },
+    "SNP": {
+      "win_percent": 0,
+      "sack_percent": 75
+    },
+    "Plaid Cymru": {
+      "win_percent": 0,
+      "sack_percent": 95
+    }
+  }
 }
