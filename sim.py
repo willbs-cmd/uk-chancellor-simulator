@@ -202,6 +202,48 @@ def check(n=None, difficulty=None):
     contract = thresholds['contract']
     failures = []
 
+    # Save/load must preserve the approved Budget ledger and current fiscal state.
+    try:
+        new_run('Labour', 'Normal', 97531)
+        s = st.session_state
+        s.headroom = 7.4
+        s.deficit = 42.6
+        s.budget_applied = budget.read()
+        s.budget_applied['tax']['income'] = float(s.budget_applied['tax'].get('income', 0)) + 1.0
+        s.budget_history = [{'year': 1, 'ayes': 350, 'headroom': 7.4}]
+        saved_party = s.party
+        saved_ledger = budget.read()
+        saved_applied = dict(s.budget_applied)
+        saved_headroom = float(s.headroom)
+        payload = state.export_save()
+        error = state.import_save(payload)
+        if error:
+            failures.append(f"A freshly exported save could not be loaded: {error}")
+        else:
+            budget.ensure()
+            if st.session_state.party != saved_party:
+                failures.append("Save/load changed the governing party.")
+            if abs(float(st.session_state.headroom) - saved_headroom) > 0.01:
+                failures.append("Save/load changed Treasury headroom.")
+            if budget.read() != saved_ledger:
+                failures.append("Save/load changed the editable Budget ledger.")
+            if st.session_state.budget_applied != saved_applied:
+                failures.append("Save/load changed the approved Budget ledger.")
+            if st.session_state.budget_history != [{'year': 1, 'ayes': 350, 'headroom': 7.4}]:
+                failures.append("Save/load did not preserve Budget history.")
+    except Exception as exc:
+        failures.append(f"Save/load smoke test failed: {exc}")
+
+    # Regional parties need a credible route to retain a Westminster mandate
+    # without being expected to win almost every seat in Scotland or Wales.
+    try:
+        new_run('SNP', 'Normal', 11223)
+        snp_result = engine.compute_election() if st.session_state.year > 5 else None
+        if engine.REGIONAL_MANDATES.get('SNP') != 12 or engine.REGIONAL_MANDATES.get('Plaid Cymru') != 6:
+            failures.append("Regional mandate thresholds are missing or inconsistent.")
+    except Exception as exc:
+        failures.append(f"Regional mandate smoke test failed: {exc}")
+
     # A large forecast/headroom movement must not by itself cause a political
     # confidence collapse. Test the real engine function in isolation.
     try:
