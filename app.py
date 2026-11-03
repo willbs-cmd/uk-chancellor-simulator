@@ -553,15 +553,26 @@ def budget_screen():
     stages=['Number 10 negotiations','OBR forecast','Budget speech','Commons vote & markets']
     st.progress(min(stage,3)/3, text=f"Budget Day · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
     if stage == 0:
-        st.markdown("### Final negotiations with the Prime Minister")
-        st.write("The Prime Minister has sent the Treasury a private list of priorities for this Budget. These are political demands, not automatic changes to your figures.")
-        st.markdown("#### Prime Minister's Budget priorities")
-        for idx, item in enumerate(s.get('budget_pm_priorities', []), 1):
-            st.markdown(f"**{idx}. {item['title']}**")
-            st.caption(item['detail'])
-        st.info("Your draft will be assessed against these priorities. You remain the Chancellor: you can accept, negotiate or reject the PM's requests.")
-        s.budget_pm_choice=st.radio("Your negotiating position",["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"],index=["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"].index(s.get('budget_pm_choice','Compromise with the Prime Minister')))
-        st.info("Your choice affects the PM relationship and political atmosphere, not the arithmetic of the Budget draft.")
+        with st.expander("Number 10 · private Budget negotiations", expanded=False):
+            st.caption("The Prime Minister's political priorities are requests, not automatic changes to your fiscal plan. You remain the Chancellor and retain control of the Budget.")
+            priorities = s.get('budget_pm_priorities', [])
+            if priorities:
+                pcols = st.columns(min(2, len(priorities)), gap="small")
+                for idx, item in enumerate(priorities, 1):
+                    with pcols[(idx - 1) % len(pcols)]:
+                        st.markdown(f"**{idx}. {item['title']}**")
+                        st.caption(item['detail'])
+            st.info("Choose whether to accept, compromise or stand firm. This affects the PM relationship and political atmosphere, not the Budget arithmetic.")
+            choices = ["Accept the Prime Minister’s priorities","Compromise with the Prime Minister","Stand firm on the Treasury plan"]
+            current_choice = s.get('budget_pm_choice','Compromise with the Prime Minister')
+            s.budget_pm_choice=st.radio("Negotiating position", choices, index=choices.index(current_choice) if current_choice in choices else 1, horizontal=True)
+            st.markdown("**Number 10 assessment of your current draft**")
+            live_assessment = budget.assess_pm_priorities()
+            assessment_cols = st.columns(min(2, max(1, len(live_assessment))), gap="small")
+            for idx, item in enumerate(live_assessment):
+                with assessment_cols[idx % len(assessment_cols)]:
+                    (st.success if item['met'] else st.warning)(f"**{'Met' if item['met'] else 'Not yet met'} · {item['title']}**")
+                    st.caption(item['detail'])
         def submit():
             if st.button("Conclude negotiations",type="primary",use_container_width=True):
                 thresholds = budget.read().get('thresholds', {})
@@ -571,13 +582,6 @@ def budget_screen():
                 else:
                     engine.submit_budget(); st.rerun()
         budget.render(submit=submit,after_summary=lambda: politics.render_pledges(budget.read()))
-        st.markdown("#### How your draft measures up against Number 10")
-        live_assessment = budget.assess_pm_priorities()
-        for item in live_assessment:
-            if item['met']:
-                st.success(f"**Met · {item['title']}** — {item['detail']}")
-            else:
-                st.warning(f"**Not yet met · {item['title']}** — {item['detail']}")
         st.caption(f"{sum(1 for item in live_assessment if item['met'])} of {len(live_assessment)} priorities currently met. This assessment updates as you change the Budget.")
 
     elif stage == 1:
