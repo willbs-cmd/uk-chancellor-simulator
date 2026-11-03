@@ -223,80 +223,50 @@ def render():
                     x.backbench_opinion = _clip(x.backbench_opinion - 3)
                 x.pay_settlement = pay
             _act("pay_round", 2, "Public-sector pay round", pay_fx); st.rerun()
-        st.markdown("**Tax thresholds, retirement age & state pension**")
-        # Live policy controls: draft values are only enacted when the Chancellor confirms them.
-        s.setdefault("inheritance_nil_rate_band", 325000.0)
-        s.setdefault("vat_registration_threshold", 90000.0)
+        st.markdown("**Current tax thresholds · Budget-controlled**")
+        st.caption(
+            f"Personal allowance £{float(s.get('personal_allowance', 12570)):,.0f} · "
+            f"Higher-rate threshold £{float(s.get('higher_rate_threshold', 50270)):,.0f} · "
+            f"Additional-rate threshold £{float(s.get('additional_rate_threshold', 125140)):,.0f}"
+        )
+        st.caption(
+            f"Inheritance tax nil-rate band £{float(s.get('inheritance_nil_rate_band', 325000)):,.0f} · "
+            f"VAT registration threshold £{float(s.get('vat_registration_threshold', 90000)):,.0f} · "
+            + ("Income-tax thresholds currently frozen." if s.get('thresholds_frozen', False) else "Income-tax thresholds currently uprate annually.")
+        )
+        st.caption("These figures are read-only here. Propose changes in the Budget's Tax & revenue section; they take effect only when the Budget is delivered.")
+        st.markdown("**State pension & retirement age**")
         s.setdefault("retirement_age", 66)
         s.setdefault("retirement_age_annual_saving", 0.0)
         s.setdefault("state_pension_weekly", 230.25)
         s.setdefault("state_pension_uprating", "Triple lock")
-        st.caption("Set the actual thresholds and pension rules. Changes affect the fiscal forecast and can trigger a political backlash. These are simplified UK-wide game controls; Scottish income-tax bands are different.")
-        with st.expander("Income tax thresholds", expanded=True):
-            pa = st.number_input("Personal allowance (£ per year)", min_value=5000, max_value=25000, value=int(s.personal_allowance), step=250, key="draft_personal_allowance")
-            higher = st.number_input("Higher-rate threshold (£ total income)", min_value=30000, max_value=100000, value=int(s.higher_rate_threshold), step=500, key="draft_higher_threshold")
-            additional = st.number_input("Additional-rate threshold (£ total income)", min_value=80000, max_value=250000, value=int(s.additional_rate_threshold), step=1000, key="draft_additional_threshold")
-            st.caption("The higher-rate threshold is the total income point at which the 40% band begins, not the width of the basic-rate band.")
-        with st.expander("Other tax thresholds", expanded=False):
-            iht_band = st.number_input("Inheritance tax nil-rate band (£)", min_value=100000, max_value=1000000, value=int(s.inheritance_nil_rate_band), step=5000, key="draft_iht_band")
-            vat_threshold = st.number_input("VAT registration threshold (£ taxable turnover)", min_value=30000, max_value=250000, value=int(s.vat_registration_threshold), step=5000, key="draft_vat_threshold")
-            freeze = st.checkbox("Freeze income-tax thresholds (fiscal drag)", key="feature_threshold_freeze", value=bool(s.get("thresholds_frozen", False)), help="Frozen thresholds do not rise with earnings. This gradually raises receipts but squeezes take-home pay.")
-            freeze_scope = st.radio("Threshold freeze scope", ["Personal allowance and all bands", "Higher and additional thresholds only"], key="feature_threshold_scope", horizontal=False)
-            council_tax = st.checkbox("Revalue council tax bands", key="feature_council_tax", help="A simplified revaluation raises receipts but can anger households whose bills increase.")
-            pension_relief = st.checkbox("Reduce higher-rate pension tax relief", key="feature_pension_relief", help="Raises revenue but makes pension saving less attractive to some higher-rate taxpayers.")
         with st.expander("State pension & retirement age", expanded=True):
             retirement_age = st.slider("State pension age (years)", 60, 75, int(s.retirement_age), 1, key="draft_retirement_age", help="Raising the pension age reduces the number of people eligible at a given time, but is politically difficult and can disadvantage people in physically demanding work.")
             pension_weekly = st.number_input("Full new State Pension (£ per week)", min_value=100.0, max_value=400.0, value=float(s.state_pension_weekly), step=1.0, key="draft_state_pension_weekly")
             uprating = st.selectbox("Annual State Pension uprating rule", ["Triple lock", "Earnings growth", "CPI inflation", "Freeze"], index=["Triple lock", "Earnings growth", "CPI inflation", "Freeze"].index(s.state_pension_uprating) if s.state_pension_uprating in ["Triple lock", "Earnings growth", "CPI inflation", "Freeze"] else 0, key="draft_pension_uprating")
-            st.caption("The triple lock uses the highest of earnings growth, CPI inflation or 2.5%. The other choices use one measure or freeze the payment.")
+            st.caption("The triple lock uses the highest of earnings growth, CPI inflation or 2.5%. Tax threshold changes are now proposed and approved through the annual Budget.")
         productivity_plan = st.checkbox("Fund skills, research and infrastructure for productivity", key="feature_productivity_plan", help="Costs £0.5bn of headroom now and improves the long-run productivity trend.")
-        if higher <= pa or additional <= higher:
-            st.error("Thresholds must be ordered: personal allowance < higher-rate threshold < additional-rate threshold.")
-        if st.button("Enact tax, pension & retirement package", key="feat_tax_pension", use_container_width=True,
-                      disabled=(("tax_pension" in _used()[1] or s.political_capital_points < 1) or higher <= pa or additional <= higher)):
-            def tax_fx(x):
-                old_pa = float(x.personal_allowance)
-                old_higher = float(x.higher_rate_threshold)
-                old_additional = float(x.additional_rate_threshold)
-                old_iht = float(x.inheritance_nil_rate_band)
-                old_vat = float(x.vat_registration_threshold)
+        if st.button("Enact pension, retirement & productivity package", key="feat_tax_pension", use_container_width=True,
+                      disabled=("tax_pension" in _used()[1] or s.political_capital_points < 1)):
+            def pension_fx(x):
+                old_age = int(x.retirement_age)
                 old_age_saving = float(x.retirement_age_annual_saving)
                 old_weekly = float(x.state_pension_weekly)
-                # Approximate annual yield sensitivities in £bn; deliberately labelled game estimates.
-                threshold_cost = ((pa - old_pa) / 1000.0 * 1.4
-                                  + (higher - old_higher) / 1000.0 * 0.45
-                                  + (additional - old_additional) / 1000.0 * 0.08
-                                  + (iht_band - old_iht) / 1000.0 * 0.08
-                                  + (vat_threshold - old_vat) / 1000.0 * 0.05)
                 new_age_saving = (retirement_age - 66) * 5.0
-                age_saving_change = new_age_saving - old_age_saving
                 pension_cost = (pension_weekly - old_weekly) * 0.6
-                x.headroom = round(x.headroom - threshold_cost + age_saving_change - pension_cost, 1)
-                x.deficit = round(x.deficit + threshold_cost - age_saving_change + pension_cost, 1)
-                x.personal_allowance = float(pa)
-                x.higher_rate_threshold = float(higher)
-                x.additional_rate_threshold = float(additional)
-                x.inheritance_nil_rate_band = float(iht_band)
-                x.vat_registration_threshold = float(vat_threshold)
-                x.thresholds_frozen = bool(freeze)
-                x.threshold_freeze_scope = freeze_scope
+                x.headroom = round(x.headroom + (new_age_saving - old_age_saving) - pension_cost, 1)
+                x.deficit = round(x.deficit - (new_age_saving - old_age_saving) + pension_cost, 1)
                 x.retirement_age = int(retirement_age)
                 x.retirement_age_annual_saving = float(new_age_saving)
                 x.state_pension_weekly = float(pension_weekly)
                 x.state_pension_uprating = uprating
-                if council_tax:
-                    x.headroom = round(x.headroom + .5, 1); x.approval = _clip(x.approval - 1.5)
-                    x.message = (x.get("message", "") + " Council tax band revaluation sparks local controversy.").strip()
-                if pension_relief:
-                    x.headroom = round(x.headroom + .8, 1); x.approval = _clip(x.approval - 1)
-                    x.party_opinion = _clip(x.party_opinion - 1)
                 if uprating == "Triple lock":
                     x.pension_pressure = round(x.pension_pressure + .5, 1)
-                if retirement_age > int(old_age_saving / 5.0 + 66):
+                if retirement_age > old_age:
                     x.approval = _clip(x.approval - 2.5)
                     x.party_opinion = _clip(x.party_opinion - 2)
                     x.message += " Raising the State Pension age provokes a backlash from unions and older voters."
-                elif retirement_age < int(old_age_saving / 5.0 + 66):
+                elif retirement_age < old_age:
                     x.approval = _clip(x.approval + 1.5)
                 if pension_weekly > old_weekly:
                     x.approval = _clip(x.approval + 1.5)
@@ -306,8 +276,8 @@ def render():
                 if productivity_plan:
                     x.longrun_productivity = round(x.longrun_productivity + .15, 2)
                     x.headroom = round(x.headroom - .5, 1)
-            _act("tax_pension", 1, "Tax, pension and retirement package", tax_fx); st.rerun()
-        st.caption(f"Current thresholds: £{s.personal_allowance:,.0f} / £{s.higher_rate_threshold:,.0f} / £{s.additional_rate_threshold:,.0f}. State Pension: £{s.state_pension_weekly:.2f} weekly; pension age {s.retirement_age}.")
+            _act("tax_pension", 1, "State pension, retirement and productivity package", pension_fx); st.rerun()
+        st.caption(f"State Pension: £{s.state_pension_weekly:.2f} weekly; pension age {s.retirement_age}.")
     with st.expander("📖 Glossary: what these controls mean", expanded=False):
         st.markdown("**Political capital** is a limited annual resource for interventions; spend it on the most important priorities. **Market confidence** is a simplified investor sentiment score, not a direct market price.")
         st.markdown("**Quantitative easing (QE)** means a central bank buys assets to loosen financial conditions; it can support demand but may add inflation risk. **Gilts** are UK government bonds. Maturity is how long until they must be repaid; index-linked gilts rise with inflation.")

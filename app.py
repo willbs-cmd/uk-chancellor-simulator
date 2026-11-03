@@ -476,6 +476,24 @@ def budget_day_scorecard(draft, heading="Budget impact & announcements"):
         if abs(delta) >= 0.001:
             unit = spec.get('unit', 'percentage points')
             announcements.append({"Announcement": f"Tax · {spec.get('short', key)}", "Change": f"{delta:+.2f} {unit}"})
+    old_thresholds = old.get('thresholds', {})
+    new_thresholds = draft.get('thresholds', {})
+    threshold_labels = {
+        'personal_allowance': 'Personal allowance',
+        'higher_rate_threshold': 'Higher-rate threshold',
+        'additional_rate_threshold': 'Additional-rate threshold',
+        'inheritance_nil_rate_band': 'Inheritance tax nil-rate band',
+        'vat_registration_threshold': 'VAT registration threshold',
+    }
+    for key, label in threshold_labels.items():
+        before = float(old_thresholds.get(key, {'personal_allowance':12570,'higher_rate_threshold':50270,'additional_rate_threshold':125140,'inheritance_nil_rate_band':325000,'vat_registration_threshold':90000}[key]))
+        after = float(new_thresholds.get(key, before))
+        if abs(after - before) >= 0.001:
+            announcements.append({"Announcement": f"Tax threshold · {label}", "Change": f"£{before:,.0f} → £{after:,.0f}"})
+    for key, label in (('thresholds_frozen', 'Freeze income-tax thresholds'), ('council_tax_revaluation', 'Revalue council tax bands')):
+        before, after = bool(old_thresholds.get(key, False)), bool(new_thresholds.get(key, False))
+        if before != after:
+            announcements.append({"Announcement": label, "Change": "Introduced" if after else "Withdrawn"})
     for key, spec in budget.SPEND_DEFAULTS.items():
         before = float(old.get('spend', {}).get(key, 0.0))
         after = float(draft.get('spend', {}).get(key, 0.0))
@@ -546,7 +564,12 @@ def budget_screen():
         st.info("Your choice affects the PM relationship and political atmosphere, not the arithmetic of the Budget draft.")
         def submit():
             if st.button("Conclude negotiations",type="primary",use_container_width=True):
-                engine.submit_budget(); st.rerun()
+                thresholds = budget.read().get('thresholds', {})
+                if (float(thresholds.get('personal_allowance', 12570)) >= float(thresholds.get('higher_rate_threshold', 50270))
+                        or float(thresholds.get('higher_rate_threshold', 50270)) >= float(thresholds.get('additional_rate_threshold', 125140))):
+                    st.error("The Budget cannot proceed: income-tax thresholds must be ordered from personal allowance to higher-rate and additional-rate thresholds.")
+                else:
+                    engine.submit_budget(); st.rerun()
         budget.render(submit=submit,after_summary=lambda: politics.render_pledges(budget.read()))
         st.markdown("#### How your draft measures up against Number 10")
         live_assessment = budget.assess_pm_priorities()

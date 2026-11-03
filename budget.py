@@ -97,6 +97,13 @@ def defaults():
         'spend': {k: 0.0 for k in SPEND_DEFAULTS},
         'tax_pol': {k: False for k in TAX_POLICIES},
         'spend_pol': {k: False for k in SPEND_POLICIES},
+        'thresholds': {
+            'personal_allowance': 12570.0, 'higher_rate_threshold': 50270.0,
+            'additional_rate_threshold': 125140.0, 'inheritance_nil_rate_band': 325000.0,
+            'vat_registration_threshold': 90000.0, 'thresholds_frozen': False,
+            'threshold_freeze_scope': 'Personal allowance and all bands',
+            'council_tax_revaluation': False,
+        },
     }
 
 
@@ -122,6 +129,12 @@ def _migrate_depts(dept):
 
 def ensure():
     s = st.session_state
+    # Tax thresholds are part of the approved Budget ledger. Keep these defaults
+    # here so a player can reach the Budget screen before opening Fiscal tools.
+    threshold_defaults = defaults()['thresholds']
+    for key, value in threshold_defaults.items():
+        state_key = key
+        s.setdefault(state_key, value)
     s.setdefault("cabinet_ministers", {})
     s.setdefault("ministerial_loyalty", {})
     s.setdefault("ministerial_resignations", [])
@@ -161,6 +174,12 @@ def ensure():
                 migrated[section].update(value)
             else:
                 migrated[section] = value
+        # Older saves enacted thresholds through Fiscal tools, outside the Budget ledger.
+        # Adopt those existing values once rather than silently reverting them.
+        if not isinstance(raw_applied.get('thresholds'), dict):
+            migrated['thresholds'] = {
+                key: s.get(key, value) for key, value in defaults()['thresholds'].items()
+            }
         s.budget_applied = migrated
         _migrate_applied(s.budget_applied)
     else:
@@ -229,6 +248,9 @@ def ensure():
     for k, v in s.budget_applied['spend'].items(): s.setdefault(f'bs_{k}', float(v))
     for k, v in s.budget_applied['tax_pol'].items(): s.setdefault(f'btp_{k}', v)
     for k, v in s.budget_applied['spend_pol'].items(): s.setdefault(f'bsp_{k}', v)
+    approved_thresholds = s.budget_applied.get('thresholds', threshold_defaults)
+    for key, value in threshold_defaults.items():
+        s.setdefault(f'bt_threshold_{key}', approved_thresholds.get(key, value))
 
 
 def read():
@@ -240,6 +262,16 @@ def read():
         'spend': {k: float(s[f'bs_{k}']) for k in SPEND_DEFAULTS},
         'tax_pol': {k: s[f'btp_{k}'] for k in TAX_POLICIES},
         'spend_pol': {k: s[f'bsp_{k}'] for k in SPEND_POLICIES},
+        'thresholds': {
+            'personal_allowance': float(s['bt_threshold_personal_allowance']),
+            'higher_rate_threshold': float(s['bt_threshold_higher_rate_threshold']),
+            'additional_rate_threshold': float(s['bt_threshold_additional_rate_threshold']),
+            'inheritance_nil_rate_band': float(s['bt_threshold_inheritance_nil_rate_band']),
+            'vat_registration_threshold': float(s['bt_threshold_vat_registration_threshold']),
+            'thresholds_frozen': bool(s['bt_threshold_thresholds_frozen']),
+            'threshold_freeze_scope': str(s['bt_threshold_threshold_freeze_scope']),
+            'council_tax_revaluation': bool(s['bt_threshold_council_tax_revaluation']),
+        },
     }
 
 
@@ -540,15 +572,30 @@ def spending_pie(b):
     return data
 
 
+def threshold_budget_balance(thresholds):
+    """Estimated annual fiscal effect (£bn) of a threshold package versus today's baseline."""
+    t = thresholds or {}
+    cost = (
+        (float(t.get('personal_allowance', 12570)) - 12570.0) / 1000.0 * 1.4
+        + (float(t.get('higher_rate_threshold', 50270)) - 50270.0) / 1000.0 * 0.45
+        + (float(t.get('additional_rate_threshold', 125140)) - 125140.0) / 1000.0 * 0.08
+        + (float(t.get('inheritance_nil_rate_band', 325000)) - 325000.0) / 1000.0 * 0.08
+        + (float(t.get('vat_registration_threshold', 90000)) - 90000.0) / 1000.0 * 0.05
+    )
+    return -cost + (0.5 if t.get('council_tax_revaluation') else 0.0)
+
+
 def totals(b):
     """(receipts, spending) in £bn for a Budget draft, at today's debt interest."""
     s = st.session_state
     ensure()
     scheme_data = scheme_financials(b)
     rev = sum(revenues(b).values()) + OTHER_RECEIPTS + float(scheme_data['tax_net'])
-    # Frozen thresholds create extra receipts through fiscal drag; this is separate from changing a tax rate.
-    if s.get('thresholds_frozen', False):
-        drag_rate = 0.35 if s.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
+    # Threshold changes are recurring Budget measures. Fiscal drag is added separately.
+    rev += threshold_budget_balance(b.get('thresholds', {}))
+    thresholds = b.get('thresholds', {})
+    if thresholds.get('thresholds_frozen', False):
+        drag_rate = 0.35 if thresholds.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
         rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
     spend = (sum(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0) for k in SPEND_DEFAULTS) + interest()
              + float(scheme_data['spend_cost']))
@@ -618,7 +665,8 @@ def impact(old, new):
     new_schemes = scheme_financials(new)
     tax_pol_diff = float(new_schemes['tax_net']) - float(old_schemes['tax_net'])
     spend_pol_diff = float(new_schemes['spend_cost']) - float(old_schemes['spend_cost'])
-    bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff
+    threshold_delta = threshold_budget_balance(new.get('thresholds', {})) - threshold_budget_balance(old.get('thresholds', {}))
+    bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff + threshold_delta
     old_st = FISCAL_STRATEGIES.get(old.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
     new_st = FISCAL_STRATEGIES.get(new.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
     sd = {k: new_st[k] - old_st[k] for k in ('headroom','approval','market','growth')}
@@ -629,7 +677,15 @@ def impact(old, new):
     wealth = d['property'] + d['cgt'] + d['iht'] + d['land_value'] + d['financial_transaction'] + d['stamp_duty']
     vat_pts = new['tax']['vat'] - old['tax']['vat']
 
-    approval = (-0.10 * household - 0.03 * wealth
+    old_thresholds = old.get('thresholds', {})
+    new_thresholds = new.get('thresholds', {})
+    threshold_household_change = (
+        (float(new_thresholds.get('personal_allowance', 12570)) - float(old_thresholds.get('personal_allowance', 12570))) / 1000.0 * 0.20
+        + (float(new_thresholds.get('higher_rate_threshold', 50270)) - float(old_thresholds.get('higher_rate_threshold', 50270))) / 1000.0 * 0.06
+        + (float(new_thresholds.get('additional_rate_threshold', 125140)) - float(old_thresholds.get('additional_rate_threshold', 125140))) / 1000.0 * 0.02
+        - (1.5 if new_thresholds.get('council_tax_revaluation') and not old_thresholds.get('council_tax_revaluation') else 0.0)
+    )
+    approval = (-0.10 * household - 0.03 * wealth + threshold_household_change
                 + 0.05 * (ds['health'] + ds['education']) + 0.03 * ds['welfare']
                 + 0.02 * (ds['justice'] + ds['housing'] + ds['transport']) + 0.01 * ds['defence']
                 + 0.01 * (ds['science'] + ds['culture']) - 0.01 * ds['aid']
@@ -682,6 +738,13 @@ def _apply():
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
     _set_scheme_delivery_after_budget(old, new)
     s.budget_applied = new
+    # Enact tax thresholds only as part of the delivered Budget package.
+    approved_thresholds = new.get('thresholds', {})
+    for key in ('personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold',
+                'inheritance_nil_rate_band', 'vat_registration_threshold',
+                'thresholds_frozen', 'threshold_freeze_scope'):
+        if key in approved_thresholds:
+            s[key] = approved_thresholds[key]
     # budget_strategy is a Streamlit widget key. Its value already came from read();
     # assigning it here after widget creation raises StreamlitWidgetAlreadyInstantiatedError.
     acc = dict(s.get('budget_impact') or {})
@@ -700,6 +763,8 @@ def _reset():
     for k, v in s.budget_applied['spend'].items(): s[f'bs_{k}'] = float(v)
     for k, v in s.budget_applied['tax_pol'].items(): s[f'btp_{k}'] = v
     for k, v in s.budget_applied['spend_pol'].items(): s[f'bsp_{k}'] = v
+    for key, value in s.budget_applied.get('thresholds', {}).items():
+        s[f'bt_threshold_{key}'] = value
 
 
 
@@ -890,6 +955,7 @@ def commit_budget(ayes):
         'label': f"Term {int(s.get('term', 1))} · Year {int(s.get('year', 1))}",
         'strategy': delivered.get('strategy', 'balanced'),
         'tax': dict(delivered.get('tax', {})), 'tax_names': tax_names,
+        'thresholds': dict(delivered.get('thresholds', {})),
         'spend': dict(delivered.get('spend', {})), 'spend_names': spending_names,
         'revenue_schemes': revenue_schemes, 'spending_schemes': spending_schemes,
         'scheme_delivery': {
@@ -1500,17 +1566,20 @@ def render(submit=None, after_summary=None):
             st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
             st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
 
+    thresholds_for_validation = cur.get('thresholds', {})
+    thresholds_valid = (
+        float(thresholds_for_validation.get('personal_allowance', 12570)) < float(thresholds_for_validation.get('higher_rate_threshold', 50270))
+        < float(thresholds_for_validation.get('additional_rate_threshold', 125140))
+    )
+    if not thresholds_valid:
+        st.error("Correct the income-tax threshold order before applying this Budget.")
     with st.container(key="budget_actions"):
-        apply_col, reset_col = st.columns(2, gap="medium")
-        apply_col.button(
-            "Apply Budget", type="primary", on_click=_apply,
-            disabled=not changed, use_container_width=True,
-            help="Apply the current slider values to the draft forecast."
-        )
+        _, reset_col = st.columns([1, 1], gap="medium")
+        st.caption("All figures above update as you edit. Your changes remain a draft until the Budget reaches the Commons vote.")
         reset_col.button(
-            "Reset sliders", on_click=_reset,
+            "Discard draft changes", on_click=_reset,
             disabled=not changed, use_container_width=True,
-            help="Return tax rates, spending changes and schemes to the previously applied draft."
+            help="Discard all proposed tax, threshold, spending and scheme changes."
         )
         # Submission sits on its own full-width row so the label never gets clipped
         # by a narrow third column, especially on mobile.
@@ -1561,7 +1630,26 @@ def render(submit=None, after_summary=None):
         ['Tax & revenue', 'Departmental spending', 'Policy programmes', 'Parliament & forecast', 'Red Book & charts'])
 
     with t_tax:
-        st.caption('Set each tax or duty in the unit shown beside its slider. Figures show estimated annual Treasury receipts, not an individual household bill. Income-tax rates are marginal and apply only within their band. Threshold policy is managed separately in Fiscal tools.')
+        st.caption('Set tax rates, thresholds and revenue measures for this Budget. Nothing is enacted until the Budget passes the Commons.')
+        with st.expander('Income-tax thresholds & fiscal drag', expanded=True):
+            st.caption('Threshold changes affect how much income is taxed at each rate. Freezing thresholds can raise receipts over time through fiscal drag.')
+            tc1, tc2, tc3 = st.columns(3)
+            with tc1:
+                st.number_input('Personal allowance (£/year)', min_value=5000, max_value=25000, step=250, key='bt_threshold_personal_allowance')
+                st.number_input('Higher-rate threshold (£/year)', min_value=30000, max_value=100000, step=500, key='bt_threshold_higher_rate_threshold')
+            with tc2:
+                st.number_input('Additional-rate threshold (£/year)', min_value=80000, max_value=250000, step=1000, key='bt_threshold_additional_rate_threshold')
+                st.number_input('Inheritance tax nil-rate band (£)', min_value=100000, max_value=1000000, step=5000, key='bt_threshold_inheritance_nil_rate_band')
+            with tc3:
+                st.number_input('VAT registration threshold (£ turnover)', min_value=30000, max_value=250000, step=5000, key='bt_threshold_vat_registration_threshold')
+                st.checkbox('Freeze income-tax thresholds', key='bt_threshold_thresholds_frozen', help='Keeps the selected thresholds fixed as earnings rise, creating fiscal drag.')
+            st.selectbox('Thresholds covered by freeze', ['Personal allowance and all bands', 'Higher and additional thresholds only'], key='bt_threshold_threshold_freeze_scope')
+            if (float(s['bt_threshold_personal_allowance']) >= float(s['bt_threshold_higher_rate_threshold'])
+                    or float(s['bt_threshold_higher_rate_threshold']) >= float(s['bt_threshold_additional_rate_threshold'])):
+                st.error('Tax thresholds must be ordered: personal allowance < higher-rate threshold < additional-rate threshold.')
+            st.checkbox('Revalue council tax bands', key='bt_threshold_council_tax_revaluation', help='A modelled revenue increase, with a political cost for affected households. This is a recurring measure once approved.')
+            threshold_change = threshold_budget_balance(read().get('thresholds', {})) - threshold_budget_balance(applied.get('thresholds', {}))
+            st.caption(f'Estimated annual change from threshold measures: £{threshold_change:+.2f}bn. These are simplified gameplay estimates.')
         groups = {}
         for k, tx in TAXES.items():
             groups.setdefault(tx['group'], []).append((k, tx))
