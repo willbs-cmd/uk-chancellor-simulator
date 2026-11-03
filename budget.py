@@ -743,11 +743,25 @@ def _apply(draft=None):
     approved_thresholds = new.get('thresholds', {})
     for key in ('personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold',
                 'inheritance_nil_rate_band', 'vat_registration_threshold',
-                'thresholds_frozen', 'threshold_freeze_scope'):
+                'thresholds_frozen', 'threshold_freeze_scope', 'council_tax_revaluation'):
         if key in approved_thresholds:
             s[key] = approved_thresholds[key]
-    # budget_strategy is a Streamlit widget key. Its value already came from read();
-    # assigning it here after widget creation raises StreamlitWidgetAlreadyInstantiatedError.
+
+    # The next Budget must open from the last Commons-approved ledger. Streamlit
+    # keeps widget values in session_state, so setdefault() in ensure() cannot
+    # refresh controls that were created in a previous Budget. This runs during
+    # the Commons vote stage, when the Budget editor widgets are not on screen.
+    for key, value in new.get('tax', {}).items():
+        s[f'bt_{key}'] = value
+    for key, value in new.get('spend', {}).items():
+        s[f'bs_{key}'] = float(value)
+    for key, value in new.get('tax_pol', {}).items():
+        s[f'btp_{key}'] = bool(value)
+    for key, value in new.get('spend_pol', {}).items():
+        s[f'bsp_{key}'] = bool(value)
+    for key, value in approved_thresholds.items():
+        s[f'bt_threshold_{key}'] = value
+    s['budget_strategy'] = new.get('strategy', 'balanced')
     acc = dict(s.get('budget_impact') or {})
     for k, v in imp.items():
         acc[k] = round(acc.get(k, 0.0) + v, 4)

@@ -234,6 +234,42 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Save/load smoke test failed: {exc}")
 
+    # The next Budget editor must hydrate from the newly approved ledger,
+    # not retain stale Streamlit widget values from the previous Budget.
+    try:
+        new_run('Labour', 'Normal', 97532)
+        draft = budget.read()
+        draft['tax']['income'] = min(float(budget.TAXES['income']['hi']), float(draft['tax']['income']) + 1.0)
+        draft['tax']['vat'] = min(float(budget.TAXES['vat']['hi']), float(draft['tax']['vat']) + 0.5)
+        draft['spend']['health'] = 2.0
+        first_tax_policy = next(iter(draft['tax_pol']))
+        draft['tax_pol'][first_tax_policy] = True
+        first_spend_policy = next(iter(draft['spend_pol']))
+        draft['spend_pol'][first_spend_policy] = True
+        draft['thresholds']['personal_allowance'] = 13000.0
+        draft['thresholds']['council_tax_revaluation'] = True
+        draft['strategy'] = 'redistribution'
+        budget._apply(draft)
+        for key, value in draft['tax'].items():
+            if st.session_state.get(f'bt_{key}') != value:
+                failures.append(f"Approved tax rate {key} did not carry forward to its Budget control.")
+        for key, value in draft['spend'].items():
+            if abs(float(st.session_state.get(f'bs_{key}', 0.0)) - float(value)) > 0.001:
+                failures.append(f"Approved spending setting {key} did not carry forward to its Budget control.")
+        for key, value in draft['tax_pol'].items():
+            if bool(st.session_state.get(f'btp_{key}')) != bool(value):
+                failures.append(f"Approved tax scheme {key} did not carry forward to its Budget control.")
+        for key, value in draft['spend_pol'].items():
+            if bool(st.session_state.get(f'bsp_{key}')) != bool(value):
+                failures.append(f"Approved spending scheme {key} did not carry forward to its Budget control.")
+        for key, value in draft['thresholds'].items():
+            if st.session_state.get(f'bt_threshold_{key}') != value:
+                failures.append(f"Approved Budget threshold {key} did not carry forward to its control.")
+        if st.session_state.get('budget_strategy') != 'redistribution':
+            failures.append("Approved Budget strategy did not carry forward to its control.")
+    except Exception as exc:
+        failures.append(f"Budget control carry-forward regression test failed: {exc}")
+
     # Regional parties need a credible route to retain a Westminster mandate
     # without being expected to win almost every seat in Scotland or Wales.
     try:
