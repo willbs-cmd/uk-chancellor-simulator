@@ -36,6 +36,8 @@ LEFT_BLOC = ['Labour', 'Liberal Democrats', 'Green Party', 'SNP', 'Plaid Cymru']
 RIGHT_BLOC = ['Conservative', 'Reform UK', 'Liberal Democrats']
 
 # which ideologies each party's MPs consider "home territory"
+REGIONAL_MANDATES = {'SNP': 12, 'Plaid Cymru': 6}
+
 PURITY = {
     'Labour': ['Social Democratic', 'Hard Left'],
     'Conservative': ['Free-Market', 'Fiscal Austerity'],
@@ -1334,11 +1336,14 @@ def compute_election():
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
     if regional:
-        target = 40 if party == 'SNP' else 15
+        # A regional party does not need to win almost every seat in its nation
+        # to retain a meaningful mandate. These thresholds represent a credible
+        # Westminster bloc, not outright control of the devolved nation.
+        target = REGIONAL_MANDATES[party]
         cap = 57 if party == 'SNP' else 32
         if mine >= target:
             r.update(win=True, kind='regional', margin=mine - target,
-                     title=f'{party} Regional Dominance ({mine}/{cap})',
+                     title=f'{party} Regional Mandate ({mine}/{cap})',
                      gov_type='Holding the Balance of Power in Westminster' if seats[largest] < WIN_MAJORITY else 'Strong Regional Opposition')
         else:
             r.update(title=f'{party} Regional Defeat ({mine} seats)', gov_type='Loss of Regional Mandate')
