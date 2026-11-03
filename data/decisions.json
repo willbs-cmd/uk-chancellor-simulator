@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Playable policy content. Each decision has five options aligned to the ideology list; effects are game-stat deltas.",
+  "description": "Playable policy content. Each decision has six options with matching effects and ideology labels; effects are game-stat deltas.",
   "ideologies": [
     "Hard Left",
     "Social Democratic",
@@ -21,7 +21,8 @@
           "2. (Social Democratic) Launch a massive state-funded green jobs guarantee.",
           "3. (Centric) Announce targeted, fully-costed infrastructure upgrades.",
           "4. (Free-Market) Immediately scrap EU-era employment regulations.",
-          "5. (Fiscal Austerity) Announce an emergency freeze on all public sector hiring."
+          "5. (Fiscal Austerity) Announce an emergency freeze on all public sector hiring.",
+          "6. (Centric) Negotiate a cross-party first-year programme with a small number of fully costed national priorities."
         ],
         "effects": [
           {
@@ -66,7 +67,22 @@
             "schools": -5,
             "market_conf": 4,
             "message": "Public sector hiring frozen."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -82,7 +98,8 @@
           "2. (Social Democratic) Negotiate a generous inflation-matching pay rise.",
           "3. (Centric) Offer a balanced compromise settlement.",
           "4. (Free-Market) De-unionize public sectors and introduce private contractors.",
-          "5. (Fiscal Austerity) Enforce a strict statutory pay cap and invoke anti-strike laws."
+          "5. (Fiscal Austerity) Enforce a strict statutory pay cap and invoke anti-strike laws.",
+          "6. (Centric) Broker a three-year pay and productivity deal with unions, employers and public-service leaders."
         ],
         "effects": [
           {
@@ -117,7 +134,22 @@
             "inflation": -0.3,
             "nhs_morale": -20,
             "message": "Pay cap enforced. Markets pleased, workforce furious."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -133,7 +165,8 @@
           "2. (Social Democratic) Increase wrap-around employment support and health coaching.",
           "3. (Centric) Streamline welfare administration with moderate criteria checks.",
           "4. (Free-Market) Privatize employment support services and enforce strict work search rules.",
-          "5. (Fiscal Austerity) Severely restrict disability benefits to achieve immediate savings."
+          "5. (Fiscal Austerity) Severely restrict disability benefits to achieve immediate savings.",
+          "6. (Centric) Pilot locally delivered employment and health support, with independent evaluation before national rollout."
         ],
         "effects": [
           {
@@ -171,7 +204,22 @@
             "homeless": 30,
             "market_conf": 4,
             "message": "Benefits slashed. Massive public backlash."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -187,7 +235,8 @@
           "2. (Social Democratic) Lead a global OECD coalition to enforce a minimum tax floor.",
           "3. (Centric) Close the worst domestic loopholes but avoid a trade war.",
           "4. (Free-Market) Defend the tax code and offer them further R&D incentives.",
-          "5. (Fiscal Austerity) Use the controversy to quietly raise VAT on digital goods instead."
+          "5. (Fiscal Austerity) Use the controversy to quietly raise VAT on digital goods instead.",
+          "6. (Centric) Agree an international minimum-tax enforcement pact and strengthen HMRC's specialist team."
         ],
         "effects": [
           {
@@ -221,7 +270,22 @@
             "inflation": 0.2,
             "market_conf": 4,
             "message": "Digital VAT quietly raised."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -237,7 +301,8 @@
           "2. (Social Democratic) Mandate high social housing quotas on all private developments.",
           "3. (Centric) Overhaul planning laws to streamline local housing approvals.",
           "4. (Free-Market) Abolish planning restrictions and greenbelt protections entirely.",
-          "5. (Fiscal Austerity) Protect greenbelt land and offer no state housing intervention."
+          "5. (Fiscal Austerity) Protect greenbelt land and offer no state housing intervention.",
+          "6. (Centric) Create locally negotiated housing partnerships linking new homes to transport, schools and GP capacity."
         ],
         "effects": [
           {
@@ -277,7 +342,22 @@
             "house_ratio": 0.3,
             "market_conf": 4,
             "message": "Greenbelt protected."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -293,7 +373,8 @@
           "2. (Social Democratic) Maintain current spending but shift focus to cyber warfare.",
           "3. (Centric) Modestly increase the defence budget to meet NATO 2.5% targets.",
           "4. (Free-Market) Privatise military logistics and procurement to cut costs.",
-          "5. (Fiscal Austerity) Force the MoD to scrap a major aircraft carrier to save money."
+          "5. (Fiscal Austerity) Force the MoD to scrap a major aircraft carrier to save money.",
+          "6. (Centric) Set a cross-party defence settlement with multi-year funding and stronger parliamentary scrutiny."
         ],
         "effects": [
           {
@@ -323,7 +404,22 @@
             "approval": -3.2,
             "market_conf": -4,
             "message": "Aircraft carrier scrapped."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -339,7 +435,8 @@
           "2. (Social Democratic) Subsidise home insulation and cap green energy prices.",
           "3. (Centric) Delay minor green targets to ease immediate bill pressure.",
           "4. (Free-Market) Fast-track North Sea oil drilling and scrap all green levies.",
-          "5. (Fiscal Austerity) Refuse all subsidies and let the market dictate energy prices."
+          "5. (Fiscal Austerity) Refuse all subsidies and let the market dictate energy prices.",
+          "6. (Centric) Offer targeted bill support alongside competitive contracts for new low-carbon power."
         ],
         "effects": [
           {
@@ -380,7 +477,22 @@
             "inflation": 0.4,
             "energy_bills": 200,
             "message": "Energy prices left to soar."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -396,7 +508,8 @@
           "2. (Social Democratic) Negotiate comprehensive digital and green trade alignment pacts.",
           "3. (Centric) Pursue standard diplomatic trade negotiations.",
           "4. (Free-Market) Unilateral free trade approach with zero tariffs on all imports.",
-          "5. (Fiscal Austerity) Absorb trade friction without policy or budget changes."
+          "5. (Fiscal Austerity) Absorb trade friction without policy or budget changes.",
+          "6. (Centric) Pursue sector-by-sector trade agreements while protecting critical domestic supply chains."
         ],
         "effects": [
           {
@@ -425,7 +538,22 @@
             "growth": -0.2,
             "market_conf": 4,
             "message": "Trade friction ignored."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -441,7 +569,8 @@
           "2. (Social Democratic) Launch a massive frontline staff recruitment drive.",
           "3. (Centric) Partner with private healthcare providers to clear backlogs quickly.",
           "4. (Free-Market) Introduce an insurance-based healthcare model with copays.",
-          "5. (Fiscal Austerity) Rely on existing NHS efficiencies with no extra funding."
+          "5. (Fiscal Austerity) Rely on existing NHS efficiencies with no extra funding.",
+          "6. (Centric) Agree a measurable NHS recovery compact with local trusts, staff and social-care providers."
         ],
         "effects": [
           {
@@ -476,7 +605,22 @@
             "nhs_waiting": 0.3,
             "market_conf": 4,
             "message": "No extra NHS funds."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -492,7 +636,8 @@
           "2. (Social Democratic) Deliver targeted cost-of-living cash support.",
           "3. (Centric) Increase defense spending to 2.5% and protect pensions.",
           "4. (Free-Market) Abolish stamp duty and inheritance tax.",
-          "5. (Fiscal Austerity) Hold firm on spending caps and protect fiscal rules."
+          "5. (Fiscal Austerity) Hold firm on spending caps and protect fiscal rules.",
+          "6. (Centric) Publish a costed stability plan that protects priority services and limits unfunded giveaways."
         ],
         "effects": [
           {
@@ -521,7 +666,22 @@
           {
             "market_conf": 9,
             "message": "Spending caps held firm."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -537,7 +697,8 @@
           "2. (Social Democratic) Fund extra evening and weekend clinics and expand NHS recruitment.",
           "3. (Centric) Target the longest waits and publish monthly performance dashboards.",
           "4. (Free-Market) Expand independent-provider contracts for routine procedures.",
-          "5. (Fiscal Austerity) Freeze administrative hiring and require productivity savings."
+          "5. (Fiscal Austerity) Freeze administrative hiring and require productivity savings.",
+          "6. (Centric) Expand evening and weekend treatment through voluntary NHS staff agreements and shared waiting-list capacity."
         ],
         "effects": [
           {
@@ -573,7 +734,22 @@
             "approval": -4,
             "nhs_morale": -7,
             "message": "NHS savings drive announced."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -589,7 +765,8 @@
           "2. (Social Democratic) Expand grants for disadvantaged students and technical colleges.",
           "3. (Centric) Reform student finance and fund courses tied to skills shortages.",
           "4. (Free-Market) Let universities set fees and compete for students.",
-          "5. (Fiscal Austerity) Cut teaching grants and consolidate struggling institutions."
+          "5. (Fiscal Austerity) Cut teaching grants and consolidate struggling institutions.",
+          "6. (Centric) Create regional skills compacts joining colleges, universities and employers around local vacancies."
         ],
         "effects": [
           {
@@ -624,7 +801,22 @@
             "approval": -4,
             "growth": -0.1,
             "message": "Higher education savings imposed."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -709,7 +901,8 @@
           "2. (Social Democratic) Fund retraining and require worker consultation on major automation.",
           "3. (Centric) Create a light-touch AI code with targeted retraining grants.",
           "4. (Free-Market) Keep regulation minimal and offer AI investment allowances.",
-          "5. (Fiscal Austerity) End new grants and let firms fund their own transition."
+          "5. (Fiscal Austerity) End new grants and let firms fund their own transition.",
+          "6. (Centric) Establish a transition fund for worker retraining, with employers contributing where automation replaces roles."
         ],
         "effects": [
           {
@@ -744,7 +937,22 @@
             "approval": -2.5,
             "growth": 0.05,
             "message": "Public support for AI transition withdrawn."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -760,7 +968,8 @@
           "2. (Social Democratic) Expand small-business relief and provide targeted energy support.",
           "3. (Centric) Simplify rates and offer time-limited relief to struggling shops.",
           "4. (Free-Market) Permanently cut business rates and loosen trading rules.",
-          "5. (Fiscal Austerity) Keep rates unchanged and remove temporary reliefs."
+          "5. (Fiscal Austerity) Keep rates unchanged and remove temporary reliefs.",
+          "6. (Centric) Offer a time-limited rates discount for high-street firms, funded by reforming relief for the largest properties."
         ],
         "effects": [
           {
@@ -794,7 +1003,22 @@
             "approval": -3.5,
             "growth": -0.1,
             "message": "Business reliefs withdrawn."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -810,7 +1034,8 @@
           "2. (Social Democratic) Prioritise vulnerable communities and resilient infrastructure.",
           "3. (Centric) Co-fund local defences using risk-based assessments.",
           "4. (Free-Market) Incentivise private insurance and property-level protection.",
-          "5. (Fiscal Austerity) Restrict new spending to emergency repairs only."
+          "5. (Fiscal Austerity) Restrict new spending to emergency repairs only.",
+          "6. (Centric) Create regional flood-resilience partnerships combining targeted barriers, natural defences and property protection."
         ],
         "effects": [
           {
@@ -844,7 +1069,22 @@
             "approval": -3,
             "netzero": -2,
             "message": "Only emergency flood repairs will be funded."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -860,7 +1100,8 @@
           "2. (Social Democratic) Expand funded hours and raise support for low-income families.",
           "3. (Centric) Target subsidies at working parents and childcare shortages.",
           "4. (Free-Market) Offer tax credits and encourage new private providers.",
-          "5. (Fiscal Austerity) Tighten eligibility and reduce childcare subsidies."
+          "5. (Fiscal Austerity) Tighten eligibility and reduce childcare subsidies.",
+          "6. (Centric) Expand funded childcare places in shortage areas and help providers recruit and retain staff."
         ],
         "effects": [
           {
@@ -897,7 +1138,22 @@
             "unemployment": 0.2,
             "child_poverty": 1,
             "message": "Childcare support eligibility tightened."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -913,7 +1169,8 @@
           "2. (Social Democratic) Stabilise council finances and protect social care.",
           "3. (Centric) Reward councils that share services and improve delivery.",
           "4. (Free-Market) Expand outsourcing and give councils greater tax flexibility.",
-          "5. (Fiscal Austerity) Require deeper savings and allow service consolidation."
+          "5. (Fiscal Austerity) Require deeper savings and allow service consolidation.",
+          "6. (Centric) Agree multi-year council funding settlements in return for transparent recovery and service-improvement plans."
         ],
         "effects": [
           {
@@ -945,7 +1202,22 @@
             "approval": -4,
             "schools": -2,
             "message": "Council savings targets imposed."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -961,7 +1233,8 @@
           "2. (Social Democratic) Fund sustainable farming and rural infrastructure.",
           "3. (Centric) Offer targeted resilience grants and simplify compliance.",
           "4. (Free-Market) Remove trade barriers and loosen agricultural regulation.",
-          "5. (Fiscal Austerity) End most farm subsidies and prioritise market competition."
+          "5. (Fiscal Austerity) End most farm subsidies and prioritise market competition.",
+          "6. (Centric) Introduce a predictable multi-year farm support contract rewarding food production and environmental stewardship."
         ],
         "effects": [
           {
@@ -995,7 +1268,22 @@
             "approval": -3.5,
             "netzero": -2,
             "message": "Farm subsidy reductions announced."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1011,7 +1299,8 @@
           "2. (Social Democratic) Expand renewables and provide targeted bill support.",
           "3. (Centric) Diversify supply and accelerate grid upgrades.",
           "4. (Free-Market) Offer tax incentives for private energy investment and new generation.",
-          "5. (Fiscal Austerity) End bill support and let prices reduce demand."
+          "5. (Fiscal Austerity) End bill support and let prices reduce demand.",
+          "6. (Centric) Build a strategic energy resilience plan combining storage, grid upgrades and diversified supply contracts."
         ],
         "effects": [
           {
@@ -1049,7 +1338,22 @@
             "energy_bills": 150,
             "inflation": 0.2,
             "message": "Energy support withdrawn as bills rise."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1065,7 +1369,8 @@
           "2. (Social Democratic) Invest in skills, R&D and regional growth partnerships.",
           "3. (Centric) Reform planning and focus investment on high-return projects.",
           "4. (Free-Market) Cut corporation tax and remove barriers to investment.",
-          "5. (Fiscal Austerity) Prioritise debt reduction over new investment."
+          "5. (Fiscal Austerity) Prioritise debt reduction over new investment.",
+          "6. (Centric) Create a ten-year productivity compact focused on skills, infrastructure and faster planning decisions."
         ],
         "effects": [
           {
@@ -1099,7 +1404,22 @@
             "growth": -0.1,
             "approval": -2,
             "message": "Investment deferred in favour of debt reduction."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1115,7 +1435,8 @@
           "2. (Social Democratic) Link work visas to shortage sectors and invest in integration.",
           "3. (Centric) Reform processing, enforcement and skills planning together.",
           "4. (Free-Market) Expand employer-led visas and streamline recruitment.",
-          "5. (Fiscal Austerity) Tighten eligibility and reduce migration-related service spending."
+          "5. (Fiscal Austerity) Tighten eligibility and reduce migration-related service spending.",
+          "6. (Centric) Link migration policy to verified labour shortages while funding local services facing rapid population growth."
         ],
         "effects": [
           {
@@ -1151,7 +1472,22 @@
             "approval": -3,
             "growth": -0.15,
             "message": "Migration and related service spending tightened."
+          },
+          {
+            "headroom": -1.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1167,7 +1503,8 @@
           "2. (Social Democratic) Provide targeted payments and expand social tariffs.",
           "3. (Centric) Focus help on low-income households and debt advice.",
           "4. (Free-Market) Cut selected indirect taxes and encourage competition.",
-          "5. (Fiscal Austerity) End temporary support to limit borrowing and demand."
+          "5. (Fiscal Austerity) End temporary support to limit borrowing and demand.",
+          "6. (Centric) Expand targeted debt advice and hardship support, coordinated with lenders and local authorities."
         ],
         "effects": [
           {
@@ -1201,7 +1538,22 @@
             "approval": -4.5,
             "child_poverty": 1,
             "message": "Temporary cost-of-living support ends."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1217,7 +1569,8 @@
           "2. (Social Democratic) Support regional tourism, museums and creative apprenticeships.",
           "3. (Centric) Target grants at projects with measurable local economic returns.",
           "4. (Free-Market) Cut licensing red tape and promote private investment.",
-          "5. (Fiscal Austerity) End cultural grants and require venues to become self-funding."
+          "5. (Fiscal Austerity) End cultural grants and require venues to become self-funding.",
+          "6. (Centric) Create local visitor-economy partnerships improving late transport, town-centre safety and cultural venues."
         ],
         "effects": [
           {
@@ -1250,7 +1603,22 @@
             "headroom": 1.5,
             "approval": -3,
             "message": "Cultural grants withdrawn."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1266,7 +1634,8 @@
           "2. (Social Democratic) Fund secure digital services and retrain civil servants.",
           "3. (Centric) Consolidate legacy systems with staged delivery targets.",
           "4. (Free-Market) Outsource major platforms to competing technology firms.",
-          "5. (Fiscal Austerity) Mandate rapid headcount reductions and freeze IT budgets."
+          "5. (Fiscal Austerity) Mandate rapid headcount reductions and freeze IT budgets.",
+          "6. (Centric) Set shared digital standards across departments and publish annual service-quality and efficiency results."
         ],
         "effects": [
           {
@@ -1298,7 +1667,22 @@
             "approval": -3,
             "nhs_morale": -2,
             "message": "Rapid civil service savings imposed."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
@@ -1314,7 +1698,8 @@
           "2. (Social Democratic) Protect the pension floor and improve support for low-income retirees.",
           "3. (Centric) Review pension uprating alongside targeted help for poorer pensioners.",
           "4. (Free-Market) Encourage private saving and gradually raise the retirement age.",
-          "5. (Fiscal Austerity) Means-test more pensioner benefits and restrain uprating."
+          "5. (Fiscal Austerity) Means-test more pensioner benefits and restrain uprating.",
+          "6. (Centric) Convene an independent pensions commission to recommend a sustainable settlement across generations."
         ],
         "effects": [
           {
@@ -1343,7 +1728,22 @@
             "headroom": 3,
             "approval": -4.5,
             "message": "Pensioner benefits means-tested more tightly."
+          },
+          {
+            "headroom": -0.8,
+            "approval": 1.2,
+            "growth": 0.1,
+            "market_conf": 1,
+            "message": "A negotiated, phased settlement is agreed, balancing delivery with fiscal control."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     }
