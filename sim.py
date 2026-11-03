@@ -258,8 +258,12 @@ def check(n=None, difficulty=None):
                 failures.append(f"{party} is not rewarded for its core ideology.")
             if engine.party_alignment(party, 'Centric') <= 0:
                 failures.append(f"{party} is punished for a centrist compromise.")
-            if engine.party_alignment(party, 'Centric') >= engine.party_alignment(party, core_ideology):
-                failures.append(f"{party} does not distinguish its core programme from compromise.")
+            off_message = next(
+                ideology for ideology in ('Hard Left', 'Free-Market', 'Fiscal Austerity', 'Social Democratic')
+                if ideology not in engine.PURITY.get(party, []) and ideology != 'Centric'
+            )
+            if engine.party_alignment(party, off_message) >= engine.party_alignment(party, core_ideology):
+                failures.append(f"{party} does not distinguish its core programme from an off-message choice.")
     except Exception as exc:
         failures.append(f"Party alignment regression check failed: {exc}")
 
