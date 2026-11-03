@@ -200,6 +200,13 @@ if s.year > 5 and not s.get('election_campaign_done', False):
         if len(s.poll_history[party]) > 1:
             delta = round(float(s.poll_history[party][-1]) - float(s.poll_history[party][-2]), 1)
         col.metric(party, f"{current_polls[party]:.1f}%", delta=(f"{delta:+.1f} pts" if delta is not None else None))
+    projected_seats = engine.compute_seats(current_polls)
+    projection_party = max(projected_seats, key=projected_seats.get)
+    projection_cols = st.columns(3)
+    projection_cols[0].metric("Your projected seats", projected_seats.get(s.party, 0))
+    projection_cols[1].metric("Largest party in projection", projection_party)
+    projection_cols[2].metric("Projected Commons majority", max(0, projected_seats.get(s.party, 0) - engine.WIN_MAJORITY))
+    st.caption("Illustrative seat projection from the game's constituency model. It updates as national polls and campaign choices change; it is not a real-world forecast.")
     st.progress(min(1.0, (week - 1) / total_weeks), text=f"Campaign progress · {week - 1}/{total_weeks} weeks completed")
     week_briefings = {
         1: ("The campaign launch", "Set the tone with a major announcement and the first national visits."),
@@ -349,7 +356,7 @@ if s.year > 5:
                       else "Hung / minority")
     e3.metric("Working majority", majority_label)
     st.markdown(f"### 🗳️ Government mandate · {r.get('mandate_label', 'Election result')}" )
-    st.caption(f"The next term begins with a modelled Commons mandate of {r.get('mandate_strength', 0):+d} votes. A larger majority makes it easier to pass legislation; coalition and minority governments receive a more cautious mandate.")
+    st.caption(f"The next term begins with a modelled working majority of {r.get('working_majority', 0):+d} seats. A larger majority makes it easier to pass legislation; coalition and minority governments receive a more cautious mandate.")
     election_rows = []
     for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True):
         election_rows.append({
