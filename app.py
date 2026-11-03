@@ -581,19 +581,29 @@ def budget_screen():
                         or float(thresholds.get('higher_rate_threshold', 50270)) >= float(thresholds.get('additional_rate_threshold', 125140))):
                     st.error("The Budget cannot proceed: income-tax thresholds must be ordered from personal allowance to higher-rate and additional-rate thresholds.")
                 else:
+                    s.budget_day_draft = budget.read()
                     engine.submit_budget(); st.rerun()
         budget.render(submit=submit,after_summary=lambda: politics.render_pledges(budget.read()))
         st.caption(f"{sum(1 for item in live_assessment if item['met'])} of {len(live_assessment)} priorities currently met. This assessment updates as you change the Budget.")
 
     elif stage == 1:
-        st.markdown("### OBR forecast: the numbers behind the Budget")
+        st.markdown("### Review your Budget before the OBR forecast")
         st.info(s.get('budget_day_negotiation',''))
-        st.write("The independent forecast assesses the current draft. It is a central projection, not a guarantee.")
-        if st.button("Receive the OBR forecast",type="primary"):
+        draft = s.get('budget_day_draft') or budget.read()
+        budget_day_scorecard(draft, "Your negotiated Budget draft")
+        if draft == s.get('budget_applied'):
+            st.warning("This draft is identical to your last delivered Budget. Your tax rates, departmental percentages or policy programmes have not changed. Return to the controls if you intended to make changes.")
+        else:
+            st.success("Your draft contains changes. They are not enacted yet; they will take effect only after the Budget passes the Commons.")
+        back_col, next_col = st.columns(2)
+        if back_col.button("← Return to Budget controls", use_container_width=True):
+            s.budget_day_stage = 0; st.rerun()
+        if next_col.button("Receive the OBR forecast",type="primary",use_container_width=True):
             engine.submit_budget(); st.rerun()
     elif stage == 2:
         st.markdown("### The Chancellor prepares the statement")
         draft_budget = budget.read()
+        draft_budget = s.get('budget_day_draft') or draft_budget
         budget_day_scorecard(draft_budget, "The Budget at a glance")
         rows=s.get('budget_day_forecast') or []
         if rows:
@@ -605,6 +615,8 @@ def budget_screen():
                 first, last = rows[0], rows[-1]
                 st.caption(f"By {last.get('year', 'year three')}, projected headroom is £{float(last.get('headroom', 0)):.1f}bn and growth is {float(last.get('growth', 0)):.1f}%. This is a central gameplay scenario, not a guarantee.")
         st.caption("The forecast reflects the current draft and simplified model assumptions. You can still return to the Budget controls and revise the package before delivering it.")
+        if st.button("← Return to Budget controls", use_container_width=True):
+            s.budget_day_stage = 0; st.rerun()
         if st.button("Prepare the Budget speech",type="primary"):
             engine.submit_budget(); st.rerun()
     elif stage == 3:
@@ -614,6 +626,8 @@ def budget_screen():
             st.markdown("> "+draft['text'])
         budget_day_scorecard(budget.read(), "Final Budget announcement sheet")
         st.warning("Once delivered, the Budget is put to the Commons. A failed vote ends the Chancellor’s career.")
+        if st.button("← Return to Budget controls", use_container_width=True):
+            s.budget_day_stage = 0; st.rerun()
         if st.button("Deliver Budget & open the markets",type="primary"):
             engine.submit_budget(); st.rerun()
 
