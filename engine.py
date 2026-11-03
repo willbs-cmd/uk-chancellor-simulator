@@ -883,7 +883,8 @@ def submit_budget():
         s.message = s.budget_day_negotiation
         return 'negotiated'
     if stage == 1:
-        s.budget_day_forecast = budget.forecast(budget.read(), years=1)
+        draft = s.get('budget_day_draft') or budget.read()
+        s.budget_day_forecast = budget.forecast(draft, years=3)
         s.budget_day_stage = 2
         return 'forecast'
     if stage == 2:
@@ -897,8 +898,9 @@ def submit_budget():
     s.event_cards = []
     budget.ensure()
     before = state.values()
-    if budget.read() != s.budget_applied:
-        budget._apply()
+    draft = s.get('budget_day_draft') or budget.read()
+    if draft != s.budget_applied:
+        budget._apply(draft)
     elif not str(s.get('message', '')).startswith('Budget delivered'):
         s.message = 'You deliver the Budget unchanged.'
     budget.apply_irritants()
@@ -913,7 +915,7 @@ def submit_budget():
     if s.approval < 40:
         s.market_conf = round(_clip(s.market_conf - 1.0), 1)
     s.vote_ayes = ayes
-    s.budget_speech = speech.compose()
+    s.budget_speech = speech.compose(draft)
     market_impulse = float((s.get('budget_impact') or {}).get('market', 0.0))
     gilt_move = max(-0.12, min(0.12, -0.035 * market_impulse))
     if float((s.get('budget_impact') or {}).get('headroom', 0.0)) < -5:
