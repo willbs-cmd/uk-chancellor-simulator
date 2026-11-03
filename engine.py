@@ -871,7 +871,9 @@ def submit_budget():
         s.budget_day_stage = 2
         return 'forecast'
     if stage == 2:
-        s.budget_day_speech = speech.compose()
+        draft = s.get('budget_day_draft') or budget.read()
+        s.budget_day_draft = draft
+        s.budget_day_speech = speech.compose(draft)
         s.budget_day_stage = 3
         return 'speech'
     state.checkpoint()
