@@ -168,8 +168,11 @@ def log(kind, title, choice='', ideology='', before=None, note=''):
     s = st.session_state
     d = {}
     if before:
+        # Some events intentionally snapshot only the stats they can change.
+        # Missing keys must not crash the shared event logger.
         for k in ('approval', 'market_conf', 'headroom', 'growth'):
-            d[k] = round(s[k] - before[k], 2)
+            if k in before and k in s:
+                d[k] = round(s[k] - before[k], 2)
     score = d.get('approval', 0) + 0.5 * d.get('market_conf', 0) + 0.7 * d.get('headroom', 0)
     s.history.append(dict(n=len(s.history) + 1, term=s.term, year=s.year, block=s.block, kind=kind, title=title,
                           choice=choice, ideology=ideology, d=d, score=round(score, 2), note=note))
