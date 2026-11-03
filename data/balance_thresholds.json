@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "default_runs": 20,
+  "default_runs": 100,
   "default_difficulty": "Hardcore",
   "strategy": "sensible",
   "seed_start": 0,
@@ -45,7 +45,7 @@
       "maximum_sack_percent": 65
     }
   },
-  "note": "The party thresholds remain the desired balance targets. The baseline values record the measured main-branch results from 20 sensible-strategy Hardcore runs (2 November 2026); CI fails if a change moves a party more than 10 percentage points worse than that baseline. Balance-target misses remain visible and should be addressed in a dedicated gameplay-balancing update.",
+  "note": "The party thresholds remain the desired balance targets. CI now measures 100 sensible-strategy Hardcore runs per party (700 runs total) to reduce small-sample noise. The baseline values are historical 20-run main-branch reference results, so target misses remain visible and any party more than 10 percentage points worse than that baseline fails CI. Use the larger results to guide further balancing rather than treating the baseline as a design target.",
   "balance_regression_tolerance_pp": 10,
   "balance_baseline": {
     "Labour": {
