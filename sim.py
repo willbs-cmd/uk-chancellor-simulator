@@ -244,6 +244,25 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Regional mandate smoke test failed: {exc}")
 
+    # Party identity should matter, but centrist compromises must remain
+    # viable for every governing party rather than draining unity by default.
+    try:
+        expected_core = {
+            'Labour': 'Social Democratic', 'Conservative': 'Free-Market',
+            'Liberal Democrats': 'Centric', 'Reform UK': 'Free-Market',
+            'Green Party': 'Hard Left', 'SNP': 'Social Democratic',
+            'Plaid Cymru': 'Social Democratic',
+        }
+        for party, core_ideology in expected_core.items():
+            if abs(engine.party_alignment(party, core_ideology) - 1.0) > 0.001:
+                failures.append(f"{party} is not rewarded for its core ideology.")
+            if engine.party_alignment(party, 'Centric') <= 0:
+                failures.append(f"{party} is punished for a centrist compromise.")
+            if engine.party_alignment(party, 'Centric') >= engine.party_alignment(party, core_ideology):
+                failures.append(f"{party} does not distinguish its core programme from compromise.")
+    except Exception as exc:
+        failures.append(f"Party alignment regression check failed: {exc}")
+
     # A large forecast/headroom movement must not by itself cause a political
     # confidence collapse. Test the real engine function in isolation.
     try:
