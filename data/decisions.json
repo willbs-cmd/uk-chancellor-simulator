@@ -640,7 +640,8 @@
           "2. (Social Democratic) Cap fare rises and invest in reliable local services.",
           "3. (Centric) Tie fare rises to service standards and upgrade bottlenecks.",
           "4. (Free-Market) Open more routes to competition and dynamic pricing.",
-          "5. (Fiscal Austerity) Allow fares to rise and cut low-use subsidies."
+          "5. (Fiscal Austerity) Allow fares to rise and cut low-use subsidies.",
+          "6. (Centric) Introduce a national commuter pass and give regional transport authorities more power to coordinate fares and services."
         ],
         "effects": [
           {
@@ -676,7 +677,23 @@
             "approval": -4,
             "rail": -3,
             "message": "Rail subsidies cut; fares rise."
+          },
+          {
+            "headroom": -2.2,
+            "approval": 2.5,
+            "rail": 5,
+            "growth": 0.15,
+            "unemployment": -0.05,
+            "message": "A national commuter pass is introduced, with regional authorities coordinating fares and service improvements."
           }
+        ],
+        "option_ideologies": [
+          "Hard Left",
+          "Social Democratic",
+          "Centric",
+          "Free-Market",
+          "Fiscal Austerity",
+          "Centric"
         ]
       }
     },
