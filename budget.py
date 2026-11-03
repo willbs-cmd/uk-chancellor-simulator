@@ -719,9 +719,10 @@ def impact(old, new):
 def _clip(v): return max(0, min(100, v))
 
 
-def _apply():
+def _apply(draft=None):
+    """Enact the exact Budget draft approved by the Commons, not a fresh widget read."""
     s = st.session_state
-    new, old = read(), s.budget_applied
+    new, old = (read() if draft is None else draft), s.budget_applied
     if new == old:
         s.message = 'Budget unchanged.'
         return

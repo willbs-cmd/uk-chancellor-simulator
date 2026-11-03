@@ -78,7 +78,8 @@ def compose(draft=None):
         opener = random.choice(['Mr Speaker, this is a Budget that balances ambition with prudence.',
                                 'Mr Speaker, this is a steady Budget for uncertain times.'])
 
-    strategy = budget.FISCAL_STRATEGIES.get(s.get('budget_strategy', 'balanced'), budget.FISCAL_STRATEGIES['balanced'])
+    strategy_key = draft.get('strategy', s.get('budget_strategy', 'balanced'))
+    strategy = budget.FISCAL_STRATEGIES.get(strategy_key, budget.FISCAL_STRATEGIES['balanced'])
     parts = [opener, f"Our fiscal approach is {strategy['label'].lower()}: {strategy['description']}"]
     if s.get('budget_message'):
         parts.append(s.budget_message.strip())
