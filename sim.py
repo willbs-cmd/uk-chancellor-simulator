@@ -202,6 +202,23 @@ def check(n=None, difficulty=None):
     contract = thresholds['contract']
     failures = []
 
+    # A large forecast/headroom movement must not by itself cause a political
+    # confidence collapse. Test the real engine function in isolation.
+    try:
+        new_run('Labour', 'Normal', 86420)
+        st.session_state.pm_opinion = 70.0
+        st.session_state.cab_opinion = 65.0
+        st.session_state.market_conf = 50.0
+        st.session_state.prev = {'market_conf': 50.0}
+        engine.update_political_capital('Social Democratic', 0.0, -20.0)
+        pm_drop = 70.0 - float(st.session_state.pm_opinion)
+        if pm_drop > 1.4:
+            failures.append(
+                f"A £20B headroom movement caused an excessive {pm_drop:.1f}-point PM confidence loss."
+            )
+    except Exception as exc:
+        failures.append(f"Political confidence smoke test failed: {exc}")
+
     # Local election vote shares must be expressed as percentages and sum to 100.
     try:
         new_run('Labour', 'Normal', 24680)
