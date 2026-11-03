@@ -188,10 +188,10 @@ if s.year > 5 and not s.get('election_campaign_done', False):
     st.markdown("# 🗳️ General Election Campaign")
     st.caption(f"Term {s.term} · Campaign week {min(week, total_weeks)} of {total_weeks} · Campaign headquarters")
     st.markdown(f"""
-    <div style='background:linear-gradient(120deg,#182b42,#263d58);padding:22px;border-radius:14px;border:1px solid #c9a45c;color:white'>
-      <div style='font-size:12px;letter-spacing:2px;color:#e4c77e'>THE COUNTRY GOES TO THE POLLS</div>
-      <h2 style='color:white;margin:8px 0'>Four weeks to make your case.</h2>
-      <p style='font-size:16px;color:#e8edf4'>Rallies, debates, manifesto launches and marginal-seat campaigning will shape the final result. Every week you must choose where to spend your political capital and campaign time.</p>
+    <div class='general-election-hero'>
+      <div class='campaign-eyebrow'>THE COUNTRY GOES TO THE POLLS</div>
+      <h2>Four weeks to make your case.</h2>
+      <p>Rallies, debates, manifesto launches and marginal-seat campaigning will shape the final result. Every week you must choose where to spend your political capital and campaign time.</p>
     </div>
     """, unsafe_allow_html=True)
     poll_cols = st.columns(len(state.PARTIES))
