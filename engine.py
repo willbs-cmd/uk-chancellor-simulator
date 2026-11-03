@@ -1195,11 +1195,11 @@ def end_run(kind, result=None):
 
 
 def compute_seats(polls, return_details=False):
-    """Run a stylised constituency-by-constituency FPTP election.
+    """Model all 650 FPTP contests using stable local lean, national swings and campaign targeting.
 
-    The official register supplies all 650 seat names, codes and nations. It does
-    not contain 2024 party results, so local candidate/party lean is simulated
-    deterministically rather than presented as historical data.
+    This is an illustrative game model, not an official constituency forecast. Local
+    variation is deliberately substantial so a national lead does not translate into
+    an implausible sweep of almost every seat.
     """
     s = st.session_state
     import json
@@ -1208,69 +1208,78 @@ def compute_seats(polls, return_details=False):
     data_path = Path(__file__).resolve().parent / 'data' / 'constituencies_2024.json'
     with data_path.open(encoding='utf-8') as handle:
         constituencies = json.load(handle).get('constituencies', [])
-
     if len(constituencies) != SEATS:
-        # Keep the game playable if a user has an incomplete/custom data file.
         return _legacy_compute_seats(polls)
 
     parties = list(state.PARTIES)
-    seats = {p: 0 for p in parties}
-    results = []
     nation_effects = {
         'England': {},
-        'Scotland': {'SNP': 28.0, 'Labour': 1.0, 'Conservative': -1.0},
-        'Wales': {'Plaid Cymru': 25.0, 'Labour': 2.0, 'Conservative': -1.0},
+        'Scotland': {'SNP': 15.0, 'Labour': 1.0, 'Conservative': -1.0},
+        'Wales': {'Plaid Cymru': 15.0, 'Labour': 2.0, 'Conservative': -1.0},
         'Northern Ireland': {'SNP': -8.0, 'Plaid Cymru': -8.0,
                              'Liberal Democrats': -3.0, 'Green Party': -2.0},
     }
+    incumbents = s.get('constituency_incumbents', {})
+    player = s.get('party')
+    campaign_actions = s.get('election_campaign_actions', [])
+    target_marginals = any(x.get('action') == 'Target marginal constituencies' for x in campaign_actions)
+    gotv = any(x.get('action') == 'Get out the vote operation' for x in campaign_actions)
+    scored_seats = []
 
     for seat in constituencies:
-        # A stable per-seat seed means the same game state always produces the
-        # same local map, while each constituency has its own voting character.
-        rng = random.Random('seat:' + str(seat.get('code', seat.get('name', ''))))
+        code = str(seat.get('code', seat.get('name', '')))
         nation = seat.get('nation', 'England')
         scores = {}
         for party in parties:
-            national = max(0.1, float(polls.get(party, 0.0)))
-            local_lean = rng.gauss(0.0, 5.8)
+            # Stable local political geography, with enough variation to create
+            # safe seats, marginals and geographically concentrated challengers.
+            rng = random.Random(f"seat-lean:{code}:{party}")
+            local_lean = rng.gauss(0.0, 12.5)
             regional = nation_effects.get(nation, {}).get(party, 0.0)
+            concentration = 0.0
+            if party == 'Liberal Democrats' and random.Random('libdem-target:' + code).random() < 0.20:
+                concentration = 25.0
+            elif party == 'Green Party' and random.Random('green-target:' + code).random() < 0.10:
+                concentration = 20.0
+            incumbent_party = incumbents.get(code)
+            incumbency = 3.5 if incumbent_party == party else 0.0
+            national = max(0.1, float(polls.get(party, 0.0)))
+            scores[party] = max(0.01, national + local_lean + regional + concentration + incumbency)
+        ranked = sorted(scores, key=scores.get, reverse=True)
+        scored_seats.append({
+            'seat': seat, 'code': code, 'nation': nation, 'scores': scores,
+            'margin': scores[ranked[0]] - scores[ranked[1]],
+        })
 
-            # First Past the Post rewards parties whose support is concentrated.
-            # Model Lib Dem target seats separately from their national average:
-            # a stable subset has a strong local base, while support is thinner
-            # elsewhere. The stable seed keeps the same map across reruns.
-            if party == 'Liberal Democrats':
-                stronghold_rng = random.Random('libdem-target:' + str(seat.get('code', seat.get('name', ''))))
-                in_stronghold = stronghold_rng.random() < 0.20
-                local_concentration = 24.0 if in_stronghold else -6.0
-            elif party == 'Green Party':
-                stronghold_rng = random.Random('green-target:' + str(seat.get('code', seat.get('name', ''))))
-                in_stronghold = stronghold_rng.random() < 0.10
-                local_concentration = 18.0 if in_stronghold else -2.0
-            else:
-                local_concentration = 0.0
+    # Campaign resources have a constituency-level effect as well as the small
+    # national polling effect already applied by the campaign screen.
+    if player in parties and (target_marginals or gotv):
+        closest = sorted(scored_seats, key=lambda row: row['margin'])
+        if target_marginals:
+            for row in closest[:70]:
+                row['scores'][player] += 3.0
+        if gotv:
+            for row in closest[:100]:
+                row['scores'][player] += 1.6
 
-            incumbents = s.get('constituency_incumbents', {})
-            incumbent_party = incumbents.get(str(seat.get('code', '')))
-            incumbency = 2.2 if incumbent_party == party else 0.0
-            # Constituency voting differs substantially from the national poll:
-            # local incumbency, candidates and tactical voting create meaningful
-            # seat-level variation. A narrow national lead must not become a
-            # near-total parliamentary sweep. Regional parties retain a geographic
-            # advantage in their home nations.
-            scores[party] = max(0.01, national + local_lean + regional + local_concentration + incumbency)
-        winner = max(parties, key=lambda p: scores[p])
+    seats = {p: 0 for p in parties}
+    results = []
+    for row in scored_seats:
+        scores = row['scores']
+        winner = max(parties, key=scores.get)
         seats[winner] += 1
+        runner_up = max((p for p in parties if p != winner), key=lambda p: scores[p])
         results.append({
-            'name': seat.get('name', 'Unknown constituency'),
-            'code': seat.get('code', ''),
-            'nation': nation,
+            'name': row['seat'].get('name', 'Unknown constituency'),
+            'code': row['code'],
+            'nation': row['nation'],
             'winner': winner,
-            'margin': round(scores[winner] - max(v for p, v in scores.items() if p != winner), 1),
+            'runner_up': runner_up,
+            'margin': round(scores[winner] - scores[runner_up], 1),
+            'is_marginal': (scores[winner] - scores[runner_up]) < 5.0,
         })
 
     return (seats, results) if return_details else seats
-
 
 def _legacy_compute_seats(polls):
     """Fallback allocation for a missing or invalid constituency register."""
