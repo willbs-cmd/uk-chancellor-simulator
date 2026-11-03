@@ -80,7 +80,7 @@ def audit():
             total = dict(fx)
             for k, v in delayed.get(i, {}).get('fx', {}).items():
                 total[k] = total.get(k, 0) + v
-            rows.append((decisions.IDEOLOGIES[i], utility(total), fx))
+            rows.append((decisions.option_ideology(d, i), utility(total), fx))
         us = [r[1] for r in rows]
         mean, sd = statistics.mean(us), statistics.pstdev(us) or 1
         print(f"\n({key[0]},{key[1]}) {d['title']}   mean {mean:+.1f}  sd {sd:.1f}")
@@ -568,8 +568,12 @@ def check(n=None, difficulty=None):
     for key, decision in decisions.DECISIONS.items():
         options = decision.get('options', [])
         effects = decision.get('effects', [])
-        if len(options) != contract['minimum_options_per_decision'] or len(effects) != contract['minimum_options_per_decision']:
-            failures.append(f"Decision {key} ({decision.get('title', 'untitled')}) must have five options and five effects.")
+        minimum = int(contract['minimum_options_per_decision'])
+        if len(options) < minimum or len(options) != len(effects):
+            failures.append(f"Decision {key} ({decision.get('title', 'untitled')}) must have at least {minimum} options and a matching effect for each.")
+        option_ideologies = decision.get('option_ideologies', decisions.IDEOLOGIES)
+        if len(option_ideologies) != len(options):
+            failures.append(f"Decision {key} ({decision.get('title', 'untitled')}) must define one ideology for each option.")
         for ix, effect in enumerate(effects):
             if not isinstance(effect, dict):
                 failures.append(f"Decision {key} option {ix + 1} has no effect object.")
@@ -603,7 +607,8 @@ def check(n=None, difficulty=None):
         if key not in decisions.DECISIONS:
             failures.append(f"Delayed consequences refer to missing decision key {key}.")
         for option_ix, effect in delayed.items():
-            if option_ix < 0 or option_ix >= len(decisions.IDEOLOGIES):
+            option_count = len(decisions.DECISIONS.get(key, {}).get('options', []))
+            if option_ix < 0 or option_ix >= option_count:
                 failures.append(f"Delayed consequence at {key} refers to missing option {option_ix}.")
             if not isinstance(effect.get('fx', {}), dict):
                 failures.append(f"Delayed consequence at {key}, option {option_ix} has invalid effects.")

@@ -168,6 +168,12 @@ def strip_tag(text):
     return _TAG.sub('', text)
 
 
+def option_ideology(decision, index):
+    """Return the ideology for an option, allowing individual decisions to add extra choices."""
+    ideologies = decision.get('option_ideologies', IDEOLOGIES)
+    return ideologies[index] if index < len(ideologies) else 'Centric'
+
+
 def get_options(decision, shuffle_key, show_tags=False):
     """Return the decision's options as dicts, shuffled deterministically by ``shuffle_key``.
 
@@ -178,7 +184,7 @@ def get_options(decision, shuffle_key, show_tags=False):
     options = []
     for i, (text, fx) in enumerate(zip(decision['options'], decision['effects'])):
         body = strip_tag(text)
-        ideology = IDEOLOGIES[i]
+        ideology = option_ideology(decision, i)
         options.append(dict(label=f'({ideology}) {body}' if show_tags else body, ideology=ideology,
                             effect=fx, delayed=delayed.get(i)))
     random.Random(shuffle_key).shuffle(options)
