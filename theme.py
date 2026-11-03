@@ -1304,6 +1304,52 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
 .st-key-policy_options [role="radiogroup"] > label:has(input:checked) { border-color:var(--brass); background:rgba(201,164,92,.15); }
 @media(max-width:650px) { .decision-section-head { align-items:flex-start; flex-direction:column; gap:3px; } }
 
+
+/* General election campaign: high-contrast surfaces aligned with the Chancellor's Office palette. */
+.general-election-hero {
+  background:linear-gradient(115deg,#ffffff 0%,#edf3f7 100%) !important;
+  border:1px solid #d5e0e9 !important;
+  border-left:5px solid #397b78 !important;
+  border-radius:14px !important;
+  padding:24px 28px !important;
+  margin:14px 0 18px !important;
+  box-shadow:0 5px 16px rgba(32,54,79,.07) !important;
+}
+.general-election-hero .campaign-eyebrow {
+  color:#397b78 !important;
+  font-size:12px !important;
+  font-weight:750 !important;
+  letter-spacing:2px !important;
+  text-transform:uppercase !important;
+}
+.general-election-hero h2 {
+  color:#203b59 !important;
+  margin:10px 0 12px !important;
+  font-weight:750 !important;
+}
+.general-election-hero p {
+  color:#43566b !important;
+  font-size:16px !important;
+  line-height:1.6 !important;
+  margin:0 !important;
+  max-width:900px !important;
+}
+[data-testid="stProgress"] { color:#203b59 !important; }
+[data-testid="stProgress"] label,
+[data-testid="stProgress"] [data-testid="stMarkdownContainer"],
+[data-testid="stProgress"] p {
+  color:#203b59 !important;
+  background:transparent !important;
+}
+[data-testid="stProgress"] > div {
+  background:#dce5ec !important;
+  border-radius:20px !important;
+}
+[data-testid="stProgress"] > div > div {
+  background:#397b78 !important;
+  border-radius:20px !important;
+}
+
 </style>
 """
 
