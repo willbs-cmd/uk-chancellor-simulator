@@ -1274,7 +1274,7 @@ def _tax_row(k, t, s):
         new_rev *= scale
         baseline_rev = float(t['base']) * scale
         st.markdown(_value_html(
-            f"{_tax_display(value, t)}<br><small>£{new_rev:,.1f}bn receipts</small>",
+            f"{_tax_display(value, t)}<br><small>£{new_rev:,.1f}bn receipts · {new_rev - baseline_rev:+.2f}bn vs baseline</small>",
             new_rev - baseline_rev
         ), unsafe_allow_html=True)
 
@@ -1295,7 +1295,7 @@ def _spend_row(k, sp, s):
     with c3:
         pct = float(s[f'bs_{k}'])
         new_val = base * (1.0 + pct / 100.0)
-        st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%)'),
+        st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%) · annual impact'),
                     unsafe_allow_html=True)
 
 
@@ -1414,7 +1414,8 @@ def render(submit=None, after_summary=None):
         unsafe_allow_html=True,
     )
     st.caption('Approved tax rates and tax/spending schemes carry forward automatically. Departmental percentage changes are applied to the actual £bn allocation at the start of the next year; those sliders then return to 0% because the new allocation is the baseline, not because the money has been removed.')
-    render_chips([
+    with st.container(key="budget_financial_summary"):
+        render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'),
              num=(rev_now - rev_app) if changed else 0, desc='Estimated annual tax and other government receipts.'),
         dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'),
@@ -1428,7 +1429,10 @@ def render(submit=None, after_summary=None):
         dict(label='Market confidence', value=f"{_clip(s.market_conf + imp['market']):.0f}/100",
              delta=delta(imp['market']), num=imp['market'] if changed else 0,
              desc='Investor confidence and the likely market reception.'),
-    ])
+        dict(label='GDP growth', value=f"{float(s.growth) + float(imp['growth']):+.1f}%",
+             delta=delta(imp['growth'], 'pp'), num=imp['growth'] if changed else 0,
+             desc='Projected annual real GDP growth after this draft Budget.'),
+        ])
 
     with st.expander('Treasury briefing · three-year outlook', expanded=False):
         briefing_rows = forecast(cur, years=3)
