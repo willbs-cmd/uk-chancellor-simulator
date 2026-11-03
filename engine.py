@@ -93,15 +93,19 @@ def update_political_capital(ideology_chosen, approval_diff, headroom_diff):
     s = st.session_state
     core = PURITY.get(s.party, ['Centric'])
     if ideology_chosen in core:
-        s.backbench_opinion += random.uniform(2, 6)
-        s.party_opinion += random.uniform(1, 4)
+        # Reward a recognisable party programme without allowing a short run of
+        # aligned choices to push every political indicator straight to 100.
+        s.backbench_opinion += random.uniform(1.5, 3.5)
+        s.party_opinion += random.uniform(0.8, 2.4)
     elif ideology_chosen == 'Centric':
-        # centrism upsets nobody much
-        s.backbench_opinion -= random.uniform(1, 3)
-        s.party_opinion -= random.uniform(0, 2)
+        # A centrist compromise should usually be tolerable to most parties.
+        s.backbench_opinion += random.uniform(-0.5, 0.8)
+        s.party_opinion += random.uniform(-0.4, 0.5)
     else:
-        s.backbench_opinion -= random.uniform(3, 6)
-        s.party_opinion -= random.uniform(1, 3)
+        # Parties contain factions: one off-message decision should hurt, but
+        # should not trigger an automatic leadership crisis after a few weeks.
+        s.backbench_opinion -= random.uniform(1.0, 2.5)
+        s.party_opinion -= random.uniform(0.4, 1.4)
 
     market_diff = s.market_conf - s.prev.get('market_conf', s.market_conf)
     s.pm_opinion += (approval_diff * 1.0) + (headroom_diff * 0.8)
@@ -121,7 +125,9 @@ def update_polls(label):
     if s.get('spad') == 'pollster' and s.approval >= 50:
         shift += 1.5
     if gov in state.REGIONAL:
-        shift *= 0.2
+        # Regional parties' national vote share is smaller by definition, but it
+        # should still respond to government performance rather than being frozen.
+        shift *= 0.55
     last = {p: ph[p][-1] for p in state.PARTIES}
     anchor = s.poll_anchor.get(gov, last[gov])
 
@@ -801,6 +807,30 @@ def submit_budget():
                     ('Invest in local communities', 'Support councils, housing and local transport.', 'local'),
                     ('Accelerate climate investment', 'Back clean energy and low-carbon infrastructure.', 'green'),
                 ],
+                'Reform UK': [
+                    ('Cut taxes on work and small businesses', 'Prioritise lower taxes on earnings, employers and enterprise.', 'income_tax'),
+                    ('Reduce wasteful public spending', 'Find savings while protecting core public services.', 'spending'),
+                    ('Increase border and national security capacity', 'Fund enforcement and defence priorities.', 'defence'),
+                    ('Scrap costly green levies', 'Reduce energy and motoring costs for households and firms.', 'green'),
+                ],
+                'Green Party': [
+                    ('Accelerate the green transition', 'Prioritise clean energy, public transport and home insulation.', 'green'),
+                    ('Fund the NHS and social care', 'Expand frontline services and workforce capacity.', 'health'),
+                    ('Make taxation fairer', 'Shift more of the burden towards wealth and high incomes.', 'fair_tax'),
+                    ('Build affordable, warm homes', 'Invest in social housing and energy efficiency.', 'local'),
+                ],
+                'SNP': [
+                    ('Protect Scotland’s public services', 'Avoid cuts to health, education and devolved services.', 'health'),
+                    ('Secure fair funding for the nations', 'Protect devolved and local-government budgets.', 'local'),
+                    ('Invest in Scottish infrastructure', 'Support transport, energy and regional growth.', 'investment'),
+                    ('Support household incomes', 'Avoid tax and spending decisions that squeeze working families.', 'income_tax'),
+                ],
+                'Plaid Cymru': [
+                    ('Protect Welsh public services', 'Avoid cuts to health, education and devolved services.', 'health'),
+                    ('Fair funding for Wales', 'Protect local government and devolved budgets.', 'local'),
+                    ('Invest in Welsh jobs and infrastructure', 'Support transport, skills and regional growth.', 'investment'),
+                    ('Strengthen communities and the Welsh language', 'Back local services and cultural investment.', 'green'),
+                ],
                 'default': [
                     ('Protect public services', 'Avoid real-terms cuts to frontline services.', 'health'),
                     ('Keep household taxes stable', 'Avoid increasing taxes on ordinary working households.', 'income_tax'),
@@ -1177,8 +1207,8 @@ def compute_seats(polls, return_details=False):
     results = []
     nation_effects = {
         'England': {},
-        'Scotland': {'SNP': 24.0, 'Labour': 1.0, 'Conservative': -1.0},
-        'Wales': {'Plaid Cymru': 20.0, 'Labour': 2.0, 'Conservative': -1.0},
+        'Scotland': {'SNP': 28.0, 'Labour': 1.0, 'Conservative': -1.0},
+        'Wales': {'Plaid Cymru': 25.0, 'Labour': 2.0, 'Conservative': -1.0},
         'Northern Ireland': {'SNP': -8.0, 'Plaid Cymru': -8.0,
                              'Liberal Democrats': -3.0, 'Green Party': -2.0},
     }
