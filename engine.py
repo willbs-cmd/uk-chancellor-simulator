@@ -1061,6 +1061,8 @@ def proceed_to_spring():
     world_economy.ensure(s)
     world_economy.advance(s)
     economy_tick()
+    import living_economy
+    living_economy.advance(s)
     economic_management.annual_update()
     economic_management.run_gilt_auction()
     economic_management.advance_financial_stability()

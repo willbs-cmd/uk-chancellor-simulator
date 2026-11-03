@@ -919,6 +919,8 @@ def economy():
         st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
         st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
     country.render()
+    import living_economy
+    living_economy.render()
 
 
 # ==================== MAIN NAVIGATION ====================
