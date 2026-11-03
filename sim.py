@@ -80,7 +80,7 @@ def audit():
             total = dict(fx)
             for k, v in delayed.get(i, {}).get('fx', {}).items():
                 total[k] = total.get(k, 0) + v
-            rows.append((decisions.IDEOLOGIES[i], utility(total), fx))
+            rows.append((decisions.option_ideology(d, i), utility(total), fx))
         us = [r[1] for r in rows]
         mean, sd = statistics.mean(us), statistics.pstdev(us) or 1
         print(f"\n({key[0]},{key[1]}) {d['title']}   mean {mean:+.1f}  sd {sd:.1f}")
