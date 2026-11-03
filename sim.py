@@ -262,6 +262,8 @@ def check(n=None, difficulty=None):
             failures.append("Increasing the personal allowance did not reduce forecast Budget receipts.")
         if float(st.session_state.get('personal_allowance', 12570.0)) != 12570.0:
             failures.append("Previewing a tax threshold change unexpectedly enacted it.")
+        st.session_state.bt_threshold_personal_allowance = 13570.0
+        budget._apply()
         budget.commit_budget(350)
         if abs(float(st.session_state.get('personal_allowance', 0.0)) - 13570.0) > 0.01:
             failures.append("An approved Budget did not enact its personal allowance change.")
