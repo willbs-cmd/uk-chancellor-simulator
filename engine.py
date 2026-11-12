@@ -748,6 +748,75 @@ def resolve_request(accept):
     check_sacked()
 
 
+def request_ministerial_reshuffle(department):
+    """Ask the Prime Minister to replace a Cabinet minister; only the PM can appoint or dismiss."""
+    s = st.session_state
+    term = int(s.get("term", 1))
+    used = list(s.get("cabinet_reshuffle_terms", []))
+    if term in used:
+        s.message = "You have already made a Cabinet reshuffle request this term. Number 10 will not entertain another."
+        return
+    if department not in budget.DEPARTMENT_MINISTERS:
+        return
+    current = str(s.get("cabinet_ministers", {}).get(department, ""))
+    if not current or current.startswith("Vacant") or current.startswith("New appointment"):
+        s.message = "There is no established minister in that post to recommend for replacement."
+        return
+
+    state.checkpoint()
+    before = state.values()
+    state.snapshot()
+    loyalty = float(s.get("ministerial_loyalty", {}).get(department, 55.0))
+    pm = float(s.get("pm_opinion", 50.0))
+    cabinet = float(s.get("cab_opinion", 50.0))
+    dispute = s.get("active_dispute") or {}
+    dispute_pressure = 12.0 if dispute.get("minister") == current else 0.0
+    score = 0.45 * pm + 0.25 * cabinet + 0.30 * (100.0 - loyalty) + dispute_pressure
+    accepted = score >= 58.0
+    used.append(term)
+    s.cabinet_reshuffle_terms = used[-10:]
+    history = list(s.get("cabinet_reshuffle_history", []))
+    if accepted:
+        s.cabinet_ministers[department] = "Vacant — awaiting Prime Minister"
+        s.ministerial_vacancy_year[department] = int(s.get("year", 1))
+        s.ministerial_loyalty[department] = 50.0
+        resignations = list(s.get("ministerial_resignations", []))
+        resignations.append({
+            "minister": current, "year": int(s.get("year", 1)),
+            "term": term, "reason": "Replaced after the Chancellor's recommendation was accepted by the Prime Minister"
+        })
+        s.ministerial_resignations = resignations[-20:]
+        s.cab_opinion = round(_clip(float(s.get("cab_opinion", 50.0)) + 1.5), 1)
+        s.pm_opinion = round(_clip(pm + 1.0), 1)
+        outcome = (
+            f"The Prime Minister accepts your recommendation. {current} leaves the Cabinet; "
+            "the post is vacant until Number 10 appoints a successor. Your intervention has strengthened "
+            "your standing with the PM, though colleagues will notice that you have challenged a minister."
+        )
+    else:
+        s.pm_opinion = round(_clip(pm - 2.5), 1)
+        s.cab_opinion = round(_clip(cabinet - 1.5), 1)
+        outcome = (
+            f"The Prime Minister rejects your recommendation to replace {current}. Number 10 says the "
+            "minister retains its confidence and warns you not to undermine Cabinet colleagues."
+        )
+    history.append({
+        "term": term, "year": int(s.get("year", 1)), "department": department,
+        "minister": current, "accepted": accepted, "score": round(score, 1), "outcome": outcome
+    })
+    s.cabinet_reshuffle_history = history[-20:]
+    s.message = outcome
+    s.humphrey_note = (
+        "A reshuffle is, constitutionally speaking, a matter for the Prime Minister. "
+        "Your role was to make a recommendation; Number 10 has now made its position clear."
+    )
+    state.log("politics", f"Cabinet reshuffle request: {current}",
+              choice="Accepted by PM" if accepted else "Rejected by PM",
+              before=before, note=outcome)
+    state.record()
+    check_sacked()
+
+
 def resolve_ministerial_dispute(choice):
     """Resolve an escalating Cabinet dispute: compromise, stand firm, or let the minister go public."""
     s = st.session_state
