@@ -128,7 +128,7 @@ _by_key = {d['key']: d for d in CARDS_TOP + CARDS_ECON + CARDS_POLITICAL}
 _KEY_STATS = ['approval', 'market_conf', 'headroom', 'growth', 'inflation', 'pm_opinion']
 _on_major_fiscal_event = (
     (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
-    or bool(s.get('spending_review_due')) or bool(s.get('active_emergency_budget'))
+    or bool(s.get('spending_review_due')) or bool(s.get('autumn_statement_due')) or bool(s.get('active_emergency_budget'))
 )
 if _on_major_fiscal_event:
     # Fiscal events put the decision itself first; the economic detail remains in the event briefing.
@@ -1015,6 +1015,8 @@ with tab_action:
         budget_screen()
     elif s.get('spending_review_due'):
         budget.render_spending_review()
+    elif s.get('autumn_statement_due') and s.block == 1:
+        features.render_autumn_statement_event()
     elif _is_budget_phase:
         budget_screen()
     else:
