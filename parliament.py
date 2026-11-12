@@ -65,6 +65,9 @@ def scale_effect(effect, factor):
 def _party_seats(s):
     """Use the latest election result, falling back to the latest polling split."""
     result = s.get("election_result") or {}
+    opening = s.get("opening_parliament_seats", {})
+    if not result and opening and sum(max(0, int(opening.get(p, 0))) for p in state.PARTIES) == 650:
+        return {p: max(0, int(opening.get(p, 0))) for p in state.PARTIES}
     seats = result.get("seats", {}) if isinstance(result, dict) else {}
     parties = list(state.PARTIES)
     if seats and sum(max(0, int(seats.get(p, 0))) for p in parties):
