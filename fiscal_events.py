@@ -154,13 +154,16 @@ def render_treasury_overview():
     s = st.session_state
     ensure_state(s)
     period = period_key(s)
-    next_review_year = int(s.get("year", 1))
+    current_year = int(s.get("year", 1))
+    next_review_year = current_year
+    if (current_year - 1) % REVIEW_INTERVAL == 0 and s.get("spending_review_last_period") == period:
+        next_review_year += 1
     while next_review_year <= 5 and (next_review_year - 1) % REVIEW_INTERVAL != 0:
         next_review_year += 1
-    if next_review_year > 5:
-        next_review = "Next term · Year 1"
-    elif s.get("spending_review_due"):
+    if s.get("spending_review_due"):
         next_review = "Due now"
+    elif next_review_year > 5:
+        next_review = "Next term · Year 1"
     else:
         next_review = f"Term {s.get('term', 1)} · Year {next_review_year}"
 
@@ -203,7 +206,8 @@ def render_treasury_overview():
         st.markdown("#### Recent Spending Reviews")
         st.dataframe([
             {"Period": row.get("period", ""), "Departmental total": f"£{float(row.get('departmental_total', 0.0)):.1f}bn",
-             "Annual change": f"£{float(row.get('annual_change', 0.0)):+.1f}bn"}
+             "Annual change": f"£{float(row.get('annual_change', 0.0)):+.1f}bn",
+             "Local grant uplift": f"£{float(row.get('local_settlement', {}).get('local_grant_uplift_bn', 0.0)):.1f}bn"}
             for row in reversed(reviews[-5:])
         ], hide_index=True, use_container_width=True)
 
