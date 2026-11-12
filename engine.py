@@ -25,6 +25,7 @@ import household
 import regional_economy
 import public_services
 import devolution
+import fiscal_events
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -211,6 +212,7 @@ def settle():
     if s.headroom < 0:
         # breaching your fiscal rules spooks the markets a little more with every action
         s.market_conf = round(_clip(s.market_conf - min(3.0, 0.2 * -s.headroom)), 1)
+    fiscal_events.maybe_trigger_emergency_budget(s)
 
 
 # ================================================================ the decision loop
@@ -559,14 +561,8 @@ def resolve_gilt_emergency(choice):
         label="Ask the Prime Minister for a united statement"
         note="The PM joins you in promising a credible fiscal plan. The show of unity steadies markets, although it does not solve the borrowing problem."
     elif choice==2:
-        s.headroom=round(float(s.headroom)+1.5,1)
-        s.deficit=round(max(0.0,float(s.deficit)-1.5),1)
-        s.market_conf=round(_clip(float(s.market_conf)+3.0),1)
-        s.gilt_yield=round(max(0.1,float(s.gilt_yield)-0.08),2)
-        s.approval=round(_clip(float(s.approval)-1.0),1)
-        s.pm_opinion=round(_clip(float(s.pm_opinion)-1.5),1)
         label="Call an emergency Budget"
-        note="You announce an emergency fiscal package: £1.5bn of near-term consolidation and a promise of revised forecasts. Markets recover slightly, but the PM is uneasy about another Budget."
+        note="You ask the Treasury to prepare a full emergency fiscal package. The Chancellor must now revise the tax and spending plan, receive a rapid forecast and secure a Commons vote."
     elif choice==3 and emergency.get("pm_pressure"):
         s.headroom=round(float(s.headroom)-1.5,1)
         s.deficit=round(float(s.deficit)+1.5,1)
@@ -581,6 +577,8 @@ def resolve_gilt_emergency(choice):
     s.message=note
     s.active_gilt_emergency=None
     s.gilt_emergency_history=(list(s.get("gilt_emergency_history",[]))+[{"year":emergency.get("year"),"response":label,"market_conf":round(float(s.market_conf),1),"gilt_yield":round(float(s.gilt_yield),2)}])[-12:]
+    if choice == 2:
+        fiscal_events.open_emergency_budget(note, source="failed gilt auction response")
     state.log("gilt_emergency","Emergency Treasury meeting",choice=label,before=before,note=note)
     settle()
     state.record()
@@ -998,13 +996,14 @@ def submit_budget():
     s.budget_speech['market_move'] = gilt_move
     s.budget_speech['market_after'] = s.gilt_yield
     budget.resolve_budget_risks()
-    budget.commit_budget(ayes)
+    event_type = 'Emergency Budget' if s.get('budget_day_type') == 'emergency' else 'Spring Budget'
+    budget.commit_budget(ayes, event_type=event_type)
     s.budget_passed = True
     s.budget_day_stage = 4
     s.headlines = generate_headlines(None, True, s.headroom)
     update_polls(_period_label())
     s.steps += 1
-    state.log('budget', f'Year {s.year} Budget', note=s.message, before=before)
+    state.log('budget', f'Year {s.year} {event_type}', note=s.message, before=before)
     deliver_pending()
     state.record()
     check_sacked()
@@ -1247,6 +1246,7 @@ def proceed_to_spring():
     s.feature_notice_phase = 0
     performance_report.create_report()
     s.year += 1
+    fiscal_events.schedule_spending_review(s)
     budget.apply_spending_review_rollforward(s, s.year)
     # Annual local contests take place after the first full year in office.
     s.local_election_due = s.year > 1
@@ -1258,11 +1258,14 @@ def proceed_to_spring():
     s.budget_day_forecast = []
     s.budget_day_speech = None
     s.budget_risk_outcome = None
+    s.budget_day_type = 'annual'
+    s.budget_day_draft = None
     s.headlines = None
     s.steps += 1
     state.log('event', f'Spring, year {s.year}', note=s.message, before=before)
     deliver_pending()
     state.record()
+    fiscal_events.maybe_trigger_emergency_budget(s)
     check_sacked()
 
 
@@ -1551,6 +1554,10 @@ def continue_term():
     s.feature_notice_phase = 0
     s.budget_passed = False
     s.election_result = None
+    s.spending_review_due = True
+    s.fiscal_calendar_initialised = True
+    s.budget_day_type = 'annual'
+    s.active_emergency_budget = None
     s.active_crisis = None
     s.headlines = None
     s.pending = []
