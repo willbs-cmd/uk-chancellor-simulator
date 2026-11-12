@@ -220,8 +220,8 @@ def render():
 
     with st.expander("What the Chancellor can and cannot control"):
         st.markdown(
-            "- **Can control:** the central grant settlement, regional growth funds and the broad framework for council tax flexibility.\\n"
-            "- **Can influence:** devolved block-grant consequentials through changes in comparable spending in England.\\n"
-            "- **Cannot directly set:** individual council tax bills, council budgets or the spending choices of devolved governments.\\n"
+            "- **Can control:** the central grant settlement, regional growth funds and the broad framework for council tax flexibility.\n"
+            "- **Can influence:** devolved block-grant consequentials through changes in comparable spending in England.\n"
+            "- **Cannot directly set:** individual council tax bills, council budgets or the spending choices of devolved governments.\n"
             "- **Trade-off:** tighter settlements improve the Treasury's annual balance but can weaken local services and increase political pressure."
         )
