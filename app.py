@@ -978,7 +978,7 @@ def economy():
 _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
 _is_budget_phase = (
     (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
-    or bool(s.get('spending_review_due')) or bool(s.get('active_emergency_budget'))
+    or bool(s.get('spending_review_due')) or bool(s.get('autumn_statement_due')) or bool(s.get('active_emergency_budget'))
 )
 
 tab_action, tab_briefing, tab_economy, tab_government, tab_treasury, tab_household, tab_regions, tab_services = st.tabs([
