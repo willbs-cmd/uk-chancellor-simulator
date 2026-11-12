@@ -47,6 +47,7 @@ import streamlit as st  # noqa: E402
 st.session_state = FakeState()
 
 import budget  # noqa: E402
+import fiscal_events  # noqa: E402
 import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
@@ -290,6 +291,39 @@ def check(n=None, difficulty=None):
 
     except Exception as exc:
         failures.append(f"Budget control carry-forward regression test failed: {exc}")
+
+    # Fiscal calendar: Spending Reviews are periodic events, not an always-open Treasury tab.
+    try:
+        new_run('Labour', 'Normal', 44101)
+        if not st.session_state.get('spending_review_due'):
+            failures.append("A new Chancellor game must open with its first Spending Review due.")
+        st.session_state.spending_review_due = False
+        st.session_state.year = 2
+        if fiscal_events.schedule_spending_review(st.session_state):
+            failures.append("A Spending Review should not be scheduled every year.")
+        st.session_state.year = 3
+        if not fiscal_events.schedule_spending_review(st.session_state):
+            failures.append("A Spending Review should be scheduled at the start of Year 3.")
+        st.session_state.spending_review_due = False
+        st.session_state.block = 1
+        if fiscal_events.maybe_trigger_emergency_budget(st.session_state):
+            failures.append("Normal market conditions must not trigger an Emergency Budget.")
+        st.session_state.market_conf = 20.0
+        st.session_state.gilt_yield = 7.0
+        if not fiscal_events.maybe_trigger_emergency_budget(st.session_state):
+            failures.append("A severe gilt-market shock must trigger an Emergency Budget.")
+        if not st.session_state.get('active_emergency_budget'):
+            failures.append("An Emergency Budget trigger did not create a pending fiscal event.")
+        emergency_period = fiscal_events.period_key(st.session_state)
+        if fiscal_events.maybe_trigger_emergency_budget(st.session_state):
+            failures.append("An active Emergency Budget was triggered more than once.")
+        fiscal_events.close_emergency_budget()
+        if st.session_state.get('emergency_budget_last_period') != emergency_period:
+            failures.append("Closing an Emergency Budget did not record its fiscal period.")
+        if st.session_state.get('budget_day_type') != 'annual':
+            failures.append("Closing an Emergency Budget did not restore the normal annual Budget mode.")
+    except Exception as exc:
+        failures.append(f"Fiscal event calendar regression check failed: {exc}")
 
     # Regional parties need a credible route to retain a Westminster mandate
     # without being expected to win almost every seat in Scotland or Wales.
