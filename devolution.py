@@ -79,6 +79,9 @@ def annual_update():
         "annual_cost_bn": annual_cost,
         "funding_pressure": s.local_finance_pressure,
         "service_delivery": s.local_service_delivery,
+        "council_tax_referendum_threshold_pct": round(referendum, 2),
+        "social_care_precept_flexibility_pct": round(precept, 2),
+        "barnett_pass_through_pct": round(float(s.get("barnett_pass_through_pct", 100)), 1),
         "notice": notice,
     }
     s.local_finance_history = (list(s.get("local_finance_history", [])) + [record])[-12:]
@@ -88,16 +91,82 @@ def annual_update():
                  f"council funding pressure is {s.local_finance_pressure:.0f}/100.").strip()
 
 
+def review_settlement_keys(period):
+    """Return the namespaced widget keys used by a Spending Review."""
+    return {
+        "local_grant_uplift_bn": f"sr_{period}_local_grant_uplift_bn",
+        "barnett_pass_through_pct": f"sr_{period}_barnett_pass_through_pct",
+        "regional_growth_fund_bn": f"sr_{period}_regional_growth_fund_bn",
+        "council_tax_referendum_threshold": f"sr_{period}_council_tax_referendum_threshold",
+        "social_care_precept_cap": f"sr_{period}_social_care_precept_cap",
+    }
+
+
+def render_spending_review_controls(period):
+    """Let the Chancellor agree the local-government settlement as part of a Spending Review."""
+    ensure()
+    s = st.session_state
+    keys = review_settlement_keys(period)
+    st.markdown("#### Local government & devolved funding settlement")
+    st.caption("Agree the central grant, regional growth fund and local-tax framework alongside departmental bids. These settings take effect with the next Spring update.")
+    c1, c2 = st.columns(2, gap="medium")
+    with c1:
+        st.slider("Local government grant uplift (£bn per year)", -5.0, 10.0, 0.5,
+                  value=float(s.get(keys["local_grant_uplift_bn"], s.local_grant_uplift_bn)),
+                  key=keys["local_grant_uplift_bn"])
+        st.slider("Regional growth and town-centre fund (£bn per year)", 0.0, 5.0, 0.25,
+                  value=float(s.get(keys["regional_growth_fund_bn"], s.regional_growth_fund_bn)),
+                  key=keys["regional_growth_fund_bn"])
+        st.slider("Devolved funding pass-through (%)", 50, 150, 5,
+                  value=int(s.get(keys["barnett_pass_through_pct"], s.barnett_pass_through_pct)),
+                  key=keys["barnett_pass_through_pct"])
+    with c2:
+        st.slider("Council tax referendum threshold (%)", 0.0, 10.0, 0.5,
+                  value=float(s.get(keys["council_tax_referendum_threshold"], s.council_tax_referendum_threshold)),
+                  key=keys["council_tax_referendum_threshold"])
+        st.slider("Adult social-care precept flexibility (%)", 0.0, 5.0, 0.25,
+                  value=float(s.get(keys["social_care_precept_cap"], s.social_care_precept_cap)),
+                  key=keys["social_care_precept_cap"])
+        grant = float(s[keys["local_grant_uplift_bn"]])
+        regional = float(s[keys["regional_growth_fund_bn"]])
+        barnett = float(s[keys["barnett_pass_through_pct"]])
+        cost = grant + regional + regional * 0.19 * barnett / 100.0
+        st.metric("Recurring annual local settlement cost", f"£{cost:.2f}bn")
+    return {field: s[key] for field, key in keys.items()}
+
+
+def apply_spending_review_settlement(period):
+    """Commit the local settlement controls only after the Spending Review is approved."""
+    ensure()
+    s = st.session_state
+    for field, key in review_settlement_keys(period).items():
+        if key in s:
+            s[field] = float(s[key])
+    s.local_finance_notice = (
+        "Your local-government and devolved funding settlement has been approved through the Spending Review. "
+        "Its fiscal and service effects begin at the next Spring update."
+    )
+    return current_settlement()
+
+
+def current_settlement(s=None):
+    ensure()
+    s = s or st.session_state
+    return {
+        "local_grant_uplift_bn": round(float(s.local_grant_uplift_bn), 2),
+        "barnett_pass_through_pct": round(float(s.barnett_pass_through_pct), 1),
+        "regional_growth_fund_bn": round(float(s.regional_growth_fund_bn), 2),
+        "council_tax_referendum_threshold": round(float(s.council_tax_referendum_threshold), 2),
+        "social_care_precept_cap": round(float(s.social_care_precept_cap), 2),
+    }
+
+
 def render():
-    """Policy workspace for central grants, Barnett consequentials and local tax flexibility."""
+    """Read-only local-government and devolution monitor; policy is set in Spending Reviews."""
     ensure()
     s = st.session_state
     st.markdown("### Local government & devolution")
-    st.caption(
-        "Set the central-government funding settlement and the framework for local tax flexibility. "
-        "Councils retain responsibility for setting their own council tax bills; these controls model the national framework."
-    )
-
+    st.caption("Monitor council finances, devolved funding and the effects of the latest Spending Review. New settlements are agreed through the scheduled Spending Review event.")
     pressure = float(s.local_finance_pressure)
     delivery = float(s.local_service_delivery)
     annual_cost = (
@@ -120,57 +189,16 @@ def render():
     else:
         st.info("Local finances are under manageable pressure.")
 
-    st.markdown("#### Set the next annual settlement")
-    st.caption("Changes are saved as policy settings and feed through at the next Spring update. A positive grant uplift is a recurring annual commitment.")
-    with st.form("devolution_policy_form"):
-        grant = st.slider(
-            "Local government grant uplift (£bn per year)", -5.0, 10.0,
-            float(s.local_grant_uplift_bn), 0.5,
-            help="A negative figure represents a real-terms or cash reduction against the game's baseline settlement."
-        )
-        barnett = st.slider(
-            "Devolved funding pass-through (%)", 50, 150,
-            int(s.barnett_pass_through_pct), 5,
-            help="A simplified Barnett-style multiplier for the devolved consequentials generated by comparable English spending changes."
-        )
-        regional = st.slider(
-            "Regional growth and town-centre fund (£bn per year)", 0.0, 5.0,
-            float(s.regional_growth_fund_bn), 0.25
-        )
-        referendum = st.slider(
-            "Council tax referendum threshold (%)", 0.0, 10.0,
-            float(s.council_tax_referendum_threshold), 0.5,
-            help="A lower threshold constrains council tax rises; a higher threshold gives councils more flexibility but can increase household bills."
-        )
-        precept = st.slider(
-            "Adult social-care precept flexibility (%)", 0.0, 5.0,
-            float(s.social_care_precept_cap), 0.25,
-            help="More flexibility helps councils fund social care but shifts more of the cost onto local taxpayers."
-        )
-        projected_cost = grant + regional + regional * 0.19 * barnett / 100.0
-        st.info(f"Estimated recurring annual cost: £{projected_cost:.2f}bn. This is applied at the next Spring update.")
-        submitted = st.form_submit_button("Approve local government settlement", type="primary", use_container_width=True)
-
-    if submitted:
-        s.local_grant_uplift_bn = float(grant)
-        s.barnett_pass_through_pct = int(barnett)
-        s.regional_growth_fund_bn = float(regional)
-        s.council_tax_referendum_threshold = float(referendum)
-        s.social_care_precept_cap = float(precept)
-        s.local_finance_notice = "Your local-government and devolved funding framework has been agreed. Its recurring fiscal and service effects begin at the next Spring update."
-        s.message = s.local_finance_notice
-        st.success(s.local_finance_notice)
-        st.rerun()
-
-    st.markdown("#### How the settlement is distributed")
-    consequentials = float(s.regional_growth_fund_bn) * 0.19 * float(s.barnett_pass_through_pct) / 100.0
-    distribution = [
-        {"Funding stream": "Local authority grant uplift", "Annual amount": f"£{float(s.local_grant_uplift_bn):.2f}bn", "Purpose": "Core council services and statutory responsibilities"},
-        {"Funding stream": "Regional growth fund", "Annual amount": f"£{float(s.regional_growth_fund_bn):.2f}bn", "Purpose": "Town centres, local transport and regional investment"},
-        {"Funding stream": "Devolved consequentials", "Annual amount": f"£{consequentials:.2f}bn", "Purpose": "Additional funding for devolved administrations"},
-    ]
-    st.dataframe(distribution, hide_index=True, use_container_width=True)
-    st.caption("The devolved consequentials are a deliberately simplified game estimate, not an official Barnett calculation.")
+    st.markdown("#### Current approved settlement")
+    settings = current_settlement(s)
+    st.dataframe([
+        {"Setting": "Local government grant uplift", "Approved value": f"£{settings['local_grant_uplift_bn']:.2f}bn/year"},
+        {"Setting": "Regional growth fund", "Approved value": f"£{settings['regional_growth_fund_bn']:.2f}bn/year"},
+        {"Setting": "Barnett-style pass-through", "Approved value": f"{settings['barnett_pass_through_pct']:.0f}%"},
+        {"Setting": "Council tax referendum threshold", "Approved value": f"{settings['council_tax_referendum_threshold']:.1f}%"},
+        {"Setting": "Adult social-care precept flexibility", "Approved value": f"{settings['social_care_precept_cap']:.2f}%"},
+    ], hide_index=True, use_container_width=True)
+    st.caption("The devolved funding calculation is a simplified game estimate, not an official Barnett formula. Councils and devolved governments retain their own spending responsibilities.")
 
     if s.get("local_finance_last_update"):
         last = s.local_finance_last_update
@@ -186,8 +214,8 @@ def render():
 
     with st.expander("What the Chancellor can and cannot control"):
         st.markdown(
-            "- **Can control:** the central grant settlement, regional growth funds and the broad framework for council tax flexibility.\n"
-            "- **Can influence:** devolved block-grant consequentials through changes in comparable spending in England.\n"
-            "- **Cannot directly set:** individual council tax bills, council budgets or the spending choices of devolved governments.\n"
+            "- **Can control:** the central grant settlement, regional growth funds and the broad framework for council tax flexibility.\\n"
+            "- **Can influence:** devolved block-grant consequentials through changes in comparable spending in England.\\n"
+            "- **Cannot directly set:** individual council tax bills, council budgets or the spending choices of devolved governments.\\n"
             "- **Trade-off:** tighter settlements improve the Treasury's annual balance but can weaken local services and increase political pressure."
         )
