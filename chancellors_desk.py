@@ -4,6 +4,7 @@ import streamlit as st
 
 import engine
 import politics
+import budget
 import state
 from theme import phase_info
 
@@ -131,6 +132,44 @@ def render(on_restart):
             a, b = st.columns(2)
             a.metric("Market confidence", f"{float(s.get('market_conf', 0)):.0f}/100")
             b.metric("Political capital", f"{int(s.get('political_capital_points', 0))}/5")
+
+        # Cabinet management: the Chancellor can recommend; only the PM can appoint or dismiss.
+        st.markdown("<div class='desk-section-title'>CABINET MANAGEMENT</div>", unsafe_allow_html=True)
+        ministers = s.get("cabinet_ministers", {})
+        active_posts = [
+            (key, name) for key, name in ministers.items()
+            if key in budget.DEPARTMENT_MINISTERS
+            and name
+            and not str(name).startswith(("Vacant", "New appointment"))
+        ]
+        reshuffle_used = int(s.get("term", 1)) in s.get("cabinet_reshuffle_terms", [])
+        if active_posts:
+            if reshuffle_used:
+                st.caption("You have already made your one reshuffle recommendation this term.")
+            else:
+                dept = st.selectbox(
+                    "Minister to recommend for replacement",
+                    [key for key, _ in active_posts],
+                    format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key.replace('_', ' ').title())}",
+                    key="desk_reshuffle_department",
+                )
+                loyalty = float(s.get("ministerial_loyalty", {}).get(str(ministers.get(dept, "")), s.get("ministerial_loyalty", {}).get(dept, 50.0)))
+                st.caption(
+                    f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(str(ministers.get(dept, '')), 50.0)):.0f}/100. "
+                    "A weak relationship or active dispute makes Number 10 more receptive."
+                )
+                if st.button("Recommend a Cabinet replacement to the PM", use_container_width=True):
+                    engine.request_ministerial_reshuffle(dept)
+                    st.rerun()
+        else:
+            st.caption("No established Cabinet appointments are currently available to review.")
+        recent_reshuffles = list(s.get("cabinet_reshuffle_history", []))
+        if recent_reshuffles:
+            with st.expander("Reshuffle correspondence", expanded=False):
+                for item in reversed(recent_reshuffles[-3:]):
+                    result = "Accepted" if item.get("accepted") else "Rejected"
+                    st.caption(f"Term {item.get('term')} · {item.get('minister')} · PM {result}")
+                    st.write(item.get("outcome", ""))
 
         # Private advisers: one-click expanders rather than more navigation tabs.
         st.markdown("<div class='desk-section-title'>YOUR ADVISERS</div>", unsafe_allow_html=True)
