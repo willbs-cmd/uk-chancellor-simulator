@@ -30,7 +30,7 @@ def ensure_state(s=None):
     s.setdefault("budget_day_draft", None)
     # Older saves have no explicit calendar flag. Only schedule a review at the
     # start of a review year, and never repeat one already completed in that year.
-    if "fiscal_calendar_initialised" not in s:
+    if not bool(s.get("fiscal_calendar_initialised", False)):
         year = int(s.get("year", 1))
         due = (year - 1) % REVIEW_INTERVAL == 0 and s.get("spending_review_last_period") != period_key(s)
         s["spending_review_due"] = bool(s.get("spending_review_due", False) or due)
