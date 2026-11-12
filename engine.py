@@ -1255,7 +1255,7 @@ def proceed_to_spring():
     s.feature_notice_phase = 0
     performance_report.create_report()
     s.year += 1
-    s.autumn_statement_due = True
+    s.autumn_statement_due = s.year <= 5
     fiscal_events.schedule_spending_review(s)
     budget.apply_spending_review_rollforward(s, s.year)
     # Annual local contests take place after the first full year in office.
