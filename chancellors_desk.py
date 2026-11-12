@@ -133,6 +133,9 @@ def render(on_restart):
             a.metric("Market confidence", f"{float(s.get('market_conf', 0)):.0f}/100")
             b.metric("Political capital", f"{int(s.get('political_capital_points', 0))}/5")
 
+        # Ensure the Cabinet roster is available on every phase, not only after opening the Budget screen.
+        budget.ensure()
+
         # Cabinet management: the Chancellor can recommend; only the PM can appoint or dismiss.
         st.markdown("<div class='desk-section-title'>CABINET MANAGEMENT</div>", unsafe_allow_html=True)
         ministers = s.get("cabinet_ministers", {})
