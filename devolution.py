@@ -108,34 +108,55 @@ def review_settlement_keys(period):
     }
 
 
-def render_spending_review_controls(period):
+def render_spending_review_controls(period, read_only=False):
     """Let the Chancellor agree the local-government settlement as part of a Spending Review."""
     ensure()
     s = st.session_state
     keys = review_settlement_keys(period)
     st.markdown("#### Local government & devolved funding settlement")
+    if read_only:
+        st.caption("This year's local-government settlement has already been approved. The settings below are now read-only.")
+        settings = current_settlement(s)
+        rows = [
+            {"Setting": "Local government grant uplift", "Approved value": f"£{settings['local_grant_uplift_bn']:.2f}bn/year"},
+            {"Setting": "Regional growth and town-centre fund", "Approved value": f"£{settings['regional_growth_fund_bn']:.2f}bn/year"},
+            {"Setting": "Devolved funding pass-through", "Approved value": f"{settings['barnett_pass_through_pct']:.0f}%"},
+            {"Setting": "Council tax referendum threshold", "Approved value": f"{settings['council_tax_referendum_threshold']:.1f}%"},
+            {"Setting": "Adult social-care precept flexibility", "Approved value": f"{settings['social_care_precept_cap']:.2f}%"},
+        ]
+        st.dataframe(rows, hide_index=True, use_container_width=True)
+        cost = (settings["local_grant_uplift_bn"] + settings["regional_growth_fund_bn"]
+                + settings["regional_growth_fund_bn"] * 0.19 * settings["barnett_pass_through_pct"] / 100.0)
+        st.metric("Recurring annual local settlement cost", f"£{cost:.2f}bn")
+        return settings
+
     st.caption("Agree the central grant, regional growth fund and local-tax framework alongside departmental bids. These settings take effect with the next Spring update.")
     c1, c2 = st.columns(2, gap="medium")
     with c1:
-        st.slider("Local government grant uplift (£bn per year)", -5.0, 10.0, 0.5,
-                  value=float(s.get(keys["local_grant_uplift_bn"], s.local_grant_uplift_bn)),
-                  key=keys["local_grant_uplift_bn"])
-        st.slider("Regional growth and town-centre fund (£bn per year)", 0.0, 5.0, 0.25,
-                  value=float(s.get(keys["regional_growth_fund_bn"], s.regional_growth_fund_bn)),
-                  key=keys["regional_growth_fund_bn"])
-        st.slider("Devolved funding pass-through (%)", 50, 150, 5,
-                  value=int(s.get(keys["barnett_pass_through_pct"], s.barnett_pass_through_pct)),
-                  key=keys["barnett_pass_through_pct"])
+        grant_key = keys["local_grant_uplift_bn"]
+        regional_key = keys["regional_growth_fund_bn"]
+        barnett_key = keys["barnett_pass_through_pct"]
+        s.setdefault(grant_key, float(s.local_grant_uplift_bn))
+        s.setdefault(regional_key, float(s.regional_growth_fund_bn))
+        s.setdefault(barnett_key, int(s.barnett_pass_through_pct))
+        st.slider("Local government grant uplift (£bn per year)", min_value=-5.0, max_value=10.0,
+                  value=float(s[grant_key]), step=0.5, key=grant_key)
+        st.slider("Regional growth and town-centre fund (£bn per year)", min_value=0.0, max_value=5.0,
+                  value=float(s[regional_key]), step=0.25, key=regional_key)
+        st.slider("Devolved funding pass-through (%)", min_value=50, max_value=150,
+                  value=int(s[barnett_key]), step=5, key=barnett_key)
     with c2:
-        st.slider("Council tax referendum threshold (%)", 0.0, 10.0, 0.5,
-                  value=float(s.get(keys["council_tax_referendum_threshold"], s.council_tax_referendum_threshold)),
-                  key=keys["council_tax_referendum_threshold"])
-        st.slider("Adult social-care precept flexibility (%)", 0.0, 5.0, 0.25,
-                  value=float(s.get(keys["social_care_precept_cap"], s.social_care_precept_cap)),
-                  key=keys["social_care_precept_cap"])
-        grant = float(s[keys["local_grant_uplift_bn"]])
-        regional = float(s[keys["regional_growth_fund_bn"]])
-        barnett = float(s[keys["barnett_pass_through_pct"]])
+        referendum_key = keys["council_tax_referendum_threshold"]
+        precept_key = keys["social_care_precept_cap"]
+        s.setdefault(referendum_key, float(s.council_tax_referendum_threshold))
+        s.setdefault(precept_key, float(s.social_care_precept_cap))
+        st.slider("Council tax referendum threshold (%)", min_value=0.0, max_value=10.0,
+                  value=float(s[referendum_key]), step=0.5, key=referendum_key)
+        st.slider("Adult social-care precept flexibility (%)", min_value=0.0, max_value=5.0,
+                  value=float(s[precept_key]), step=0.25, key=precept_key)
+        grant = float(s[grant_key])
+        regional = float(s[regional_key])
+        barnett = float(s[barnett_key])
         cost = grant + regional + regional * 0.19 * barnett / 100.0
         st.metric("Recurring annual local settlement cost", f"£{cost:.2f}bn")
     return {field: s[key] for field, key in keys.items()}
