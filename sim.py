@@ -324,7 +324,7 @@ def check(n=None, difficulty=None):
         if not fiscal_events.schedule_spending_review(st.session_state):
             failures.append("A Spending Review should be scheduled at the start of Year 3.")
         st.session_state.spending_review_due = False
-        st.session_state.block = 1
+        st.session_state.block = 2
         if fiscal_events.maybe_trigger_emergency_budget(st.session_state):
             failures.append("Normal market conditions must not trigger an Emergency Budget.")
         st.session_state.market_conf = 20.0
@@ -333,14 +333,35 @@ def check(n=None, difficulty=None):
             failures.append("A severe gilt-market shock must trigger an Emergency Budget.")
         if not st.session_state.get('active_emergency_budget'):
             failures.append("An Emergency Budget trigger did not create a pending fiscal event.")
+        if not st.session_state.get('emergency_replaces_spring_budget'):
+            failures.append("An Emergency Budget called after the second decision must replace the scheduled Spring Budget.")
         emergency_period = fiscal_events.period_key(st.session_state)
         if fiscal_events.maybe_trigger_emergency_budget(st.session_state):
             failures.append("An active Emergency Budget was triggered more than once.")
-        fiscal_events.close_emergency_budget()
+        advance_to_spring = fiscal_events.close_emergency_budget()
+        if not advance_to_spring:
+            failures.append("Closing an Emergency Budget that replaces Spring did not return the Spring hand-off.")
         if st.session_state.get('emergency_budget_last_period') != emergency_period:
             failures.append("Closing an Emergency Budget did not record its fiscal period.")
         if st.session_state.get('budget_day_type') != 'annual':
             failures.append("Closing an Emergency Budget did not restore the normal annual Budget mode.")
+
+        # The local-government settlement is applied once per financial year only.
+        new_run('Labour', 'Normal', 44102)
+        st.session_state.local_grant_uplift_bn = 1.0
+        st.session_state.regional_growth_fund_bn = 0.5
+        st.session_state.local_finance_last_period = ''
+        first_update = devolution.annual_update()
+        first_headroom = float(st.session_state.headroom)
+        first_deficit = float(st.session_state.deficit)
+        first_pressure = float(st.session_state.local_finance_pressure)
+        second_update = devolution.annual_update()
+        if not first_update or second_update:
+            failures.append("Local-government annual finance effects were not guarded against duplicate application.")
+        if (float(st.session_state.headroom) != first_headroom
+                or float(st.session_state.deficit) != first_deficit
+                or float(st.session_state.local_finance_pressure) != first_pressure):
+            failures.append("A repeated local-government annual update changed the fiscal or service position twice.")
     except Exception as exc:
         failures.append(f"Fiscal event calendar regression check failed: {exc}")
 
