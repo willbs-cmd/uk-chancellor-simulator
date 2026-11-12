@@ -153,9 +153,8 @@ def render(on_restart):
                     format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key.replace('_', ' ').title())}",
                     key="desk_reshuffle_department",
                 )
-                loyalty = float(s.get("ministerial_loyalty", {}).get(str(ministers.get(dept, "")), s.get("ministerial_loyalty", {}).get(dept, 50.0)))
                 st.caption(
-                    f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(str(ministers.get(dept, '')), 50.0)):.0f}/100. "
+                    f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(dept, 50.0)):.0f}/100. "
                     "A weak relationship or active dispute makes Number 10 more receptive."
                 )
                 if st.button("Recommend a Cabinet replacement to the PM", use_container_width=True):
