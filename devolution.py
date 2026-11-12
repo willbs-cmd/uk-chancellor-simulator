@@ -140,20 +140,20 @@ def render_spending_review_controls(period, read_only=False):
         s.setdefault(regional_key, float(s.regional_growth_fund_bn))
         s.setdefault(barnett_key, int(s.barnett_pass_through_pct))
         st.slider("Local government grant uplift (£bn per year)", min_value=-5.0, max_value=10.0,
-                  value=float(s[grant_key]), step=0.5, key=grant_key)
+                  step=0.5, key=grant_key)
         st.slider("Regional growth and town-centre fund (£bn per year)", min_value=0.0, max_value=5.0,
-                  value=float(s[regional_key]), step=0.25, key=regional_key)
+                  step=0.25, key=regional_key)
         st.slider("Devolved funding pass-through (%)", min_value=50, max_value=150,
-                  value=int(s[barnett_key]), step=5, key=barnett_key)
+                  step=5, key=barnett_key)
     with c2:
         referendum_key = keys["council_tax_referendum_threshold"]
         precept_key = keys["social_care_precept_cap"]
         s.setdefault(referendum_key, float(s.council_tax_referendum_threshold))
         s.setdefault(precept_key, float(s.social_care_precept_cap))
         st.slider("Council tax referendum threshold (%)", min_value=0.0, max_value=10.0,
-                  value=float(s[referendum_key]), step=0.5, key=referendum_key)
+                  step=0.5, key=referendum_key)
         st.slider("Adult social-care precept flexibility (%)", min_value=0.0, max_value=5.0,
-                  value=float(s[precept_key]), step=0.25, key=precept_key)
+                  step=0.25, key=precept_key)
         grant = float(s[grant_key])
         regional = float(s[regional_key])
         barnett = float(s[barnett_key])
