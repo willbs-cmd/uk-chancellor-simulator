@@ -219,6 +219,12 @@ def check(n=None, difficulty=None):
         s.local_service_delivery = 58.0
         s.local_finance_history = [{'year': 'Term 1, Year 1', 'annual_cost_bn': 4.0}]
         s.local_finance_last_period = '1-1'
+        s.budget_day_stage = 2
+        s.budget_day_draft = budget.read()
+        s.budget_pm_priorities = [{'title': 'Protect core services', 'detail': 'Test priority', 'tag': 'health'}]
+        s.budget_day_forecast = [{'year': 'Year 1', 'headroom': 7.4}]
+        review_keys = devolution.review_settlement_keys('1-1')
+        s[review_keys['local_grant_uplift_bn']] = 3.5
         s.budget_applied = budget.read()
         s.budget_applied['tax']['income'] = float(s.budget_applied['tax'].get('income', 0)) + 1.0
         s.budget_history = [{'year': 1, 'ayes': 350, 'headroom': 7.4}]
@@ -226,6 +232,11 @@ def check(n=None, difficulty=None):
         saved_local_settlement = devolution.current_settlement(s)
         saved_local_history = list(s.local_finance_history)
         saved_local_period = s.local_finance_last_period
+        saved_budget_stage = s.budget_day_stage
+        saved_budget_draft = dict(s.budget_day_draft)
+        saved_budget_priorities = list(s.budget_pm_priorities)
+        saved_budget_forecast = list(s.budget_day_forecast)
+        saved_review_widget = float(s[review_keys['local_grant_uplift_bn']])
         saved_ledger = budget.read()
         saved_applied = dict(s.budget_applied)
         saved_headroom = float(s.headroom)
@@ -251,6 +262,16 @@ def check(n=None, difficulty=None):
                 failures.append("Save/load did not preserve local-government finance history.")
             if st.session_state.local_finance_last_period != saved_local_period:
                 failures.append("Save/load did not preserve the local-government annual update guard.")
+            if st.session_state.budget_day_stage != saved_budget_stage:
+                failures.append("Save/load did not preserve the in-progress fiscal event stage.")
+            if st.session_state.budget_day_draft != saved_budget_draft:
+                failures.append("Save/load did not preserve the in-progress Budget draft.")
+            if st.session_state.budget_pm_priorities != saved_budget_priorities:
+                failures.append("Save/load did not preserve the in-progress Budget negotiation priorities.")
+            if st.session_state.budget_day_forecast != saved_budget_forecast:
+                failures.append("Save/load did not preserve the in-progress Budget forecast.")
+            if abs(float(st.session_state[review_keys['local_grant_uplift_bn']]) - saved_review_widget) > 0.001:
+                failures.append("Save/load did not preserve the in-progress Spending Review settlement control.")
     except Exception as exc:
         failures.append(f"Save/load smoke test failed: {exc}")
 
