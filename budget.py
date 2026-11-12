@@ -1688,7 +1688,7 @@ def render(submit=None, after_summary=None):
         cut_count = sum(1 for v in spend_values.values() if v < -0.05)
         rise_count = sum(1 for v in spend_values.values() if v > 0.05)
         net_change = sum(float(s.dept_spend[k]) * (spend_values[k] - float(applied.get('spend', {}).get(k, 0.0))) / 100.0 for k in SPEND_DEFAULTS)
-        st.caption(f"Adjust each department against its current approved annual budget. Negative values are cuts; positive values are increases. Drafts take effect only when the Budget is delivered and then roll into next year's baseline. Total spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
+        st.caption(f"Set each department's recurring annual settlement against its current approved allocation. The previous percentage stays in place until you change it. Total spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
         control_cols = st.columns([2.2, 1, 1], gap='small')
         control_cols[0].markdown(f"<div class='spend-draft-summary'><strong>{cut_count} departments cut · {rise_count} increased</strong><small>Net annual departmental change: £{net_change:+,.1f}bn</small></div>", unsafe_allow_html=True)
         control_cols[1].button("Restore approved", key="restore_spend_draft", on_click=_reset_spending_draft,
