@@ -233,7 +233,11 @@ def render():
             ("Spring Statement", "spring_statement", "Phase 3 · before the Spring Budget"),
         ]
         for label, key, timing in statuses:
-            st.markdown(f"{'✅' if key in used else '◯'} **{label}** — {timing}")
+            skipped = key == "autumn" and "autumn_skipped" in used
+            complete = key in used or skipped
+            marker = "✅" if complete else "◯"
+            suffix = " · not published" if skipped else ""
+            st.markdown(f"{marker} **{label}** — {timing}{suffix}")
         emergency_period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
         emergency_done = any(row.get("period") == emergency_period for row in s.get("emergency_budget_history", []))
         st.markdown(f"{'✅' if emergency_done else '◯'} **Emergency Budget** — only when triggered by severe conditions")
