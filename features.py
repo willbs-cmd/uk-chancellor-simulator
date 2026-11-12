@@ -35,83 +35,113 @@ def _act(key, cost, label, effect):
     state.record()
     return True
 
+AUTUMN_CHOICES = [
+    "Publish the updated forecast and hold course",
+    "Fund a targeted cost-of-living package",
+    "Announce a tighter spending path",
+    "Launch a limited growth and investment package",
+]
+
+AUTUMN_SUMMARIES = {
+    AUTUMN_CHOICES[0]: "A forecast-led update steadies the message and gives investors a clearer view, without changing the fiscal stance.",
+    AUTUMN_CHOICES[1]: "Targeted support helps households facing high bills, but uses some fiscal room.",
+    AUTUMN_CHOICES[2]: "A tighter spending path improves the near-term fiscal position, but puts pressure on departments and the governing party.",
+    AUTUMN_CHOICES[3]: "Targeted investment supports demand and productivity, but adds to borrowing in the short term.",
+}
+
+
+def resolve_autumn_statement(choice):
+    """Apply one annual Autumn Statement choice and archive it exactly once."""
+    s = st.session_state
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    if choice not in AUTUMN_CHOICES or not s.get("autumn_statement_due"):
+        return False
+    _, used = _used()
+    if "autumn" in used:
+        s.autumn_statement_due = False
+        return False
+
+    def effect(x):
+        if choice == AUTUMN_CHOICES[0]:
+            x.market_conf = _clip(x.market_conf + 2.0)
+            x.media_opinion = _clip(x.media_opinion + 1.0)
+            x.pm_opinion = _clip(x.pm_opinion + 1.0)
+        elif choice == AUTUMN_CHOICES[1]:
+            x.headroom = round(float(x.headroom) - 1.2, 1)
+            x.deficit = round(float(x.deficit) + 1.2, 1)
+            x.approval = _clip(x.approval + 1.8)
+            x.household_bill_pressure = _clip(float(x.get("household_bill_pressure", 50.0)) - 2.5)
+            x.market_conf = _clip(x.market_conf - 0.5)
+        elif choice == AUTUMN_CHOICES[2]:
+            x.headroom = round(float(x.headroom) + 1.5, 1)
+            x.deficit = round(max(0.0, float(x.deficit) - 1.5), 1)
+            x.market_conf = _clip(x.market_conf + 1.0)
+            x.approval = _clip(x.approval - 1.0)
+            x.party_opinion = _clip(x.party_opinion - 1.0)
+        else:
+            x.headroom = round(float(x.headroom) - 1.8, 1)
+            x.deficit = round(float(x.deficit) + 1.8, 1)
+            x.growth = round(float(x.growth) + 0.18, 2)
+            x.market_conf = _clip(x.market_conf - 1.0)
+            x.approval = _clip(x.approval + 0.5)
+        x.autumn_statement_history = list(x.get("autumn_statement_history", []))
+        x.autumn_statement_history.append({
+            "period": period, "choice": choice, "summary": AUTUMN_SUMMARIES[choice],
+            "headroom_after": round(float(x.headroom), 1),
+            "market_conf_after": round(float(x.market_conf), 1),
+        })
+        x.autumn_statement_history = x.autumn_statement_history[-12:]
+        x.autumn_statement_due = False
+
+    return _act("autumn", 1, "Autumn Statement", effect)
+
+
+def render_autumn_statement_event():
+    """Standalone annual fiscal update, completed before the first policy submission."""
+    s = st.session_state
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    _, used = _used()
+    st.markdown("# 🍂 The Autumn Statement")
+    st.caption(f"Term {s.term} · Year {s.year} · Annual fiscal update")
+    st.markdown(
+        "<div class='treasury-notice info'><div><strong>A statement, not a full Budget</strong>"
+        "Publish an updated view of the economy and choose one limited fiscal adjustment. Tax rates, thresholds and departmental cash settlements remain for the Spring Budget.</div></div>",
+        unsafe_allow_html=True,
+    )
+    metrics = st.columns(4, gap="small")
+    metrics[0].metric("Real GDP growth", f"{float(s.get('growth', 0.0)):+.1f}%")
+    metrics[1].metric("Inflation", f"{float(s.get('inflation', 0.0)):.1f}%")
+    metrics[2].metric("Fiscal headroom", f"£{float(s.get('headroom', 0.0)):.1f}bn")
+    metrics[3].metric("10-year gilt yield", f"{float(s.get('gilt_yield', 0.0)):.2f}%")
+    if "autumn" in used:
+        latest = next((row for row in reversed(s.get("autumn_statement_history", [])) if row.get("period") == period), None)
+        st.success("The Autumn Statement for this year has already been delivered.")
+        if latest:
+            st.write(f"**{latest.get('choice', 'Fiscal update')}** — {latest.get('summary', '')}")
+        s.autumn_statement_due = False
+        return
+
+    choice = st.radio(
+        "Choose the Government's Autumn Statement:",
+        AUTUMN_CHOICES, key=f"autumn_statement_choice_{period}",
+        label_visibility="collapsed",
+    )
+    st.info(AUTUMN_SUMMARIES[choice])
+    st.caption("This update is optional, but it costs 1 political-capital point. Its effects are applied immediately and recorded in the fiscal history.")
+    if st.button("Publish Autumn Statement", key=f"publish_autumn_statement_{period}",
+                 type="primary", use_container_width=True, disabled=int(s.get("political_capital_points", 0)) < 1):
+        if resolve_autumn_statement(choice):
+            st.rerun()
+
+
 def render_phase_action():
-    """Render the fiscal event attached to the current phase of the Chancellor's calendar."""
+    """Render the emergency fiscal watch attached to the winter policy phase."""
     s = st.session_state
     _, used = _used()
     if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
-
     if s.block == 1:
-        period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
-        st.markdown("### Autumn Statement & fiscal update")
-        st.caption("A mid-year update to the economic outlook and the Government's fiscal direction. It is smaller than the Spring Budget: choose one limited package, publish the update and face its political and market consequences.")
-        metrics = st.columns(4, gap="small")
-        metrics[0].metric("Growth", f"{float(s.get('growth', 0.0)):+.1f}%")
-        metrics[1].metric("Inflation", f"{float(s.get('inflation', 0.0)):.1f}%")
-        metrics[2].metric("Fiscal headroom", f"£{float(s.get('headroom', 0.0)):.1f}bn")
-        metrics[3].metric("Gilt yield", f"{float(s.get('gilt_yield', 0.0)):.2f}%")
-        if "autumn" in used:
-            history = list(s.get("autumn_statement_history", []))
-            latest = next((row for row in reversed(history) if row.get("period") == period), None)
-            st.success("The Autumn Statement has already been delivered this year.")
-            if latest:
-                st.caption(f"Published: {latest.get('choice', 'Fiscal update')} · {latest.get('summary', '')}")
-        else:
-            choices = [
-                "Publish the updated forecast and hold course",
-                "Fund a targeted cost-of-living package",
-                "Announce a tighter spending path",
-                "Launch a limited growth and investment package",
-            ]
-            choice = st.radio(
-                "Choose the Government's Autumn Statement:",
-                choices, key=f"autumn_statement_choice_{period}",
-                label_visibility="collapsed",
-            )
-            summaries = {
-                choices[0]: "A forecast-led update steadies the message and gives investors a clearer view, without changing the fiscal stance.",
-                choices[1]: "Targeted support helps households facing high bills, but uses some fiscal room.",
-                choices[2]: "A tighter spending path improves the near-term fiscal position, but puts pressure on departments and the governing party.",
-                choices[3]: "Targeted investment supports demand and productivity, but adds to borrowing in the short term.",
-            }
-            st.info(summaries[choice])
-            st.caption("This is not a full Budget. New tax rates, thresholds and departmental settlements are reserved for the Spring Budget.")
-            if st.button("Publish Autumn Statement", key=f"publish_autumn_statement_{period}",
-                         type="primary", use_container_width=True, disabled=s.political_capital_points < 1):
-                def autumn_effect(x):
-                    if choice == choices[0]:
-                        x.market_conf = _clip(x.market_conf + 2.0)
-                        x.media_opinion = _clip(x.media_opinion + 1.0)
-                        x.pm_opinion = _clip(x.pm_opinion + 1.0)
-                    elif choice == choices[1]:
-                        x.headroom = round(float(x.headroom) - 1.2, 1)
-                        x.deficit = round(float(x.deficit) + 1.2, 1)
-                        x.approval = _clip(x.approval + 1.8)
-                        x.household_bill_pressure = _clip(float(x.get("household_bill_pressure", 50.0)) - 2.5)
-                        x.market_conf = _clip(x.market_conf - 0.5)
-                    elif choice == choices[2]:
-                        x.headroom = round(float(x.headroom) + 1.5, 1)
-                        x.deficit = round(max(0.0, float(x.deficit) - 1.5), 1)
-                        x.market_conf = _clip(x.market_conf + 1.0)
-                        x.approval = _clip(x.approval - 1.0)
-                        x.party_opinion = _clip(x.party_opinion - 1.0)
-                    else:
-                        x.headroom = round(float(x.headroom) - 1.8, 1)
-                        x.deficit = round(float(x.deficit) + 1.8, 1)
-                        x.growth = round(float(x.growth) + 0.18, 2)
-                        x.market_conf = _clip(x.market_conf - 1.0)
-                        x.approval = _clip(x.approval + 0.5)
-                    x.autumn_statement_history = list(x.get("autumn_statement_history", []))
-                    x.autumn_statement_history.append({
-                        "period": period, "choice": choice, "summary": summaries[choice],
-                        "headroom_after": round(float(x.headroom), 1),
-                        "market_conf_after": round(float(x.market_conf), 1),
-                    })
-                    x.autumn_statement_history = x.autumn_statement_history[-12:]
-                _act("autumn", 1, "Autumn Statement", autumn_effect)
-                st.rerun()
-
+        st.info("The annual Autumn Statement is handled as a separate fiscal event before this year's first policy decision.")
     elif s.block == 2:
         st.markdown("### Emergency fiscal watch")
         st.caption("An Emergency Budget is not a routine annual mini-budget. It is called only when serious market, recession, fiscal-rule or government-confidence conditions require a full revised package.")
