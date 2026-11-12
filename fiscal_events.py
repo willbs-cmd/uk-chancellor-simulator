@@ -28,6 +28,8 @@ def ensure_state(s=None):
     s.setdefault("active_emergency_budget", None)
     s.setdefault("budget_day_type", "annual")
     s.setdefault("budget_day_draft", None)
+    s.setdefault("emergency_replaces_spring_budget", False)
+    s.setdefault("fiscal_calendar_initialised", False)
     # Older saves have no explicit calendar flag. Only schedule a review at the
     # start of a review year, and never repeat one already completed in that year.
     if not bool(s.get("fiscal_calendar_initialised", False)):
