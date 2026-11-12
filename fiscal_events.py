@@ -65,6 +65,9 @@ def open_emergency_budget(reason, source="automatic"):
         "reason": str(reason),
         "source": str(source),
     }
+    # If this is called after the second decision of the year, the emergency
+    # package replaces the scheduled Spring Budget rather than causing two Budgets.
+    s.emergency_replaces_spring_budget = int(s.get("block", 1)) >= 2
     s.budget_day_type = "emergency"
     s.budget_day_stage = 0
     s.budget_day_draft = None
@@ -133,6 +136,8 @@ def close_emergency_budget():
     s.emergency_budget_history = s.emergency_budget_history[-12:]
     s.emergency_budget_last_period = emergency.get("period", period_key(s))
     s.active_emergency_budget = None
+    advance_to_spring = bool(s.get("emergency_replaces_spring_budget", False))
+    s.emergency_replaces_spring_budget = False
     s.budget_day_type = "annual"
     s.budget_day_stage = 0
     s.budget_day_draft = None
@@ -141,6 +146,7 @@ def close_emergency_budget():
     s.budget_day_negotiation = ""
     s.budget_passed = False
     s.message = "The Emergency Budget has been delivered. The Government returns to its normal programme."
+    return advance_to_spring
 
 
 def render_treasury_overview():
