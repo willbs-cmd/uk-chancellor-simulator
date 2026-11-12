@@ -11,7 +11,7 @@ DEFAULTS = {
     "barnett_pass_through_pct": 100,
     "council_tax_referendum_threshold": 5.0,
     "social_care_precept_cap": 2.0,
-    "regional_growth_fund_bn": 1.0,
+    "regional_growth_fund_bn": 0.0,
     "local_finance_pressure": 42.0,
     "local_service_delivery": 62.0,
     "local_finance_history": [],
