@@ -1959,6 +1959,9 @@ def render_spending_review():
                         )
                     draft[key] = round(base * (1 + pct / 100.0), 1)
 
+    import devolution
+    local_review_draft = devolution.render_spending_review_controls(period)
+
     current_total = sum(float(s.dept_spend[k]) for k in departments)
     proposed_total = sum(draft.values()) if draft else current_total
     annual_change = proposed_total - current_total
@@ -2039,11 +2042,13 @@ def render_spending_review():
                 bid_satisfaction.append(max(-1.0, min(1.0, (settled - requested) / max(abs(requested), 2.0))))
             cabinet_effect = sum(bid_satisfaction) / max(1, len(bid_satisfaction)) * 5.0
             s.cab_opinion = round(_clip(float(s.get("cab_opinion", 65.0)) + cabinet_effect), 1)
+            approved_local_settlement = devolution.apply_spending_review_settlement(period)
             s.spending_review_plan = {
                 "term": int(s.get("term", 1)), "approved_year": int(s.get("year", 1)),
                 "year2_uplift": float(year2_uplift), "year3_uplift": float(year3_uplift),
                 "last_applied_year": int(s.get("year", 1)),
                 "allocations": {k: float(v) for k, v in draft.items()},
+                "local_settlement": dict(approved_local_settlement),
             }
             # The Review replaces the previous departmental percentage baseline.
             for key in departments:
@@ -2056,6 +2061,7 @@ def render_spending_review():
                 "period": period, "annual_change": round(annual_change, 1),
                 "departmental_total": round(proposed_total, 1),
                 "allocations": {k: round(v, 1) for k, v in draft.items()},
+                "local_settlement": dict(approved_local_settlement),
                 "cabinet_effect": round(cabinet_effect, 1),
             })
             s.event_cards = list(s.get("event_cards", []))
