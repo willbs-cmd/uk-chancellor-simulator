@@ -16,7 +16,8 @@ START = {
     'Labour': (48, 65, dict(zip(PARTIES, [38, 32, 12, 10, 4, 3, 1]))),
     'Conservative': (46, 70, dict(zip(PARTIES, [32, 38, 12, 10, 4, 3, 1]))),
     'Liberal Democrats': (49, 60, dict(zip(PARTIES, [30, 30, 24, 8, 4, 3, 1]))),
-    'Reform UK': (42, 55, dict(zip(PARTIES, [28, 28, 10, 26, 4, 3, 1]))),
+    # A Reform-led opening parliament: the player's party begins ahead in national polling.
+    'Reform UK': (42, 55, dict(zip(PARTIES, [24, 24, 9, 34, 5, 3, 1]))),
     'Green Party': (45, 50, dict(zip(PARTIES, [28, 26, 12, 8, 22, 3, 1]))),
     'SNP': (45, 50, dict(zip(PARTIES, [34, 30, 10, 9, 4, 12, 1]))),
     'Plaid Cymru': (45, 50, dict(zip(PARTIES, [34, 30, 10, 9, 4, 3, 10]))),
