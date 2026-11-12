@@ -28,9 +28,10 @@ def ensure_state(s=None):
     s.setdefault("active_emergency_budget", None)
     s.setdefault("budget_day_type", "annual")
     if s.get("autumn_statement_due") is None:
-        action_key = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+        year = int(s.get("year", 1))
+        action_key = f"{int(s.get('term', 1))}:{year}"
         used_actions = s.get("feature_actions", {}).get(action_key, [])
-        s["autumn_statement_due"] = "autumn" not in used_actions
+        s["autumn_statement_due"] = year <= 5 and "autumn" not in used_actions
     s.setdefault("budget_day_draft", None)
     s.setdefault("emergency_replaces_spring_budget", False)
     s.setdefault("fiscal_calendar_initialised", False)
