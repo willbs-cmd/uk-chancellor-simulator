@@ -267,6 +267,24 @@ def check(n=None, difficulty=None):
                 failures.append(f"Approved Budget threshold {key} did not carry forward to its control.")
         if st.session_state.get('budget_strategy') != 'redistribution':
             failures.append("Approved Budget strategy did not carry forward to its control.")
+
+        # The approved departmental percentage is a recurring annual settlement.
+        # It must remain visible after Spring, while the actual £bn baseline compounds once.
+        before_spend = float(st.session_state.dept_spend['health'])
+        approved_rate = float(st.session_state.budget_applied['spend']['health'])
+        before_total = budget.totals(budget.read())[1]
+        budget.apply_ongoing()
+        after_spend = float(st.session_state.dept_spend['health'])
+        if abs(after_spend - round(before_spend * (1.0 + approved_rate / 100.0), 1)) > 0.11:
+            failures.append("Approved departmental settlement was not applied exactly once at Spring.")
+        if abs(float(st.session_state.get('bs_health', 0.0)) - approved_rate) > 0.001:
+            failures.append("Departmental percentage did not remain visible after Spring.")
+        if abs(float(st.session_state.budget_applied['spend']['health']) - approved_rate) > 0.001:
+            failures.append("Approved departmental percentage was cleared at Spring.")
+        after_total = budget.totals(budget.read())[1]
+        if abs(after_total - before_total * (1.0 + approved_rate / 100.0)) > 0.25:
+            failures.append("Carried-forward departmental spending was double-counted or omitted.")
+
     except Exception as exc:
         failures.append(f"Budget control carry-forward regression test failed: {exc}")
 
