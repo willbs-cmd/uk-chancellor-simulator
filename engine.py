@@ -1255,6 +1255,7 @@ def proceed_to_spring():
     s.feature_notice_phase = 0
     performance_report.create_report()
     s.year += 1
+    s.autumn_statement_due = True
     fiscal_events.schedule_spending_review(s)
     budget.apply_spending_review_rollforward(s, s.year)
     # Annual local contests take place after the first full year in office.
@@ -1564,6 +1565,7 @@ def continue_term():
     s.budget_passed = False
     s.election_result = None
     s.spending_review_due = True
+    s.autumn_statement_due = True
     s.fiscal_calendar_initialised = True
     s.budget_day_type = 'annual'
     s.active_emergency_budget = None
