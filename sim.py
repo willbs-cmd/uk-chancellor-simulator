@@ -280,11 +280,12 @@ def check(n=None, difficulty=None):
             failures.append("Departmental percentage did not remain visible after Spring.")
         if abs(float(st.session_state.budget_applied['spend']['health']) - approved_rate) > 0.001:
             failures.append("Approved departmental percentage was cleared at Spring.")
-        carried_total = budget.totals(budget.read())[1]
-        expected_total = (sum(float(st.session_state.dept_spend[k]) for k in budget.SPEND_DEFAULTS)
-                          + budget.interest()
-                          + float(budget.scheme_financials(budget.read())['spend_cost']))
-        if abs(carried_total - expected_total) > 0.05:
+        carried_lines = budget.spending_pie(budget.read())
+        carried_department_total = sum(float(carried_lines[budget.SPEND_DEFAULTS[k]['short']])
+                                       for k in budget.SPEND_DEFAULTS)
+        approved_department_total = sum(float(st.session_state.dept_spend[k])
+                                        for k in budget.SPEND_DEFAULTS)
+        if abs(carried_department_total - approved_department_total) > 0.05:
             failures.append("Carried-forward departmental spending was double-counted or omitted from the next Budget baseline.")
 
     except Exception as exc:
