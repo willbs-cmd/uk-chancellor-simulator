@@ -376,6 +376,15 @@ def check(n=None, difficulty=None):
         if st.session_state.get('budget_day_type') != 'annual':
             failures.append("Closing an Emergency Budget did not restore the normal annual Budget mode.")
 
+        # The general-election year must not be interrupted by a late Emergency Budget trigger.
+        new_run('Labour', 'Normal', 44104)
+        st.session_state.year = 6
+        st.session_state.block = 1
+        st.session_state.market_conf = 20.0
+        st.session_state.gilt_yield = 7.0
+        if fiscal_events.maybe_trigger_emergency_budget(st.session_state):
+            failures.append("An Emergency Budget incorrectly interrupted the general-election campaign year.")
+
         # The local-government settlement is applied once per financial year only.
         new_run('Labour', 'Normal', 44102)
         st.session_state.local_grant_uplift_bn = 1.0
