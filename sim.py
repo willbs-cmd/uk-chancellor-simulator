@@ -482,6 +482,18 @@ def check(n=None, difficulty=None):
     if sum(reform_start_polls.values()) != 100 or max(reform_start_polls, key=reform_start_polls.get) != 'Reform UK':
         failures.append("The Reform UK opening scenario must start with Reform leading a 100% national polling split.")
 
+    # Every non-regional playable party starts with a comfortable opening majority;
+    # SNP and Plaid Cymru keep their separate regional mandate route.
+    for opening_party in state.PARTIES:
+        opening_seats = state.opening_seat_allocation(opening_party)
+        if opening_party in state.REGIONAL:
+            if opening_seats is not None:
+                failures.append(f"{opening_party} should use the regional mandate model, not a Westminster majority.")
+        elif (not opening_seats or sum(opening_seats.values()) != 650
+              or opening_seats.get(opening_party, 0) < 350
+              or opening_seats.get(opening_party, 0) >= 400):
+            failures.append(f"{opening_party} must start with a comfortable majority in a 650-seat Parliament.")
+
     # Exercise the constituency-by-constituency election model and its repeatability.
     sample_polls = {party: 100.0 / len(state.PARTIES) for party in state.PARTIES}
     seat_totals, local_results = engine.compute_seats(sample_polls, return_details=True)
