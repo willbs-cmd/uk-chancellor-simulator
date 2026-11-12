@@ -118,7 +118,9 @@ def render_autumn_statement_event():
         st.success("The Autumn Statement for this year has already been delivered.")
         if latest:
             st.write(f"**{latest.get('choice', 'Fiscal update')}** — {latest.get('summary', '')}")
-        s.autumn_statement_due = False
+        if st.button("Continue to policy decisions", key=f"continue_autumn_statement_{period}", type="primary"):
+            s.autumn_statement_due = False
+            st.rerun()
         return
 
     choice = st.radio(
@@ -137,6 +139,16 @@ def render_autumn_statement_event():
     with skip_col:
         if st.button("Proceed without a statement", key=f"skip_autumn_statement_{period}",
                      use_container_width=True):
+            year_key, used_actions = _used()
+            s.feature_actions[year_key] = used_actions + ["autumn_skipped"]
+            s.autumn_statement_history = list(s.get("autumn_statement_history", []))
+            s.autumn_statement_history.append({
+                "period": period, "choice": "No statement published",
+                "summary": "The Chancellor chose to reserve political capital and leave the fiscal position unchanged.",
+                "headroom_after": round(float(s.headroom), 1),
+                "market_conf_after": round(float(s.market_conf), 1),
+            })
+            s.autumn_statement_history = s.autumn_statement_history[-12:]
             s.autumn_statement_due = False
             s.message = "You decide not to publish an Autumn Statement this year. The Spring Budget remains the main fiscal event."
             state.log("event", "Autumn Statement not published", note=s.message)
@@ -152,6 +164,8 @@ def render_phase_action():
     if s.block == 1:
         if "autumn" in used:
             st.success("The Autumn Statement has been delivered for this financial year.")
+        elif "autumn_skipped" in used:
+            st.info("No Autumn Statement was published this year. The Spring Budget remains the main fiscal event.")
         else:
             st.info("The Autumn Statement is a separate fiscal event. You may proceed without publishing one.")
     elif s.block == 2:
