@@ -1882,7 +1882,7 @@ def apply_spending_review_rollforward(s, target_year):
     return change
 
 def render_spending_review():
-    """Annual multi-year Spending Review. Approved settlements change the live departmental baselines."""
+    """Periodic multi-year Spending Review. Approved settlements change live departmental baselines."""
     ensure()
     s = st.session_state
     period = f"{s.get('term', 1)}-{s.get('year', 1)}"
@@ -1960,7 +1960,7 @@ def render_spending_review():
                     draft[key] = round(base * (1 + pct / 100.0), 1)
 
     import devolution
-    local_review_draft = devolution.render_spending_review_controls(period)
+    local_review_draft = devolution.render_spending_review_controls(period, read_only=done)
 
     current_total = sum(float(s.dept_spend[k]) for k in departments)
     proposed_total = sum(draft.values()) if draft else current_total
