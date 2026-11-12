@@ -202,7 +202,7 @@ def log(kind, title, choice='', ideology='', before=None, note=''):
 
 
 # ---------------------------------------------------------------- new game / defaults
-_WIPE_PREFIXES = ('bt_', 'bs_', 'btp_', 'bsp_')
+_WIPE_PREFIXES = ('bt_', 'bs_', 'btp_', 'bsp_', 'sr_')
 
 
 def _defaults():
@@ -348,6 +348,8 @@ def undo():
 SAVE_KEYS = [
     'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile', 'active_crisis', 'active_gilt_emergency', 'gilt_auction_history', 'gilt_auction_latest', 'last_ideology', 'last_crisis',
     'crisis_reason', 'active_weekly_event', 'active_pm_ultimatum', 'last_weekly_event', 'ongoing_issues', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
+    'budget_day_stage', 'budget_day_draft', 'budget_pm_priorities', 'budget_pm_assessment',
+    'budget_pm_met_count', 'budget_pm_choice', 'budget_day_negotiation', 'budget_day_forecast', 'budget_day_speech',
     'message', 'humphrey_note', 'last_humphrey_quote', 'fallout_done', 'difficulty', 'seed', 'show_tags',
     'prev', 'pending', 'history', 'stat_hist', 'country_hist', 'event_cards', 'ideology_counts', 'policy_history',
     'crises_handled', 'achievements', 'new_achievements', 'poll_history', 'poll_anchor', 'term_start',
