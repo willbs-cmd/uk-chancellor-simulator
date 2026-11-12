@@ -31,6 +31,7 @@ The game loads player-facing content from `data/` files. You can add or rebalanc
 - `data/constituencies_2024.json` — official names, nations and codes for all 650 Westminster constituencies.
 - `data/career_divisions.json` — simulated Commons divisions, party-whip positions and local-priority categories.
 - `data/README.md` — data structures, editing rules and instructions for updating the IMF baseline.
+- `devolution.py` — local-government grant settlements, simplified Barnett-style consequentials, council tax flexibility and regional growth funding.
 
 The JSON is loaded at application startup. Restart the local app after changing data files. When using Streamlit Cloud, commit the changed file to the repository so the app can redeploy.
 
