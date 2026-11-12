@@ -222,6 +222,8 @@ def check(n=None, difficulty=None):
         s.local_finance_last_period = '1-1'
         s.budget_day_stage = 2
         s.budget_day_draft = budget.read()
+        s.autumn_statement_due = True
+        s["autumn_statement_choice_1-1"] = features.AUTUMN_CHOICES[2]
         s.budget_pm_priorities = [{'title': 'Protect core services', 'detail': 'Test priority', 'tag': 'health'}]
         s.budget_day_forecast = [{'year': 'Year 1', 'headroom': 7.4}]
         review_keys = devolution.review_settlement_keys('1-1')
@@ -235,6 +237,8 @@ def check(n=None, difficulty=None):
         saved_local_period = s.local_finance_last_period
         saved_budget_stage = s.budget_day_stage
         saved_budget_draft = dict(s.budget_day_draft)
+        saved_autumn_due = bool(s.autumn_statement_due)
+        saved_autumn_choice = s["autumn_statement_choice_1-1"]
         saved_budget_priorities = list(s.budget_pm_priorities)
         saved_budget_forecast = list(s.budget_day_forecast)
         saved_review_widget = float(s[review_keys['local_grant_uplift_bn']])
@@ -265,6 +269,10 @@ def check(n=None, difficulty=None):
                 failures.append("Save/load did not preserve the local-government annual update guard.")
             if st.session_state.budget_day_stage != saved_budget_stage:
                 failures.append("Save/load did not preserve the in-progress fiscal event stage.")
+            if bool(st.session_state.autumn_statement_due) != saved_autumn_due:
+                failures.append("Save/load did not preserve whether the Autumn Statement is awaiting publication.")
+            if st.session_state.get("autumn_statement_choice_1-1") != saved_autumn_choice:
+                failures.append("Save/load did not preserve the in-progress Autumn Statement choice.")
             if st.session_state.budget_day_draft != saved_budget_draft:
                 failures.append("Save/load did not preserve the in-progress Budget draft.")
             if st.session_state.budget_pm_priorities != saved_budget_priorities:
