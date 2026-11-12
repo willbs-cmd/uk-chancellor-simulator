@@ -11,6 +11,31 @@ import streamlit as st
 PARTIES = ['Labour', 'Conservative', 'Liberal Democrats', 'Reform UK', 'Green Party', 'SNP', 'Plaid Cymru']
 REGIONAL = ('SNP', 'Plaid Cymru')
 
+
+def opening_seat_allocation(player_party, majority_target=365):
+    """Give a non-regional player a comfortable opening Westminster majority.
+
+    This is the game's starting-term premise, not a prediction of the next election.
+    Regional parties retain their distinct mandate model.
+    """
+    if player_party not in PARTIES or player_party in REGIONAL:
+        return None
+    target = max(326, min(400, int(majority_target)))
+    opponents = [party for party in PARTIES if party != player_party]
+    opposition_polls = START[player_party][2] if 'START' in globals() else {}
+    weights = {party: max(0.0, float(opposition_polls.get(party, 0.0))) for party in opponents}
+    total_weight = sum(weights.values()) or float(len(opponents))
+    remaining = 650 - target
+    exact = {party: remaining * (weights[party] if total_weight else 1.0) / total_weight for party in opponents}
+    seats = {party: 0 for party in PARTIES}
+    seats[player_party] = target
+    for party in opponents:
+        seats[party] = int(exact[party])
+    leftovers = remaining - sum(seats[party] for party in opponents)
+    for party in sorted(opponents, key=lambda name: exact[name] - seats[name], reverse=True)[:leftovers]:
+        seats[party] += 1
+    return seats
+
 # party: (starting approval, starting market confidence, starting polls)
 START = {
     'Labour': (48, 65, dict(zip(PARTIES, [38, 32, 12, 10, 4, 3, 1]))),
@@ -213,7 +238,7 @@ def _defaults():
         threshold_freeze_scope='Personal allowance and all bands',
         parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],
         parliament_actions={}, parliament_last_strategy=None,
-        local_election_due=False, local_election_result=None, local_election_history=[],
+        local_election_due=False, local_election_result=None, local_election_history=[], opening_parliament_seats={}, opening_mandate_pending=False,
         election_campaign_done=False, election_night_started=False, election_campaign_strategy='',
         election_campaign_turnout=0.0, election_campaign_approval=0.0, election_campaign_week=1,
         election_campaign_actions=[], constituency_incumbents={}, previous_election_seats={},
@@ -255,6 +280,8 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     sc = SCENARIOS.get(scenario) or SCENARIOS['fragile']
     s.scenario = scenario if scenario in SCENARIOS else 'fragile'
     s.party, s.difficulty, s.seed, s.show_tags = party, difficulty, int(seed), bool(show_tags)
+    s.opening_parliament_seats = opening_seat_allocation(party) or {}
+    s.opening_mandate_pending = party not in REGIONAL
     for k, v in sc['set'].items():
         s[k] = v
     s.pledges = [p for p in list(pledges)[:3] if p in politics.PLEDGES]
@@ -336,7 +363,7 @@ SAVE_KEYS = [
     'regional_economies', 'regional_history', 'regional_last_year', 'regional_policy_period', 'regional_policy_history',
     'election_campaign_done', 'election_night_started', 'election_campaign_strategy',
     'election_campaign_turnout', 'election_campaign_approval', 'election_campaign_week', 'election_campaign_actions',
-    'constituency_incumbents', 'previous_election_seats',
+    'constituency_incumbents', 'previous_election_seats', 'opening_parliament_seats', 'opening_mandate_pending',
     'election_broadcast_stage',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
