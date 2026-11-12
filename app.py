@@ -1015,7 +1015,7 @@ with tab_action:
         budget_screen()
     elif s.get('spending_review_due'):
         budget.render_spending_review()
-    elif s.get('autumn_statement_due') and s.block == 1:
+    elif s.get('autumn_statement_due'):
         features.render_autumn_statement_event()
     elif _is_budget_phase:
         budget_screen()
