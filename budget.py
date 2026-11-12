@@ -564,7 +564,8 @@ def revenue_pie(b):
 def spending_pie(b):
     s = st.session_state
     ensure()
-    data = {SPEND_DEFAULTS[k]['short']: round(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0), 1) for k in SPEND_DEFAULTS}
+    applied_spend = s.budget_applied.get('spend', {})
+    data = {SPEND_DEFAULTS[k]['short']: round(s.dept_spend[k] * (1.0 + (float(b['spend'][k]) - float(applied_spend.get(k, 0.0))) / 100.0), 1) for k in SPEND_DEFAULTS}
     data['Debt interest'] = round(interest(), 1)
     scheme_data = scheme_financials(b)
     pol_spend = float(scheme_data['spend_cost'])
@@ -597,7 +598,8 @@ def totals(b):
     if thresholds.get('thresholds_frozen', False):
         drag_rate = 0.35 if thresholds.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
         rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
-    spend = (sum(s.dept_spend[k] * (1.0 + b['spend'][k] / 100.0) for k in SPEND_DEFAULTS) + interest()
+    applied_spend = s.budget_applied.get('spend', {})
+    spend = (sum(s.dept_spend[k] * (1.0 + (float(b['spend'][k]) - float(applied_spend.get(k, 0.0))) / 100.0) for k in SPEND_DEFAULTS) + interest()
              + float(scheme_data['spend_cost']))
     return rev, spend
 
@@ -1144,10 +1146,11 @@ def apply_ongoing():
     # percentages are annual changes, so compound them once and then start the next
     # year's draft at zero against the newly approved departmental baseline.
     for k in SPEND_DEFAULTS:
+        # The approved percentage is a recurring annual settlement. Keep it in
+        # the ledger and widget; compound it once into the actual allocation.
         pct_change = float(s.budget_applied['spend'].get(k, 0.0))
         s.dept_spend[k] = round(float(s.dept_spend[k]) * (1.0 + pct_change / 100.0), 1)
-        s[f'bs_{k}'] = 0.0
-        s.budget_applied['spend'][k] = 0.0
+        s[f'bs_{k}'] = pct_change
 
     # Preserve the approved tax rates, strategy and policy selections across years.
     # Only reset one-off whip interventions and the cumulative delivery ledger.
@@ -1305,11 +1308,13 @@ def _spend_row(k, sp, s):
             f"{sp['label']} slider", min_value=-15.0, max_value=15.0,
             step=0.5, key=f'bs_{k}', format="%+.1f%%",
             label_visibility="collapsed",
-            help="Change this department's annual budget relative to today's approved baseline. Negative values are cuts; positive values are increases."
+            help="Set the recurring annual percentage settlement for this department. The approved setting carries forward each year; change it to revise the ongoing settlement."
         )
     with c3:
         pct = float(s[f'bs_{k}'])
-        new_val = base * (1.0 + pct / 100.0)
+        approved_pct = float(s.budget_applied.get('spend', {}).get(k, 0.0))
+        effective_change = pct - approved_pct
+        new_val = base * (1.0 + effective_change / 100.0)
         st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%) · annual impact'),
                     unsafe_allow_html=True)
 
@@ -1428,7 +1433,7 @@ def render(submit=None, after_summary=None):
         f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
         unsafe_allow_html=True,
     )
-    st.caption('Approved tax rates and tax/spending schemes carry forward automatically. Departmental percentage changes are applied to the actual £bn allocation at the start of the next year; those sliders then return to 0% because the new allocation is the baseline, not because the money has been removed.')
+    st.caption('Approved tax rates, thresholds, departmental spending settings and policy schemes carry forward automatically. Departmental percentage settlements recur each year; change a percentage to revise the ongoing annual settlement.')
     with st.container(key="budget_financial_summary"):
         render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'),
@@ -1682,7 +1687,7 @@ def render(submit=None, after_summary=None):
         spend_values = {k: float(cur['spend'].get(k, 0.0)) for k in SPEND_DEFAULTS}
         cut_count = sum(1 for v in spend_values.values() if v < -0.05)
         rise_count = sum(1 for v in spend_values.values() if v > 0.05)
-        net_change = sum(float(s.dept_spend[k]) * spend_values[k] / 100.0 for k in SPEND_DEFAULTS)
+        net_change = sum(float(s.dept_spend[k]) * (spend_values[k] - float(applied.get('spend', {}).get(k, 0.0))) / 100.0 for k in SPEND_DEFAULTS)
         st.caption(f"Adjust each department against its current approved annual budget. Negative values are cuts; positive values are increases. Drafts take effect only when the Budget is delivered and then roll into next year's baseline. Total spending is {spend_now / GDP_BN * 100:.1f}% of GDP; debt interest is £{interest():,.1f}bn ({interest() / max(rev_now, 1):.1f}% of receipts).")
         control_cols = st.columns([2.2, 1, 1], gap='small')
         control_cols[0].markdown(f"<div class='spend-draft-summary'><strong>{cut_count} departments cut · {rise_count} increased</strong><small>Net annual departmental change: £{net_change:+,.1f}bn</small></div>", unsafe_allow_html=True)
@@ -1979,8 +1984,7 @@ def render_spending_review():
             s.checkpoint = None
             for key, amount in draft.items():
                 s.dept_spend[key] = amount
-                s[f"bs_{key}"] = 0.0
-                s.budget_applied.setdefault("spend", {})[key] = 0.0
+                s[f"bs_{key}"] = float(s.budget_applied.get('spend', {}).get(key, 0.0))
             # An unfunded increase worsens the annual deficit and uses fiscal room.
             s.deficit = round(float(s.deficit) + annual_change, 1)
             s.headroom = round(float(s.headroom) - annual_change * 0.22, 1)
