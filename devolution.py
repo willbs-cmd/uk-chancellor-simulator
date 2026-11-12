@@ -16,6 +16,7 @@ DEFAULTS = {
     "local_service_delivery": 62.0,
     "local_finance_history": [],
     "local_finance_last_update": None,
+    "local_finance_last_period": "",
     "local_finance_notice": "",
 }
 
@@ -31,6 +32,9 @@ def annual_update():
     """Apply the current central-grant and local-finance framework once per Spring."""
     ensure()
     s = st.session_state
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    if s.get("local_finance_last_period") == period:
+        return False
     inflation = max(-2.0, min(15.0, float(s.get("inflation", 2.0))))
     grant_uplift = float(s.get("local_grant_uplift_bn", 0.0))
     regional_fund = float(s.get("regional_growth_fund_bn", 1.0))
@@ -86,9 +90,11 @@ def annual_update():
     }
     s.local_finance_history = (list(s.get("local_finance_history", [])) + [record])[-12:]
     s.local_finance_last_update = record
+    s.local_finance_last_period = period
     s.local_finance_notice = notice
     s.message = (str(s.get("message", "")) + f" Local finance settlement: £{annual_cost:.2f}bn annual cost; "
                  f"council funding pressure is {s.local_finance_pressure:.0f}/100.").strip()
+    return True
 
 
 def review_settlement_keys(period):
