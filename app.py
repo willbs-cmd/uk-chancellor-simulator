@@ -564,7 +564,10 @@ def budget_screen():
                 emergency = s.get('active_emergency_budget') or {}
                 st.warning(f"Emergency Budget called because: {emergency.get('reason', 'severe fiscal or market conditions')}")
                 if st.button('Return to government',type='primary'):
-                    fiscal_events.close_emergency_budget(); st.rerun()
+                    advance_to_spring = fiscal_events.close_emergency_budget()
+                    if advance_to_spring:
+                        engine.proceed_to_spring()
+                    st.rerun()
             else:
                 if st.button('Proceed to Spring',type='primary'):
                     engine.proceed_to_spring(); st.rerun()
@@ -583,8 +586,9 @@ def budget_screen():
     budget.ensure()
     st.progress(min(stage,3)/3, text=f"{event_name} · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
     if stage == 0:
-        with st.expander("Number 10 · private Budget negotiations", expanded=False):
-            st.caption("The Prime Minister's political priorities are requests, not automatic changes to your fiscal plan. You remain the Chancellor and retain control of the Budget.")
+        negotiation_title = "Number 10 · emergency Budget negotiations" if is_emergency else "Number 10 · private Budget negotiations"
+        with st.expander(negotiation_title, expanded=False):
+            st.caption("The Prime Minister's priorities are requests, not automatic changes to your fiscal plan. You remain the Chancellor and retain control of the package.")
             priorities = s.get('budget_pm_priorities', [])
             if priorities:
                 pcols = st.columns(min(2, len(priorities)), gap="small")
