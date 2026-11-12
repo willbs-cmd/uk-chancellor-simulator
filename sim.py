@@ -477,6 +477,11 @@ def check(n=None, difficulty=None):
     if any(actual_nations.get(nation, 0) != expected for nation, expected in expected_nations.items()):
         failures.append(f"Constituency nation counts do not match the official 2024 register: {dict(actual_nations)}.")
 
+    # Reform's playable opening scenario should start with Reform leading national polling.
+    reform_start_polls = state.START['Reform UK'][2]
+    if sum(reform_start_polls.values()) != 100 or max(reform_start_polls, key=reform_start_polls.get) != 'Reform UK':
+        failures.append("The Reform UK opening scenario must start with Reform leading a 100% national polling split.")
+
     # Exercise the constituency-by-constituency election model and its repeatability.
     sample_polls = {party: 100.0 / len(state.PARTIES) for party in state.PARTIES}
     seat_totals, local_results = engine.compute_seats(sample_polls, return_details=True)
