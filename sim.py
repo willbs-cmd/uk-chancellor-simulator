@@ -272,7 +272,6 @@ def check(n=None, difficulty=None):
         # It must remain visible after Spring, while the actual £bn baseline compounds once.
         before_spend = float(st.session_state.dept_spend['health'])
         approved_rate = float(st.session_state.budget_applied['spend']['health'])
-        before_total = budget.totals(budget.read())[1]
         budget.apply_ongoing()
         after_spend = float(st.session_state.dept_spend['health'])
         if abs(after_spend - round(before_spend * (1.0 + approved_rate / 100.0), 1)) > 0.11:
@@ -281,9 +280,12 @@ def check(n=None, difficulty=None):
             failures.append("Departmental percentage did not remain visible after Spring.")
         if abs(float(st.session_state.budget_applied['spend']['health']) - approved_rate) > 0.001:
             failures.append("Approved departmental percentage was cleared at Spring.")
-        after_total = budget.totals(budget.read())[1]
-        if abs(after_total - before_total * (1.0 + approved_rate / 100.0)) > 0.25:
-            failures.append("Carried-forward departmental spending was double-counted or omitted.")
+        carried_total = budget.totals(budget.read())[1]
+        expected_total = (sum(float(st.session_state.dept_spend[k]) for k in budget.SPEND_DEFAULTS)
+                          + budget.interest()
+                          + float(budget.scheme_financials(budget.read())['spend_cost']))
+        if abs(carried_total - expected_total) > 0.05:
+            failures.append("Carried-forward departmental spending was double-counted or omitted from the next Budget baseline.")
 
     except Exception as exc:
         failures.append(f"Budget control carry-forward regression test failed: {exc}")
