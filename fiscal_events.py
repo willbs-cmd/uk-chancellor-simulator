@@ -183,7 +183,7 @@ def render_treasury_overview():
 
     st.markdown("#### Fiscal calendar")
     calendar = [
-        {"Event": "Autumn Statement", "Timing": "Every year · Phase 1", "Purpose": "Update forecasts and announce limited fiscal measures"},
+        {"Event": "Autumn Statement", "Timing": "Every year · opening event before policy decisions", "Purpose": "Update forecasts and announce limited fiscal measures"},
         {"Event": "Spring Budget", "Timing": "Every year · Phase 3", "Purpose": "Set taxes, thresholds, spending measures and policy programmes; Commons vote"},
         {"Event": "Spending Review", "Timing": "Every two years · starts in Years 1, 3 and 5", "Purpose": "Set departmental baselines and a multi-year spending path"},
         {"Event": "Emergency Budget", "Timing": "Only after severe economic, market or government-confidence stress", "Purpose": "A full revised package, rapid forecast, speech and Commons vote"},
