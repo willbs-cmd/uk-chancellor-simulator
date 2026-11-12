@@ -777,8 +777,12 @@ def request_ministerial_reshuffle(department):
     s.cabinet_reshuffle_terms = used[-10:]
     history = list(s.get("cabinet_reshuffle_history", []))
     if accepted:
-        s.cabinet_ministers[department] = "Vacant — awaiting Prime Minister"
-        s.ministerial_vacancy_year[department] = int(s.get("year", 1))
+        cabinet = dict(s.get("cabinet_ministers", {}))
+        cabinet[department] = "Vacant — awaiting Prime Minister"
+        s.cabinet_ministers = cabinet
+        vacancies = dict(s.get("ministerial_vacancy_year", {}))
+        vacancies[department] = int(s.get("year", 1))
+        s.ministerial_vacancy_year = vacancies
         s.ministerial_loyalty[department] = 50.0
         resignations = list(s.get("ministerial_resignations", []))
         resignations.append({
