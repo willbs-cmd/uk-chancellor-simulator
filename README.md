@@ -32,6 +32,19 @@ The game loads player-facing content from `data/` files. You can add or rebalanc
 - `data/career_divisions.json` — simulated Commons divisions, party-whip positions and local-priority categories.
 - `data/README.md` — data structures, editing rules and instructions for updating the IMF baseline.
 - `devolution.py` — local-government grant settlements, simplified Barnett-style consequentials, council tax flexibility and regional growth funding.
+- `fiscal_events.py` — fiscal calendar, periodic Spending Review scheduling, Treasury overview and crisis-triggered Emergency Budgets.
+
+## Chancellor fiscal calendar
+
+The main Chancellor game treats major fiscal events as part of the Decisions calendar rather than permanent Treasury controls:
+
+- **Autumn Statement:** an annual, optional fiscal update in Phase 1. The Chancellor chooses a forecast-led update, targeted household support, a tighter spending path or a limited growth package.
+- **Spring Budget:** the full annual tax-and-spending package in Phase 3, with Number 10 negotiations, a three-year OBR-style forecast, a speech, Commons vote and market reaction.
+- **Spending Review:** a separate multi-year event at the start of Years 1, 3 and 5. Departmental Secretaries submit bids; the Chancellor agrees cash baselines and a forward spending path. The local-government and devolved funding settlement is agreed here too. Year-two and year-three spending paths roll forward once, without compounding an old departmental percentage a second time.
+- **Emergency Budget:** not a routine annual mini-budget. It is triggered only by severe gilt-market stress, a deep recession with weak confidence, a major fiscal-rule breach, financial-stability emergency or serious government-confidence crisis. It reuses the full negotiation, forecast, statement and Commons-vote process but does not advance the Spring calendar.
+
+The Treasury workspace is for ongoing monitoring: the fiscal position and event history, investments and gilts, institutional tools, OBR/market analysis and local-government outcomes. The local-government tab is read-only; policy settings are agreed through Spending Reviews.
+
 
 The JSON is loaded at application startup. Restart the local app after changing data files. When using Streamlit Cloud, commit the changed file to the repository so the app can redeploy.
 
