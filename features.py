@@ -36,34 +36,96 @@ def _act(key, cost, label, effect):
     return True
 
 def render_phase_action():
-    """Show the fiscal event that belongs to the current annual phase."""
+    """Render the fiscal event attached to the current phase of the Chancellor's calendar."""
     s = st.session_state
     _, used = _used()
     if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
+
     if s.block == 1:
-        with st.expander("💷 Optional Autumn Statement · costs 1 political capital", expanded=False):
-            st.write("Set out the government's fiscal direction before winter. It can reassure investors, but uses some fiscal headroom.")
-            st.caption("If announced: +2 market confidence and −£0.5bn headroom. Once per year.")
-            if st.button("Deliver Autumn Statement", key="phase_autumn_statement",
-                         disabled=("autumn" in used or s.political_capital_points < 1), use_container_width=True):
-                _act("autumn", 1, "Autumn Statement",
-                     lambda x: (setattr(x, "market_conf", _clip(x.market_conf + 2)),
-                                setattr(x, "headroom", round(x.headroom - 0.5, 1))))
+        period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+        st.markdown("### Autumn Statement & fiscal update")
+        st.caption("A mid-year update to the economic outlook and the Government's fiscal direction. It is smaller than the Spring Budget: choose one limited package, publish the update and face its political and market consequences.")
+        metrics = st.columns(4, gap="small")
+        metrics[0].metric("Growth", f"{float(s.get('growth', 0.0)):+.1f}%")
+        metrics[1].metric("Inflation", f"{float(s.get('inflation', 0.0)):.1f}%")
+        metrics[2].metric("Fiscal headroom", f"£{float(s.get('headroom', 0.0)):.1f}bn")
+        metrics[3].metric("Gilt yield", f"{float(s.get('gilt_yield', 0.0)):.2f}%")
+        if "autumn" in used:
+            history = list(s.get("autumn_statement_history", []))
+            latest = next((row for row in reversed(history) if row.get("period") == period), None)
+            st.success("The Autumn Statement has already been delivered this year.")
+            if latest:
+                st.caption(f"Published: {latest.get('choice', 'Fiscal update')} · {latest.get('summary', '')}")
+        else:
+            choices = [
+                "Publish the updated forecast and hold course",
+                "Fund a targeted cost-of-living package",
+                "Announce a tighter spending path",
+                "Launch a limited growth and investment package",
+            ]
+            choice = st.radio(
+                "Choose the Government's Autumn Statement:",
+                choices, key=f"autumn_statement_choice_{period}",
+                label_visibility="collapsed",
+            )
+            summaries = {
+                choices[0]: "A forecast-led update steadies the message and gives investors a clearer view, without changing the fiscal stance.",
+                choices[1]: "Targeted support helps households facing high bills, but uses some fiscal room.",
+                choices[2]: "A tighter spending path improves the near-term fiscal position, but puts pressure on departments and the governing party.",
+                choices[3]: "Targeted investment supports demand and productivity, but adds to borrowing in the short term.",
+            }
+            st.info(summaries[choice])
+            st.caption("This is not a full Budget. New tax rates, thresholds and departmental settlements are reserved for the Spring Budget.")
+            if st.button("Publish Autumn Statement", key=f"publish_autumn_statement_{period}",
+                         type="primary", use_container_width=True, disabled=s.political_capital_points < 1):
+                def autumn_effect(x):
+                    if choice == choices[0]:
+                        x.market_conf = _clip(x.market_conf + 2.0)
+                        x.media_opinion = _clip(x.media_opinion + 1.0)
+                        x.pm_opinion = _clip(x.pm_opinion + 1.0)
+                    elif choice == choices[1]:
+                        x.headroom = round(float(x.headroom) - 1.2, 1)
+                        x.deficit = round(float(x.deficit) + 1.2, 1)
+                        x.approval = _clip(x.approval + 1.8)
+                        x.household_bill_pressure = _clip(float(x.get("household_bill_pressure", 50.0)) - 2.5)
+                        x.market_conf = _clip(x.market_conf - 0.5)
+                    elif choice == choices[2]:
+                        x.headroom = round(float(x.headroom) + 1.5, 1)
+                        x.deficit = round(max(0.0, float(x.deficit) - 1.5), 1)
+                        x.market_conf = _clip(x.market_conf + 1.0)
+                        x.approval = _clip(x.approval - 1.0)
+                        x.party_opinion = _clip(x.party_opinion - 1.0)
+                    else:
+                        x.headroom = round(float(x.headroom) - 1.8, 1)
+                        x.deficit = round(float(x.deficit) + 1.8, 1)
+                        x.growth = round(float(x.growth) + 0.18, 2)
+                        x.market_conf = _clip(x.market_conf - 1.0)
+                        x.approval = _clip(x.approval + 0.5)
+                    x.autumn_statement_history = list(x.get("autumn_statement_history", []))
+                    x.autumn_statement_history.append({
+                        "period": period, "choice": choice, "summary": summaries[choice],
+                        "headroom_after": round(float(x.headroom), 1),
+                        "market_conf_after": round(float(x.market_conf), 1),
+                    })
+                    x.autumn_statement_history = x.autumn_statement_history[-12:]
+                _act("autumn", 1, "Autumn Statement", autumn_effect)
                 st.rerun()
+
     elif s.block == 2:
-        with st.expander("🚨 Optional emergency mini-budget · costs 2 political capital", expanded=False):
-            st.write("A fast package can stimulate activity, but if it looks unfunded markets may demand higher borrowing costs.")
-            st.caption("If announced: +0.3 percentage points growth, −£3bn headroom, −5 market confidence and +0.25 points gilt yield.")
-            if st.button("Issue emergency mini-budget", key="phase_mini_budget",
-                         disabled=("mini" in used or s.political_capital_points < 2), use_container_width=True):
-                def mini(x):
-                    x.headroom = round(x.headroom - 3.0, 1)
-                    x.growth = round(x.growth + 0.3, 2)
-                    x.market_conf = _clip(x.market_conf - 5)
-                    x.gilt_yield = round(x.gilt_yield + 0.25, 2)
-                _act("mini", 2, "Emergency mini-budget", mini)
-                st.rerun()
+        st.markdown("### Emergency fiscal watch")
+        st.caption("An Emergency Budget is not a routine annual mini-budget. It is called only when serious market, recession, fiscal-rule or government-confidence conditions require a full revised package.")
+        market = float(s.get("market_conf", 50.0))
+        gilt = float(s.get("gilt_yield", 4.5))
+        headroom = float(s.get("headroom", 0.0))
+        growth = float(s.get("growth", 0.0))
+        severe = (market <= 27 and gilt >= 6.25) or (growth <= -2.5 and market <= 40) or (headroom <= -18 and market <= 32)
+        if s.get("active_emergency_budget"):
+            st.error("An Emergency Budget has been called. It will appear as a separate event before normal business continues.")
+        elif severe:
+            st.warning("The fiscal position is approaching emergency territory. The Treasury is monitoring the next market and economic update.")
+        else:
+            st.info("No Emergency Budget is currently required. The Chancellor can continue with the Government's normal programme.")
 
 def render():
     s = st.session_state
@@ -112,11 +174,13 @@ def render():
         _, used = _used()
         statuses = [
             ("Autumn Statement", "autumn", "Phase 1 · Autumn"),
-            ("Emergency mini-budget", "mini", "Phase 2 · Winter"),
-            ("Spring Statement", "spring_statement", "Phase 3 · Spring"),
+            ("Spring Statement", "spring_statement", "Phase 3 · before the Spring Budget"),
         ]
         for label, key, timing in statuses:
             st.markdown(f"{'✅' if key in used else '◯'} **{label}** — {timing}")
+        emergency_period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+        emergency_done = any(row.get("period") == emergency_period for row in s.get("emergency_budget_history", []))
+        st.markdown(f"{'✅' if emergency_done else '◯'} **Emergency Budget** — only when triggered by severe conditions")
         st.caption("Statements are optional. Political capital spent here cannot be used for Bank interventions, pay talks or regional bargaining.")
 
     with t2:
