@@ -127,10 +127,19 @@ def render_autumn_statement_event():
         label_visibility="collapsed",
     )
     st.info(AUTUMN_SUMMARIES[choice])
-    st.caption("This update is optional, but it costs 1 political-capital point. Its effects are applied immediately and recorded in the fiscal history.")
-    if st.button("Publish Autumn Statement", key=f"publish_autumn_statement_{period}",
-                 type="primary", use_container_width=True, disabled=int(s.get("political_capital_points", 0)) < 1):
-        if resolve_autumn_statement(choice):
+    st.caption("Publishing costs 1 political-capital point. Its effects are applied immediately and recorded in the fiscal history. You may also proceed without publishing a statement.")
+    publish_col, skip_col = st.columns(2, gap="small")
+    with publish_col:
+        if st.button("Publish Autumn Statement", key=f"publish_autumn_statement_{period}",
+                     type="primary", use_container_width=True, disabled=int(s.get("political_capital_points", 0)) < 1):
+            if resolve_autumn_statement(choice):
+                st.rerun()
+    with skip_col:
+        if st.button("Proceed without a statement", key=f"skip_autumn_statement_{period}",
+                     use_container_width=True):
+            s.autumn_statement_due = False
+            s.message = "You decide not to publish an Autumn Statement this year. The Spring Budget remains the main fiscal event."
+            state.log("event", "Autumn Statement not published", note=s.message)
             st.rerun()
 
 
@@ -141,7 +150,10 @@ def render_phase_action():
     if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
         st.info(s.feature_notice)
     if s.block == 1:
-        st.info("The annual Autumn Statement is handled as a separate fiscal event before this year's first policy decision.")
+        if "autumn" in used:
+            st.success("The Autumn Statement has been delivered for this financial year.")
+        else:
+            st.info("The Autumn Statement is a separate fiscal event. You may proceed without publishing one.")
     elif s.block == 2:
         st.markdown("### Emergency fiscal watch")
         st.caption("An Emergency Budget is not a routine annual mini-budget. It is called only when serious market, recession, fiscal-rule or government-confidence conditions require a full revised package.")
