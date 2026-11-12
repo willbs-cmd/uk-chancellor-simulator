@@ -257,7 +257,7 @@ def _defaults():
         local_grant_uplift_bn=0.0, barnett_pass_through_pct=100, council_tax_referendum_threshold=5.0,
         social_care_precept_cap=2.0, regional_growth_fund_bn=0.0, local_finance_pressure=42.0,
         local_service_delivery=62.0, local_finance_history=[], local_finance_last_update=None, local_finance_last_period='', local_finance_notice='',
-        autumn_statement_history=[], emergency_budget_history=[], emergency_budget_last_period='', active_emergency_budget=None,
+        autumn_statement_history=[], emergency_budget_history=[], emergency_budget_last_period='', active_emergency_budget=None, emergency_replaces_spring_budget=False,
         budget_day_type='annual', fiscal_calendar_initialised=False,
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
     )
@@ -374,7 +374,7 @@ SAVE_KEYS = [
     'constituency_incumbents', 'previous_election_seats', 'opening_parliament_seats', 'opening_mandate_pending',
     'election_broadcast_stage',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history', 'spending_review_due',
-    'autumn_statement_history', 'emergency_budget_history', 'emergency_budget_last_period', 'active_emergency_budget',
+    'autumn_statement_history', 'emergency_budget_history', 'emergency_budget_last_period', 'active_emergency_budget', 'emergency_replaces_spring_budget',
     'local_grant_uplift_bn', 'barnett_pass_through_pct', 'council_tax_referendum_threshold',
     'social_care_precept_cap', 'regional_growth_fund_bn', 'local_finance_pressure', 'local_service_delivery',
     'local_finance_history', 'local_finance_last_update', 'local_finance_last_period', 'local_finance_notice',
