@@ -957,7 +957,7 @@ def _whip(key):
     s.whip_used = list(s.get('whip_used', [])) + [key]
 
 
-def commit_budget(ayes):
+def commit_budget(ayes, event_type='Spring Budget'):
     """Archive the delivered Budget so the Chancellor can inspect previous decisions."""
     s = st.session_state
     s.vote_ayes = ayes
@@ -970,6 +970,7 @@ def commit_budget(ayes):
     s.budget_history.append({
         'term': int(s.get('term', 1)), 'year': int(s.get('year', 1)),
         'label': f"Term {int(s.get('term', 1))} · Year {int(s.get('year', 1))}",
+        'event_type': str(event_type),
         'strategy': delivered.get('strategy', 'balanced'),
         'tax': dict(delivered.get('tax', {})), 'tax_names': tax_names,
         'thresholds': dict(delivered.get('thresholds', {})),
@@ -1862,6 +1863,11 @@ def apply_spending_review_rollforward(s, target_year):
     before = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     for key in SPEND_DEFAULTS:
         s.dept_spend[key] = round(float(s.dept_spend.get(key, 0.0)) * (1.0 + uplift / 100.0), 1)
+    # A Spending Review sets a new cash baseline, replacing the previous Budget
+    # percentage settlements so they are not compounded a second time.
+    for key in SPEND_DEFAULTS:
+        s.budget_applied.setdefault('spend', {})[key] = 0.0
+        s[f'bs_{key}'] = 0.0
     after = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     change = round(after - before, 1)
     s.deficit = round(float(s.get('deficit', 0.0)) + change, 1)
@@ -1884,9 +1890,12 @@ def render_spending_review():
     s.setdefault('spending_review_last_period', '')
     s.setdefault('spending_review_plan', {})
     done = s.spending_review_last_period == period
+    if not s.get('spending_review_due') and not done:
+        st.info("The Spending Review is not currently due. The next round is scheduled at the start of a new two-year spending cycle.")
+        return
 
     st.markdown("## 🏛️ The Spending Review")
-    st.caption("Set departmental budgets for the year ahead and publish a three-year spending path. Settlements change the live Treasury baseline, not just a forecast.")
+    st.caption("A major fiscal event held at the start of Years 1, 3 and 5. Departmental Secretaries submit bids; you negotiate the new cash baselines and publish a forward spending path for the following years.")
     if done:
         st.markdown(
             "<div class='treasury-notice success'><div><strong>Spending Review approved</strong>"
@@ -1896,7 +1905,7 @@ def render_spending_review():
     else:
         st.markdown(
             "<div class='treasury-notice info'><div><strong>Spending round open</strong>"
-            "Departmental Secretaries have submitted their bids. Review the requests and set the final settlements.</div></div>",
+            "Departmental Secretaries have submitted their bids. Review the requests, set new cash allocations and agree the forward path. This replaces the preceding departmental baseline.</div></div>",
             unsafe_allow_html=True,
         )
 
@@ -2036,7 +2045,13 @@ def render_spending_review():
                 "last_applied_year": int(s.get("year", 1)),
                 "allocations": {k: float(v) for k, v in draft.items()},
             }
+            # The Review replaces the previous departmental percentage baseline.
+            for key in departments:
+                s.budget_applied.setdefault('spend', {})[key] = 0.0
+                s[f'bs_{key}'] = 0.0
             s.spending_review_last_period = period
+            s.spending_review_due = False
+            s.fiscal_calendar_initialised = True
             s.spending_review_history.append({
                 "period": period, "annual_change": round(annual_change, 1),
                 "departmental_total": round(proposed_total, 1),
