@@ -48,6 +48,7 @@ st.session_state = FakeState()
 
 import budget  # noqa: E402
 import fiscal_events  # noqa: E402
+import devolution  # noqa: E402
 import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
@@ -209,10 +210,22 @@ def check(n=None, difficulty=None):
         s = st.session_state
         s.headroom = 7.4
         s.deficit = 42.6
+        s.local_grant_uplift_bn = 2.5
+        s.barnett_pass_through_pct = 125
+        s.council_tax_referendum_threshold = 4.0
+        s.social_care_precept_cap = 3.0
+        s.regional_growth_fund_bn = 1.25
+        s.local_finance_pressure = 51.0
+        s.local_service_delivery = 58.0
+        s.local_finance_history = [{'year': 'Term 1, Year 1', 'annual_cost_bn': 4.0}]
+        s.local_finance_last_period = '1-1'
         s.budget_applied = budget.read()
         s.budget_applied['tax']['income'] = float(s.budget_applied['tax'].get('income', 0)) + 1.0
         s.budget_history = [{'year': 1, 'ayes': 350, 'headroom': 7.4}]
         saved_party = s.party
+        saved_local_settlement = devolution.current_settlement(s)
+        saved_local_history = list(s.local_finance_history)
+        saved_local_period = s.local_finance_last_period
         saved_ledger = budget.read()
         saved_applied = dict(s.budget_applied)
         saved_headroom = float(s.headroom)
@@ -232,6 +245,12 @@ def check(n=None, difficulty=None):
                 failures.append("Save/load changed the approved Budget ledger.")
             if st.session_state.budget_history != [{'year': 1, 'ayes': 350, 'headroom': 7.4}]:
                 failures.append("Save/load did not preserve Budget history.")
+            if devolution.current_settlement(st.session_state) != saved_local_settlement:
+                failures.append("Save/load changed the local-government and devolved settlement settings.")
+            if st.session_state.local_finance_history != saved_local_history:
+                failures.append("Save/load did not preserve local-government finance history.")
+            if st.session_state.local_finance_last_period != saved_local_period:
+                failures.append("Save/load did not preserve the local-government annual update guard.")
     except Exception as exc:
         failures.append(f"Save/load smoke test failed: {exc}")
 
