@@ -1862,85 +1862,114 @@ div[role="radiogroup"] [data-baseweb="radio"] input:checked + div > div {
   line-height:1.55;
 }
 
-/* New newspaper front pages: consistent mastheads, modern editorial cards and subtle viewpoint accents. */
+/* Newspaper front pages: legible mastheads, balanced columns and proper editorial hierarchy. */
 .np-strip {
   display:grid !important;
   grid-template-columns:repeat(3,minmax(0,1fr)) !important;
-  gap:13px !important;
-  margin:14px 0 18px !important;
+  align-items:stretch !important;
+  gap:16px !important;
+  margin:16px 0 20px !important;
 }
 .np-card {
   display:flex !important;
   flex-direction:column !important;
-  min-width:0;
-  min-height:205px;
-  padding:14px 16px 12px !important;
-  border:1px solid #dce3eb !important;
-  border-top:4px solid #8297aa !important;
-  border-radius:12px !important;
-  background:#ffffff !important;
-  color:#20364f !important;
-  box-shadow:0 3px 11px rgba(20,39,60,.045) !important;
+  min-width:0 !important;
+  min-height:280px;
+  padding:17px 18px 14px !important;
+  overflow:hidden;
+  border:1px solid #d9d3c8 !important;
+  border-top:5px solid #8297aa !important;
+  border-radius:5px 5px 13px 13px !important;
+  background:linear-gradient(180deg,#fffefa 0%,#fbf8f0 100%) !important;
+  color:#26384a !important;
+  box-shadow:0 5px 16px rgba(20,39,60,.07),inset 0 1px 0 #fff !important;
   animation:news-card-in .48s cubic-bezier(.2,.7,.2,1) both;
-  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease !important;
+  transition:transform .2s ease,box-shadow .2s ease !important;
 }
 .np-card:nth-child(2) { animation-delay:.08s; }
 .np-card:nth-child(3) { animation-delay:.16s; }
-.np-card:hover {
-  transform:translateY(-4px);
-  box-shadow:0 10px 22px rgba(20,39,60,.09) !important;
-}
-.np-left { border-top-color:#658a9e !important; }
-.np-centre { border-top-color:#a77d32 !important; }
-.np-right { border-top-color:#647b91 !important; }
-.np-paper-meta,.np-edition {
+.np-card:hover { transform:translateY(-3px); box-shadow:0 11px 24px rgba(20,39,60,.12) !important; }
+.np-left { border-top-color:#567f9b !important; }
+.np-centre { border-top-color:#b28a45 !important; }
+.np-right { border-top-color:#9a5149 !important; }
+.np-paper-meta {
   display:flex;
   justify-content:space-between;
-  gap:8px;
-  color:#8391a0 !important;
-  font-size:.58rem;
+  align-items:center;
+  gap:6px;
+  color:#778496 !important;
+  font-size:.57rem;
   font-weight:800;
-  letter-spacing:.12em;
+  letter-spacing:.105em;
+  line-height:1.4;
 }
+.np-paper-meta span:last-child { text-align:right; }
 .np-masthead {
-  margin:8px 0 4px;
+  margin:13px 0 9px;
   color:#172a42 !important;
-  font-family:Georgia,'Times New Roman',serif;
-  font-size:clamp(1.05rem,1.35vw,1.42rem);
-  font-weight:900;
-  line-height:1.05;
-  letter-spacing:-.035em;
-  text-align:center;
+  font-family:Georgia,'Times New Roman',serif !important;
+  font-size:clamp(1.02rem,1.5vw,1.48rem) !important;
+  font-weight:900 !important;
+  line-height:1.08 !important;
+  letter-spacing:-.035em !important;
+  text-align:center !important;
   text-transform:uppercase;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
 }
 .np-paper-rule {
-  height:1px;
-  margin:5px 0 9px;
+  height:2px;
+  margin:2px 0 11px;
   background:#263d54;
 }
-.np-edition { color:#64788e !important; font-size:.59rem; }
+.np-edition {
+  align-self:flex-start;
+  display:inline-flex;
+  padding:4px 8px;
+  border:1px solid #dce2e8;
+  border-radius:3px;
+  background:#f0f3f5;
+  color:#53677d !important;
+  font-size:.61rem;
+  font-weight:900;
+  letter-spacing:.12em;
+}
 .np-headline {
-  margin:12px 0 8px !important;
-  color:#20364f !important;
-  font-family:'Manrope',sans-serif !important;
-  font-size:clamp(.95rem,1.2vw,1.13rem) !important;
+  margin:14px 0 12px !important;
+  color:#1d3046 !important;
+  font-family:'IBM Plex Sans',Arial,sans-serif !important;
+  font-size:clamp(1.02rem,1.35vw,1.25rem) !important;
   font-weight:800 !important;
-  line-height:1.28 !important;
-  text-align:left;
+  line-height:1.22 !important;
+  letter-spacing:-.025em !important;
+  text-align:left !important;
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
 }
 .np-description {
-  margin:auto 0 12px !important;
-  color:#64788e !important;
-  font-size:.75rem !important;
-  line-height:1.4 !important;
+  margin:auto 0 15px !important;
+  color:#586b7d !important;
+  font-size:.82rem !important;
+  line-height:1.5 !important;
 }
 .np-paper-footer {
-  border-top:1px solid #e5eaf0;
-  padding-top:8px;
-  color:#8a98a7 !important;
-  font-size:.56rem;
+  border-top:1px solid #dedfdc;
+  padding-top:9px;
+  color:#778496 !important;
+  font-size:.59rem;
   font-weight:800;
-  letter-spacing:.1em;
+  letter-spacing:.09em;
+  line-height:1.5;
+}
+@media (max-width:900px) {
+  .np-strip { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:12px !important; }
+}
+@media (max-width:520px) {
+  .np-strip { grid-template-columns:minmax(0,1fr) !important; }
+  .np-card { min-height:245px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .np-card { animation:none !important; transition:none !important; }
 }
 @keyframes news-card-in {
   from { opacity:0; transform:translateY(10px) scale(.985); }
@@ -2580,10 +2609,10 @@ def render_newspapers(left_hl, centre_hl, right_hl):
             f"<div class='np-paper-meta'><span>THE DAILY PRESS</span><span>POLITICAL DESK</span></div>"
             f"<div class='np-masthead'>{safe_name}</div>"
             f"<div class='np-paper-rule'></div>"
-            f"<div class='np-edition'><span>{safe_desk}</span><span>{safe_lean.upper()}</span></div>"
+            f"<div class='np-edition'>{safe_desk}</div>"
             f"<h3 class='np-headline'>“{safe_headline}”</h3>"
             f"<p class='np-description'>{safe_description}</p>"
-            f"<div class='np-paper-footer'>TREASURY &amp; WESTMINSTER · COMMENT</div>"
+            f"<div class='np-paper-footer'>WESTMINSTER EDITION&nbsp; · &nbsp;POLITICAL COMMENT</div>"
             f"</article>"
         )
     st.markdown(
