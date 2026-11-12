@@ -1397,6 +1397,10 @@ def _legacy_compute_seats(polls):
     return seats
 
 
+def party_is_nonregional(party):
+    return party in state.PARTIES and party not in state.REGIONAL
+
+
 def compute_election():
     """Work out (once) the general election result. Stored in session state so reruns don't change it."""
     s = st.session_state
@@ -1405,6 +1409,25 @@ def compute_election():
     reseed('election')
     polls = {p: s.poll_history[p][-1] for p in state.PARTIES}
     seats, constituency_results = compute_seats(polls, return_details=True)
+    # The selected non-regional party begins the game with a comfortable first-term mandate.
+    # Preserve that opening premise through the first election, then return to the normal FPTP model.
+    if s.get('opening_mandate_pending') and party_is_nonregional(s.get('party')):
+        player_party = s.party
+        target_seats = 365
+        current = int(seats.get(player_party, 0))
+        if current < target_seats:
+            available = sorted(
+                (row for row in constituency_results if row.get('winner') != player_party),
+                key=lambda row: (float(row.get('margin', 0.0)), row.get('code', ''))
+            )
+            for row in available[:target_seats - current]:
+                displaced = row.get('winner')
+                seats[displaced] = max(0, int(seats.get(displaced, 0)) - 1)
+                seats[player_party] = int(seats.get(player_party, 0)) + 1
+                row['winner'], row['runner_up'] = player_party, displaced
+                row['margin'] = max(0.1, float(row.get('margin', 0.0)))
+                row['is_marginal'] = True
+        s.opening_mandate_pending = False
     previous_seats = s.get('previous_election_seats', {})
     seat_changes = {p: int(seats.get(p, 0)) - int(previous_seats.get(p, seats.get(p, 0))) for p in state.PARTIES}
     # Store this parliament's results and winners for the next general election.
