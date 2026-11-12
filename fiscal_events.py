@@ -93,6 +93,10 @@ def maybe_trigger_emergency_budget(s=None):
     ensure_state(s)
     if s.get("active_emergency_budget") or s.get("budget_passed") or s.get("game_over"):
         return False
+    if int(s.get("year", 1)) > 5:
+        # The term is over; the general-election campaign takes precedence over
+        # fiscal events until a new term begins.
+        return False
     if int(s.get("block", 1)) >= 3:
         # The scheduled Spring Budget is already the government's full fiscal event.
         return False
