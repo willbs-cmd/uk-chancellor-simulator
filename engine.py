@@ -24,6 +24,7 @@ import economic_management
 import household
 import regional_economy
 import public_services
+import devolution
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -1163,6 +1164,7 @@ def proceed_to_spring():
     household.advance(s)
     regional_economy.advance(s)
     public_services.advance(s)
+    devolution.annual_update()
     world_drag = float(s.get('world_cycle', 0.0))
     s.growth = round(s.growth + world_drag * 0.12, 2)
     s.market_conf = round(_clip(s.market_conf + world_drag * 0.8), 1)
