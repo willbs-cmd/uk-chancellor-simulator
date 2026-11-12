@@ -49,6 +49,7 @@ st.session_state = FakeState()
 import budget  # noqa: E402
 import fiscal_events  # noqa: E402
 import devolution  # noqa: E402
+import features  # noqa: E402
 import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
@@ -383,6 +384,22 @@ def check(n=None, difficulty=None):
                 or float(st.session_state.deficit) != first_deficit
                 or float(st.session_state.local_finance_pressure) != first_pressure):
             failures.append("A repeated local-government annual update changed the fiscal or service position twice.")
+
+        # The Autumn Statement is a distinct annual event and can be published only once.
+        new_run('Labour', 'Normal', 44103)
+        if not st.session_state.get('autumn_statement_due'):
+            failures.append("A new Chancellor game must begin with an Autumn Statement due.")
+        starting_capital = int(st.session_state.political_capital_points)
+        first_autumn = features.resolve_autumn_statement(features.AUTUMN_CHOICES[0])
+        history_count = len(st.session_state.autumn_statement_history)
+        if not first_autumn or st.session_state.get('autumn_statement_due'):
+            failures.append("Publishing the Autumn Statement did not complete the annual fiscal event.")
+        if int(st.session_state.political_capital_points) != starting_capital - 1:
+            failures.append("Publishing the Autumn Statement did not deduct one political-capital point.")
+        if features.resolve_autumn_statement(features.AUTUMN_CHOICES[1]):
+            failures.append("A second Autumn Statement was allowed in the same financial year.")
+        if len(st.session_state.autumn_statement_history) != history_count:
+            failures.append("A second Autumn Statement was recorded in the same financial year.")
     except Exception as exc:
         failures.append(f"Fiscal event calendar regression check failed: {exc}")
 
