@@ -16,6 +16,7 @@ import scenarios as scen
 import state
 import treasury
 import chancellor_office
+import devolution
 import performance_report
 import economic_management
 import household
@@ -1041,7 +1042,7 @@ with tab_government:
 with tab_treasury:
     st.markdown('### Treasury')
     st.caption('Budgets, spending settlements, public investments and the cost of government borrowing.')
-    treasury_tabs = st.tabs(['Spending review', 'Investments & gilts', 'Fiscal tools', 'OBR & markets'])
+    treasury_tabs = st.tabs(['Spending review', 'Investments & gilts', 'Fiscal tools', 'OBR & markets', 'Local government'])
     with treasury_tabs[0]:
         budget.render_spending_review()
     with treasury_tabs[1]:
@@ -1050,6 +1051,8 @@ with tab_treasury:
         features.render()
     with treasury_tabs[3]:
         economic_management.render()
+    with treasury_tabs[4]:
+        devolution.render()
 
 
 with tab_household:
