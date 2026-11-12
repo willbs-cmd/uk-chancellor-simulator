@@ -7,6 +7,7 @@ import budget
 import country
 import engine
 import features
+import fiscal_events
 import imf_outlook
 import world_economy
 import politics
@@ -32,6 +33,7 @@ st.set_page_config(page_title='The Chancellor’s Office', layout='wide', page_i
 apply_theme()
 state.ensure_init()
 s = st.session_state
+fiscal_events.ensure_state(s)
 
 
 def restart():
@@ -124,9 +126,12 @@ def hud_note():
 # The headline row shows the six numbers a Chancellor checks first; everything else is one click away.
 _by_key = {d['key']: d for d in CARDS_TOP + CARDS_ECON + CARDS_POLITICAL}
 _KEY_STATS = ['approval', 'market_conf', 'headroom', 'growth', 'inflation', 'pm_opinion']
-_on_budget_screen = (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
-if _on_budget_screen:
-    # The Budget screen shows the projected economy itself, so only political capital is needed here.
+_on_major_fiscal_event = (
+    (s.block == 3 and s.active_crisis is None and s.year <= 5 and not s.get('game_over'))
+    or bool(s.get('spending_review_due')) or bool(s.get('active_emergency_budget'))
+)
+if _on_major_fiscal_event:
+    # Fiscal events put the decision itself first; the economic detail remains in the event briefing.
     render_hud([('Political capital', CARDS_POLITICAL)], note=hud_note())
 else:
     render_hud([(None, [_by_key[k] for k in _KEY_STATS])], note=hud_note())
@@ -527,6 +532,13 @@ def budget_day_scorecard(draft, heading="Budget impact & announcements"):
 
 def budget_screen():
     stage = int(s.get('budget_day_stage', 0))
+    is_emergency = s.get('budget_day_type', 'annual') == 'emergency'
+    event_name = 'Emergency Budget' if is_emergency else 'Spring Budget'
+    stages = (
+        ['Emergency Cabinet talks', 'Rapid OBR assessment', 'Emergency Budget speech', 'Commons vote & markets']
+        if is_emergency else
+        ['Number 10 negotiations', 'OBR forecast', 'Budget speech', 'Commons vote & markets']
+    )
     if s.get('budget_passed'):
         left, right = st.columns([3, 2], gap='large')
         with left:
@@ -537,9 +549,9 @@ def budget_screen():
             elif ayes >= budget.WIN + 15: st.info(f'**House of Commons:** The Budget passed.\n\n{txt}')
             else: st.warning(f'**House of Commons:** The Budget barely scraped through!\n\n{txt}')
             speech_data=s.get('budget_speech') or {}
-            st.markdown("#### Budget speech")
+            st.markdown(f"#### {event_name} speech")
             if speech_data.get('text'): st.markdown('> '+speech_data['text'])
-            st.markdown("#### The Budget Day timeline")
+            st.markdown(f"#### {event_name} timeline")
             for clock,title,detail in speech_data.get('budget_day',[]): st.markdown(f"**{clock} · {title}**  \n{detail}")
             st.markdown("#### Opposition amendments")
             for item in speech_data.get('amendments',[]): st.markdown(f"**{item['title']}** — {item['detail']}  \nAyes: {item['ayes']} · Noes: {650-item['ayes']} · {item['result']}")
@@ -548,8 +560,14 @@ def budget_screen():
             move=float(speech_data.get('market_move',0))
             st.metric("Opening 10-year gilt yield",f"{float(speech_data.get('market_after',s.gilt_yield)):.2f}%",f"{move:+.2f} percentage points")
             for who,quote in speech_data.get('reactions',[]): st.write(f"**{who}:** {quote}")
-            if st.button('Proceed to Spring',type='primary'):
-                engine.proceed_to_spring(); st.rerun()
+            if is_emergency:
+                emergency = s.get('active_emergency_budget') or {}
+                st.warning(f"Emergency Budget called because: {emergency.get('reason', 'severe fiscal or market conditions')}")
+                if st.button('Return to government',type='primary'):
+                    fiscal_events.close_emergency_budget(); st.rerun()
+            else:
+                if st.button('Proceed to Spring',type='primary'):
+                    engine.proceed_to_spring(); st.rerun()
         with right:
             st.markdown("#### The morning after")
             for ev in s.event_cards: event_card(ev['title'],ev['text'],ev['summary'])
@@ -557,10 +575,13 @@ def budget_screen():
             if s.get('headlines'): render_newspapers(*s.headlines)
         return
 
-    st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · Phase 3 · Spring Budget</div><div class='dc-title'>The Chancellor's Budget</div>", unsafe_allow_html=True)
+    phase_label = 'Extraordinary fiscal event' if is_emergency else 'Yearly fiscal event · Phase 3'
+    st.markdown(f"<div class='dc-eyebrow'>Year {s.year} · {phase_label}</div><div class='dc-title'>The Chancellor's {event_name}</div>", unsafe_allow_html=True)
+    if is_emergency:
+        emergency = s.get('active_emergency_budget') or {}
+        st.error(f"**Emergency Budget required.** {emergency.get('reason', 'Severe economic or market conditions require an urgent fiscal package.')}")
     budget.ensure()
-    stages=['Number 10 negotiations','OBR forecast','Budget speech','Commons vote & markets']
-    st.progress(min(stage,3)/3, text=f"Budget Day · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
+    st.progress(min(stage,3)/3, text=f"{event_name} · Stage {min(stage+1,4)} of 4: {stages[min(stage,3)]}")
     if stage == 0:
         with st.expander("Number 10 · private Budget negotiations", expanded=False):
             st.caption("The Prime Minister's political priorities are requests, not automatic changes to your fiscal plan. You remain the Chancellor and retain control of the Budget.")
@@ -595,7 +616,7 @@ def budget_screen():
         st.caption(f"{sum(1 for item in live_assessment if item['met'])} of {len(live_assessment)} priorities currently met. This assessment updates as you change the Budget.")
 
     elif stage == 1:
-        st.markdown("### Review your Budget before the OBR forecast")
+        st.markdown(f"### Review your {event_name} before the OBR forecast")
         st.info(s.get('budget_day_negotiation',''))
         draft = s.get('budget_day_draft') or budget.read()
         budget_day_scorecard(draft, "Your negotiated Budget draft")
@@ -609,7 +630,7 @@ def budget_screen():
         if next_col.button("Receive the OBR forecast",type="primary",use_container_width=True):
             engine.submit_budget(); st.rerun()
     elif stage == 2:
-        st.markdown("### The Chancellor prepares the statement")
+        st.markdown(f"### The Chancellor prepares the {event_name} statement")
         draft_budget = budget.read()
         draft_budget = s.get('budget_day_draft') or draft_budget
         budget_day_scorecard(draft_budget, "The Budget at a glance")
@@ -628,16 +649,16 @@ def budget_screen():
         if st.button("Prepare the Budget speech",type="primary"):
             engine.submit_budget(); st.rerun()
     elif stage == 3:
-        st.markdown("### Deliver the Budget to Parliament")
+        st.markdown(f"### Deliver the {event_name} to Parliament")
         draft=s.get('budget_day_speech') or {}
         if draft.get('text'):
             st.markdown("> "+draft['text'])
         final_draft = s.get("budget_day_draft") or budget.read()
         budget_day_scorecard(final_draft, "Final Budget announcement sheet")
-        st.warning("Once delivered, the Budget is put to the Commons. A failed vote ends the Chancellor’s career.")
+        st.warning(f"Once delivered, the {event_name} is put to the Commons. A failed vote ends the Chancellor’s career.")
         if st.button("← Return to Budget controls", use_container_width=True):
             s.budget_day_stage = 0; st.rerun()
-        if st.button("Deliver Budget & open the markets",type="primary"):
+        if st.button(f"Deliver {event_name} & open the markets",type="primary"):
             engine.submit_budget(); st.rerun()
 
 
@@ -951,7 +972,10 @@ def economy():
 # Keep the core action visible in one place; supporting information is separated
 # into compact workspaces so the player does not have to scroll through everything.
 _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
-_is_budget_phase = (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
+_is_budget_phase = (
+    (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
+    or bool(s.get('spending_review_due')) or bool(s.get('active_emergency_budget'))
+)
 
 tab_action, tab_briefing, tab_economy, tab_government, tab_treasury, tab_household, tab_regions, tab_services = st.tabs([
     'Decisions' + (' •' if _is_budget_phase else ''),
@@ -983,6 +1007,10 @@ with tab_action:
         weekly_event_screen()
     elif s.get('active_request'):
         request_screen()
+    elif s.get('active_emergency_budget'):
+        budget_screen()
+    elif s.get('spending_review_due'):
+        budget.render_spending_review()
     elif _is_budget_phase:
         budget_screen()
     else:
@@ -1041,10 +1069,10 @@ with tab_government:
 
 with tab_treasury:
     st.markdown('### Treasury')
-    st.caption('Budgets, spending settlements, public investments and the cost of government borrowing.')
-    treasury_tabs = st.tabs(['Spending review', 'Investments & gilts', 'Fiscal tools', 'OBR & markets', 'Local government'])
+    st.caption('Monitor the public finances, prepare for scheduled fiscal events and manage government borrowing.')
+    treasury_tabs = st.tabs(['Treasury position', 'Investments & gilts', 'Institutions & tools', 'OBR & markets', 'Local government'])
     with treasury_tabs[0]:
-        budget.render_spending_review()
+        fiscal_events.render_treasury_overview()
     with treasury_tabs[1]:
         treasury.render()
     with treasury_tabs[2]:
