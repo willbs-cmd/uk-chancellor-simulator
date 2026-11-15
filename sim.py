@@ -473,6 +473,16 @@ def check(n=None, difficulty=None):
             failures.append("An older save did not recover the last approved education settlement after a Spending Review reset.")
         if abs(float(s.bs_health) - 3.5) > 0.001 or abs(float(s.bs_education) - 2.0) > 0.001:
             failures.append("Recovered departmental settings were not copied back into the live Budget controls.")
+        payload = state.export_save()
+        load_error = state.import_save(payload)
+        if load_error:
+            failures.append(f"Save/load failed after repairing Budget carry-forward: {load_error}")
+        else:
+            budget.ensure()
+            if abs(float(st.session_state.budget_applied['spend']['health']) - 3.5) > 0.001:
+                failures.append("A repaired departmental setting did not survive save/load.")
+            if abs(float(st.session_state.bs_education) - 2.0) > 0.001:
+                failures.append("A repaired departmental control did not survive save/load.")
     except Exception as exc:
         failures.append(f"Legacy Budget carry-forward repair regression check failed: {exc}")
 
