@@ -436,8 +436,8 @@ def check(n=None, difficulty=None):
         expected_year2 = round(before_year2 * 1.02, 1)
         if abs(float(s.dept_spend['health']) - expected_year2) > 0.11:
             failures.append("Year 2 Spending Review uplift was not applied to the approved cash baseline.")
-        if abs(float(s.budget_applied['spend']['health'])) > 0.001 or abs(float(s.bs_health)) > 0.001:
-            failures.append("Spending Review roll-forward did not replace the prior Budget percentage settlement.")
+        if abs(float(s.budget_applied['spend']['health']) - 3.0) > 0.001 or abs(float(s.bs_health) - 3.0) > 0.001:
+            failures.append("Spending Review Year 2 roll-forward erased the previous Budget departmental setting.")
         after_year2 = float(s.dept_spend['health'])
         repeated_year2 = budget.apply_spending_review_rollforward(s, 2)
         if repeated_year2 != 0.0 or abs(float(s.dept_spend['health']) - after_year2) > 0.001:
@@ -446,10 +446,35 @@ def check(n=None, difficulty=None):
         expected_year3 = round(after_year2 * 1.01, 1)
         if abs(float(s.dept_spend['health']) - expected_year3) > 0.11:
             failures.append("Year 3 Spending Review uplift did not apply to the Year 2 cash baseline.")
+        if abs(float(s.budget_applied['spend']['health']) - 3.0) > 0.001 or abs(float(s.bs_health) - 3.0) > 0.001:
+            failures.append("Spending Review Year 3 roll-forward erased the previous Budget departmental setting.")
         if year2_change == 0.0 or year3_change == 0.0:
             failures.append("A valid multi-year Spending Review uplift was unexpectedly skipped.")
     except Exception as exc:
         failures.append(f"Spending Review roll-forward regression check failed: {exc}")
+
+    # Existing saves affected by the old reset should recover rates from the last delivered Budget.
+    try:
+        new_run('Labour', 'Normal', 44106)
+        s = st.session_state
+        draft = budget.read()
+        draft['spend']['health'] = 3.5
+        draft['spend']['education'] = 2.0
+        budget._apply(draft)
+        budget.commit_budget(390)
+        s.year = 2
+        for key in budget.SPEND_DEFAULTS:
+            s.budget_applied.setdefault('spend', {})[key] = 0.0
+            s[f'bs_{key}'] = 0.0
+        budget.ensure()
+        if abs(float(s.budget_applied['spend']['health']) - 3.5) > 0.001:
+            failures.append("An older save did not recover the last approved NHS settlement after a Spending Review reset.")
+        if abs(float(s.budget_applied['spend']['education']) - 2.0) > 0.001:
+            failures.append("An older save did not recover the last approved education settlement after a Spending Review reset.")
+        if abs(float(s.bs_health) - 3.5) > 0.001 or abs(float(s.bs_education) - 2.0) > 0.001:
+            failures.append("Recovered departmental settings were not copied back into the live Budget controls.")
+    except Exception as exc:
+        failures.append(f"Legacy Budget carry-forward repair regression check failed: {exc}")
 
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
