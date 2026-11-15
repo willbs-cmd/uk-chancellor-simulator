@@ -2509,11 +2509,11 @@ def apply_theme():
 
 PHASES = {
     1: dict(name='Autumn agenda', title='Autumn · Set the agenda',
-            guide='Choose the policy direction for the year. This is where you set priorities and signal your governing style.'),
+            guide='The Autumn Statement is handled before policy choices. Set the Government’s first major priority and manage the political direction for the year.'),
     2: dict(name='Winter pressure', title='Winter · Handle the pressure',
-            guide='Take a second major decision while managing crises, ministerial requests and political consequences.'),
+            guide='Take a second major decision while managing crises, ministerial requests, market pressure and the consequences of your autumn choices.'),
     3: dict(name='Spring Budget', title='Spring · Budget and Parliament',
-            guide='Set tax and spending, check the OBR forecast, manage your MPs and submit the Budget for a Commons vote.'),
+            guide='Negotiate the annual tax-and-spending package, review the OBR forecast, manage party rebellions and put the Budget to a Commons vote.'),
 }
 
 def phase_info(block):
