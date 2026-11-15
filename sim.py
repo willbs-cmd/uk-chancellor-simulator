@@ -420,6 +420,37 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Fiscal event calendar regression check failed: {exc}")
 
+    # Approved Spending Review paths must roll forward once, without compounding twice.
+    try:
+        new_run('Labour', 'Normal', 44105)
+        s = st.session_state
+        s.spending_review_plan = {
+            "term": int(s.term), "approved_year": 1, "year2_uplift": 2.0,
+            "year3_uplift": 1.0, "last_applied_year": 1,
+            "allocations": {key: float(s.dept_spend[key]) for key in budget.SPEND_DEFAULTS},
+        }
+        s.budget_applied.setdefault('spend', {})['health'] = 3.0
+        s.bs_health = 3.0
+        before_year2 = float(s.dept_spend['health'])
+        year2_change = budget.apply_spending_review_rollforward(s, 2)
+        expected_year2 = round(before_year2 * 1.02, 1)
+        if abs(float(s.dept_spend['health']) - expected_year2) > 0.11:
+            failures.append("Year 2 Spending Review uplift was not applied to the approved cash baseline.")
+        if abs(float(s.budget_applied['spend']['health'])) > 0.001 or abs(float(s.bs_health)) > 0.001:
+            failures.append("Spending Review roll-forward did not replace the prior Budget percentage settlement.")
+        after_year2 = float(s.dept_spend['health'])
+        repeated_year2 = budget.apply_spending_review_rollforward(s, 2)
+        if repeated_year2 != 0.0 or abs(float(s.dept_spend['health']) - after_year2) > 0.001:
+            failures.append("Year 2 Spending Review uplift was applied more than once.")
+        year3_change = budget.apply_spending_review_rollforward(s, 3)
+        expected_year3 = round(after_year2 * 1.01, 1)
+        if abs(float(s.dept_spend['health']) - expected_year3) > 0.11:
+            failures.append("Year 3 Spending Review uplift did not apply to the Year 2 cash baseline.")
+        if year2_change == 0.0 or year3_change == 0.0:
+            failures.append("A valid multi-year Spending Review uplift was unexpectedly skipped.")
+    except Exception as exc:
+        failures.append(f"Spending Review roll-forward regression check failed: {exc}")
+
     # Regional parties need a credible route to retain a Westminster mandate
     # without being expected to win almost every seat in Scotland or Wales.
     try:
