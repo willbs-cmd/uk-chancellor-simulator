@@ -630,7 +630,7 @@ def budget_screen():
             st.success("Your draft contains changes. They are not enacted yet; they will take effect only after the Budget passes the Commons.")
         back_col, next_col = st.columns(2)
         if back_col.button("← Return to Budget controls", use_container_width=True):
-            s.budget_day_stage = 0; st.rerun()
+            s.budget_editor_restore_draft = True; s.budget_day_stage = 0; st.rerun()
         if next_col.button("Receive the OBR forecast",type="primary",use_container_width=True):
             engine.submit_budget(); st.rerun()
     elif stage == 2:
@@ -649,7 +649,7 @@ def budget_screen():
                 st.caption(f"By {last.get('year', 'year three')}, projected headroom is £{float(last.get('headroom', 0)):.1f}bn and growth is {float(last.get('growth', 0)):.1f}%. This is a central gameplay scenario, not a guarantee.")
         st.caption("The forecast reflects the current draft and simplified model assumptions. You can still return to the Budget controls and revise the package before delivering it.")
         if st.button("← Return to Budget controls", use_container_width=True):
-            s.budget_day_stage = 0; st.rerun()
+            s.budget_editor_restore_draft = True; s.budget_day_stage = 0; st.rerun()
         if st.button("Prepare the Budget speech",type="primary"):
             engine.submit_budget(); st.rerun()
     elif stage == 3:
@@ -661,7 +661,7 @@ def budget_screen():
         budget_day_scorecard(final_draft, "Final Budget announcement sheet")
         st.warning(f"Once delivered, the {event_name} is put to the Commons. A failed vote ends the Chancellor’s career.")
         if st.button("← Return to Budget controls", use_container_width=True):
-            s.budget_day_stage = 0; st.rerun()
+            s.budget_editor_restore_draft = True; s.budget_day_stage = 0; st.rerun()
         if st.button(f"Deliver {event_name} & open the markets",type="primary"):
             engine.submit_budget(); st.rerun()
 
