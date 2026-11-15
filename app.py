@@ -856,7 +856,7 @@ def decision_screen():
     humphrey_message(decision['humphrey'])
     features.render_phase_action()
     labels = [o['label'] for o in options]
-    st.markdown("<div class='decision-section-head'><span>THE CABINET OPTIONS</span><small>Five competing approaches · Select one to open its assessment</small></div>", unsafe_allow_html=True)
+    st.markdown("<div class='decision-section-head'><span>THE CABINET OPTIONS</span><small>Six competing approaches · Select one to open its assessment</small></div>", unsafe_allow_html=True)
     with st.container(key='policy_options'):
         choice = st.radio('Select policy approach:', labels, index=None, key=f'dec_{s.term}_{s.year}_{s.block}',
                           label_visibility='collapsed',
