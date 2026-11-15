@@ -33,6 +33,67 @@ DEPARTMENT_MINISTERS = {
     "public_sector_pay": ("Rachel Okafor", "workforce retention and fair public-sector pay settlements"),
     "skills": ("Dr Peter Lawson", "further education, apprenticeships and technical skills"),
 }
+
+# Departmental Secretaries' opening asks for each Spending Review. These are
+# requests for negotiation, not automatic entitlements or guaranteed awards.
+SPENDING_REVIEW_BID_RATES = {
+    "health": 5.0, "education": 4.0, "welfare": 3.0, "justice": 4.5,
+    "defence": 6.0, "transport": 7.0, "housing": 8.0, "science": 9.0,
+    "climate": 6.5, "aid": 2.0, "culture": 3.5, "other": 2.5,
+    "social_care": 5.0, "local_government": 3.5, "public_sector_pay": 4.0, "skills": 6.0,
+}
+
+
+def spending_review_reaction(department, requested_pct, settled_pct, loyalty):
+    """Return a deterministic ministerial response to a proposed spending settlement."""
+    requested = float(requested_pct)
+    settled = float(settled_pct)
+    current_loyalty = max(0.0, min(100.0, float(loyalty)))
+    gap = settled - requested
+    loyalty_change = max(-8.0, min(3.0, gap * 0.75))
+    new_loyalty = round(max(0.0, min(100.0, current_loyalty + loyalty_change)), 1)
+    minister, priority = DEPARTMENT_MINISTERS.get(
+        department, ("The department's Secretary of State", "frontline delivery")
+    )
+    will_resign = new_loyalty <= 15.0 and gap <= -5.0
+
+    if will_resign:
+        status, tone = "Would resign", "danger"
+        message = (f"{minister} says the proposed settlement is untenable and would resign if it is approved. "
+                   f"The minister argues that {priority} cannot be delivered on this allocation.")
+    elif gap <= -8.0 or (gap <= -4.0 and current_loyalty <= 42.0):
+        status, tone = "Resignation threat", "danger"
+        message = (f"{minister} is threatening to take the dispute to Number 10 and is raising the possibility of resignation. "
+                   f"The minister says {priority} is at risk.")
+    elif gap <= -4.0:
+        status, tone = "Strong protest", "warning"
+        message = (f"{minister} warns that the offer falls well short of the bid and could delay {priority}.")
+    elif gap < -1.5:
+        status, tone = "Formal warning", "warning"
+        message = (f"{minister} accepts that a compromise may be necessary but warns that {priority} will face pressure.")
+    elif gap <= 1.5:
+        status, tone = "Accepts compromise", "info"
+        message = (f"{minister} accepts the proposed compromise but asks for progress on {priority} to be reviewed next year.")
+    else:
+        status, tone = "Welcomes settlement", "success"
+        message = (f"{minister} welcomes the stronger settlement and says it gives the department room to advance {priority}.")
+
+    return {
+        "department": department,
+        "minister": minister,
+        "priority": priority,
+        "requested_pct": round(requested, 2),
+        "settled_pct": round(settled, 2),
+        "gap_pct": round(gap, 2),
+        "loyalty_before": round(current_loyalty, 1),
+        "loyalty_change": round(loyalty_change, 1),
+        "loyalty_after": new_loyalty,
+        "status": status,
+        "tone": tone,
+        "message": message,
+        "will_resign": will_resign,
+    }
+
 from content_store import load_json
 from theme import render_chips
 # Game-editable fiscal controls and policy choices live in data/policies.json.
@@ -1916,13 +1977,8 @@ def render_spending_review():
         ("Other services", ["aid", "culture", "other"]),
     ]
     draft = {}
-    # Secretaries submit politically and operationally differentiated bids each year.
-    bid_rates = {
-        "health": 5.0, "education": 4.0, "welfare": 3.0, "justice": 4.5,
-        "defence": 6.0, "transport": 7.0, "housing": 8.0, "science": 9.0,
-        "climate": 6.5, "aid": 2.0, "culture": 3.5, "other": 2.5,
-        "social_care": 5.0, "local_government": 3.5, "public_sector_pay": 4.0, "skills": 6.0,
-    }
+    # Ministers submit differentiated bids; their reactions follow the live offer.
+    bid_rates = SPENDING_REVIEW_BID_RATES
     st.markdown("### Departmental bids · Year 1")
     st.caption("Each Secretary of State has submitted a funding request. Negotiate the settlement: generous awards improve ministerial support but cost more, while rejecting bids risks cabinet tension and service pressure.")
     with st.expander("Read the Secretaries' submissions", expanded=False):
@@ -1958,6 +2014,48 @@ def render_spending_review():
                             help=f"Secretary requested {requested_pct:+.1f}%. Your settlement is applied to the departmental baseline when approved."
                         )
                     draft[key] = round(base * (1 + pct / 100.0), 1)
+
+    # Live Cabinet read-out: the player can see who is satisfied, who is warning,
+    # and which ministers may resign before the settlement is formally approved.
+    review_reactions = []
+    if done:
+        archived = next((row for row in reversed(s.spending_review_history)
+                         if row.get("period") == period), {})
+        review_reactions = list(archived.get("ministerial_reactions", []))
+    else:
+        for key in departments:
+            requested = float(bid_rates.get(key, 3.0))
+            settled = float(s.get(f"sr_{period}_{key}", requested))
+            loyalty = float(s.ministerial_loyalty.get(key, 65.0))
+            review_reactions.append(spending_review_reaction(key, requested, settled, loyalty))
+
+    if review_reactions:
+        st.markdown("### Cabinet room · ministerial reaction")
+        if not done:
+            st.caption("These are live responses to your proposed awards. Changing a departmental settlement updates the minister's position; confidence changes only when you approve the review.")
+        supportive = sum(1 for row in review_reactions if row.get("tone") == "success")
+        cautionary = sum(1 for row in review_reactions if row.get("tone") in ("info", "warning"))
+        threatening = sum(1 for row in review_reactions if row.get("tone") == "danger")
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Welcomes the offer", supportive)
+        r2.metric("Seeking changes", cautionary)
+        r3.metric("Cabinet threats", threatening)
+        reaction_rows = [{
+            "Minister": row.get("minister", "Departmental Secretary"),
+            "Department": SPEND_DEFAULTS.get(row.get("department"), {}).get("label", row.get("department", "Department")),
+            "Bid": f"{float(row.get('requested_pct', 0.0)):+.1f}%",
+            "Your offer": f"{float(row.get('settled_pct', 0.0)):+.1f}%",
+            "Confidence": f"{float(row.get('loyalty_after', 0.0)):.0f}/100",
+            "Position": row.get("status", "Awaiting response"),
+            "Message": row.get("message", ""),
+        } for row in review_reactions]
+        st.dataframe(pd.DataFrame(reaction_rows), hide_index=True, use_container_width=True)
+        if threatening and not done:
+            st.error(f"{threatening} minister(s) may resign or take the dispute to Number 10 if this settlement is approved unchanged.")
+        elif cautionary and not done:
+            st.warning(f"{cautionary} minister(s) are seeking changes or warning about delivery risks.")
+        elif not done:
+            st.success("The draft is broadly acceptable to the Cabinet. Ministers are not all getting everything they asked for, but no one is threatening resignation.")
 
     import devolution
     local_review_draft = devolution.render_spending_review_controls(period, read_only=done)
@@ -2005,23 +2103,26 @@ def render_spending_review():
             elif annual_change < 0:
                 s.market_conf = round(_clip(float(s.market_conf) + min(2.0, -annual_change * 0.02)), 1)
             s.approval = round(_clip(float(s.approval) + max(-2.0, min(2.0, frontline * 0.025 - max(0.0, annual_change) * 0.008))), 1)
-            # Department-by-department loyalty remembers whether ministers repeatedly lose their bids.
+            # Record each Secretary's response and update Cabinet confidence once.
             bid_satisfaction = []
             resignations = []
-            for key in departments:
-                requested = float(bid_rates.get(key, 3.0))
-                settled = float(s.get(f"sr_{period}_{key}", 0.0))
-                gap = settled - requested
-                loyalty = float(s.ministerial_loyalty.get(key, 65.0))
-                loyalty_change = max(-8.0, min(3.0, gap * 0.75))
-                loyalty = round(_clip(loyalty + loyalty_change), 1)
+            for reaction in review_reactions:
+                key = reaction["department"]
+                loyalty = float(reaction["loyalty_after"])
+                minister = s.cabinet_ministers.get(key, reaction.get("minister", DEPARTMENT_MINISTERS[key][0]))
                 s.ministerial_loyalty[key] = loyalty
-                if loyalty <= 15.0:
-                    minister = s.cabinet_ministers.get(key, DEPARTMENT_MINISTERS[key][0])
+                if reaction.get("will_resign") and not str(minister).startswith("Vacant"):
                     resignations.append((key, minister))
+                    reaction["status"] = "Resigned"
+                    reaction["tone"] = "danger"
+                    reaction["message"] = (f"{minister} resigns after the Spending Review rejects the department's bid. "
+                                            f"The minister says {reaction.get('priority', 'frontline delivery')} cannot be protected on the agreed settlement.")
                     s.cabinet_ministers[key] = "Vacant — awaiting Prime Minister"
                     s.ministerial_vacancy_year[key] = int(s.get("year", 1))
                     s.ministerial_loyalty[key] = 0.0
+                gap = float(reaction["gap_pct"])
+                requested = float(reaction["requested_pct"])
+                bid_satisfaction.append(max(-1.0, min(1.0, gap / max(abs(requested), 2.0))))
             if resignations:
                 s.ministerial_resignations.extend([
                     {"period": period, "department": key, "minister": minister}
@@ -2033,13 +2134,9 @@ def render_spending_review():
                 for key, minister in resignations:
                     s.event_cards.append({
                         "title": f"{minister} resigns from Cabinet",
-                        "text": f"The {SPEND_DEFAULTS[key]['label']} Secretary has resigned after repeated disputes over departmental funding. The post is vacant. The Prime Minister will decide who replaces them; the Chancellor cannot appoint a successor.",
+                        "text": f"The {SPEND_DEFAULTS[key]['label']} Secretary has resigned after the Spending Review rejected the department's bid. The post is vacant. The Prime Minister will decide who replaces them; the Chancellor cannot appoint a successor.",
                         "summary": "Cabinet crisis · Prime Minister to appoint",
                     })
-            for key in departments:
-                requested = float(bid_rates.get(key, 3.0))
-                settled = float(s.get(f"sr_{period}_{key}", 0.0))
-                bid_satisfaction.append(max(-1.0, min(1.0, (settled - requested) / max(abs(requested), 2.0))))
             cabinet_effect = sum(bid_satisfaction) / max(1, len(bid_satisfaction)) * 5.0
             s.cab_opinion = round(_clip(float(s.get("cab_opinion", 65.0)) + cabinet_effect), 1)
             approved_local_settlement = devolution.apply_spending_review_settlement(period)
@@ -2063,12 +2160,14 @@ def render_spending_review():
                 "allocations": {k: round(v, 1) for k, v in draft.items()},
                 "local_settlement": dict(approved_local_settlement),
                 "cabinet_effect": round(cabinet_effect, 1),
+                "ministerial_reactions": [dict(row) for row in review_reactions],
             })
             s.event_cards = list(s.get("event_cards", []))
             s.event_cards.append({
                 "title": "Spending Review approved",
-                "text": f"You approved departmental settlements worth £{proposed_total:,.1f}bn a year. The annual spending change is £{annual_change:+,.1f}bn.",
-                "summary": f"Headroom £{-annual_change * 0.22:+.1f}bn · Deficit £{annual_change:+.1f}bn",
+                "text": f"You approved departmental settlements worth £{proposed_total:,.1f}bn a year. The annual spending change is £{annual_change:+,.1f}bn. "
+                        f"Cabinet impact: {len(resignations)} ministerial resignation(s); overall Cabinet confidence movement {cabinet_effect:+.1f}.",
+                "summary": f"Headroom £{-annual_change * 0.22:+.1f}bn · Deficit £{annual_change:+.1f}bn · {len(resignations)} resignation(s)",
             })
             s.message = f"Spending Review approved. Departmental budgets change by £{annual_change:+,.1f}bn a year."
             st.rerun()
