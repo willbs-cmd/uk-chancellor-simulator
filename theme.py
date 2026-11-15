@@ -2473,6 +2473,34 @@ div[role="radiogroup"] > label:has(input:checked) {
   .st-key-budget_financial_summary { position: static !important; }
   .st-key-budget_financial_summary .chip-row { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
 }
+
+/* Final contrast correction for the permanent Chancellor's Desk.
+   The global sidebar colour reset must not recolour the white £ glyph
+   or wash out the explanatory copy on the pale sidebar surface. */
+section[data-testid="stSidebar"] .desk-monogram,
+section[data-testid="stSidebar"] .desk-monogram *,
+section[data-testid="stSidebar"] .desk-monogram span {
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  opacity:1 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {
+  color:#52677c !important;
+  -webkit-text-fill-color:#52677c !important;
+  opacity:1 !important;
+  font-size:.86rem !important;
+  font-weight:500 !important;
+  line-height:1.45 !important;
+}
+section[data-testid="stSidebar"] .desk-kicker {
+  color:#80602a !important;
+  -webkit-text-fill-color:#80602a !important;
+}
+section[data-testid="stSidebar"] .desk-title {
+  color:#203b59 !important;
+  -webkit-text-fill-color:#203b59 !important;
+}
 </style>
 """
 
