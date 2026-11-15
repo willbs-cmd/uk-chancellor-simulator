@@ -232,6 +232,31 @@ def render_treasury_overview():
             for row in reversed(reviews[-5:])
         ], hide_index=True, use_container_width=True)
 
+    # Make the approved multi-year settlement visible between formal review rounds.
+    plan = s.get("spending_review_plan") or {}
+    if isinstance(plan, dict) and plan.get("allocations"):
+        approved_term = int(plan.get("term", s.get("term", 1)))
+        approved_year = int(plan.get("approved_year", 1))
+        year2 = float(plan.get("year2_uplift", 0.0))
+        year3 = float(plan.get("year3_uplift", 0.0))
+        current_term = int(s.get("term", 1))
+        current_year = int(s.get("year", 1))
+        last_applied = int(plan.get("last_applied_year", approved_year))
+        st.markdown("#### Approved multi-year spending path")
+        path_cols = st.columns(3)
+        path_cols[0].metric("Year 2 planned uplift", f"{year2:+.1f}%")
+        path_cols[1].metric("Year 3 planned uplift", f"{year3:+.1f}%")
+        if current_term == approved_term and current_year == approved_year + 1:
+            path_status = "Year 2 settlement applied" if last_applied >= current_year else "Year 2 settlement awaiting Spring"
+        elif current_term == approved_term and current_year == approved_year + 2:
+            path_status = "Year 3 settlement applied" if last_applied >= current_year else "Year 3 settlement awaiting Spring"
+        elif current_term == approved_term and current_year == approved_year:
+            path_status = "Year 1 baseline approved"
+        else:
+            path_status = f"Approved in Term {approved_term}, Year {approved_year}"
+        path_cols[2].metric("Settlement status", path_status)
+        st.caption("These uplifts are applied once to departmental cash baselines at the annual Spring transition. The next Spending Review replaces this plan.")
+
     autumn = list(s.get("autumn_statement_history", []))
     emergency = list(s.get("emergency_budget_history", []))
     with st.expander("Statement and emergency-event history", expanded=False):
