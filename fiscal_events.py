@@ -194,10 +194,20 @@ def render_treasury_overview():
         {"Event": "Emergency Budget", "Timing": "Only after severe economic, market or government-confidence stress", "Purpose": "A full revised package, rapid forecast, speech and Commons vote"},
     ]
     st.dataframe(calendar, hide_index=True, use_container_width=True)
-    if s.get("spending_review_due"):
-        st.info("A Spending Review is due. It will appear in Decisions before the next policy submission.")
+    # Current agenda: make the next actionable event obvious without opening Decisions.
     if s.get("active_emergency_budget"):
-        st.error("An Emergency Budget has been called and is awaiting delivery.")
+        emergency = s.get("active_emergency_budget") or {}
+        st.error(f"**Emergency Budget awaiting delivery.** {emergency.get('reason', 'A severe fiscal event has been called.')}")
+    elif s.get("spending_review_due"):
+        st.warning("**Spending Review due now.** Agree departmental cash baselines and the local-government settlement before normal policy decisions.")
+    elif s.get("autumn_statement_due"):
+        st.info("**Autumn Statement due now.** Publish a limited fiscal update or proceed without one before the first policy decision.")
+    elif int(s.get("block", 1)) == 3 and not s.get("budget_passed"):
+        st.warning("**Spring Budget due.** Finalise the tax-and-spending package and take it to the Commons.")
+    elif s.get("budget_passed"):
+        st.success("The Budget has passed. Proceed to the Spring update to apply the annual economic and fiscal effects.")
+    elif int(s.get("year", 1)) <= 5:
+        st.caption("No major fiscal event is awaiting action. Monitor borrowing, fiscal headroom and market conditions while completing the current policy phase.")
 
     st.markdown("#### Recent fiscal decisions")
     budget_rows = list(s.get("budget_history", []))[-5:]
@@ -227,11 +237,24 @@ def render_treasury_overview():
     with st.expander("Statement and emergency-event history", expanded=False):
         if autumn:
             st.markdown("**Autumn Statements**")
-            st.dataframe(list(reversed(autumn[-5:])), hide_index=True, use_container_width=True)
+            st.dataframe([
+                {"Period": row.get("period", ""),
+                 "Decision": row.get("choice", ""),
+                 "Headroom after": f"£{float(row.get('headroom_after', 0.0)):.1f}bn",
+                 "Market confidence": f"{float(row.get('market_conf_after', 0.0)):.0f}/100"}
+                for row in reversed(autumn[-5:])
+            ], hide_index=True, use_container_width=True)
         else:
-            st.caption("No Autumn Statement has been delivered yet.")
+            st.caption("No Autumn Statement has been delivered or skipped yet.")
         if emergency:
             st.markdown("**Emergency Budgets**")
-            st.dataframe(list(reversed(emergency[-5:])), hide_index=True, use_container_width=True)
+            st.dataframe([
+                {"Period": row.get("period", ""),
+                 "Reason": row.get("reason", ""),
+                 "Commons Ayes": row.get("ayes", 0),
+                 "Headroom after": f"£{float(row.get('headroom_after', 0.0)):.1f}bn",
+                 "Gilt yield after": f"{float(row.get('gilt_yield_after', 0.0)):.2f}%"}
+                for row in reversed(emergency[-5:])
+            ], hide_index=True, use_container_width=True)
         else:
             st.caption("No Emergency Budget has been required.")
