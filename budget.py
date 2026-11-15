@@ -2048,9 +2048,12 @@ def render_spending_review():
             "Your offer": f"{float(row.get('settled_pct', 0.0)):+.1f}%",
             "Confidence": f"{float(row.get('loyalty_after', 0.0)):.0f}/100",
             "Position": row.get("status", "Awaiting response"),
-            "Message": row.get("message", ""),
         } for row in review_reactions]
         st.dataframe(pd.DataFrame(reaction_rows), hide_index=True, use_container_width=True)
+        with st.expander(f"Read ministerial representations ({len(review_reactions)})", expanded=bool(threatening and not done)):
+            for row in review_reactions:
+                st.markdown(f"**{row.get('minister', 'Departmental Secretary')} · {row.get('status', 'Awaiting response')}**")
+                st.caption(row.get("message", ""))
         if threatening and not done:
             st.error(f"{threatening} minister(s) may resign or take the dispute to Number 10 if this settlement is approved unchanged.")
         elif cautionary and not done:
