@@ -451,6 +451,22 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Spending Review roll-forward regression check failed: {exc}")
 
+    # Spending Review lobbying must react proportionately to the Chancellor's offer.
+    try:
+        generous = budget.spending_review_reaction('health', 5.0, 8.0, 60.0)
+        compromise = budget.spending_review_reaction('education', 4.0, 3.0, 60.0)
+        threatened = budget.spending_review_reaction('defence', 6.0, -5.0, 20.0)
+        if generous['tone'] != 'success' or generous['loyalty_after'] <= 60.0:
+            failures.append("A generous departmental settlement did not improve ministerial confidence.")
+        if compromise['tone'] not in ('info', 'warning') or compromise['loyalty_after'] >= 60.0:
+            failures.append("A below-bid compromise did not produce a proportionate ministerial response.")
+        if not threatened['will_resign'] or threatened['tone'] != 'danger' or threatened['loyalty_after'] > 15.0:
+            failures.append("Severe underfunding did not produce a credible resignation warning.")
+        if "Dr Eleanor Shaw" not in generous['message'] or "NHS waiting lists" not in generous['message']:
+            failures.append("Ministerial lobbying did not use the named minister and departmental priority.")
+    except Exception as exc:
+        failures.append(f"Spending Review Cabinet negotiation regression check failed: {exc}")
+
     # Regional parties need a credible route to retain a Westminster mandate
     # without being expected to win almost every seat in Scotland or Wales.
     try:
