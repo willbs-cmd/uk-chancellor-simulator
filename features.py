@@ -216,7 +216,7 @@ def render():
         st.caption("If announced: +3 market confidence and +1 point public approval. Costs 1 political capital.")
         _, used = _used()
         if s.block != 3:
-            st.info("Available in Phase 3 · Spring Budget. You can still use Bank, pay or devolution actions during the current phase.")
+            st.info("Available during Phase 3, before the Spring Budget is delivered. It is a short forecast statement, not the tax-and-spending package.")
         elif "spring_statement" in used:
             st.success("Spring Statement already delivered this year.")
         elif st.button("Deliver Spring Statement", key="feat_spring_statement", use_container_width=True, disabled=s.political_capital_points < 1):
@@ -229,7 +229,7 @@ def render():
         st.markdown("**Fiscal-year checklist**")
         _, used = _used()
         statuses = [
-            ("Autumn Statement", "autumn", "Phase 1 · Autumn"),
+            ("Autumn Statement", "autumn", "Opening event · before policy decisions"),
             ("Spring Statement", "spring_statement", "Phase 3 · before the Spring Budget"),
         ]
         for label, key, timing in statuses:
