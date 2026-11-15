@@ -205,6 +205,29 @@ def check(n=None, difficulty=None):
     contract = thresholds['contract']
     failures = []
 
+    # Every standard and conditional policy decision must expose six matched options.
+    try:
+        decision_content = load_json('decisions.json')
+        for item in decision_content.get('decisions', []):
+            decision = item.get('decision', {})
+            options = decision.get('options', [])
+            effects = decision.get('effects', [])
+            if len(options) != 6 or len(effects) != 6 or len(options) != len(effects):
+                failures.append(
+                    f"{decision.get('title', 'Untitled decision')} has {len(options)} options and {len(effects)} effects; expected six matched choices."
+                )
+            ideologies = decision.get('option_ideologies')
+            if ideologies is not None and len(ideologies) != len(options):
+                failures.append(f"{decision.get('title', 'Untitled decision')} has mismatched option ideology labels.")
+        for branch_id, branch in decisions.BRANCHES.items():
+            options = decisions.get_options(branch, f"branch-contract-{branch_id}")
+            if len(branch.get('options', [])) != 6 or len(branch.get('effects', [])) != 6 or len(options) != 6:
+                failures.append(f"Conditional storyline '{branch_id}' does not expose six matched playable options.")
+            elif options[5].get('ideology') != 'Centric':
+                failures.append(f"Conditional storyline '{branch_id}' sixth option is not labelled Centric.")
+    except Exception as exc:
+        failures.append(f"Six-option policy content regression check failed: {exc}")
+
     # Save/load must preserve the approved Budget ledger and current fiscal state.
     try:
         new_run('Labour', 'Normal', 97531)
