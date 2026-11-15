@@ -22,7 +22,7 @@ Streamlit Community Cloud can host these as two separate apps from the same repo
 
 The game loads player-facing content from `data/` files. You can add or rebalance policies, crises and tax/spending choices without editing their Python modules:
 
-- `data/decisions.json` — policy topics, five approaches per topic, effects, delayed consequences and Sir Humphrey's reactions.
+- `data/decisions.json` — policy topics, six approaches per topic, effects, delayed consequences and Sir Humphrey's reactions.
 - `data/crises.json` — crisis text and response options.
 - `data/policies.json` — tax sliders, revenue schemes, spending departments, spending schemes and game-balance coefficients.
 - `data/imf_uk_baseline.json` — fixed-vintage IMF UK baseline and source metadata.
