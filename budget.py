@@ -300,6 +300,25 @@ def ensure():
                 s.budget_scheme_delivery[kind][key] = len(scheme_profile(kind, key, table[key])['ramp']) - 1
 
     s.setdefault('budget_history', [])
+
+    # Repair saves affected by the old Spending Review carry-forward bug. That
+    # code zeroed departmental Budget percentages while applying a multi-year
+    # cash uplift. The most recent delivered Budget is the authoritative source
+    # when the live ledger is zero but a prior, later-period Budget recorded a
+    # non-zero approved rate. Do this before widget defaults are seeded below.
+    if s.budget_history:
+        last_budget = s.budget_history[-1]
+        last_period = (int(last_budget.get('term', 1)), int(last_budget.get('year', 1)))
+        current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
+        recorded_spend = last_budget.get('spend', {}) or {}
+        if last_period < current_period and isinstance(recorded_spend, dict):
+            for key in SPEND_DEFAULTS:
+                live_rate = float(s.budget_applied.get('spend', {}).get(key, 0.0))
+                previous_rate = float(recorded_spend.get(key, 0.0))
+                if abs(live_rate) < 0.0001 and abs(previous_rate) >= 0.0001:
+                    s.budget_applied.setdefault('spend', {})[key] = previous_rate
+                    s[f'bs_{key}'] = previous_rate
+
     s.setdefault('budget_message', '')
     s.setdefault('whip_ayes', 0)
     s.setdefault('whip_used', [])
@@ -1924,11 +1943,9 @@ def apply_spending_review_rollforward(s, target_year):
     before = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     for key in SPEND_DEFAULTS:
         s.dept_spend[key] = round(float(s.dept_spend.get(key, 0.0)) * (1.0 + uplift / 100.0), 1)
-    # A Spending Review sets a new cash baseline, replacing the previous Budget
-    # percentage settlements so they are not compounded a second time.
-    for key in SPEND_DEFAULTS:
-        s.budget_applied.setdefault('spend', {})[key] = 0.0
-        s[f'bs_{key}'] = 0.0
+    # The Spending Review uplift changes the departmental cash baseline, but it
+    # must not erase the Chancellor's separately approved Budget settlement rates.
+    # apply_ongoing() applies those recurring rates once at each Spring transition.
     after = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     change = round(after - before, 1)
     s.deficit = round(float(s.get('deficit', 0.0)) + change, 1)
@@ -1966,7 +1983,7 @@ def render_spending_review():
     else:
         st.markdown(
             "<div class='treasury-notice info'><div><strong>Spending round open</strong>"
-            "Departmental Secretaries have submitted their bids. Review the requests, set new cash allocations and agree the forward path. This replaces the preceding departmental baseline.</div></div>",
+            "Departmental Secretaries have submitted their bids. Set new cash allocations and agree the forward path. The previous Budget's tax, scheme and departmental settlement settings remain in force until you change them in a Budget.</div></div>",
             unsafe_allow_html=True,
         )
 
@@ -2151,10 +2168,9 @@ def render_spending_review():
                 "allocations": {k: float(v) for k, v in draft.items()},
                 "local_settlement": dict(approved_local_settlement),
             }
-            # The Review replaces the previous departmental percentage baseline.
-            for key in departments:
-                s.budget_applied.setdefault('spend', {})[key] = 0.0
-                s[f'bs_{key}'] = 0.0
+            # The Review establishes new cash allocations and a forward path.
+            # Preserve the last Budget's departmental percentage settings so the next
+            # Budget opens with the same approved ledger for the Chancellor to amend.
             s.spending_review_last_period = period
             s.spending_review_due = False
             s.fiscal_calendar_initialised = True
