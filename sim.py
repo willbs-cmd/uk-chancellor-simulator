@@ -486,6 +486,50 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Legacy Budget carry-forward repair regression check failed: {exc}")
 
+    # Budget controls must hydrate from the durable ledger for a new year,
+    # and from the saved draft when the player returns from forecast/speech stages.
+    try:
+        new_run('Labour', 'Normal', 44107)
+        s = st.session_state
+        draft = budget.read()
+        draft['tax']['income'] = min(float(budget.TAXES['income']['hi']), float(draft['tax']['income']) + 1.0)
+        draft['spend']['health'] = 3.0
+        draft['strategy'] = 'investment'
+        draft['thresholds']['personal_allowance'] = 13000.0
+        budget._apply(draft)
+        s.year = 2
+        s.budget_editor_period = '1-1'
+        s.budget_day_stage = 0
+        s.budget_day_draft = None
+        s.budget_editor_restore_draft = False
+        s.bt_income = budget.TAXES['income']['default']
+        s.bs_health = 0.0
+        s.budget_strategy = 'balanced'
+        s.bt_threshold_personal_allowance = 12570.0
+        restored = budget.prepare_editor_state()
+        if not restored:
+            failures.append("A new Budget period did not trigger control hydration.")
+        if abs(float(s.bt_income) - float(draft['tax']['income'])) > 0.001:
+            failures.append("A new Budget period did not restore the approved tax rate to its control.")
+        if abs(float(s.bs_health) - 3.0) > 0.001:
+            failures.append("A new Budget period did not restore the approved departmental setting to its control.")
+        if s.budget_strategy != 'investment' or abs(float(s.bt_threshold_personal_allowance) - 13000.0) > 0.001:
+            failures.append("A new Budget period did not restore the approved strategy and threshold controls.")
+
+        resumed_draft = dict(draft)
+        resumed_draft['tax'] = dict(draft['tax'])
+        resumed_draft['tax']['income'] = max(float(budget.TAXES['income']['lo']), float(draft['tax']['income']) - 0.5)
+        s.budget_day_draft = resumed_draft
+        s.budget_editor_restore_draft = True
+        s.bt_income = draft['tax']['income']
+        budget.prepare_editor_state()
+        if abs(float(s.bt_income) - float(resumed_draft['tax']['income'])) > 0.001:
+            failures.append("Returning from a Budget forecast did not restore the saved in-progress draft.")
+        if s.budget_editor_restore_draft:
+            failures.append("The Budget editor draft-restore flag was not cleared after hydration.")
+    except Exception as exc:
+        failures.append(f"Budget editor hydration regression check failed: {exc}")
+
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
         generous = budget.spending_review_reaction('health', 5.0, 8.0, 60.0)
