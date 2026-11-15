@@ -235,22 +235,32 @@ def render(on_restart):
         # The diary reflects queued decisions and the revised fiscal-event calendar.
         st.markdown("<div class='desk-section-title'>DIARY & NEXT STEPS</div>", unsafe_allow_html=True)
         diary = []
-        if s.get("active_emergency_budget"):
-            diary.append(("NOW", "Deliver Emergency Budget"))
+        # Match the actual Decisions-screen priority so the diary never suggests
+        # a fiscal event is actionable ahead of an urgent parliamentary or crisis event.
+        if s.get("local_election_due"):
+            diary.append(("NOW", "Local elections"))
+        if s.get("active_pm_ultimatum"):
+            diary.append(("NOW", "Prime Minister's ultimatum"))
+        if s.get("active_pm_meeting"):
+            diary.append(("PENDING", "Private meeting with the PM"))
+        if s.get("active_gilt_emergency"):
+            diary.append(("NOW", "Gilt-market emergency"))
+        if s.get("active_financial_crisis"):
+            diary.append(("NOW", "Financial stability response"))
         if s.get("active_crisis"):
             diary.append(("NOW", "Emergency decision"))
+        if s.get("active_dispute"):
+            diary.append(("PENDING", "Cabinet dispute"))
         if s.get("active_weekly_event"):
             diary.append(("NOW", "Treasury event response"))
         if s.get("active_request"):
             diary.append(("PENDING", "Ministerial request"))
-        if s.get("active_dispute"):
-            diary.append(("PENDING", "Cabinet dispute"))
+        if s.get("active_emergency_budget"):
+            diary.append(("NOW", "Deliver Emergency Budget"))
         if s.get("spending_review_due"):
             diary.append(("NOW", "Spending Review · agree departmental settlements"))
         if s.get("autumn_statement_due"):
             diary.append(("NOW", "Autumn Statement · publish or skip"))
-        if s.get("local_election_due"):
-            diary.append(("UPCOMING", "Local elections"))
         if s.get("budget_passed"):
             diary.append(("NEXT", "Proceed to Spring"))
         elif int(s.get("block", 1)) == 3 and not s.get("active_emergency_budget"):
@@ -259,7 +269,7 @@ def render(on_restart):
             diary.append(("NEXT", phase_info(min(3, int(s.get("block", 1)) + 1))["title"]))
         if year >= 5:
             diary.append(("TERM END", "General election preparations"))
-        if len(diary) < 5 and not s.get("spending_review_due"):
+        if len(diary) < 6 and not s.get("spending_review_due"):
             next_review_year = next((yr for yr in (1, 3, 5) if yr > year), None)
             if next_review_year:
                 diary.append(("PLANNED", f"Next Spending Review · Year {next_review_year}"))
