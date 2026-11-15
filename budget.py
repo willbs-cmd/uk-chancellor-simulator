@@ -1979,7 +1979,8 @@ def render_spending_review():
     draft = {}
     # Ministers submit differentiated bids; their reactions follow the live offer.
     bid_rates = SPENDING_REVIEW_BID_RATES
-    st.markdown("### Departmental bids · Year 1")
+    review_year = int(s.get("year", 1))
+    st.markdown(f"### Departmental bids · Government Year {review_year}")
     st.caption("Each Secretary of State has submitted a funding request. Negotiate the settlement: generous awards improve ministerial support but cost more, while rejecting bids risks cabinet tension and service pressure.")
     with st.expander("Read the Secretaries' submissions", expanded=False):
         for key in departments:
@@ -2072,13 +2073,13 @@ def render_spending_review():
     st.caption("Set the planned annual uplift for years two and three. Once approved, these increases automatically flow into future departmental baselines and the fiscal position.")
     c_y2, c_y3 = st.columns(2)
     with c_y2:
-        year2_uplift = st.slider("Year 2 annual uplift (%)", -2.0, 6.0, 1.5, 0.5, key=f"sr_y2_{period}")
+        year2_uplift = st.slider(f"Government Year {review_year + 1} annual uplift (%)", -2.0, 6.0, 1.5, 0.5, key=f"sr_y2_{period}")
     with c_y3:
-        year3_uplift = st.slider("Year 3 annual uplift (%)", -2.0, 6.0, 2.5, 0.5, key=f"sr_y3_{period}")
+        year3_uplift = st.slider(f"Government Year {review_year + 2} annual uplift (%)", -2.0, 6.0, 2.5, 0.5, key=f"sr_y3_{period}")
     path_rows = [
-        {"Spending year": "Year 1 · agreed settlement", "Annual departmental budgets": f"£{proposed_total:,.1f}bn", "Annual change": f"£{annual_change:+,.1f}bn"},
-        {"Spending year": "Year 2 · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100):,.1f}bn", "Annual change": f"{year2_uplift:+.1f}%"},
-        {"Spending year": "Year 3 · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100) * (1 + year3_uplift / 100):,.1f}bn", "Annual change": f"{year3_uplift:+.1f}%"},
+        {"Spending year": f"Government Year {review_year} · agreed settlement", "Annual departmental budgets": f"£{proposed_total:,.1f}bn", "Annual change": f"£{annual_change:+,.1f}bn"},
+        {"Spending year": f"Government Year {review_year + 1} · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100):,.1f}bn", "Annual change": f"{year2_uplift:+.1f}%"},
+        {"Spending year": f"Government Year {review_year + 2} · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100) * (1 + year3_uplift / 100):,.1f}bn", "Annual change": f"{year3_uplift:+.1f}%"},
     ]
     st.dataframe(pd.DataFrame(path_rows), hide_index=True, use_container_width=True)
 
