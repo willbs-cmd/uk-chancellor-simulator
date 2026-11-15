@@ -1,6 +1,6 @@
 """Policy decisions: 2 blocks per year, followed by the Budget.
 
-Each decision lists five options in a fixed ideology order (see IDEOLOGIES). The game shuffles them and
+Each decision lists six options in a fixed ideology order (see IDEOLOGIES). The game shuffles them and
 hides the ideology tags unless the player turns them on. Some options also queue a DELAYED consequence."""
 import random
 import re
@@ -35,14 +35,16 @@ BRANCHES = {
             '2. (Social Democratic) Agree a workforce and productivity compact with public services.',
             '3. (Centric) Target extra funding at the worst-performing services.',
             '4. (Free-Market) Expand independent-sector provision to cut waiting times.',
-            '5. (Fiscal Austerity) Require departments to absorb costs through efficiency savings.'
+            '5. (Fiscal Austerity) Require departments to absorb costs through efficiency savings.',
+            '6. (Centric) Agree service-by-service recovery plans with measurable targets and independent delivery reviews.'
         ],
         'effects': [
             {'headroom': -7.0, 'approval': 5.0, 'nhs_morale': 12, 'schools': 4, 'growth': 0.15, 'message': 'A major public-service expansion is underway.'},
             {'headroom': -4.0, 'approval': 4.0, 'nhs_morale': 9, 'unemployment': -0.1, 'message': 'A workforce and productivity compact is agreed.'},
             {'headroom': -2.0, 'approval': 1.5, 'nhs_morale': 4, 'message': 'Funding is concentrated on the services under greatest strain.'},
             {'headroom': -1.0, 'market_conf': 3.0, 'approval': 0.5, 'nhs_morale': 1, 'message': 'Independent providers take on more NHS activity.'},
-            {'headroom': 3.5, 'approval': -3.5, 'nhs_morale': -7, 'schools': -3, 'message': 'Departments are ordered to find savings.'}
+            {'headroom': 3.5, 'approval': -3.5, 'nhs_morale': -7, 'schools': -3, 'message': 'Departments are ordered to find savings.'},
+            {'headroom': -1.2, 'approval': 1.8, 'market_conf': 0.8, 'nhs_morale': 3, 'schools': 2, 'message': 'A targeted service recovery plan is agreed with clear delivery tests.'}
         ]
     },
     'growth_mission': {
@@ -55,14 +57,16 @@ BRANCHES = {
             '2. (Social Democratic) Launch regional investment partnerships and skills guarantees.',
             '3. (Centric) Establish a cross-party infrastructure and planning commission.',
             '4. (Free-Market) Cut business taxes and accelerate deregulation.',
-            '5. (Fiscal Austerity) Prioritise debt reduction before new growth spending.'
+            '5. (Fiscal Austerity) Prioritise debt reduction before new growth spending.',
+            '6. (Centric) Launch a productivity compact linking planning, technical skills and infrastructure.'
         ],
         'effects': [
             {'headroom': -6.0, 'growth': 0.35, 'approval': 2.0, 'debt': 0.5, 'message': 'A state-led investment drive begins.'},
             {'headroom': -4.0, 'growth': 0.3, 'unemployment': -0.2, 'approval': 3.0, 'message': 'Regional investment partnerships are launched.'},
             {'headroom': -1.5, 'growth': 0.2, 'homes_built': 10, 'market_conf': 2.0, 'message': 'Planning and infrastructure reform is agreed.'},
             {'headroom': 1.5, 'growth': 0.25, 'market_conf': 4.0, 'approval': -1.0, 'message': 'Business tax and regulatory changes are announced.'},
-            {'headroom': 4.0, 'growth': -0.1, 'approval': -2.0, 'market_conf': 2.0, 'message': 'New investment is deferred in favour of fiscal consolidation.'}
+            {'headroom': 4.0, 'growth': -0.1, 'approval': -2.0, 'market_conf': 2.0, 'message': 'New investment is deferred in favour of fiscal consolidation.'},
+            {'headroom': -2.0, 'growth': 0.22, 'approval': 1.2, 'market_conf': 1.0, 'homes_built': 7, 'unemployment': -0.1, 'message': 'A productivity compact aligns skills, planning and infrastructure investment.'}
         ]
     },
     'market_reform': {
@@ -75,14 +79,16 @@ BRANCHES = {
             '2. (Social Democratic) Strengthen regulation while retaining private investment.',
             '3. (Centric) Review each reform against value-for-money tests.',
             '4. (Free-Market) Accelerate competition, outsourcing and tax simplification.',
-            '5. (Fiscal Austerity) Use asset sales to reduce borrowing.'
+            '5. (Fiscal Austerity) Use asset sales to reduce borrowing.',
+            '6. (Centric) Retain public safeguards while opening selected services to transparent competition.'
         ],
         'effects': [
             {'approval': 3.0, 'market_conf': -5.0, 'headroom': -2.0, 'message': 'The government pauses the market reform programme.'},
             {'approval': 1.5, 'market_conf': 1.0, 'headroom': -1.0, 'message': 'A stronger regulatory framework is introduced.'},
             {'approval': 0.5, 'market_conf': 1.5, 'headroom': 0.5, 'message': 'Reforms are subjected to value-for-money reviews.'},
             {'approval': -1.5, 'market_conf': 5.0, 'growth': 0.25, 'headroom': 2.0, 'message': 'The market reform programme is accelerated.'},
-            {'approval': -2.5, 'market_conf': 3.0, 'headroom': 4.0, 'debt': -0.5, 'message': 'Selected public assets are sold to reduce borrowing.'}
+            {'approval': -2.5, 'market_conf': 3.0, 'headroom': 4.0, 'debt': -0.5, 'message': 'Selected public assets are sold to reduce borrowing.'},
+            {'approval': 0.8, 'market_conf': 2.0, 'growth': 0.12, 'headroom': 0.5, 'message': 'Targeted competition is introduced with public-service safeguards.'}
         ]
     },
     'fiscal_reset': {
@@ -95,14 +101,16 @@ BRANCHES = {
             '2. (Social Democratic) Protect core services but raise targeted revenue.',
             '3. (Centric) Publish a balanced multi-year fiscal framework.',
             '4. (Free-Market) Use supply-side tax reforms to lift receipts over time.',
-            '5. (Fiscal Austerity) Set out a tough spending and borrowing reduction plan.'
+            '5. (Fiscal Austerity) Set out a tough spending and borrowing reduction plan.',
+            '6. (Centric) Adopt a rolling fiscal framework that protects productive investment and tests delivery.'
         ],
         'effects': [
             {'approval': 3.0, 'headroom': -4.0, 'market_conf': -3.0, 'message': 'The government protects household incomes.'},
             {'approval': 1.5, 'headroom': -2.0, 'deficit': -0.3, 'message': 'Targeted revenue measures support core services.'},
             {'headroom': 1.5, 'market_conf': 3.0, 'approval': 0.5, 'message': 'A balanced fiscal framework is published.'},
             {'growth': 0.2, 'market_conf': 3.0, 'headroom': 0.5, 'message': 'Supply-side tax reforms are announced.'},
-            {'headroom': 5.0, 'deficit': -0.8, 'approval': -4.0, 'growth': -0.15, 'message': 'A tough consolidation plan is adopted.'}
+            {'headroom': 5.0, 'deficit': -0.8, 'approval': -4.0, 'growth': -0.15, 'message': 'A tough consolidation plan is adopted.'},
+            {'headroom': 1.0, 'deficit': -0.25, 'approval': 0.8, 'growth': 0.05, 'market_conf': 1.5, 'message': 'A rolling fiscal framework balances credible borrowing control with protected investment.'}
         ]
     }
 }
