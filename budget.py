@@ -852,6 +852,48 @@ def _apply(draft=None):
     s.message = f"Budget delivered. It {verb} public finances by £{abs(imp['headroom']):.1f}B a year."
 
 
+def _sync_editor_controls(source=None):
+    """Hydrate every Budget widget from an approved ledger or saved draft."""
+    s = st.session_state
+    source = source if isinstance(source, dict) else s.budget_applied
+    source = source or s.budget_applied
+    tax = source.get('tax', {}) or {}
+    spend = source.get('spend', {}) or {}
+    tax_pol = source.get('tax_pol', {}) or {}
+    spend_pol = source.get('spend_pol', {}) or {}
+    thresholds = source.get('thresholds', {}) or {}
+    threshold_defaults = defaults()['thresholds']
+
+    s['budget_strategy'] = source.get('strategy', 'balanced')
+    for key, spec in TAXES.items():
+        s[f'bt_{key}'] = tax.get(key, spec['default'])
+    for key in SPEND_DEFAULTS:
+        s[f'bs_{key}'] = float(spend.get(key, 0.0))
+    for key in TAX_POLICIES:
+        s[f'btp_{key}'] = bool(tax_pol.get(key, False))
+    for key in SPEND_POLICIES:
+        s[f'bsp_{key}'] = bool(spend_pol.get(key, False))
+    for key, value in threshold_defaults.items():
+        s[f'bt_threshold_{key}'] = thresholds.get(key, value)
+
+
+def prepare_editor_state():
+    """Restore controls at a new Budget period or when returning from a forecast stage."""
+    s = st.session_state
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    new_period = s.get('budget_editor_period', '') != period
+    resume_draft = bool(s.get('budget_editor_restore_draft'))
+    if not (new_period or resume_draft):
+        return False
+
+    pending = s.get('budget_day_draft')
+    use_pending = (resume_draft or int(s.get('budget_day_stage', 0)) == 0) and isinstance(pending, dict)
+    _sync_editor_controls(pending if use_pending else s.budget_applied)
+    s.budget_editor_period = period
+    s.budget_editor_restore_draft = False
+    return True
+
+
 def _reset():
     s = st.session_state
     s.budget_strategy = s.budget_applied.get('strategy', 'balanced')
@@ -1495,6 +1537,7 @@ def render(submit=None, after_summary=None):
     """Draw the whole Budget screen. ``submit`` draws the Submit button (it lives in engine land, so app.py passes it in);
     ``after_summary`` draws anything that should sit just under the summary (the manifesto pledge chips)."""
     ensure()
+    prepare_editor_state()
     s = st.session_state
     applied, cur = s.budget_applied, read()
     changed = cur != applied
