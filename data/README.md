@@ -4,7 +4,7 @@ The game reads these JSON files at startup. You can change game content and bala
 
 ## Files
 
-- `decisions.json`: policy topics, their five player-facing options, effects, ideology order, Sir Humphrey reactions, and delayed consequences.
+- `decisions.json`: policy topics, their six player-facing options, effects, ideology order, Sir Humphrey reactions, and delayed consequences.
 - `crises.json`: crisis text and response options. Each response is a two-item array: `[label, effect_object]`.
 - `policies.json`: tax controls, tax schemes, spending departments, spending schemes, department nudges, and baseline fiscal parameters. Tax sliders include basic/higher/additional income-tax rates, National Insurance, VAT, fuel and alcohol/tobacco duties, corporation tax, property/wealth taxes, capital gains, inheritance, council tax, land value tax, a financial transactions levy, carbon pricing and sugary-drinks duty.
 - `imf_uk_baseline.json`: the external IMF World Economic Outlook vintage, source metadata and UK macroeconomic baseline values.
@@ -12,7 +12,7 @@ The game reads these JSON files at startup. You can change game content and bala
 
 ## Editing a policy decision
 
-Each entry in `decisions.json` has `year`, `block`, and `decision`. The game expects five option labels and five effect objects in the same order as the `ideologies` array. Effects are simplified deltas to game stats, e.g. `"approval": 2` or `"headroom": -1.5`. Use finite numbers and a `message` in each effect so the player gets feedback.
+Each entry in `decisions.json` has `year`, `block`, and `decision`. The game expects six option labels and six effect objects in the same order as the `ideologies` array, with the sixth choice treated as a Centric compromise. Effects are simplified deltas to game stats, e.g. `"approval": 2` or `"headroom": -1.5`. Use finite numbers and a `message` in each effect so the player gets feedback.
 
 Delayed consequences are keyed by the same year/block and contain option indexes as strings (`"0"` through `"4"`). Each delayed entry uses `after`, `title`, `text`, `warn` and `fx`.
 
