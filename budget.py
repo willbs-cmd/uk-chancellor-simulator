@@ -1223,9 +1223,9 @@ def apply_ongoing():
     s.budget_scheme_delivery = next_status
     if newly_maturing:
         s.message = str(s.get('message', '')) + f" Scheme delivery advanced this year: {', '.join(newly_maturing[:3])}{' and other programmes' if len(newly_maturing) > 3 else ''}."
-    # A Budget's tax settings and policy choices are recurring settings. Department
-    # percentages are annual changes, so compound them once and then start the next
-    # year's draft at zero against the newly approved departmental baseline.
+    # Approved tax, programme and departmental settlement settings are recurring
+    # choices. Compound each approved departmental rate once at Spring, then keep
+    # that same rate in the next Budget so the Chancellor can retain or revise it.
     for k in SPEND_DEFAULTS:
         # The approved percentage is a recurring annual settlement. Keep it in
         # the ledger and widget; compound it once into the actual allocation.
