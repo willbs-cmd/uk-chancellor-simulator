@@ -223,8 +223,8 @@ def check(n=None, difficulty=None):
             options = decisions.get_options(branch, f"branch-contract-{branch_id}")
             if len(branch.get('options', [])) != 6 or len(branch.get('effects', [])) != 6 or len(options) != 6:
                 failures.append(f"Conditional storyline '{branch_id}' does not expose six matched playable options.")
-            elif options[5].get('ideology') != 'Centric':
-                failures.append(f"Conditional storyline '{branch_id}' sixth option is not labelled Centric.")
+            elif sum(1 for option in options if option.get('ideology') == 'Centric') != 2:
+                failures.append(f"Conditional storyline '{branch_id}' must include both its standard and compromise Centric approaches.")
     except Exception as exc:
         failures.append(f"Six-option policy content regression check failed: {exc}")
 
