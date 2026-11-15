@@ -232,9 +232,11 @@ def render(on_restart):
                 unsafe_allow_html=True,
             )
 
-        # The diary reflects the current phase and any queued events.
+        # The diary reflects queued decisions and the revised fiscal-event calendar.
         st.markdown("<div class='desk-section-title'>DIARY & NEXT STEPS</div>", unsafe_allow_html=True)
         diary = []
+        if s.get("active_emergency_budget"):
+            diary.append(("NOW", "Deliver Emergency Budget"))
         if s.get("active_crisis"):
             diary.append(("NOW", "Emergency decision"))
         if s.get("active_weekly_event"):
@@ -243,17 +245,27 @@ def render(on_restart):
             diary.append(("PENDING", "Ministerial request"))
         if s.get("active_dispute"):
             diary.append(("PENDING", "Cabinet dispute"))
+        if s.get("spending_review_due"):
+            diary.append(("NOW", "Spending Review · agree departmental settlements"))
+        if s.get("autumn_statement_due"):
+            diary.append(("NOW", "Autumn Statement · publish or skip"))
         if s.get("local_election_due"):
             diary.append(("UPCOMING", "Local elections"))
         if s.get("budget_passed"):
             diary.append(("NEXT", "Proceed to Spring"))
-        elif int(s.get("block", 1)) == 3:
+        elif int(s.get("block", 1)) == 3 and not s.get("active_emergency_budget"):
             diary.append(("CURRENT", "Spring Budget and Commons vote"))
-        else:
+        elif not s.get("active_emergency_budget"):
             diary.append(("NEXT", phase_info(min(3, int(s.get("block", 1)) + 1))["title"]))
         if year >= 5:
             diary.append(("TERM END", "General election preparations"))
-        for status, item in diary[:5]:
+        if len(diary) < 5 and not s.get("spending_review_due"):
+            next_review_year = next((yr for yr in (1, 3, 5) if yr > year), None)
+            if next_review_year:
+                diary.append(("PLANNED", f"Next Spending Review · Year {next_review_year}"))
+            elif year <= 5:
+                diary.append(("PLANNED", "Next Spending Review · next term"))
+        for status, item in diary[:6]:
             st.markdown(
                 f"<div class='desk-diary'><span>{_safe(status)}</span><strong>{_safe(item)}</strong></div>",
                 unsafe_allow_html=True,
@@ -287,11 +299,18 @@ def render(on_restart):
             help="Save your progress and load it again from the start screen."
         )
         with st.expander("Annual cycle guide", expanded=False):
+            st.markdown("**Autumn Statement**")
+            st.caption("A standalone opening event. Publish a limited fiscal update or proceed without one.")
+            st.markdown("**Spending Review**")
+            st.caption("Held at the start of Years 1, 3 and 5. Agree departmental cash baselines and a multi-year spending path.")
             for num in (1, 2, 3):
                 item = phase_info(num)
                 st.markdown(f"**{item['title']}**")
                 st.caption(item["guide"])
-            st.caption("Two policy decisions lead into a Budget vote each year.")
+            st.markdown("**Spring Budget**")
+            st.caption("The annual tax-and-spending package, followed by a Commons vote and market reaction.")
+            st.markdown("**Emergency Budget**")
+            st.caption("Only called when severe fiscal, market or economic stress requires a full revised package.")
         with st.expander("End this run", expanded=False):
             st.caption("Resigning ends your career and shows your scorecard. Abandoning discards this run.")
             if st.button("Resign as Chancellor", use_container_width=True):
