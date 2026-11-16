@@ -239,7 +239,7 @@ def _defaults():
         parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],
         parliament_actions={}, parliament_last_strategy=None,
         local_election_due=False, local_election_result=None, local_election_history=[], opening_parliament_seats={}, opening_mandate_pending=False,
-        parliament_seats={}, government_type='majority', government_coalition_partners=[], government_working_majority=39, coalition_stability=70.0,
+        parliament_seats={}, government_type='majority', government_coalition_partners=[], government_working_majority=0, coalition_stability=70.0,
         election_campaign_done=False, election_night_started=False, election_campaign_strategy='',
         election_campaign_turnout=0.0, election_campaign_approval=0.0, election_campaign_week=1,
         election_campaign_actions=[], constituency_incumbents={}, previous_election_seats={},
