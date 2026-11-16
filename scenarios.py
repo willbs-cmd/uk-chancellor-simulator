@@ -63,7 +63,7 @@ def _crisis_weight(crisis_id, s):
     if crisis_id in ('gilt_revolt', 'rating_warning', 'sovereign_debt_crisis'):
         if float(s.get('market_conf', 60.0)) < 45 or float(s.get('headroom', 5.0)) < 0:
             weight += 1.7
-    if crisis_id in ('nhs_walkout', 'winter_flu', 'water_collapse') and float(country_state.get('nhs_waiting', 0.0)) > 0.5:
+    if crisis_id in ('nhs_walkout', 'winter_flu', 'water_collapse') and float(country_state.get('nhs_waiting', 0.0)) > 8.0:
         weight += 0.8
     if crisis_id in ('energy_bankruptcy', 'oil_price_spike', 'grid_blackout') and float(s.get('inflation', 2.0)) > 4:
         weight += 0.9
