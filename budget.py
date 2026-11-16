@@ -641,11 +641,29 @@ def revenue_pie(b):
     return data
 
 
-def spending_pie(b):
+def _annual_settlement_active(enabled=None):
+    """Whether this Budget applies a fresh annual departmental settlement to today's cash baseline."""
+    if enabled is not None:
+        return bool(enabled)
+    return str(st.session_state.get('budget_day_type', 'annual')).lower() != 'emergency'
+
+
+def _spend_rate_change(old_rate, new_rate, annual_settlement=None):
+    """A Spring Budget applies the full recurring rate; an emergency Budget applies only its change."""
+    return float(new_rate) if _annual_settlement_active(annual_settlement) else float(new_rate) - float(old_rate)
+
+
+def spending_pie(b, annual_settlement=None):
     s = st.session_state
     ensure()
     applied_spend = s.budget_applied.get('spend', {})
-    data = {SPEND_DEFAULTS[k]['short']: round(s.dept_spend[k] * (1.0 + (float(b['spend'][k]) - float(applied_spend.get(k, 0.0))) / 100.0), 1) for k in SPEND_DEFAULTS}
+    data = {
+        SPEND_DEFAULTS[k]['short']: round(
+            s.dept_spend[k] * (1.0 + _spend_rate_change(
+                applied_spend.get(k, 0.0), b['spend'][k], annual_settlement
+            ) / 100.0), 1
+        ) for k in SPEND_DEFAULTS
+    }
     data['Debt interest'] = round(interest(), 1)
     scheme_data = scheme_financials(b)
     pol_spend = float(scheme_data['spend_cost'])
@@ -666,7 +684,7 @@ def threshold_budget_balance(thresholds):
     return -cost + (0.5 if t.get('council_tax_revaluation') else 0.0)
 
 
-def totals(b):
+def totals(b, annual_settlement=None):
     """(receipts, spending) in £bn for a Budget draft, at today's debt interest."""
     s = st.session_state
     ensure()
@@ -679,7 +697,9 @@ def totals(b):
         drag_rate = 0.35 if thresholds.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
         rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
     applied_spend = s.budget_applied.get('spend', {})
-    spend = (sum(s.dept_spend[k] * (1.0 + (float(b['spend'][k]) - float(applied_spend.get(k, 0.0))) / 100.0) for k in SPEND_DEFAULTS) + interest()
+    spend = (sum(s.dept_spend[k] * (1.0 + _spend_rate_change(
+                 applied_spend.get(k, 0.0), b['spend'][k], annual_settlement
+             ) / 100.0) for k in SPEND_DEFAULTS) + interest()
              + float(scheme_data['spend_cost']))
     return rev, spend
 
@@ -735,13 +755,15 @@ def assess_pm_priorities(draft=None):
         results.append({'title': item.get('title', 'PM priority'), 'met': bool(met), 'detail': detail})
     return results
 
-def impact(old, new):
-    """What moving from Budget ``old`` to Budget ``new`` does to the headline numbers (applied once, when delivered)."""
+def impact(old, new, annual_settlement=None):
+    """What delivering Budget ``new`` does against today's cash baseline."""
     s = st.session_state
     ensure()
     ro, rn = revenues(old), revenues(new)
     d = {k: rn[k] - ro[k] for k in ro}
-    ds = {k: s.dept_spend[k] * ((new['spend'][k] - old['spend'][k]) / 100.0) for k in SPEND_DEFAULTS}
+    ds = {k: s.dept_spend[k] * (_spend_rate_change(
+        old['spend'].get(k, 0.0), new['spend'][k], annual_settlement
+    ) / 100.0) for k in SPEND_DEFAULTS}
 
     old_schemes = scheme_financials(old)
     new_schemes = scheme_financials(new)
@@ -801,14 +823,15 @@ def impact(old, new):
 def _clip(v): return max(0, min(100, v))
 
 
-def _apply(draft=None):
-    """Enact the exact Budget draft approved by the Commons, not a fresh widget read."""
+def _apply(draft=None, annual_settlement=None):
+    """Enact the approved Budget and, for a Spring Budget, compound its annual cash settlement once."""
     s = st.session_state
     new, old = (read() if draft is None else draft), s.budget_applied
-    if new == old:
+    annual_settlement = _annual_settlement_active(annual_settlement)
+    if new == old and not annual_settlement:
         s.message = 'Budget unchanged.'
         return
-    imp = impact(old, new)
+    imp = impact(old, new, annual_settlement=annual_settlement)
 
     state.snapshot()
 
@@ -820,6 +843,13 @@ def _apply(draft=None):
     s.inflation = round(s.inflation + imp['inflation'], 2)
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
     _set_scheme_delivery_after_budget(old, new)
+    if annual_settlement:
+        # The previous year's reduction is already inside dept_spend. Apply this
+        # year's full recurring rate to that latest cash baseline, even when the
+        # player leaves the slider unchanged from the previous Budget.
+        for key in SPEND_DEFAULTS:
+            rate = float(new.get('spend', {}).get(key, 0.0))
+            s.dept_spend[key] = round(float(s.dept_spend[key]) * (1.0 + rate / 100.0), 1)
     s.budget_applied = new
     # Enact tax thresholds only as part of the delivered Budget package.
     approved_thresholds = new.get('thresholds', {})
@@ -849,7 +879,8 @@ def _apply(draft=None):
         acc[k] = round(acc.get(k, 0.0) + v, 4)
     s.budget_impact = acc
     verb = 'improves' if imp['headroom'] >= 0 else 'worsens'
-    s.message = f"Budget delivered. It {verb} public finances by £{abs(imp['headroom']):.1f}B a year."
+    settlement_note = ' Departmental percentages have been applied to the latest cash baselines.' if annual_settlement else ''
+    s.message = f"Budget delivered. It {verb} public finances by £{abs(imp['headroom']):.1f}B a year.{settlement_note}"
 
 
 def _sync_editor_controls(source=None):
@@ -1267,15 +1298,11 @@ def apply_ongoing():
     s.budget_scheme_delivery = next_status
     if newly_maturing:
         s.message = str(s.get('message', '')) + f" Scheme delivery advanced this year: {', '.join(newly_maturing[:3])}{' and other programmes' if len(newly_maturing) > 3 else ''}."
-    # Approved tax, programme and departmental settlement settings are recurring
-    # choices. Compound each approved departmental rate once at Spring, then keep
-    # that same rate in the next Budget so the Chancellor can retain or revise it.
+    # Approved departmental percentages remain as the starting setting for the
+    # next Budget. The cash compounding happens when that Budget is enacted, not
+    # here at Spring, so an annual settlement can never be applied twice.
     for k in SPEND_DEFAULTS:
-        # The approved percentage is a recurring annual settlement. Keep it in
-        # the ledger and widget; compound it once into the actual allocation.
-        pct_change = float(s.budget_applied['spend'].get(k, 0.0))
-        s.dept_spend[k] = round(float(s.dept_spend[k]) * (1.0 + pct_change / 100.0), 1)
-        s[f'bs_{k}'] = pct_change
+        s[f'bs_{k}'] = float(s.budget_applied['spend'].get(k, 0.0))
 
     # Preserve the approved tax rates, strategy and policy selections across years.
     # Only reset one-off whip interventions and the cumulative delivery ledger.
@@ -1425,6 +1452,7 @@ def _tax_row(k, t, s):
 def _spend_row(k, sp, s):
     base = float(s.dept_spend[k])
     pct = float(s.get(f'bs_{k}', s.budget_applied.get('spend', {}).get(k, 0.0)))
+    annual_settlement = _annual_settlement_active()
     c1, c2, c3 = st.columns([2.0, 3.2, 1.35], gap='small')
     with c1:
         st.markdown(f"<div class='lv'><b>{sp['short']}</b><br><small>Baseline £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
@@ -1438,7 +1466,7 @@ def _spend_row(k, sp, s):
     with c3:
         pct = float(s[f'bs_{k}'])
         approved_pct = float(s.budget_applied.get('spend', {}).get(k, 0.0))
-        effective_change = pct - approved_pct
+        effective_change = _spend_rate_change(approved_pct, pct, annual_settlement)
         new_val = base * (1.0 + effective_change / 100.0)
         st.markdown(_value_html(f'£{new_val:,.1f}bn', new_val - base, good_when_positive=True, extra=f' ({pct:+.1f}%) · annual impact'),
                     unsafe_allow_html=True)
@@ -1545,31 +1573,32 @@ def render(submit=None, after_summary=None):
     changed = cur != applied
     s.budget_strategy = cur.get('strategy', 'balanced')
 
-    rev_now, spend_now = totals(cur)
-    rev_app, spend_app = totals(applied)
+    rev_now, spend_now = totals(cur, annual_settlement=annual_settlement)
+    rev_app, spend_app = totals(applied, annual_settlement=False)
     bal_now, bal_app = rev_now - spend_now, rev_app - spend_app
-    deficit_now = s.deficit + (bal_app - bal_now)     # the running deficit, adjusted for the draft
-    imp = impact(applied, cur)
+    deficit_now = s.deficit + (bal_app - bal_now)     # includes the next annual departmental settlement
+    imp = impact(applied, cur, annual_settlement=annual_settlement)
     ayes = projected_ayes(cur)
 
-    def delta(v, unit=''):
-        return f'{v:+,.1f}{unit}' if changed else '\u2014'
+    def delta(v, unit='', force=False):
+        return f'{v:+,.1f}{unit}' if changed or force else '\u2014'
 
     st.markdown(
         f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
         unsafe_allow_html=True,
     )
-    st.caption('Approved tax rates, thresholds, departmental spending settings and policy schemes carry forward automatically. Departmental percentage settlements recur each year; change a percentage to revise the ongoing annual settlement.')
+    annual_settlement = _annual_settlement_active()
+    st.caption('Approved tax rates, thresholds, departmental spending settings and policy schemes carry forward automatically. Departmental percentages are year-on-year changes: retaining a rate applies it again to the latest cash baseline when this annual Budget is delivered.')
     with st.container(key="budget_financial_summary"):
         render_chips([
         dict(label='Income', value=f'£{rev_now:,.0f}bn', delta=delta(rev_now - rev_app, 'bn'),
              num=(rev_now - rev_app) if changed else 0, desc='Estimated annual tax and other government receipts.'),
-        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn'),
-             num=(spend_now - spend_app) if changed else 0, inverse=True, desc='Estimated annual government spending.'),
+        dict(label='Spending', value=f'£{spend_now:,.0f}bn', delta=delta(spend_now - spend_app, 'bn', force=annual_settlement),
+             num=(spend_now - spend_app) if (changed or annual_settlement) else 0, inverse=True, desc='Estimated annual government spending after this year’s recurring departmental settlements.'),
         dict(label='Deficit', value=f'£{max(0, deficit_now):,.0f}bn', delta=f'{deficit_now / GDP_BN * 100:.1f}% GDP',
              num=(bal_app - bal_now) if changed else 0, inverse=True, desc='The gap between annual spending and receipts.'),
-        dict(label='Fiscal headroom', value=f"£{s.headroom + imp['headroom']:.1f}bn", delta=delta(imp['headroom']),
-             num=imp['headroom'] if changed else 0, desc='Your remaining margin against the fiscal rule.'),
+        dict(label='Fiscal headroom', value=f"£{s.headroom + imp['headroom']:.1f}bn", delta=delta(imp['headroom'], force=annual_settlement),
+             num=imp['headroom'] if (changed or annual_settlement) else 0, desc='Your remaining margin against the fiscal rule.'),
         dict(label='Projected Ayes', value=str(ayes), delta=f'{ayes - WIN:+d} vs majority',
              num=ayes - WIN, desc='Estimated MPs supporting the Budget. 326 votes are required.'),
         dict(label='Market confidence', value=f"{_clip(s.market_conf + imp['market']):.0f}/100",
