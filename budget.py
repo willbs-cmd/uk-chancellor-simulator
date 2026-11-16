@@ -1054,7 +1054,8 @@ def commons_ayes(backbench=None, whip=None):
     extra = s.get('whip_ayes', 0) if whip is None else whip
     if s.get('spad') == 'enforcer':
         extra += ENFORCER_VOTES
-    return int(min(650, max(0, math.floor(WIN + 0.75 * (bb - 20)) + extra)))
+    seat_effect = max(-18, min(18, int(round(float(s.get('government_working_majority', 0)) * 0.10))))
+    return int(min(650, max(0, math.floor(WIN + 0.75 * (bb - 20)) + seat_effect + extra)))
 
 
 def projected_ayes(draft):
