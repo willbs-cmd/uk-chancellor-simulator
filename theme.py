@@ -2643,6 +2643,222 @@ input:focus-visible, textarea:focus-visible {
   *,*::before,*::after { transition:none !important; animation:none !important; }
 }
 
+
+/* SECOND PASS — denser Chancellor workspace, based on the live screenshots. */
+:root { --primary-color:#397b78; }
+section[data-testid="stSidebar"] {
+  width:290px !important;
+  min-width:290px !important;
+  max-width:290px !important;
+  flex:0 0 290px !important;
+}
+section[data-testid="stSidebar"] > div {
+  padding:.78rem .68rem 1rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+  gap:.38rem !important;
+}
+section[data-testid="stSidebar"] .desk-brand {
+  gap:9px !important;
+  padding:2px 1px 8px !important;
+  margin-bottom:1px !important;
+}
+section[data-testid="stSidebar"] .desk-monogram {
+  width:35px !important;
+  height:35px !important;
+  font-size:1.15rem !important;
+}
+section[data-testid="stSidebar"] .desk-title { font-size:1.02rem !important; }
+section[data-testid="stSidebar"] .desk-period {
+  gap:1px !important;
+  padding:7px 9px !important;
+  margin:0 0 1px !important;
+}
+section[data-testid="stSidebar"] .desk-section-title {
+  margin:5px 0 0 !important;
+  font-size:.58rem !important;
+}
+section[data-testid="stSidebar"] .desk-grid { gap:5px !important; }
+section[data-testid="stSidebar"] .desk-tile {
+  gap:1px !important;
+  padding:6px 7px !important;
+  border-radius:8px !important;
+}
+section[data-testid="stSidebar"] .desk-tile-label { font-size:.55rem !important; }
+section[data-testid="stSidebar"] .desk-tile strong { font-size:.91rem !important; }
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+  margin:0 !important;
+  border-radius:8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  min-height:2.05rem !important;
+  padding:.32rem .52rem !important;
+  font-size:.72rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  padding:.22rem .52rem .48rem !important;
+}
+section[data-testid="stSidebar"] .desk-warning {
+  margin:2px 0 !important;
+  padding:6px 8px !important;
+  font-size:.65rem !important;
+}
+section[data-testid="stSidebar"] .desk-diary {
+  gap:6px !important;
+  padding:4px 1px !important;
+}
+section[data-testid="stSidebar"] .desk-diary strong { font-size:.66rem !important; }
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {
+  font-size:.78rem !important;
+  line-height:1.35 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  min-height:2.25rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stButton"] button,
+section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
+  min-height:2.05rem !important;
+  padding:.35rem .55rem !important;
+  font-size:.7rem !important;
+}
+@media(max-width:1100px) {
+  section[data-testid="stSidebar"] {
+    width:270px !important;
+    min-width:270px !important;
+    max-width:270px !important;
+    flex-basis:270px !important;
+  }
+}
+@media(max-width:700px) {
+  section[data-testid="stSidebar"] {
+    width:min(88vw,320px) !important;
+    min-width:min(88vw,320px) !important;
+    max-width:min(88vw,320px) !important;
+    flex-basis:min(88vw,320px) !important;
+  }
+}
+
+/* Cabinet options: consistent, compact two-column choice cards. */
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] {
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:8px !important;
+  align-items:stretch !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label {
+  display:flex !important;
+  align-items:center !important;
+  min-height:50px !important;
+  height:100% !important;
+  padding:8px 10px !important;
+  margin:0 !important;
+  border:1px solid #d5dee7 !important;
+  border-radius:8px !important;
+  background:#ffffff !important;
+  box-shadow:none !important;
+  transform:none !important;
+  transition:background .15s ease,border-color .15s ease !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label:hover {
+  background:#f4f8f9 !important;
+  border-color:#8eb7b3 !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
+  background:#edf6f5 !important;
+  border-color:#397b78 !important;
+  box-shadow:inset 3px 0 #397b78 !important;
+}
+.st-key-policy_options [data-testid="stRadio"] label p {
+  font-size:.88rem !important;
+  line-height:1.3 !important;
+  margin:0 !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label > div {
+  align-items:center !important;
+}
+.decision-section-head { margin:.55rem 0 .35rem !important; }
+.decision-brief-label { margin:9px 0 3px !important; }
+.st-key-decision_brief {
+  padding:13px !important;
+  margin:5px 0 8px !important;
+}
+.st-key-decision_brief [data-testid="stVerticalBlock"] { gap:.45rem !important; }
+.st-key-decision_brief [data-testid="stMetric"] {
+  min-height:68px !important;
+  padding:8px 10px !important;
+  border-radius:9px !important;
+}
+.st-key-decision_brief [data-testid="stMetricLabel"] p {
+  font-size:.76rem !important;
+  line-height:1.2 !important;
+}
+.st-key-decision_brief [data-testid="stMetricValue"] {
+  font-size:clamp(1.2rem,1.8vw,1.55rem) !important;
+  line-height:1.1 !important;
+}
+.st-key-decision_brief .decision-impact {
+  padding:9px 11px !important;
+  margin:3px 0 6px !important;
+  line-height:1.42 !important;
+}
+.st-key-decision_brief [data-testid="stMarkdownContainer"] ul {
+  margin:.2rem 0 .35rem !important;
+}
+.st-key-decision_brief [data-testid="stMarkdownContainer"] li {
+  margin:.08rem 0 !important;
+}
+.st-key-decision_brief [data-testid="stCaptionContainer"] p {
+  font-size:.76rem !important;
+  line-height:1.35 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"] {
+  background-color:#397b78 !important;
+  border-color:#397b78 !important;
+}
+@media(max-width:760px) {
+  .st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] {
+    grid-template-columns:1fr !important;
+  }
+  .st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label {
+    min-height:46px !important;
+  }
+  .st-key-decision_brief { padding:11px !important; }
+}
+
+
+.phase-status {
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:9px 12px;
+  margin:4px 0 7px;
+  border:1px solid #d5dee7;
+  border-left:3px solid #397b78;
+  border-radius:8px;
+  background:#ffffff;
+}
+.phase-status > span {
+  color:#397b78 !important;
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.phase-status > strong {
+  color:#203b59 !important;
+  font-size:.93rem;
+  line-height:1.25;
+}
+.phase-status > small {
+  color:#64788e !important;
+  font-size:.76rem;
+}
+.phase-status.is-neutral {
+  border-left-color:#a77d32;
+  background:#fbf8f1;
+}
+.phase-status.is-neutral > span { color:#8a6827 !important; }
+
 </style>
 """
 
