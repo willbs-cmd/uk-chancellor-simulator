@@ -280,6 +280,12 @@ def check(n=None, difficulty=None):
         legacy_fresh_crises = scen.recent_crisis_pool([], lookback=6, previous=scen.RANDOM_POOL[0])
         if scen.RANDOM_POOL[0] in legacy_fresh_crises:
             failures.append("An older save's last crisis was not included in the new repeat-prevention window.")
+        new_run('Labour', 'Normal', 81009)
+        st.session_state.last_crisis = scen.RANDOM_POOL[0]
+        st.session_state.crisis_event_history = []
+        scen._record_crisis(st.session_state, scen.RANDOM_POOL[1])
+        if st.session_state.crisis_event_history[:2] != scen.RANDOM_POOL[:2]:
+            failures.append("A legacy save's last crisis was not migrated when the new event history was first written.")
 
         new_run('Labour', 'Normal', 81010)
         st.session_state.weekly_event_history = ['nhs_strike', 'council_funding_row']
