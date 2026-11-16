@@ -1054,7 +1054,8 @@ def commons_ayes(backbench=None, whip=None):
     extra = s.get('whip_ayes', 0) if whip is None else whip
     if s.get('spad') == 'enforcer':
         extra += ENFORCER_VOTES
-    seat_effect = max(-18, min(18, int(round(float(s.get('government_working_majority', 0)) * 0.10))))
+    # A majority gives the Chancellor some security; a minority has to find votes elsewhere.
+    seat_effect = max(-55, min(10, int(round(float(s.get('government_working_majority', 0)) * 0.70))))
     return int(min(650, max(0, math.floor(WIN + 0.75 * (bb - 20)) + seat_effect + extra)))
 
 
