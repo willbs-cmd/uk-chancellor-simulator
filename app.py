@@ -430,7 +430,10 @@ if s.year > 5:
     scorecard_block()
     st.markdown("### 📺 Reactions from the party leaders")
     largest_party = max(r['seats'], key=r['seats'].get)
-    for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True)[:3]:
+    reaction_parties = sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True)[:3]
+    if s.party not in reaction_parties:
+        reaction_parties.append(s.party)
+    for party in reaction_parties:
         seat_swing = int(r.get('seat_changes', {}).get(party, 0))
         if party == s.party and r['win'] and seat_swing <= -25:
             reaction = f"The party remains in office but loses {abs(seat_swing)} seats. Senior MPs demand a review of the campaign and the government's direction."
