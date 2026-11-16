@@ -54,6 +54,7 @@ import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
 import local_elections  # noqa: E402
+import parliament  # noqa: E402
 import econ  # noqa: E402
 import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
@@ -818,6 +819,75 @@ def check(n=None, difficulty=None):
     repeated_totals, repeated_results = engine.compute_seats(sample_polls, return_details=True)
     if seat_totals != repeated_totals or local_results != repeated_results:
         failures.append("The same polling inputs must produce a repeatable constituency result.")
+
+    # The elected Parliament must persist between terms, and coalition partners must vote as partners.
+    try:
+        new_run('Labour', 'Normal', 31415)
+        s = st.session_state
+        elected = {
+            'Labour': 260, 'Conservative': 235, 'Liberal Democrats': 85,
+            'Reform UK': 35, 'Green Party': 20, 'SNP': 12, 'Plaid Cymru': 3,
+        }
+        if sum(elected.values()) != 650:
+            failures.append("Election seat regression fixture does not total 650.")
+        s.parliament_seats = dict(elected)
+        s.election_result = None
+        if parliament._party_seats(s) != elected:
+            failures.append("The new Parliament reverted to the opening seat allocation after the election result was cleared.")
+
+        s.government_type = 'coalition'
+        s.government_coalition_partners = ['Liberal Democrats']
+        s.coalition_stability = 70.0
+        s.government_working_majority = 19
+        option = {'label': 'A cross-party public service plan', 'ideology': 'Social Democratic', 'effect': {}}
+        _, coalition_votes = parliament._simulate_party_vote(option)
+        partner_ayes = coalition_votes['Liberal Democrats']['ayes']
+        s.government_coalition_partners = []
+        _, opposition_votes = parliament._simulate_party_vote(option)
+        opposition_ayes = opposition_votes['Liberal Democrats']['ayes']
+        if partner_ayes <= opposition_ayes:
+            failures.append("A coalition partner did not receive materially stronger support than an opposition party.")
+
+        s.government_working_majority = 40
+        strong_majority_projection = parliament.projected_ayes()
+        s.government_working_majority = -60
+        minority_projection = parliament.projected_ayes()
+        if strong_majority_projection <= minority_projection:
+            failures.append("A minority government did not face a lower projected Commons vote than a majority government.")
+
+        s.election_result = {
+            'win': True, 'kind': 'coalition', 'margin': 19, 'mandate_strength': 1,
+            'working_majority': 19, 'player_seats': 260, 'seats': dict(elected),
+            'coalition': 'Liberal Democrats', 'coalition_partners': ['Liberal Democrats'],
+        }
+        engine.continue_term()
+        if s.get('election_result') is not None or s.term != 2:
+            failures.append("Continuing after a coalition election did not start the next term cleanly.")
+        if parliament._party_seats(s) != elected:
+            failures.append("The latest elected Parliament was not retained into the new term.")
+        if s.get('government_type') != 'coalition' or s.get('government_coalition_partners') != ['Liberal Democrats']:
+            failures.append("Coalition formation details were not retained for the new term.")
+        if s.get('political_capital_points') != 3:
+            failures.append("A coalition government did not begin with a reduced political-capital allowance.")
+
+        new_run('Labour', 'Normal', 31416)
+        s = st.session_state
+        minority_seats = {
+            'Labour': 270, 'Conservative': 250, 'Liberal Democrats': 60,
+            'Reform UK': 35, 'Green Party': 20, 'SNP': 12, 'Plaid Cymru': 3,
+        }
+        s.election_result = {
+            'win': True, 'kind': 'minority', 'margin': 0, 'mandate_strength': 0,
+            'working_majority': -56, 'player_seats': 270,
+            'seats': minority_seats, 'coalition_partners': [],
+        }
+        engine.continue_term()
+        if s.get('government_type') != 'minority' or s.get('government_working_majority') != -56:
+            failures.append("A minority government's weak parliamentary position was not carried into the next term.")
+        if s.get('political_capital_points') != 2 or s.get('honeymoon') != 0:
+            failures.append("A minority government incorrectly received the full majority-government honeymoon.")
+    except Exception as exc:
+        failures.append(f"General election and government-formation regression check failed: {exc}")
 
     # Gilt risk should rise when debt, borrowing and market confidence deteriorate.
     calm_macro = dict(inflation=2.0, interest_rate=3.5, gilt_yield=3.8, growth=1.8,
