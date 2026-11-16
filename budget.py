@@ -1048,7 +1048,7 @@ def apply_irritants():
 
 
 def commons_ayes(backbench=None, whip=None):
-    """Ayes for the Budget. Crosses 326 exactly at backbench morale 20; whip interventions add votes on top."""
+    """Estimate Budget ayes from backbench morale, government seat arithmetic and the Whips."""
     s = st.session_state
     bb = s.backbench_opinion if backbench is None else backbench
     extra = s.get('whip_ayes', 0) if whip is None else whip
