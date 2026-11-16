@@ -190,7 +190,7 @@ def apply_effect(effect):
     if 'gilt_yield' in effect: s.gilt_yield = round(s.gilt_yield + effect['gilt_yield'], 2)
     if 'debt' in effect: s.debt = round(s.debt + effect['debt'], 2)
     for key in ('pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion',
-                'media_opinion', 'officials_confidence', 'household_confidence'):
+                'media_opinion', 'officials_confidence', 'household_confidence', 'business_confidence'):
         if key in effect:
             s[key] = round(_clip(float(s.get(key, 50.0)) + float(effect[key])), 1)
     for key in ('mortgage_pressure', 'rent_pressure', 'household_bill_pressure', 'local_finance_pressure'):
