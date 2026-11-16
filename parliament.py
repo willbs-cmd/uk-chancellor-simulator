@@ -266,7 +266,11 @@ def render():
     government_type = s.get("government_type", "majority")
     partners = s.get("government_coalition_partners", [])
     if government_type == "coalition":
-        st.info("Coalition government: " + ", ".join(partners) + " are treated as governing partners in policy votes. Their support varies with policy alignment and coalition stability.")
+        effective_stability = float(s.get("coalition_stability", 70.0))
+        effective_stability += (float(s.get("cab_opinion", 60.0)) - 60.0) * 0.20
+        effective_stability += (float(s.get("party_opinion", 60.0)) - 60.0) * 0.10
+        effective_stability = max(35.0, min(100.0, effective_stability))
+        st.info("Coalition government: " + ", ".join(partners) + f" are governing partners. Agreement strength: {effective_stability:.0f}/100. Their support changes with Cabinet confidence and policy alignment.")
     elif government_type == "minority":
         st.warning("Minority government: your party has no dependable Commons majority. The seat arithmetic makes bills harder to pass, so cross-party negotiations matter.")
     elif government_type == "regional":
