@@ -1557,8 +1557,18 @@ def continue_term():
         boost = round(min(15.0, max(5.0, margin / 10.0)), 1)
         for key in ('approval', 'pm_opinion', 'party_opinion', 'cab_opinion', 'backbench_opinion'):
             s[key] = round(_clip(float(s.get(key, 50.0)) + boost), 1)
-        s.political_capital_points = 5
-        message = f'A new majority-government term begins. The election honeymoon is worth +{boost} to approval and political confidence.'
+        seat_swing = int(r.get('seat_changes', {}).get(s.party, 0))
+        if seat_swing <= -20:
+            loss_penalty = min(7.0, round(abs(seat_swing) * 0.12, 1))
+            for key, factor in (('pm_opinion', 0.5), ('cab_opinion', 0.35),
+                                ('party_opinion', 1.0), ('backbench_opinion', 0.8)):
+                s[key] = round(_clip(float(s.get(key, 50.0)) - loss_penalty * factor), 1)
+            s.political_capital_points = 4 if seat_swing <= -35 else 5
+            message = (f'A new majority-government term begins, but the loss of {abs(seat_swing)} seats has unsettled the party. '
+                       f'Backbench and Cabinet confidence take a {loss_penalty:.1f}-point hit after the election honeymoon.')
+        else:
+            s.political_capital_points = 5
+            message = f'A new majority-government term begins. The election honeymoon is worth +{boost} to approval and political confidence.'
     elif kind == 'coalition':
         # A coalition wins office, but its mandate is shared and its own backbenchers
         # are less pleased about the compromises required to keep partners on board.
