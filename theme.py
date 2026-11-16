@@ -2501,6 +2501,148 @@ section[data-testid="stSidebar"] .desk-title {
   color:#203b59 !important;
   -webkit-text-fill-color:#203b59 !important;
 }
+
+/* ============================================================
+   FINAL WORKSPACE POLISH — consistent spacing, hierarchy and
+   responsive navigation. Keep the established Cabinet Office
+   light palette; this layer only resolves layout conflicts.
+   ============================================================ */
+:root {
+  --co-canvas:#f3f6f9;
+  --co-surface:#ffffff;
+  --co-surface-alt:#edf2f6;
+  --co-border:#d5dee7;
+  --co-border-strong:#b9c8d6;
+  --co-ink:#20364f;
+  --co-muted:#64788e;
+  --co-navy:#203b59;
+  --co-teal:#397b78;
+}
+[data-testid="stAppViewContainer"] { background:var(--co-canvas) !important; }
+.block-container {
+  width:100% !important;
+  max-width:1500px !important;
+  padding:1.15rem clamp(1rem,2vw,1.8rem) 1.5rem !important;
+}
+[data-testid="stVerticalBlock"] { gap:.72rem !important; }
+[data-testid="stHorizontalBlock"] { gap:.85rem !important; align-items:flex-start; }
+h1 { font-size:clamp(1.65rem,2.5vw,2.2rem) !important; margin:.25rem 0 .45rem !important; }
+h2 { font-size:clamp(1.35rem,2vw,1.7rem) !important; margin:.35rem 0 .35rem !important; }
+h3 { font-size:1.16rem !important; margin:.25rem 0 .25rem !important; }
+[data-testid="stCaptionContainer"] { line-height:1.45 !important; }
+
+/* Sidebar: narrower, calmer and aligned with the main workspace. */
+section[data-testid="stSidebar"] {
+  width:310px !important;
+  min-width:290px !important;
+  background:#fff !important;
+  border-right:1px solid var(--co-border) !important;
+  box-shadow:2px 0 12px rgba(32,54,79,.025);
+}
+section[data-testid="stSidebar"] > div { padding:1rem .8rem 1.25rem !important; }
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap:.55rem !important; }
+.desk-brand { padding:3px 2px 11px !important; margin-bottom:3px !important; }
+.desk-monogram { border-radius:9px !important; }
+.desk-period { padding:8px 10px !important; }
+.desk-section-title { margin:7px 0 1px !important; }
+.desk-grid { gap:6px !important; }
+.desk-tile { padding:7px 8px !important; }
+.desk-tile strong { font-size:.96rem !important; }
+section[data-testid="stSidebar"] [data-testid="stExpander"] { box-shadow:none !important; }
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary { min-height:2.35rem; }
+
+/* Navigation: tidy wrapping instead of clipped or cramped tabs. */
+[data-testid="stTabs"] [role="tablist"],
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:.3rem !important;
+  padding:0 0 .35rem !important;
+  border-bottom:1px solid var(--co-border) !important;
+}
+[data-testid="stTabs"] button[role="tab"],
+[data-testid="stTabs"] button[data-baseweb="tab"] {
+  flex:0 0 auto !important;
+  min-height:2.35rem !important;
+  padding:.48rem .78rem !important;
+  border:1px solid transparent !important;
+  border-radius:7px 7px 0 0 !important;
+  font-size:.86rem !important;
+  line-height:1.2 !important;
+  white-space:normal !important;
+}
+[data-testid="stTabs"] button[aria-selected="true"],
+[data-testid="stTabs"] button[aria-selected="true"][data-baseweb="tab"] {
+  background:var(--co-teal-soft) !important;
+  border-color:#c8dcda !important;
+  border-bottom:2px solid var(--co-teal) !important;
+  color:var(--co-navy) !important;
+  font-weight:750 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-panel"] { padding-top:.8rem !important; }
+
+/* Unified panels: consistent borders and restrained elevation. */
+[data-testid="stMetric"], .sc-card, .sk-wrap, .annual-progress,
+[data-testid="stExpander"], [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius:10px !important;
+}
+[data-testid="stMetric"] { padding:9px 11px !important; }
+.sc-card { box-shadow:0 2px 8px rgba(32,54,79,.04) !important; }
+[data-testid="stExpander"] { box-shadow:none !important; }
+[data-testid="stExpander"] details > summary { min-height:2.65rem; }
+[data-testid="stAlert"] { border-radius:9px !important; }
+hr { margin:.75rem 0 !important; }
+
+/* Inputs and action buttons: one consistent size and clear focus state. */
+[data-testid="stWidgetLabel"] p { font-size:.86rem !important; font-weight:650 !important; }
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea, [data-testid="stDateInput"] input,
+[data-testid="stTimeInput"] input, [data-baseweb="select"] > div {
+  min-height:2.55rem !important;
+  border-radius:7px !important;
+}
+[data-testid="stButton"] button, [data-testid="stDownloadButton"] button,
+[data-testid="stFormSubmitButton"] button {
+  min-height:2.5rem !important;
+  border-radius:7px !important;
+  font-weight:650 !important;
+  overflow-wrap:anywhere !important;
+}
+[data-testid="stButton"] button:focus-visible,
+[data-testid="stDownloadButton"] button:focus-visible,
+[data-baseweb="select"] > div:focus-within,
+input:focus-visible, textarea:focus-visible {
+  outline:2px solid var(--co-teal) !important;
+  outline-offset:2px !important;
+}
+[data-testid="stRadio"] [role="radiogroup"] { gap:.5rem !important; }
+[data-testid="stRadio"] label { min-height:2.65rem; }
+[data-testid="stSlider"] { padding-top:.1rem; }
+
+/* Avoid over-wide tables and broken labels on smaller screens. */
+[data-testid="stDataFrame"], [data-testid="stTable"] { max-width:100% !important; }
+[data-testid="stDataFrame"] { border:1px solid var(--co-border); border-radius:8px; overflow:hidden; }
+@media (max-width:1100px) {
+  .block-container { padding-left:1rem !important; padding-right:1rem !important; }
+  section[data-testid="stSidebar"] { width:290px !important; min-width:270px !important; }
+}
+@media (max-width:760px) {
+  .block-container { padding:.7rem .7rem 1rem !important; }
+  [data-testid="stHorizontalBlock"] { gap:.55rem !important; }
+  [data-testid="stTabs"] button[role="tab"],
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    min-height:2.2rem !important;
+    padding:.38rem .55rem !important;
+    font-size:.8rem !important;
+  }
+  [data-testid="stRadio"] div[role="radiogroup"] { grid-template-columns:1fr !important; }
+  .hud-row,.chip-row { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .st-key-budget_financial_summary .chip-row { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { transition:none !important; animation:none !important; }
+}
+
 </style>
 """
 
