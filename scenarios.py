@@ -49,9 +49,13 @@ def _record_crisis(s, crisis_id):
     s.last_crisis = crisis_id
 
 
-def recent_crisis_pool(recent=None, lookback=6):
+def recent_crisis_pool(recent=None, lookback=6, previous=None):
     """Return random crises that have not appeared in the most recent event window."""
-    blocked = set(list(recent or [])[-max(0, int(lookback)):])
+    history = list(recent or [])
+    if previous and (not history or history[-1] != previous):
+        history.append(previous)
+    count = max(0, int(lookback))
+    blocked = set(history[-count:]) if count else set()
     pool = [crisis_id for crisis_id in RANDOM_POOL if crisis_id not in blocked]
     return pool or list(RANDOM_POOL)
 
@@ -139,7 +143,7 @@ def pick_next(year, block, ideology):
                 return cid
 
     if year < 5 and random.random() < state.diff()['crisis']:
-        options = recent_crisis_pool(recent, lookback=6)
+        options = recent_crisis_pool(recent, lookback=6, previous=last)
         weights = [_crisis_weight(crisis_id, s) for crisis_id in options]
         crisis_id = random.choices(options, weights=weights, k=1)[0]
         _record_crisis(s, crisis_id)
