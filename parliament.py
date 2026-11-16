@@ -40,6 +40,7 @@ def projected_ayes(bonus=None):
         + 0.12 * (float(s.get("approval", 48)) - 50)
         + int(bonus)
         + max(-12, min(12, int(s.get("general_election_mandate", 0))))
+        + max(-18, min(18, int(round(float(s.get("government_working_majority", 0)) * 0.12))))
         + max(-3, min(3, int(round(float(s.get("local_government_mandate", 0))))))
     )
     if s.get("spad") == "enforcer":
@@ -65,10 +66,14 @@ def scale_effect(effect, factor):
 def _party_seats(s):
     """Use the latest election result, falling back to the latest polling split."""
     result = s.get("election_result") or {}
+    seats = result.get("seats", {}) if isinstance(result, dict) else {}
+    if not seats:
+        current = s.get("parliament_seats", {})
+        if current and sum(max(0, int(current.get(p, 0))) for p in state.PARTIES) == 650:
+            return {p: max(0, int(current.get(p, 0))) for p in state.PARTIES}
     opening = s.get("opening_parliament_seats", {})
     if not result and opening and sum(max(0, int(opening.get(p, 0))) for p in state.PARTIES) == 650:
         return {p: max(0, int(opening.get(p, 0))) for p in state.PARTIES}
-    seats = result.get("seats", {}) if isinstance(result, dict) else {}
     parties = list(state.PARTIES)
     if seats and sum(max(0, int(seats.get(p, 0))) for p in parties):
         raw = {p: max(0, int(seats.get(p, 0))) for p in parties}
@@ -111,6 +116,7 @@ def _simulate_party_vote(option, bonus=0):
     seats = _party_seats(s)
     ideology, austerity, homes = _policy_pressure(option)
     government = s.get("party", "Labour")
+    coalition_partners = set(s.get("government_coalition_partners", [])) if s.get("government_type") == "coalition" else set()
     result, total_ayes = {}, 0
     for party, strength in seats.items():
         if not strength:
@@ -125,6 +131,17 @@ def _simulate_party_vote(option, bonus=0):
             if not aligned:
                 support -= 0.08
             support += min(0.08, max(-0.08, bonus / max(1, strength)))
+        elif party in coalition_partners:
+            # Coalition MPs are part of the governing bloc, but their support
+            # depends on policy alignment and the health of the agreement.
+            stability = float(s.get("coalition_stability", 70.0))
+            support = 0.70 + (stability - 70.0) * 0.002
+            support += 0.08 if aligned else -0.08
+            if austerity and party in {"Labour", "SNP", "Plaid Cymru", "Green Party"}:
+                support -= 0.14
+            if austerity and party in {"Conservative", "Reform UK"}:
+                support += 0.05
+            support += min(0.04, max(-0.04, bonus / max(1, strength) * 0.5))
         else:
             # Opposition MPs mostly oppose the government, but cross-party votes
             # and ideological sympathy allow a minority to break ranks.
@@ -136,8 +153,9 @@ def _simulate_party_vote(option, bonus=0):
         support = max(0.02, min(0.98, support))
         ayes = max(0, min(strength, int(math.floor(strength * support + 0.5))))
         noes = strength - ayes
-        expected = "Government support" if party == government else "Opposition against"
-        rebels = noes if party == government else ayes
+        expected = ("Government support" if party == government else
+                    "Coalition partner support" if party in coalition_partners else "Opposition against")
+        rebels = noes if party == government or party in coalition_partners else ayes
         result[party] = {"seats": strength, "ayes": ayes, "noes": noes,
                          "rebels": rebels, "line": expected}
         total_ayes += ayes
@@ -239,6 +257,14 @@ def render():
     votes = projected_ayes()
     st.markdown("## 🏛️ The House of Commons")
     st.caption("Every major policy decision is put to a vote. Party unity, backbench morale and public approval determine support; you can spend political capital to influence the next bill. The Budget has a separate vote in the Whips & forecast tab.")
+    government_type = s.get("government_type", "majority")
+    partners = s.get("government_coalition_partners", [])
+    if government_type == "coalition":
+        st.info("Coalition government: " + ", ".join(partners) + " are treated as governing partners in policy votes. Their support varies with policy alignment and coalition stability.")
+    elif government_type == "minority":
+        st.warning("Minority government: your party has no dependable Commons majority. The seat arithmetic makes bills harder to pass, so cross-party negotiations matter.")
+    elif government_type == "regional":
+        st.info("Regional mandate: Westminster legislation still requires support from MPs beyond your party's regional bloc.")
 
     st.markdown("### 📰 Parliamentary update")
     approval = float(s.get("approval", 48))
