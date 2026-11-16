@@ -69,6 +69,9 @@ def _party_seats(s):
     seats = result.get("seats", {}) if isinstance(result, dict) else {}
     if not seats:
         current = s.get("parliament_seats", {})
+        if not current or sum(max(0, int(current.get(p, 0))) for p in state.PARTIES) != 650:
+            # Older saves pre-date the dedicated persistent Parliament field.
+            current = s.get("previous_election_seats", {})
         if current and sum(max(0, int(current.get(p, 0))) for p in state.PARTIES) == 650:
             return {p: max(0, int(current.get(p, 0))) for p in state.PARTIES}
     opening = s.get("opening_parliament_seats", {})
