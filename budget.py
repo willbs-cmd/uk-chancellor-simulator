@@ -1618,8 +1618,11 @@ def render(submit=None, after_summary=None):
     def delta(v, unit='', force=False):
         return f'{v:+,.1f}{unit}' if changed or force else '\u2014'
 
+    state_label = ('● UNSAVED DRAFT' if changed else
+                   '● ANNUAL SETTLEMENT DUE' if annual_settlement else '● BASELINE')
+    state_class = 'is-draft' if changed or annual_settlement else 'is-baseline'
     st.markdown(
-        f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
+        f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {state_class}'>{state_label}</span></div>",
         unsafe_allow_html=True,
     )
     st.caption('Approved tax rates, thresholds, departmental spending settings and policy schemes carry forward automatically. Departmental percentages are year-on-year changes: retaining a rate applies it again to the latest cash baseline when this annual Budget is delivered.')
@@ -2053,7 +2056,7 @@ def apply_spending_review_rollforward(s, target_year):
         s.dept_spend[key] = round(float(s.dept_spend.get(key, 0.0)) * (1.0 + uplift / 100.0), 1)
     # The Spending Review uplift changes the departmental cash baseline, but it
     # must not erase the Chancellor's separately approved Budget settlement rates.
-    # apply_ongoing() applies those recurring rates once at each Spring transition.
+    # The next annual Budget applies those recurring rates to this updated baseline.
     after = sum(float(s.dept_spend.get(k, 0.0)) for k in SPEND_DEFAULTS)
     change = round(after - before, 1)
     s.deficit = round(float(s.get('deficit', 0.0)) + change, 1)
