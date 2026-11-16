@@ -412,24 +412,42 @@ if s.year > 5:
         st.error(f"The largest party is {max(r['seats'], key=r['seats'].get)}. You do not have the numbers to remain in government.")
     st.divider()
 
-    extra = ('Managing a coalition partner will be tedious' if r['coalition'] else
-             'A minority government will be a legislative nightmare' if r['kind'] == 'minority' else
+    extra = ('Managing a coalition partner will be tedious' if r['kind'] == 'coalition' else
+             'A minority government will need to negotiate every important vote' if r['kind'] == 'minority' else
+             'The regional mandate will require support beyond your own bloc' if r['kind'] == 'regional' else
              'The numbers are in your favour')
     humphrey_message(f"Congratulations, Chancellor. We have survived the electorate. {extra}, but you remain at the Treasury.")
-    boost = round(min(15.0, max(5.0, r['margin'] / 10.0)), 1)
-    st.success(f"**YOU SURVIVED!** You retained power.\n\n🎉 **HONEYMOON PERIOD:** +**{boost}%** to Public Approval and all Political Capital if you continue.")
+    if r['kind'] == 'majority':
+        boost = round(min(15.0, max(5.0, r['margin'] / 10.0)), 1)
+        st.success(f"**YOU SURVIVED!** A majority government returns.\n\n🎉 **ELECTION HONEYMOON:** +**{boost}** to approval and political confidence, with five political-capital points.")
+    elif r['kind'] == 'coalition':
+        boost = round(max(1.0, min(4.0, 1.0 + max(0, int(r['margin'])) / 20.0)), 1)
+        st.info(f"**COALITION AGREEMENT REACHED.** The shared mandate brings +{boost} public approval, but party unity is strained and the new term begins with three political-capital points.")
+    elif r['kind'] == 'minority':
+        st.warning("**MINORITY GOVERNMENT.** There is no election honeymoon. Party and backbench confidence fall, and the new term begins with only two political-capital points.")
+    else:
+        st.info("**REGIONAL MANDATE RENEWED.** The new term begins with a modest political boost and four political-capital points.")
     scorecard_block()
     st.markdown("### 📺 Reactions from the party leaders")
     largest_party = max(r['seats'], key=r['seats'].get)
     for party in sorted(state.PARTIES, key=lambda p: r['seats'][p], reverse=True)[:3]:
-        if party == s.party and r['win']:
-            reaction = "The party celebrates the result and promises to deliver its programme."
-        elif party == largest_party:
-            reaction = "The leader claims a mandate to form the next government and begins consultations."
-        elif r['seats'][party] >= 50:
-            reaction = "The leader says the result gives the party a stronger voice in the new Parliament."
+        seat_swing = int(r.get('seat_changes', {}).get(party, 0))
+        if party == s.party and r['win'] and seat_swing <= -25:
+            reaction = f"The party remains in office but loses {abs(seat_swing)} seats. Senior MPs demand a review of the campaign and the government's direction."
+        elif party == s.party and r['win'] and r['kind'] in ('coalition', 'minority'):
+            reaction = "The party accepts that it has no outright majority. MPs warn that the new administration must defend every major vote."
+        elif party == s.party and r['win']:
+            reaction = "The party celebrates retaining a Commons majority and promises to deliver its programme."
+        elif party == largest_party and seat_swing >= 25:
+            reaction = f"The leader claims a major breakthrough after gaining {seat_swing} seats and demands the government recognise the new political mood."
+        elif party == largest_party and seat_swing <= -25:
+            reaction = f"The party remains the largest opposition force but loses {abs(seat_swing)} seats. The leader faces questions about their future."
+        elif seat_swing >= 20:
+            reaction = f"The leader hails a breakthrough after gaining {seat_swing} seats and promises to challenge the government."
+        elif seat_swing <= -20:
+            reaction = f"The party suffers heavy losses of {abs(seat_swing)} seats. MPs begin questioning the leadership's strategy."
         else:
-            reaction = "The leader acknowledges a difficult night and promises to reflect on the result."
+            reaction = "The leader acknowledges the result and promises to scrutinise the new Parliament."
         st.write(f"**{party}:** {reaction}")
     st.markdown("### 🏛️ Government formation")
     if r.get('kind') == 'coalition':
