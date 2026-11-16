@@ -64,7 +64,7 @@ def scale_effect(effect, factor):
 
 
 def _party_seats(s):
-    """Use the latest election result, falling back to the latest polling split."""
+    """Use the current Parliament, with legacy-save and polling fallbacks."""
     result = s.get("election_result") or {}
     seats = result.get("seats", {}) if isinstance(result, dict) else {}
     if not seats:
@@ -114,7 +114,7 @@ def _policy_pressure(option):
 
 
 def _simulate_party_vote(option, bonus=0):
-    """Simulate party-by-party support and dissent, including opposition-party rebels."""
+    """Simulate government, coalition-partner and opposition support by party."""
     s = st.session_state
     seats = _party_seats(s)
     ideology, austerity, homes = _policy_pressure(option)
@@ -138,6 +138,9 @@ def _simulate_party_vote(option, bonus=0):
             # Coalition MPs are part of the governing bloc, but their support
             # depends on policy alignment and the health of the agreement.
             stability = float(s.get("coalition_stability", 70.0))
+            stability += (float(s.get("cab_opinion", 60.0)) - 60.0) * 0.20
+            stability += (float(s.get("party_opinion", 60.0)) - 60.0) * 0.10
+            stability = max(35.0, min(100.0, stability))
             support = 0.70 + (stability - 70.0) * 0.002
             support += 0.08 if aligned else -0.08
             if austerity and party in {"Labour", "SNP", "Plaid Cymru", "Green Party"}:
