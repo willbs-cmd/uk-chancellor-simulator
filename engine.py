@@ -1445,6 +1445,7 @@ def compute_election():
     seat_changes = {p: int(seats.get(p, 0)) - int(previous_seats.get(p, seats.get(p, 0))) for p in state.PARTIES}
     # Store this parliament's results and winners for the next general election.
     s.previous_election_seats = dict(seats)
+    s.parliament_seats = dict(seats)
     s.constituency_incumbents = {str(row.get('code', '')): row.get('winner') for row in constituency_results}
     largest = max(seats, key=seats.get)
     party = s.party
@@ -1547,19 +1548,66 @@ def compute_election():
 
 
 def continue_term():
-    """Win the election and carry on for another term, with a honeymoon bump."""
+    """Carry the elected Parliament and its political constraints into the next term."""
     s = st.session_state
     r = s.election_result
-    boost = round(min(15.0, max(5.0, r['margin'] / 10.0)), 1)
-    for k in ('approval', 'pm_opinion', 'party_opinion', 'cab_opinion', 'backbench_opinion'):
-        s[k] = round(_clip(s[k] + boost), 1)
+    kind = r.get('kind', 'majority')
+    margin = int(r.get('margin', 0))
+    if kind == 'majority':
+        boost = round(min(15.0, max(5.0, margin / 10.0)), 1)
+        for key in ('approval', 'pm_opinion', 'party_opinion', 'cab_opinion', 'backbench_opinion'):
+            s[key] = round(_clip(float(s.get(key, 50.0)) + boost), 1)
+        s.political_capital_points = 5
+        message = f'A new majority-government term begins. The election honeymoon is worth +{boost} to approval and political confidence.'
+    elif kind == 'coalition':
+        # A coalition wins office, but its mandate is shared and its own backbenchers
+        # are less pleased about the compromises required to keep partners on board.
+        boost = round(max(1.0, min(4.0, 1.0 + max(0, margin) / 20.0)), 1)
+        s.approval = round(_clip(float(s.get('approval', 50.0)) + boost), 1)
+        s.pm_opinion = round(_clip(float(s.get('pm_opinion', 50.0)) + boost * 0.5), 1)
+        s.cab_opinion = round(_clip(float(s.get('cab_opinion', 50.0)) + 1.0), 1)
+        s.party_opinion = round(_clip(float(s.get('party_opinion', 50.0)) - 2.5), 1)
+        s.backbench_opinion = round(_clip(float(s.get('backbench_opinion', 50.0)) - 2.0), 1)
+        s.political_capital_points = 3
+        message = f'A new coalition term begins. The shared mandate brings a modest +{boost} public honeymoon, but your own benches expect compromises.'
+    elif kind == 'minority':
+        # The largest party can govern, but it has no dependable Commons majority.
+        boost = 0.0
+        s.approval = round(_clip(float(s.get('approval', 50.0)) + 1.0), 1)
+        s.pm_opinion = round(_clip(float(s.get('pm_opinion', 50.0)) - 2.5), 1)
+        s.cab_opinion = round(_clip(float(s.get('cab_opinion', 50.0)) - 2.0), 1)
+        s.party_opinion = round(_clip(float(s.get('party_opinion', 50.0)) - 4.0), 1)
+        s.backbench_opinion = round(_clip(float(s.get('backbench_opinion', 50.0)) - 5.0), 1)
+        s.political_capital_points = 2
+        message = 'A fragile minority-government term begins. There is no election honeymoon: every major bill will need active negotiation.'
+    else:  # Regional mandate: retain a distinct playable route for SNP and Plaid Cymru.
+        boost = 4.0
+        s.approval = round(_clip(float(s.get('approval', 50.0)) + boost), 1)
+        s.party_opinion = round(_clip(float(s.get('party_opinion', 50.0)) + 2.0), 1)
+        s.backbench_opinion = round(_clip(float(s.get('backbench_opinion', 50.0)) + 1.0), 1)
+        s.political_capital_points = 4
+        message = 'A new term begins with a renewed regional mandate and a modest political honeymoon.'
+
     s.honeymoon = boost
     s.general_election_mandate = int(r.get('mandate_strength', 0))
-    if r.get('kind') in ('coalition', 'minority'):
-        s.general_election_mandate = min(s.general_election_mandate, 2)
+    if kind in ('coalition', 'minority', 'regional'):
+        s.general_election_mandate = min(s.general_election_mandate, 2 if kind == 'coalition' else 0)
+
+    elected_seats = {p: int(r.get('seats', {}).get(p, 0)) for p in state.PARTIES}
+    if sum(elected_seats.values()) == SEATS:
+        s.parliament_seats = elected_seats
+    s.government_type = kind
+    s.government_coalition_partners = list(r.get('coalition_partners') or [])
+    s.government_working_majority = (
+        int(r.get('working_majority', 0)) if kind in ('majority', 'coalition', 'minority') else 0
+    )
+    s.coalition_stability = (
+        round(max(60.0, min(90.0, 70.0 + max(0, margin) * 0.25)), 1)
+        if kind == 'coalition' else 70.0
+    )
+
     s.term += 1
     s.year, s.block = 1, 1
-    s.political_capital_points = 5
     s.feature_notice = ''
     s.feature_notice_phase = 0
     s.budget_passed = False
@@ -1585,7 +1633,7 @@ def continue_term():
     s.election_campaign_week = 1
     s.election_campaign_actions = []
     s.election_broadcast_stage = 0
-    s.message = f'A new term begins. The honeymoon is worth +{boost} to approval and every measure of political capital.'
+    s.message = message
     state.snapshot()
     s.term_start = state.snapshot_all()
     state.record()
