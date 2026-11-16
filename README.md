@@ -34,6 +34,12 @@ The game loads player-facing content from `data/` files. You can add or rebalanc
 - `devolution.py` — local-government grant settlements, simplified Barnett-style consequentials, council tax flexibility and regional growth funding.
 - `fiscal_events.py` — fiscal calendar, periodic Spending Review scheduling, Treasury overview and crisis-triggered Emergency Budgets.
 
+## Five-year government mandates
+
+At the start of a new Chancellor game, choose one of six measurable government programmes: high-wage growth, household living standards, public-service renewal, fiscal repair, regional renewal or balanced national renewal. The mandate sets three five-year targets against the opening position. Progress is reviewed every year, major milestones are recorded, and the final result is included in the annual report and election-year briefing. The measures use the existing economy, household, public-service and regional models; they do not create a second set of economic stats. When a new term begins, the previous mandate is archived and a fresh baseline is taken.
+
+The weekly political briefing deck has also been expanded, with new events covering planning delays, skills shortages, public-service productivity, supply chains, grid connections, winter household bills, research investment and retail competition. Event selection is lightly weighted towards the subject of the Government's chosen mandate.
+
 ## Chancellor fiscal calendar
 
 The main Chancellor game treats major fiscal events as part of the Decisions calendar rather than permanent Treasury controls:

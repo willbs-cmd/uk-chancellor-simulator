@@ -24,6 +24,7 @@ import household
 import regional_economy
 import public_services
 import chancellors_desk
+import government_missions
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
@@ -34,6 +35,8 @@ apply_theme()
 state.ensure_init()
 s = st.session_state
 fiscal_events.ensure_state(s)
+if s.get('step') == 'game':
+    government_missions.ensure(s)
 
 
 def restart():
@@ -50,6 +53,13 @@ def setup_screen():
     st.markdown("""<div class='setup-hero'><div class='seal'>HM TREASURY · SIMULATION</div><h1>The Chancellor's Office</h1><p>Manage the economy, make policy choices and steer your government through Parliament.</p><span class='stamp'>The Chancellor's Office</span></div>""", unsafe_allow_html=True)
     st.markdown("### Step 1 · Form your government")
     party = st.selectbox("Select Governing Party:", state.PARTIES)
+    mission = st.selectbox(
+        "Five-year government mission", list(government_missions.MISSIONS),
+        format_func=lambda key: government_missions.MISSIONS[key]["title"],
+        index=list(government_missions.MISSIONS).index("balanced_renewal"),
+        help="Choose the three measurable outcomes your government will be judged against at the end of its five-year term."
+    )
+    st.caption(government_missions.MISSIONS[mission]["description"])
     difficulty = st.radio(
         "Difficulty", list(state.DIFFICULTY), index=2, horizontal=True,
         captions=[d['blurb'] for d in state.DIFFICULTY.values()],
@@ -80,7 +90,7 @@ def setup_screen():
         state.new_game(
             party, difficulty, seed, tags,
             scenario=scenario, spad=spad, pledges=pledges,
-            game_mode='chancellor'
+            game_mode='chancellor', government_mission=mission
         )
         st.rerun()
 
@@ -1057,7 +1067,9 @@ with tab_economy:
 with tab_government:
     st.markdown('### Government')
     st.caption('Political support, parliamentary scrutiny, local elections and your record in office.')
-    gov_polls, gov_parliament, gov_local, gov_office, gov_number10, gov_reports = st.tabs(['Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Number 10', 'Annual reports'])
+    gov_mandate, gov_polls, gov_parliament, gov_local, gov_office, gov_number10, gov_reports = st.tabs(['Mandate', 'Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Number 10', 'Annual reports'])
+    with gov_mandate:
+        government_missions.render(s)
     with gov_polls:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)

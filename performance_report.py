@@ -1,6 +1,8 @@
 """End-of-year Chancellor performance reports."""
 import streamlit as st
 
+import government_missions
+
 
 def _clamp(x):
     return max(0.0, min(100.0, float(x)))
@@ -44,6 +46,7 @@ def create_report():
         "headroom": round(headroom, 1), "deficit": round(deficit, 1),
         "debt": round(debt, 1), "approval": round(approval, 1),
         "market_conf": round(market, 1),
+        "mission": dict(s.get("mission_latest") or government_missions.get_progress(s)),
         "summary": (
             "A strong all-round year, with the Treasury balancing growth, services and political authority."
             if overall >= 80 else
@@ -71,6 +74,16 @@ def render():
     latest = reports[-1]
     st.markdown(f"## {latest['grade']} · {latest['overall']}/100")
     st.write(latest["summary"])
+    mission = latest.get("mission") or {}
+    if mission:
+        st.divider()
+        st.markdown(f"#### Five-year mandate checkpoint · {mission.get('score', 0)}/100")
+        st.caption(mission.get("title", "Government programme"))
+        for goal in mission.get("goals", []):
+            st.progress(float(goal.get("progress", 0)) / 100.0,
+                        text=f"{goal.get('label', 'Objective')} · {float(goal.get('progress', 0)):.0f}%")
+        if mission.get("result"):
+            st.success(f"Final mandate result: {mission['result']}")
     cols = st.columns(4)
     for col, (label, key) in zip(cols, [("Economy", "economic"), ("Public services", "services"), ("Fiscal record", "fiscal"), ("Political standing", "political")]):
         col.metric(label, f"{latest[key]}/100")

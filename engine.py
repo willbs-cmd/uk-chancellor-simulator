@@ -26,6 +26,7 @@ import regional_economy
 import public_services
 import devolution
 import fiscal_events
+import government_missions
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -1313,6 +1314,7 @@ def proceed_to_spring():
     s.political_capital_points = 5
     s.feature_notice = ''
     s.feature_notice_phase = 0
+    government_missions.record_year(s)
     performance_report.create_report()
     s.year += 1
     s.autumn_statement_due = s.year <= 5
@@ -1703,6 +1705,9 @@ def continue_term():
     s.election_campaign_week = 1
     s.election_campaign_actions = []
     s.election_broadcast_stage = 0
+    government_missions.start_mission(
+        s, s.get('government_mission', 'balanced_renewal'), preserve_history=True
+    )
     s.message = message
     state.snapshot()
     s.term_start = state.snapshot_all()

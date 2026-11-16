@@ -247,6 +247,8 @@ def _defaults():
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], cabinet_reshuffle_history=[], chancellor_actions=[],
         annual_reports=[], latest_annual_report=None,
+        government_mission='balanced_renewal', mission_term=1, mission_baseline={},
+        mission_history=[], mission_milestones=[], mission_latest=None, mission_archive=[], mission_finalised=False,
         budget_alternatives={}, budget_risk_outcome=None, budget_scheme_delivery={'tax': {}, 'spend': {}},
         obr_forecasts=[], obr_latest=None, boe_independence=75.0,
         boe_last_statement='The Monetary Policy Committee is monitoring inflation and activity.', boe_history=[],
@@ -275,7 +277,7 @@ def ensure_init():
 def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),
              game_mode='chancellor', career_name='Alex Morgan',
              career_constituency='Aberafan Maesteg', career_ambition='policy_specialist',
-             career_local_mandate='public_services'):
+             career_local_mandate='public_services', government_mission='balanced_renewal'):
     import budget
     import country
     import politics
@@ -321,6 +323,9 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.message = (sc['msg'] + " My job is to protect you from the press, the public, and most importantly, your own "
                  "backbenchers.")
     country.ensure_state()
+    if s.game_mode == 'chancellor':
+        import government_missions
+        government_missions.start_mission(s, government_mission)
     s.prev = values()
     s.term_start = snapshot_all()
     record()
@@ -391,7 +396,8 @@ SAVE_KEYS = [
     'local_finance_history', 'local_finance_last_update', 'local_finance_last_period', 'local_finance_notice',
     'budget_day_type', 'fiscal_calendar_initialised',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
-    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report',
+    'government_mission', 'mission_term', 'mission_baseline', 'mission_history', 'mission_milestones', 'mission_latest', 'mission_archive', 'mission_finalised', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 

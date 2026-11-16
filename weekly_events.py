@@ -204,6 +204,78 @@ EVENTS = [
             ("Leave issuance unchanged and explain the risks", {"market_conf": -0.8, "gilt_yield": 0.06, "approval": 0.1}, "The Treasury avoids reacting to short-term volatility, but investors remain watchful."),
         ],
     },
+    {
+        "id": "planning_appeals_backlog", "category": "Housing and planning", "title": "Planning appeals overwhelm local authorities",
+        "text": "Developers and councils report that a growing backlog of planning appeals is delaying housing, laboratories and transport schemes. Ministers disagree over whether the answer is more inspectors, stronger local capacity or fewer routes to challenge decisions.",
+        "options": [
+            ("Fund a temporary national planning inspectorate surge", {"headroom": -0.7, "deficit": 0.7, "homes_built": 4, "growth": 0.04}, "Extra inspectors clear the most urgent cases, although councils still need to improve their own capacity."),
+            ("Give councils a time-limited delivery grant", {"headroom": -0.4, "homes_built": 2, "officials_confidence": 0.5}, "Local planning teams receive targeted help and are asked to publish delivery standards."),
+            ("Restrict appeals for schemes meeting national rules", {"growth": 0.06, "market_conf": 0.4, "approval": -0.5}, "The process becomes quicker for some projects, but local groups warn that scrutiny is being weakened."),
+        ],
+    },
+    {
+        "id": "technical_skills_shortage", "category": "Productivity and skills", "title": "Employers warn of a shortage of technical skills",
+        "text": "Manufacturers, construction firms and technology employers say they cannot fill vacancies in engineering, digital and advanced technical roles. Colleges want longer-term funding certainty, while the Treasury is wary of another short-lived training scheme.",
+        "options": [
+            ("Co-fund employer-led technical apprenticeships", {"headroom": -0.8, "deficit": 0.8, "growth": 0.10, "unemployment": -0.05}, "Employers commit to placements and training standards in return for a targeted public contribution."),
+            ("Redirect existing college funding towards shortages", {"growth": 0.05, "schools": 0.4, "officials_confidence": 0.3}, "Funding is moved towards technical courses, but some institutions lose provision elsewhere."),
+            ("Leave training decisions to employers", {"headroom": 0.2, "business_confidence": -0.7, "growth": -0.04}, "The Treasury avoids a new commitment, but firms warn that the skills gap will hold back investment."),
+        ],
+    },
+    {
+        "id": "public_sector_productivity", "category": "Public services", "title": "Public-service productivity figures disappoint",
+        "text": "New delivery figures show that extra spending has not translated into the expected improvement in frontline services. Departmental leaders blame vacancies and ageing systems; the Treasury asks whether management and procurement need reform.",
+        "options": [
+            ("Agree service-by-service improvement plans", {"headroom": -0.3, "officials_confidence": 0.7, "nhs_morale": 1.0}, "Departments receive limited implementation support in return for transparent milestones."),
+            ("Create a cross-government procurement unit", {"headroom": -0.2, "market_conf": 0.3, "growth": 0.02}, "Joint purchasing begins, with savings expected only after contracts are renewed."),
+            ("Require departments to absorb the shortfall", {"headroom": 0.5, "approval": -0.7, "nhs_morale": -1.5, "schools": -0.4}, "The Treasury protects its spending limit, but frontline leaders warn that service recovery will slow."),
+        ],
+    },
+    {
+        "id": "port_and_supply_disruption", "category": "Trade and supply chains", "title": "Port disruption delays critical imports",
+        "text": "Industrial action and severe weather have disrupted several major ports. Manufacturers report delays to components and retailers warn that some imported goods may become more expensive.",
+        "options": [
+            ("Broker an immediate port and logistics agreement", {"growth": 0.03, "inflation": -0.03, "market_conf": 0.3}, "A temporary agreement restores much of the flow of goods, although backlogs take time to clear."),
+            ("Provide time-limited help to exposed exporters", {"headroom": -0.6, "deficit": 0.6, "business_confidence": 0.8, "growth": 0.04}, "Support is limited to firms with viable orders and a clear route to recovery."),
+            ("Allow the disruption to run its course", {"growth": -0.12, "inflation": 0.12, "approval": -0.4}, "The Government avoids intervening, but shortages and delivery delays continue."),
+        ],
+    },
+    {
+        "id": "energy_grid_connections", "category": "Energy and investment", "title": "Grid connection delays threaten new investment",
+        "text": "Energy developers say viable projects are waiting years for grid connections. Industry groups warn that the delays threaten new generation, factories and the transition away from expensive imported energy.",
+        "options": [
+            ("Fund strategic grid upgrades and connection teams", {"headroom": -1.0, "deficit": 1.0, "growth": 0.08, "netzero": 1.0}, "The Government funds bottleneck projects and publishes a national connection timetable."),
+            ("Require network operators to publish binding milestones", {"market_conf": 0.4, "officials_confidence": 0.4, "growth": 0.03}, "Regulators gain clearer delivery targets, though physical capacity still takes time to build."),
+            ("Prioritise existing projects without new funding", {"headroom": 0.2, "growth": -0.05, "netzero": -0.5}, "The Treasury avoids a new capital commitment, but some planned investment is delayed."),
+        ],
+    },
+    {
+        "id": "winter_household_bills", "category": "Households", "title": "Cold weather pushes household bills higher",
+        "text": "A colder-than-expected spell has increased energy demand. Advice charities report growing arrears, while the Treasury is being pressed to choose between targeted help and a broad subsidy.",
+        "options": [
+            ("Provide targeted winter support", {"headroom": -0.9, "deficit": 0.9, "approval": 0.8, "household_bill_pressure": -3.0}, "Support is directed towards households least able to absorb the temporary rise in bills."),
+            ("Expand advice and supplier repayment protections", {"headroom": -0.2, "household_confidence": 0.8, "household_bill_pressure": -1.5}, "The Government improves access to advice and prevents the sharpest short-term repayment shocks."),
+            ("Avoid intervention and protect the fiscal buffer", {"headroom": 0.2, "approval": -0.8, "household_bill_pressure": 2.0}, "The Treasury avoids new spending, but household pressure and criticism increase."),
+        ],
+    },
+    {
+        "id": "research_investment_competition", "category": "Science and business", "title": "International competition for research investment intensifies",
+        "text": "A group of research-intensive firms is comparing the UK with overseas locations offering long-term incentives, laboratory space and skilled-worker routes. Universities warn that a missed opportunity could weaken future productivity.",
+        "options": [
+            ("Offer a matched research and development partnership", {"headroom": -0.7, "deficit": 0.7, "growth": 0.10, "business_confidence": 0.8}, "Public support is conditional on private co-investment and domestic research partnerships."),
+            ("Accelerate research planning and visa decisions", {"growth": 0.06, "business_confidence": 0.5, "officials_confidence": 0.3}, "Administrative barriers are reduced without creating a new tax subsidy."),
+            ("Decline to compete through incentives", {"headroom": 0.2, "growth": -0.06, "business_confidence": -0.7}, "The Treasury avoids a bidding war, but some projects may choose another country."),
+        ],
+    },
+    {
+        "id": "retail_competition_prices", "category": "Cost of living", "title": "Retail competition and prices come under scrutiny",
+        "text": "Consumer groups accuse major suppliers of failing to pass lower wholesale costs on to customers. Retailers argue that wages, rents and financing costs remain high, and ministers are asked whether competition rules are strong enough.",
+        "options": [
+            ("Ask the competition regulator for a rapid market review", {"officials_confidence": 0.4, "household_confidence": 0.5, "approval": 0.3}, "The regulator investigates pricing and barriers to entry without imposing an arbitrary price cap."),
+            ("Bring retailers and suppliers into a voluntary compact", {"household_bill_pressure": -1.0, "market_conf": 0.2, "approval": 0.3}, "A voluntary agreement improves transparency, although enforcement remains limited."),
+            ("Take no action unless evidence of collusion emerges", {"market_conf": 0.2, "approval": -0.5, "household_confidence": -0.4}, "The Government avoids political intervention, but consumers want faster relief."),
+        ],
+    },
 ]
 
 def _context_weight(event_id, context):
@@ -236,6 +308,17 @@ def _context_weight(event_id, context):
         weight += 0.8
     if event_id == "export_contract_opportunity" and float(c.get("growth", 1.0)) > 1.2:
         weight += 0.5
+    mission = str(c.get("mission", ""))
+    if mission == "growth_productivity" and event_id in ("technical_skills_shortage", "research_investment_competition", "planning_appeals_backlog"):
+        weight += 0.55
+    if mission == "living_standards" and event_id in ("winter_household_bills", "retail_competition_prices", "mortgage_reset_wave"):
+        weight += 0.55
+    if mission == "public_services" and event_id in ("public_sector_productivity", "nhs_strike", "care_provider_failure"):
+        weight += 0.55
+    if mission == "fiscal_repair" and event_id in ("tax_shortfall", "gilt_auction", "pension_fund_warning"):
+        weight += 0.35
+    if mission == "regional_renewal" and event_id in ("planning_appeals_backlog", "technical_skills_shortage", "council_funding_row"):
+        weight += 0.45
     return weight
 
 
@@ -254,6 +337,7 @@ def context_from_state(s):
         "schools": float(country.get("schools", 60.0)),
         "business_confidence": float(s.get("business_confidence", 55.0)),
         "world_cycle": float(s.get("world_cycle", 0.0)),
+        "mission": str(s.get("government_mission", "balanced_renewal")),
     }
 
 

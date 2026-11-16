@@ -6,6 +6,7 @@
 It drives the real game engine with a fake ``st.session_state``, so no browser or Streamlit server is needed.
 """
 import collections
+import json
 import math
 import random
 import statistics
@@ -60,6 +61,7 @@ import econ  # noqa: E402
 import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
+import government_missions  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -233,7 +235,7 @@ def check(n=None, difficulty=None):
     # Weekly briefings should be varied, contextual and capable of creating follow-on stories.
     try:
         event_ids = [event.get('id') for event in weekly_events.EVENTS]
-        if len(event_ids) < 20 or len(event_ids) != len(set(event_ids)):
+        if len(event_ids) < 28 or len(event_ids) != len(set(event_ids)):
             failures.append("The weekly event deck is too small or contains duplicate event IDs.")
         supported_effects = {
             'headroom', 'approval', 'market_conf', 'deficit', 'growth', 'inflation', 'gilt_yield', 'debt',
@@ -1162,6 +1164,73 @@ def check(n=None, difficulty=None):
     eligible = {role_id for role_id, _ in career._eligible_promotions(test_profile)}
     if 'prime_minister' not in eligible or 'chancellor' not in eligible:
         failures.append("Career promotion rules do not offer senior-office progression to a qualified Secretary of State.")
+
+
+    # Five-year government mandates must score real model changes and survive saves.
+    try:
+        new_run('Labour', 'Normal', 88123)
+        s = st.session_state
+        government_missions.start_mission(s, 'growth_productivity')
+        if len(government_missions.MISSIONS) < 6:
+            failures.append("The mandate system must offer at least six distinct government programmes.")
+        if len(s.get('mission_baseline', {})) < 10:
+            failures.append("A new mandate did not capture its opening economic and social baseline.")
+        s.growth = float(s.growth) + 1.0
+        s.country['unemployment'] = float(s.country['unemployment']) - 0.5
+        for region in s.regional_economies.values():
+            region['productivity'] = float(region['productivity']) + 3.0
+        preview = government_missions.get_progress(s)
+        if preview['score'] != 100 or not all(goal['achieved'] for goal in preview['goals']):
+            failures.append("A mandate did not award full progress when all three objectives reached their exact targets.")
+        s.year = 1
+        first_record = government_missions.record_year(s)
+        duplicate_record = government_missions.record_year(s)
+        if not first_record or duplicate_record is not None or len(s.mission_history) != 1:
+            failures.append("Annual mandate checkpoints were not recorded exactly once.")
+        if len(s.mission_milestones) != 4:
+            failures.append("Mandate progress milestones did not record the 25/50/75/100 thresholds.")
+        ordinary_mission_weight = weekly_events._context_weight('planning_appeals_backlog', {})
+        growth_mission_weight = weekly_events._context_weight(
+            'planning_appeals_backlog', {'mission': 'growth_productivity'}
+        )
+        if growth_mission_weight <= ordinary_mission_weight:
+            failures.append("Weekly event selection did not respond to the government's chosen mission.")
+        saved_score = s.mission_latest['score']
+        save_error = state.import_save(state.export_save())
+        if save_error:
+            failures.append(f"Government mandate data did not survive save/load: {save_error}")
+        elif st.session_state.get('mission_latest', {}).get('score') != saved_score:
+            failures.append("Save/load changed the latest government mandate score.")
+
+        government_missions.start_mission(st.session_state, 'public_services', preserve_history=True)
+        s = st.session_state
+        s.country['nhs_waiting'] -= 0.75
+        s.country['nhs_morale'] += 10.0
+        s.country['schools'] += 5.0
+        s.year = 5
+        final_record = government_missions.record_year(s)
+        if not final_record or final_record.get('result') != 'Mandate exceeded' or not s.mission_finalised:
+            failures.append("A fully delivered Year 5 mandate did not receive its final result.")
+        archive_before = len(s.get('mission_archive', []))
+        government_missions.start_mission(s, 'balanced_renewal', preserve_history=True)
+        if len(s.mission_archive) != archive_before + 1:
+            failures.append("Starting a new five-year term did not archive the previous mandate.")
+        if s.government_mission != 'balanced_renewal' or s.mission_history:
+            failures.append("A new mandate did not reset its term baseline and annual progress history.")
+
+        migrated = json.dumps({
+            'format': state.SAVE_FORMAT, 'party': 'Labour', 'step': 'game', 'year': 2, 'term': 1,
+            'country': dict(s.country)
+        })
+        migration_error = state.import_save(migrated)
+        if migration_error:
+            failures.append(f"A legacy save without mandate fields could not be loaded: {migration_error}")
+        else:
+            government_missions.ensure(st.session_state)
+            if not st.session_state.get('mission_baseline'):
+                failures.append("A legacy in-progress save did not receive a safe new mandate baseline.")
+    except Exception as exc:
+        failures.append(f"Government mandate regression check failed: {exc}")
 
     # Streamlit sliders require compatible numeric types for min/max/step.
     for tax_key, tax in budget.TAXES.items():
