@@ -1487,7 +1487,7 @@ def _spend_row(k, sp, s):
     annual_settlement = _annual_settlement_active()
     c1, c2, c3 = st.columns([2.0, 3.2, 1.35], gap='small')
     with c1:
-        st.markdown(f"<div class='lv'><b>{sp['short']}</b><br><small>Baseline £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='lv'><b>{sp['short']}</b><br><small>Current cash £{base:,.1f}bn</small></div>", unsafe_allow_html=True)
     with c2:
         st.slider(
             f"{sp['label']} slider", min_value=-15.0, max_value=15.0,
