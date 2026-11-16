@@ -927,7 +927,10 @@ def prepare_editor_state():
         return False
 
     pending = s.get('budget_day_draft')
-    use_pending = (resume_draft or int(s.get('budget_day_stage', 0)) == 0) and isinstance(pending, dict)
+    # A pending draft belongs to the period in which it was created. Never
+    # reuse it just because a new fiscal year happens to begin at stage zero.
+    # Draft restoration is explicit when the player returns from an OBR stage.
+    use_pending = resume_draft and isinstance(pending, dict)
     _sync_editor_controls(pending if use_pending else s.budget_applied)
     s.budget_editor_period = period
     s.budget_editor_restore_draft = False
