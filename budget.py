@@ -653,7 +653,7 @@ def _annual_settlement_active(enabled=None):
 
 
 def _spend_rate_change(old_rate, new_rate, annual_settlement=None):
-    """A Spring Budget applies the full recurring rate; an emergency Budget applies only its change."""
+    """An annual Budget applies the full recurring rate; an emergency Budget applies only its change."""
     return float(new_rate) if _annual_settlement_active(annual_settlement) else float(new_rate) - float(old_rate)
 
 
