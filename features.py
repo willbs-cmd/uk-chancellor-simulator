@@ -156,19 +156,48 @@ def render_autumn_statement_event():
 
 
 def render_phase_action():
-    """Render the emergency fiscal watch attached to the winter policy phase."""
+    """Render a compact fiscal status attached to the current policy phase."""
     s = st.session_state
     _, used = _used()
-    if s.get("feature_notice") and int(s.get("feature_notice_phase", 0)) == int(s.block):
-        st.info(s.feature_notice)
+    notice_is_current = (
+        bool(s.get("feature_notice"))
+        and int(s.get("feature_notice_phase", 0)) == int(s.block)
+    )
+
     if s.block == 1:
         if "autumn" in used:
-            st.success("The Autumn Statement has been delivered for this financial year.")
+            capital = int(s.get("political_capital_points", 0))
+            capital_text = (
+                f"Political capital remaining: {capital}/5."
+                if notice_is_current else
+                "Your opening fiscal statement is complete."
+            )
+            st.markdown(
+                "<div class='phase-status is-complete'>"
+                "<span>FISCAL EVENT · DELIVERED</span>"
+                "<strong>Autumn Statement</strong>"
+                f"<small>{capital_text}</small>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
         elif "autumn_skipped" in used:
-            st.info("No Autumn Statement was published this year. The Spring Budget remains the main fiscal event.")
+            st.markdown(
+                "<div class='phase-status is-neutral'>"
+                "<span>FISCAL EVENT · NOT PUBLISHED</span>"
+                "<strong>Autumn Statement</strong>"
+                "<small>The Spring Budget remains the main fiscal event.</small>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
         else:
+            if notice_is_current:
+                st.info(s.feature_notice)
             st.info("The Autumn Statement is a separate fiscal event. You may proceed without publishing one.")
-    elif s.block == 2:
+    else:
+        if notice_is_current:
+            st.info(s.feature_notice)
+
+    if s.block == 2:
         st.markdown("### Emergency fiscal watch")
         st.caption("An Emergency Budget is not a routine annual mini-budget. It is called only when serious market, recession, fiscal-rule or government-confidence conditions require a full revised package.")
         market = float(s.get("market_conf", 50.0))
