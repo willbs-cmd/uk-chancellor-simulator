@@ -642,10 +642,14 @@ def revenue_pie(b):
 
 
 def _annual_settlement_active(enabled=None):
-    """Whether this Budget applies a fresh annual departmental settlement to today's cash baseline."""
+    """Whether a new annual department settlement is due in this fiscal year."""
     if enabled is not None:
         return bool(enabled)
-    return str(st.session_state.get('budget_day_type', 'annual')).lower() != 'emergency'
+    s = st.session_state
+    if str(s.get('budget_day_type', 'annual')).lower() == 'emergency':
+        return False
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    return str(s.get('budget_settlement_applied_period', '')) != period
 
 
 def _spend_rate_change(old_rate, new_rate, annual_settlement=None):
@@ -824,10 +828,11 @@ def _clip(v): return max(0, min(100, v))
 
 
 def _apply(draft=None, annual_settlement=None):
-    """Enact the approved Budget and, for a Spring Budget, compound its annual cash settlement once."""
+    """Enact the approved Budget and compound its annual cash settlement at most once per fiscal year."""
     s = st.session_state
     new, old = (read() if draft is None else draft), s.budget_applied
     annual_settlement = _annual_settlement_active(annual_settlement)
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
     if new == old and not annual_settlement:
         s.message = 'Budget unchanged.'
         return
@@ -850,6 +855,7 @@ def _apply(draft=None, annual_settlement=None):
         for key in SPEND_DEFAULTS:
             rate = float(new.get('spend', {}).get(key, 0.0))
             s.dept_spend[key] = round(float(s.dept_spend[key]) * (1.0 + rate / 100.0), 1)
+        s.budget_settlement_applied_period = period
     s.budget_applied = new
     # Enact tax thresholds only as part of the delivered Budget package.
     approved_thresholds = new.get('thresholds', {})
@@ -1161,7 +1167,8 @@ def forecast(b, years=3):
     """
     s = st.session_state
     ensure()
-    imp = impact(s.budget_applied, b)
+    annual_settlement = _annual_settlement_active()
+    imp = impact(s.budget_applied, b, annual_settlement=annual_settlement)
     v = dict(inflation=round(s.inflation + imp['inflation'], 2), interest_rate=s.interest_rate, gilt_yield=s.gilt_yield,
              growth=round(s.growth + imp['growth'], 2), debt=s.debt, deficit=round(s.deficit + imp['deficit'], 1),
              headroom=round(s.headroom + imp['headroom'], 1), market_conf=round(_clip(s.market_conf + imp['market']), 1),
@@ -1185,7 +1192,26 @@ def forecast(b, years=3):
     demographic_pressure = float(s.get('demographic_pressure', 0.0))
     pension_pressure = float(s.get('pension_pressure', 0.0))
     rows = []
+    forecast_department_spend = {}
+    for key in SPEND_DEFAULTS:
+        cash = float(s.dept_spend[key])
+        if annual_settlement:
+            cash *= 1.0 + float(b.get('spend', {}).get(key, 0.0)) / 100.0
+        forecast_department_spend[key] = cash
     for i in range(1, years + 1):
+        # Year 1 includes the current Budget settlement. Repeat that same rate in
+        # Years 2 and 3 against each already-adjusted cash baseline.
+        if i > 1:
+            departmental_cash_change = 0.0
+            for key in SPEND_DEFAULTS:
+                old_cash = forecast_department_spend[key]
+                new_cash = old_cash * (1.0 + float(b.get('spend', {}).get(key, 0.0)) / 100.0)
+                departmental_cash_change += new_cash - old_cash
+                forecast_department_spend[key] = new_cash
+            if abs(departmental_cash_change) > 0.001:
+                v['headroom'] = round(v['headroom'] - departmental_cash_change, 1)
+                v['deficit'] = round(max(0.0, v['deficit'] + departmental_cash_change), 1)
+
         # A scheme moves forward one delivery stage each year. Only the change in its
         # annual net cashflow and economic effect alters the forecast from last year.
         before_fin = scheme_financials(b, statuses=projected_status)
@@ -1461,7 +1487,7 @@ def _spend_row(k, sp, s):
             f"{sp['label']} slider", min_value=-15.0, max_value=15.0,
             step=0.5, key=f'bs_{k}', format="%+.1f%%",
             label_visibility="collapsed",
-            help="Set the recurring annual percentage settlement for this department. The approved setting carries forward each year; change it to revise the ongoing settlement."
+            help="Set this year's change in the department's cash budget. The same rate is applied again to the latest cash baseline when the next annual Budget is delivered."
         )
     with c3:
         pct = float(s[f'bs_{k}'])
@@ -1548,7 +1574,9 @@ def render_red_book(cur):
         rows = []
         for k, sp in SPEND_DEFAULTS.items():
             base, start = s.dept_spend[k], sp['default']
-            prop = base * (1.0 + cur['spend'][k] / 100.0)
+            prop = base * (1.0 + _spend_rate_change(
+                s.budget_applied.get('spend', {}).get(k, 0.0), cur['spend'][k]
+            ) / 100.0)
             rows.append({'Department': sp['short'], 'Start of term (£bn)': round(start, 1), 'Baseline now (£bn)': round(base, 1),
                          'This Budget (£bn)': round(prop, 1), 'Change since start': f"{(prop / start - 1) * 100:+.1f}%"})
         st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
@@ -1571,6 +1599,7 @@ def render(submit=None, after_summary=None):
     s = st.session_state
     applied, cur = s.budget_applied, read()
     changed = cur != applied
+    annual_settlement = _annual_settlement_active()
     s.budget_strategy = cur.get('strategy', 'balanced')
 
     rev_now, spend_now = totals(cur, annual_settlement=annual_settlement)
@@ -1587,7 +1616,6 @@ def render(submit=None, after_summary=None):
         f"<div class='budget-command-line'><div><span class='budget-kicker'>THE RED BOOK · FISCAL STATEMENT</span><strong>Budget control panel</strong><small>Annual forecast · £ billions · Draft figures update as you change policy</small></div><span class='budget-state {'is-draft' if changed else 'is-baseline'}'>{'● UNSAVED DRAFT' if changed else '● BASELINE'}</span></div>",
         unsafe_allow_html=True,
     )
-    annual_settlement = _annual_settlement_active()
     st.caption('Approved tax rates, thresholds, departmental spending settings and policy schemes carry forward automatically. Departmental percentages are year-on-year changes: retaining a rate applies it again to the latest cash baseline when this annual Budget is delivered.')
     with st.container(key="budget_financial_summary"):
         render_chips([
