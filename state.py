@@ -292,6 +292,7 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.budget_day_type = 'annual'
     s.opening_parliament_seats = opening_seat_allocation(party) or {}
     s.parliament_seats = dict(s.opening_parliament_seats)
+    s.previous_election_seats = dict(s.opening_parliament_seats)
     s.government_type = 'regional' if party in REGIONAL else 'majority'
     s.government_coalition_partners = []
     s.government_working_majority = (int(s.parliament_seats.get(party, 0)) - 326) if s.parliament_seats else 0
