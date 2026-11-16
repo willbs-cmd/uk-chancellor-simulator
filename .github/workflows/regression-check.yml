@@ -6,6 +6,8 @@ on:
       - "**.py"
       - "data/**"
       - ".github/workflows/regression-check.yml"
+      - "requirements.txt"
+      - "config.toml"
   pull_request:
     paths:
       - "**.py"
