@@ -824,6 +824,8 @@ def check(n=None, difficulty=None):
     try:
         new_run('Labour', 'Normal', 31415)
         s = st.session_state
+        if s.get('previous_election_seats') != s.get('opening_parliament_seats'):
+            failures.append("The opening Parliament was not recorded as the baseline for the first election swing.")
         elected = {
             'Labour': 260, 'Conservative': 235, 'Liberal Democrats': 85,
             'Reform UK': 35, 'Green Party': 20, 'SNP': 12, 'Plaid Cymru': 3,
@@ -900,6 +902,24 @@ def check(n=None, difficulty=None):
             failures.append("A minority government's weak parliamentary position was not carried into the next term.")
         if s.get('political_capital_points') != 2 or s.get('honeymoon') != 0:
             failures.append("A minority government incorrectly received the full majority-government honeymoon.")
+
+        new_run('Labour', 'Normal', 31417)
+        s = st.session_state
+        narrow_majority_seats = {
+            'Labour': 330, 'Conservative': 200, 'Liberal Democrats': 60,
+            'Reform UK': 30, 'Green Party': 15, 'SNP': 12, 'Plaid Cymru': 3,
+        }
+        initial_party_unity = float(s.party_opinion)
+        s.election_result = {
+            'win': True, 'kind': 'majority', 'margin': 4, 'mandate_strength': 0,
+            'working_majority': 4, 'player_seats': 330, 'seats': narrow_majority_seats,
+            'seat_changes': {'Labour': -35}, 'coalition_partners': [],
+        }
+        engine.continue_term()
+        if s.get('political_capital_points') != 4:
+            failures.append("A narrow majority after a 35-seat loss did not reduce political capital.")
+        if float(s.party_opinion) >= initial_party_unity + 5.0:
+            failures.append("Heavy seat losses were hidden by the election honeymoon instead of weakening party unity.")
     except Exception as exc:
         failures.append(f"General election and government-formation regression check failed: {exc}")
 
