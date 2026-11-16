@@ -836,6 +836,11 @@ def check(n=None, difficulty=None):
         s.election_result = None
         if parliament._party_seats(s) != elected:
             failures.append("The new Parliament reverted to the opening seat allocation after the election result was cleared.")
+        s.parliament_seats = {}
+        s.previous_election_seats = dict(elected)
+        if parliament._party_seats(s) != elected:
+            failures.append("A pre-upgrade save could not recover its most recent election from the saved seat history.")
+        s.parliament_seats = dict(elected)
 
         s.government_type = 'coalition'
         s.government_coalition_partners = ['Liberal Democrats']
