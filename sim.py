@@ -315,7 +315,7 @@ def check(n=None, difficulty=None):
         draft = budget.read()
         draft['tax']['income'] = min(float(budget.TAXES['income']['hi']), float(draft['tax']['income']) + 1.0)
         draft['tax']['vat'] = min(float(budget.TAXES['vat']['hi']), float(draft['tax']['vat']) + 0.5)
-        draft['spend']['health'] = 2.0
+        draft['spend']['health'] = -3.5
         first_tax_policy = next(iter(draft['tax_pol']))
         draft['tax_pol'][first_tax_policy] = True
         first_spend_policy = next(iter(draft['spend_pol']))
@@ -323,6 +323,7 @@ def check(n=None, difficulty=None):
         draft['thresholds']['personal_allowance'] = 13000.0
         draft['thresholds']['council_tax_revaluation'] = True
         draft['strategy'] = 'redistribution'
+        initial_health_cash = float(st.session_state.dept_spend['health'])
         budget._apply(draft)
         for key, value in draft['tax'].items():
             if st.session_state.get(f'bt_{key}') != value:
@@ -342,18 +343,29 @@ def check(n=None, difficulty=None):
         if st.session_state.get('budget_strategy') != 'redistribution':
             failures.append("Approved Budget strategy did not carry forward to its control.")
 
-        # The approved departmental percentage is a recurring annual settlement.
-        # It must remain visible after Spring, while the actual £bn baseline compounds once.
-        before_spend = float(st.session_state.dept_spend['health'])
+        # The annual percentage is a year-on-year change, not a one-off change
+        # versus the opening baseline. It applies at each annual Budget, not again at Spring.
         approved_rate = float(st.session_state.budget_applied['spend']['health'])
+        first_year_cash = round(initial_health_cash * (1.0 + approved_rate / 100.0), 1)
+        if abs(float(st.session_state.dept_spend['health']) - first_year_cash) > 0.11:
+            failures.append("The first annual Budget did not apply its departmental percentage to the cash baseline.")
         budget.apply_ongoing()
-        after_spend = float(st.session_state.dept_spend['health'])
-        if abs(after_spend - round(before_spend * (1.0 + approved_rate / 100.0), 1)) > 0.11:
-            failures.append("Approved departmental settlement was not applied exactly once at Spring.")
+        after_spring = float(st.session_state.dept_spend['health'])
+        if abs(after_spring - first_year_cash) > 0.11:
+            failures.append("Spring applied a second departmental percentage change before the next Budget.")
         if abs(float(st.session_state.get('bs_health', 0.0)) - approved_rate) > 0.001:
             failures.append("Departmental percentage did not remain visible after Spring.")
         if abs(float(st.session_state.budget_applied['spend']['health']) - approved_rate) > 0.001:
             failures.append("Approved departmental percentage was cleared at Spring.")
+        st.session_state.year = 2
+        st.session_state.budget_day_type = 'annual'
+        second_year_cash = round(after_spring * (1.0 + approved_rate / 100.0), 1)
+        budget._apply(budget.read())
+        if abs(float(st.session_state.dept_spend['health']) - second_year_cash) > 0.11:
+            failures.append("Keeping the same negative departmental rate did not compound against the Year 2 cash baseline.")
+        budget._apply(budget.read())
+        if abs(float(st.session_state.dept_spend['health']) - second_year_cash) > 0.11:
+            failures.append("The annual departmental rate was applied twice in the same fiscal year.")
         carried_lines = budget.spending_pie(budget.read())
         carried_department_total = sum(float(carried_lines[budget.SPEND_DEFAULTS[k]['short']])
                                        for k in budget.SPEND_DEFAULTS)
