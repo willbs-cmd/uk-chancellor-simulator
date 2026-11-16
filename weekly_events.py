@@ -214,7 +214,7 @@ def _context_weight(event_id, context):
         weight += 1.3
     if event_id in ("boe_dispute", "energy_spike", "mortgage_reset_wave") and float(c.get("inflation", 2.0)) > 4:
         weight += 1.2
-    if event_id in ("nhs_strike", "care_provider_failure") and float(c.get("nhs_waiting", 0.0)) > 0.5:
+    if event_id in ("nhs_strike", "care_provider_failure") and float(c.get("nhs_waiting", 0.0)) > 8.0:
         weight += 1.2
     if event_id == "teacher_strike" and float(c.get("schools", 60.0)) < 55:
         weight += 1.2
@@ -252,7 +252,7 @@ def context_from_state(s):
         "local_finance_pressure": float(s.get("local_finance_pressure", 40.0)),
         "nhs_waiting": float(country.get("nhs_waiting", 0.0)),
         "schools": float(country.get("schools", 60.0)),
-        "business_confidence": float(country.get("business_confidence", 50.0)),
+        "business_confidence": float(s.get("business_confidence", 55.0)),
         "world_cycle": float(s.get("world_cycle", 0.0)),
     }
 
