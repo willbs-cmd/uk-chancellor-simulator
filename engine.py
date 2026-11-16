@@ -188,6 +188,14 @@ def apply_effect(effect):
     if 'growth' in effect: s.growth = round(s.growth + effect['growth'], 2)
     if 'inflation' in effect: s.inflation = round(s.inflation + effect['inflation'], 2)
     if 'gilt_yield' in effect: s.gilt_yield = round(s.gilt_yield + effect['gilt_yield'], 2)
+    if 'debt' in effect: s.debt = round(s.debt + effect['debt'], 2)
+    for key in ('pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion',
+                'media_opinion', 'officials_confidence', 'household_confidence'):
+        if key in effect:
+            s[key] = round(_clip(float(s.get(key, 50.0)) + float(effect[key])), 1)
+    for key in ('mortgage_pressure', 'rent_pressure', 'household_bill_pressure', 'local_finance_pressure'):
+        if key in effect:
+            s[key] = round(max(0.0, min(100.0, float(s.get(key, 50.0)) + float(effect[key]))), 1)
     country.nudge({k: v for k, v in effect.items() if k in country.STATS}, snapshot=False)
 
 
@@ -374,8 +382,13 @@ def execute_decision(opt):
     if s.active_crisis is None:
         _advance_ongoing_issues()
     if not s.get('active_weekly_event') and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'):
-        s.active_weekly_event = weekly_events.pick(s.get('seed', 0), s.steps, s.get('last_weekly_event'))
+        s.active_weekly_event = weekly_events.pick(
+            s.get('seed', 0), s.steps, s.get('last_weekly_event'),
+            recent=s.get('weekly_event_history', []),
+            context=weekly_events.context_from_state(s),
+        )
         if s.active_weekly_event:
+            _remember_weekly_event(s, s.active_weekly_event)
             s.last_weekly_event = s.active_weekly_event.get('id')
     s.block += 1
     if s.block == 2 and random.random() < REQUEST_CHANCE:
@@ -384,6 +397,17 @@ def execute_decision(opt):
     check_sacked()
 
 
+
+
+def _remember_weekly_event(s, event):
+    """Save a rolling event trail so a briefing cannot keep resurfacing every few turns."""
+    event_id = (event or {}).get('id')
+    if not event_id:
+        return
+    history = list(s.get('weekly_event_history', []))
+    if not history or history[-1] != event_id:
+        history.append(event_id)
+    s.weekly_event_history = history[-24:]
 
 
 def _advance_ongoing_issues():
@@ -425,6 +449,36 @@ def _advance_ongoing_issues():
                         ('Offer independent pay review', {'headroom': -0.5, 'approval': 0.4, 'media_opinion': 0.5}, 'The review creates a route to talks, though unions reserve their position.'),
                         ('Reject the unions’ demands', {'approval': -2, 'cab_opinion': -1.5, 'party_opinion': 0.5}, 'The coordinated campaign escalates into widespread industrial action.'),
                     ]}
+            elif issue['kind'] == 'council':
+                event = {
+                    'id': 'followup_council_finance', 'category': 'Escalating local crisis',
+                    'title': 'A council issues a formal financial warning',
+                    'text': 'A large council says it may have to issue a section 114 notice unless emergency savings or support can be agreed. Libraries, social care and homelessness services are at risk.',
+                    'options': [
+                        ('Agree a monitored recovery package', {'headroom': -1.4, 'deficit': 1.4, 'approval': 0.8, 'local_finance_pressure': -8}, 'The council receives breathing space in exchange for a monitored recovery plan.'),
+                        ('Bring in commissioners and require service redesign', {'headroom': -0.3, 'officials_confidence': 0.5, 'approval': -0.3, 'local_finance_pressure': -3}, 'A tougher intervention begins, but local leaders object to the loss of control.'),
+                        ('Refuse a rescue and let the notice proceed', {'headroom': 0.5, 'approval': -2.0, 'local_finance_pressure': 8, 'media_opinion': -0.8}, 'The council begins emergency measures and the dispute becomes a national political issue.'),
+                    ]}
+            elif issue['kind'] == 'mortgage':
+                event = {
+                    'id': 'followup_mortgage_arrears', 'category': 'Escalating household pressure',
+                    'title': 'Mortgage arrears begin to rise',
+                    'text': 'Advice services report a rise in missed mortgage payments and rent arrears. MPs are asking whether the Government has a plan for households who cannot absorb another increase in monthly costs.',
+                    'options': [
+                        ('Fund targeted arrears prevention and debt advice', {'headroom': -0.9, 'deficit': 0.9, 'approval': 1.0, 'household_confidence': 1.5, 'mortgage_pressure': -5}, 'Targeted support helps households at the sharpest edge of the squeeze.'),
+                        ('Broker a voluntary lender forbearance agreement', {'approval': 0.5, 'market_conf': 0.3, 'household_confidence': 0.8, 'mortgage_pressure': -2}, 'Lenders agree to improve forbearance, although not every household will qualify.'),
+                        ('Take no further action', {'approval': -1.8, 'household_confidence': -1.5, 'mortgage_pressure': 5}, 'The Treasury avoids a new commitment, but arrears and political pressure continue to rise.'),
+                    ]}
+            elif issue['kind'] == 'water':
+                event = {
+                    'id': 'followup_water_failure', 'category': 'Escalating infrastructure failure',
+                    'title': 'A second pollution incident increases pressure on the regulator',
+                    'text': 'A further incident has affected local water supplies. The regulator says the company has failed to deliver its promised improvements and customers want to know who is accountable.',
+                    'options': [
+                        ('Impose a supervised recovery plan and compensation', {'headroom': -0.6, 'approval': 1.0, 'market_conf': 0.4}, 'The company faces tighter supervision and affected customers receive compensation.'),
+                        ('Replace the board and appoint a special administrator', {'headroom': -0.3, 'officials_confidence': 0.4, 'approval': 0.6}, 'A special administrator takes control while the regulator considers the company’s future.'),
+                        ('Leave enforcement to the existing timetable', {'approval': -1.8, 'media_opinion': -1.0, 'market_conf': -0.5}, 'The Government is accused of allowing the failure to continue.'),
+                    ]}
             else:
                 event = {
                     'id': 'followup_boe_dispute', 'category': 'Bank of England',
@@ -436,6 +490,7 @@ def _advance_ongoing_issues():
                         ('Escalate the public criticism', {'market_conf': -3, 'gilt_yield': 0.15, 'media_opinion': -1.5}, 'The public row unsettles markets and damages the Bank’s relationship with the Treasury.'),
                     ]}
             s.active_weekly_event = event
+            _remember_weekly_event(s, event)
             s.ongoing_issues = [x for x in issues if x is not issue]
             return
     s.ongoing_issues = issues
@@ -448,6 +503,9 @@ def _schedule_ongoing_issue(event_id, choice_index):
         ('teacher_strike', 2): ('teachers', 'Teachers’ industrial dispute'),
         ('union_pay_pressure', 2): ('union', 'Public-sector pay campaign'),
         ('boe_dispute', 1): ('boe', 'Bank of England dispute'),
+        ('council_funding_row', 2): ('council', 'Council finance crisis'),
+        ('mortgage_reset_wave', 2): ('mortgage', 'Mortgage and rent arrears pressure'),
+        ('water_company_failure', 2): ('water', 'Water company intervention'),
     }
     item = mapping.get((event_id, choice_index))
     if not item:
@@ -464,6 +522,7 @@ def resolve_weekly_event(choice_index):
     event = s.get('active_weekly_event')
     if not event:
         return
+    _remember_weekly_event(s, event)
     options = event.get('options', [])
     if choice_index < 0 or choice_index >= len(options):
         return
