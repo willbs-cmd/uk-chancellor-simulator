@@ -366,6 +366,23 @@ def check(n=None, difficulty=None):
         budget._apply(budget.read())
         if abs(float(st.session_state.dept_spend['health']) - second_year_cash) > 0.11:
             failures.append("The annual departmental rate was applied twice in the same fiscal year.")
+
+        # An Emergency Budget should apply only the difference from the last
+        # approved annual rate, not repeat the whole annual cut.
+        emergency_cash_before = float(st.session_state.dept_spend['health'])
+        emergency_draft = budget.read()
+        emergency_draft['spend']['health'] = approved_rate - 1.0
+        st.session_state.budget_day_type = 'emergency'
+        budget._apply(emergency_draft)
+        expected_emergency_cash = round(emergency_cash_before * 0.99, 1)
+        if abs(float(st.session_state.dept_spend['health']) - expected_emergency_cash) > 0.11:
+            failures.append("An Emergency Budget did not apply only the change in the departmental rate.")
+        emergency_cash_after = float(st.session_state.dept_spend['health'])
+        budget._apply(budget.read())
+        if abs(float(st.session_state.dept_spend['health']) - emergency_cash_after) > 0.11:
+            failures.append("An unchanged Emergency Budget applied a departmental adjustment twice.")
+        st.session_state.budget_day_type = 'annual'
+
         carried_lines = budget.spending_pie(budget.read())
         carried_department_total = sum(float(carried_lines[budget.SPEND_DEFAULTS[k]['short']])
                                        for k in budget.SPEND_DEFAULTS)
