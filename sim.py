@@ -667,6 +667,34 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Budget editor hydration regression check failed: {exc}")
 
+    # A stale draft from the previous fiscal year must never overwrite the newly
+    # approved ledger when the next Budget opens. Only an explicit return action
+    # may restore a pending draft within the current Budget workflow.
+    try:
+        new_run('Labour', 'Normal', 97533)
+        s = st.session_state
+        approved = budget.read()
+        approved['spend']['health'] = -3.5
+        approved['tax']['income'] = min(float(budget.TAXES['income']['hi']), approved['tax']['income'] + 1.0)
+        s.budget_applied = dict(approved)
+        s.budget_applied['spend'] = dict(approved['spend'])
+        s.budget_applied['tax'] = dict(approved['tax'])
+        stale = dict(approved)
+        stale['spend'] = dict(approved['spend'], health=0.0)
+        stale['tax'] = dict(approved['tax'], income=budget.TAXES['income']['default'])
+        s.budget_day_draft = stale
+        s.budget_day_stage = 0
+        s.budget_editor_period = '1-1'
+        s.year = 2
+        s.budget_editor_restore_draft = False
+        budget.prepare_editor_state()
+        if abs(float(s.bs_health) - (-3.5)) > 0.001:
+            failures.append("A stale previous-year draft overwrote the approved departmental settlement in the next Budget.")
+        if abs(float(s.bt_income) - float(approved['tax']['income'])) > 0.001:
+            failures.append("A stale previous-year draft overwrote the approved tax rate in the next Budget.")
+    except Exception as exc:
+        failures.append(f"Cross-year stale Budget draft regression check failed: {exc}")
+
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
         generous = budget.spending_review_reaction('health', 5.0, 8.0, 60.0)
