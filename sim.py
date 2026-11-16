@@ -277,6 +277,21 @@ def check(n=None, difficulty=None):
             failures.append("A recently-seen COBRA crisis remained in the random crisis pool.")
         if not fresh_crises:
             failures.append("The crisis pool was exhausted despite having unseen crises available.")
+        legacy_fresh_crises = scen.recent_crisis_pool([], lookback=6, previous=scen.RANDOM_POOL[0])
+        if scen.RANDOM_POOL[0] in legacy_fresh_crises:
+            failures.append("An older save's last crisis was not included in the new repeat-prevention window.")
+
+        new_run('Labour', 'Normal', 81010)
+        st.session_state.weekly_event_history = ['nhs_strike', 'council_funding_row']
+        st.session_state.crisis_event_history = ['gilt_revolt', 'floods']
+        saved_weekly = list(st.session_state.weekly_event_history)
+        saved_crisis = list(st.session_state.crisis_event_history)
+        load_error = state.import_save(state.export_save())
+        if load_error:
+            failures.append(f"Save/load failed for recent-event history: {load_error}")
+        elif (st.session_state.get('weekly_event_history') != saved_weekly
+              or st.session_state.get('crisis_event_history') != saved_crisis):
+            failures.append("Save/load did not preserve recent weekly event and crisis history.")
 
         for index, (kind, expected_id) in enumerate((
             ('council', 'followup_council_finance'),
