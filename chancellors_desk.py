@@ -136,8 +136,7 @@ def render(on_restart):
         # Ensure the Cabinet roster is available on every phase, not only after opening the Budget screen.
         budget.ensure()
 
-        # Cabinet management: the Chancellor can recommend; only the PM can appoint or dismiss.
-        st.markdown("<div class='desk-section-title'>CABINET MANAGEMENT</div>", unsafe_allow_html=True)
+        # Cabinet management: keep the live desk compact; open this only when making a recommendation.
         ministers = s.get("cabinet_ministers", {})
         active_posts = [
             (key, name) for key, name in ministers.items()
@@ -146,28 +145,30 @@ def render(on_restart):
             and not str(name).startswith(("Vacant", "New appointment"))
         ]
         reshuffle_used = int(s.get("term", 1)) in s.get("cabinet_reshuffle_terms", [])
-        if active_posts:
-            if reshuffle_used:
-                st.caption("You have already made your one reshuffle recommendation this term.")
+        cabinet_label = f"Cabinet management · {len(active_posts)} ministers"
+        with st.expander(cabinet_label, expanded=bool(s.get("active_dispute"))):
+            if active_posts:
+                if reshuffle_used:
+                    st.caption("You have already made your one reshuffle recommendation this term.")
+                else:
+                    dept = st.selectbox(
+                        "Minister to recommend for replacement",
+                        [key for key, _ in active_posts],
+                        format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key.replace('_', ' ').title())}",
+                        key="desk_reshuffle_department",
+                    )
+                    st.caption(
+                        f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(dept, 50.0)):.0f}/100. "
+                        "A weak relationship or active dispute makes Number 10 more receptive."
+                    )
+                    if st.button("Recommend a Cabinet replacement to the PM", use_container_width=True):
+                        engine.request_ministerial_reshuffle(dept)
+                        st.rerun()
             else:
-                dept = st.selectbox(
-                    "Minister to recommend for replacement",
-                    [key for key, _ in active_posts],
-                    format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key.replace('_', ' ').title())}",
-                    key="desk_reshuffle_department",
-                )
-                st.caption(
-                    f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(dept, 50.0)):.0f}/100. "
-                    "A weak relationship or active dispute makes Number 10 more receptive."
-                )
-                if st.button("Recommend a Cabinet replacement to the PM", use_container_width=True):
-                    engine.request_ministerial_reshuffle(dept)
-                    st.rerun()
-        else:
-            st.caption("No established Cabinet appointments are currently available to review.")
-        recent_reshuffles = list(s.get("cabinet_reshuffle_history", []))
-        if recent_reshuffles:
-            with st.expander("Reshuffle correspondence", expanded=False):
+                st.caption("No established Cabinet appointments are currently available to review.")
+            recent_reshuffles = list(s.get("cabinet_reshuffle_history", []))
+            if recent_reshuffles:
+                st.markdown("**Recent reshuffle correspondence**")
                 for item in reversed(recent_reshuffles[-3:]):
                     result = "Accepted" if item.get("accepted") else "Rejected"
                     st.caption(f"Term {item.get('term')} · {item.get('minister')} · PM {result}")
@@ -214,26 +215,20 @@ def render(on_restart):
 
         # Live risks and events.
         warnings = _warnings(s)
-        st.markdown(
-            f"<div class='desk-section-title'>WATCHLIST <span class='desk-count'>{len(warnings)}</span></div>",
-            unsafe_allow_html=True,
-        )
-        if warnings:
-            for kind, message in warnings[:4]:
+        with st.expander(f"Watchlist · {len(warnings)} alerts", expanded=bool(warnings)):
+            if warnings:
+                for kind, message in warnings:
+                    st.markdown(
+                        f"<div class='desk-warning {kind}'><span></span>{_safe(message)}</div>",
+                        unsafe_allow_html=True,
+                    )
+            else:
                 st.markdown(
-                    f"<div class='desk-warning {kind}'><span></span>{_safe(message)}</div>",
+                    "<div class='desk-clear'><span>✓</span> No immediate warnings</div>",
                     unsafe_allow_html=True,
                 )
-            if len(warnings) > 4:
-                st.caption(f"+ {len(warnings) - 4} further items need attention.")
-        else:
-            st.markdown(
-                "<div class='desk-clear'><span>✓</span> No immediate warnings</div>",
-                unsafe_allow_html=True,
-            )
 
         # The diary reflects queued decisions and the revised fiscal-event calendar.
-        st.markdown("<div class='desk-section-title'>DIARY & NEXT STEPS</div>", unsafe_allow_html=True)
         diary = []
         # Match the actual Decisions-screen priority so the diary never suggests
         # a fiscal event is actionable ahead of an urgent parliamentary or crisis event.
@@ -275,11 +270,12 @@ def render(on_restart):
                 diary.append(("PLANNED", f"Next Spending Review · Year {next_review_year}"))
             elif year <= 5:
                 diary.append(("PLANNED", "Next Spending Review · next term"))
-        for status, item in diary[:6]:
-            st.markdown(
-                f"<div class='desk-diary'><span>{_safe(status)}</span><strong>{_safe(item)}</strong></div>",
-                unsafe_allow_html=True,
-            )
+        with st.expander(f"Diary & next steps · {len(diary)} items", expanded=bool(diary and diary[0][0] == "NOW")):
+            for status, item in diary[:6]:
+                st.markdown(
+                    f"<div class='desk-diary'><span>{_safe(status)}</span><strong>{_safe(item)}</strong></div>",
+                    unsafe_allow_html=True,
+                )
 
         if s.get("pledges"):
             kept = [key for key in s.pledges if key not in s.get("broken_pledges", [])]
