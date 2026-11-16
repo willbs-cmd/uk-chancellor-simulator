@@ -40,7 +40,7 @@ def projected_ayes(bonus=None):
         + 0.12 * (float(s.get("approval", 48)) - 50)
         + int(bonus)
         + max(-12, min(12, int(s.get("general_election_mandate", 0))))
-        + max(-18, min(18, int(round(float(s.get("government_working_majority", 0)) * 0.12))))
+        + max(-40, min(18, int(round(float(s.get("government_working_majority", 0)) * 0.40))))
         + max(-3, min(3, int(round(float(s.get("local_government_mandate", 0))))))
     )
     if s.get("spad") == "enforcer":
