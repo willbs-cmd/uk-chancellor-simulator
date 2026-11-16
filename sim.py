@@ -55,6 +55,7 @@ import decisions  # noqa: E402
 import engine  # noqa: E402
 import local_elections  # noqa: E402
 import parliament  # noqa: E402
+import weekly_events  # noqa: E402
 import econ  # noqa: E402
 import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
@@ -228,6 +229,68 @@ def check(n=None, difficulty=None):
                 failures.append(f"Conditional storyline '{branch_id}' must include both its standard and compromise Centric approaches.")
     except Exception as exc:
         failures.append(f"Six-option policy content regression check failed: {exc}")
+
+    # Weekly briefings should be varied, contextual and capable of creating follow-on stories.
+    try:
+        event_ids = [event.get('id') for event in weekly_events.EVENTS]
+        if len(event_ids) < 20 or len(event_ids) != len(set(event_ids)):
+            failures.append("The weekly event deck is too small or contains duplicate event IDs.")
+        supported_effects = {
+            'headroom', 'approval', 'market_conf', 'deficit', 'growth', 'inflation', 'gilt_yield', 'debt',
+            'pm_opinion', 'cab_opinion', 'party_opinion', 'backbench_opinion', 'media_opinion',
+            'officials_confidence', 'household_confidence', 'business_confidence', 'mortgage_pressure',
+            'rent_pressure', 'household_bill_pressure', 'local_finance_pressure',
+        } | set(engine.country.STATS)
+        for event in weekly_events.EVENTS:
+            options = event.get('options', [])
+            if len(options) < 3:
+                failures.append(f"Weekly event {event.get('id')} has fewer than three responses.")
+            for option in options:
+                if len(option) != 3:
+                    failures.append(f"Weekly event {event.get('id')} has a malformed response.")
+                    continue
+                unknown = set(option[1]) - supported_effects
+                if unknown:
+                    failures.append(f"Weekly event {event.get('id')} contains unapplied effect keys: {sorted(unknown)}.")
+
+        history = []
+        for draw in range(10):
+            event = weekly_events.pick(481516, draw + 1, chance=1.0, recent=history, context={})
+            if not event:
+                failures.append("A guaranteed weekly event draw unexpectedly returned no event.")
+                break
+            if event['id'] in history[-7:]:
+                failures.append("A weekly event repeated within the recent-event exclusion window.")
+            history.append(event['id'])
+        first_draw = weekly_events.pick(481516, 1, chance=1.0, recent=[], context={})
+        repeated_draw = weekly_events.pick(481516, 1, chance=1.0, recent=[], context={})
+        if not first_draw or first_draw.get('id') != repeated_draw.get('id'):
+            failures.append("Weekly event draws are not deterministic for a saved seed and turn.")
+        ordinary_council_weight = weekly_events._context_weight('council_funding_row', {})
+        pressured_council_weight = weekly_events._context_weight('council_funding_row', {'local_finance_pressure': 85})
+        if pressured_council_weight <= ordinary_council_weight:
+            failures.append("Severe local-finance pressure did not make council events more likely.")
+
+        recent_crises = list(scen.RANDOM_POOL[:6])
+        fresh_crises = scen.recent_crisis_pool(recent_crises, lookback=6)
+        if any(crisis_id in fresh_crises for crisis_id in recent_crises):
+            failures.append("A recently-seen COBRA crisis remained in the random crisis pool.")
+        if not fresh_crises:
+            failures.append("The crisis pool was exhausted despite having unseen crises available.")
+
+        for index, (kind, expected_id) in enumerate((
+            ('council', 'followup_council_finance'),
+            ('mortgage', 'followup_mortgage_arrears'),
+            ('water', 'followup_water_failure'),
+        )):
+            new_run('Labour', 'Normal', 81000 + index)
+            st.session_state.ongoing_issues = [{'kind': kind, 'title': kind, 'weeks_left': 1}]
+            engine._advance_ongoing_issues()
+            followup = st.session_state.get('active_weekly_event') or {}
+            if followup.get('id') != expected_id:
+                failures.append(f"The {kind} storyline did not produce its expected follow-up event.")
+    except Exception as exc:
+        failures.append(f"Dynamic event variety regression check failed: {exc}")
 
     # Save/load must preserve the approved Budget ledger and current fiscal state.
     try:
