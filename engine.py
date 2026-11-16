@@ -980,8 +980,9 @@ def submit_budget():
     budget.ensure()
     before = state.values()
     draft = s.get('budget_day_draft') or budget.read()
-    if draft != s.budget_applied:
-        budget._apply(draft)
+    annual_settlement = budget._annual_settlement_active()
+    if draft != s.budget_applied or annual_settlement:
+        budget._apply(draft, annual_settlement=annual_settlement)
     elif not str(s.get('message', '')).startswith('Budget delivered'):
         s.message = 'You deliver the Budget unchanged.'
     budget.apply_irritants()
