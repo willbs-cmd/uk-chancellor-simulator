@@ -40,51 +40,93 @@ BUDGET_LINKS = [
 def get(crisis_id):
     return CRISES.get(crisis_id) if isinstance(crisis_id, str) else None
 
+def _record_crisis(s, crisis_id):
+    """Record a selected crisis in a rolling history used to prevent repetitive COBRA events."""
+    history = list(s.get('crisis_event_history', []))
+    if not history or history[-1] != crisis_id:
+        history.append(crisis_id)
+    s.crisis_event_history = history[-20:]
+    s.last_crisis = crisis_id
+
+
+def recent_crisis_pool(recent=None, lookback=6):
+    """Return random crises that have not appeared in the most recent event window."""
+    blocked = set(list(recent or [])[-max(0, int(lookback)):])
+    pool = [crisis_id for crisis_id in RANDOM_POOL if crisis_id not in blocked]
+    return pool or list(RANDOM_POOL)
+
+
+def _crisis_weight(crisis_id, s):
+    """Bias random crises towards pressures already visible in the country."""
+    weight = 1.0
+    country_state = s.get('country', {}) if isinstance(s.get('country', {}), dict) else {}
+    if crisis_id in ('gilt_revolt', 'rating_warning', 'sovereign_debt_crisis'):
+        if float(s.get('market_conf', 60.0)) < 45 or float(s.get('headroom', 5.0)) < 0:
+            weight += 1.7
+    if crisis_id in ('nhs_walkout', 'winter_flu', 'water_collapse') and float(country_state.get('nhs_waiting', 0.0)) > 0.5:
+        weight += 0.8
+    if crisis_id in ('energy_bankruptcy', 'oil_price_spike', 'grid_blackout') and float(s.get('inflation', 2.0)) > 4:
+        weight += 0.9
+    if crisis_id in ('floods', 'climate_disaster', 'farming_collapse') and float(country_state.get('netzero', 40.0)) < 35:
+        weight += 0.5
+    if crisis_id in ('bank_run', 'flash_crash', 'banking_panic') and float(s.get('financial_stability', 80.0)) < 60:
+        weight += 1.0
+    if crisis_id in ('ai_job_crisis', 'steel_closure') and float(s.get('growth', 1.0)) < 0:
+        weight += 0.8
+    return weight
+
+
 def pick_next(year, block, ideology):
     s = st.session_state
     s.crisis_reason = ''
     last = s.get('last_crisis')
+    recent = list(s.get('crisis_event_history', []))
 
-    # 1. NEW: Check Political Capital Crises FIRST
-    if s.get('party_opinion', 100) < 40 and last != 'leadership_challenge':
+    def fresh(crisis_id, lookback=5):
+        return crisis_id not in set(recent[-lookback:]) and crisis_id != last
+
+    # Political and fiscal crises take priority, but the same confrontation cannot
+    # repeatedly interrupt the game while the underlying pressure is unchanged.
+    if s.get('party_opinion', 100) < 40 and fresh('leadership_challenge'):
         s.crisis_reason = "🚨 Your party has lost faith in the government's direction!"
-        s.last_crisis = 'leadership_challenge'
+        _record_crisis(s, 'leadership_challenge')
         return 'leadership_challenge'
-        
-    if s.get('media_opinion', 100) < 30 and last != 'tabloid_scandal':
+
+    if s.get('media_opinion', 100) < 30 and fresh('tabloid_scandal'):
         s.crisis_reason = "🚨 Fleet Street has turned against you!"
-        s.last_crisis = 'tabloid_scandal'
+        _record_crisis(s, 'tabloid_scandal')
         return 'tabloid_scandal'
 
-    if s.get('market_conf', 100) < 35 and last != 'gilt_revolt' and random.random() < 0.6:
+    if s.get('market_conf', 100) < 35 and fresh('gilt_revolt') and random.random() < 0.6:
         s.crisis_reason = '🚨 Investors have lost faith in your fiscal credibility!'
-        s.last_crisis = 'gilt_revolt'
+        _record_crisis(s, 'gilt_revolt')
         return 'gilt_revolt'
 
-    if s.get('headroom', 0) < -10 and last != 'rating_warning' and random.random() < 0.5:
+    if s.get('headroom', 0) < -10 and fresh('rating_warning') and random.random() < 0.5:
         s.crisis_reason = '🚨 Your fiscal rules are in tatters and the agencies have noticed.'
-        s.last_crisis = 'rating_warning'
+        _record_crisis(s, 'rating_warning')
         return 'rating_warning'
 
     link = DECISION_LINKS.get((year, block, ideology))
-    if link and random.random() < link[1]:
+    if link and fresh(link[0]) and random.random() < link[1]:
         s.crisis_reason = f'🔗 This follows directly from your last decision ({ideology}).'
-        s.last_crisis = link[0]
+        _record_crisis(s, link[0])
         return link[0]
 
-    if ideology in IDEOLOGY_LINKS and random.random() < 0.30:
+    ideology_crisis = IDEOLOGY_LINKS.get(ideology)
+    if ideology_crisis and fresh(ideology_crisis) and random.random() < 0.30:
         s.crisis_reason = f'🔗 Your {ideology} approach is coming back to bite you.'
-        s.last_crisis = IDEOLOGY_LINKS[ideology]
-        return IDEOLOGY_LINKS[ideology]
+        _record_crisis(s, ideology_crisis)
+        return ideology_crisis
 
     applied = s.get('budget_applied')
     done = s.setdefault('fallout_done', [])
     if applied and s.get('dept_spend'):
         for cid, section, item, op, limit, chance in BUDGET_LINKS:
-            if cid in done:
+            if cid in done or not fresh(cid):
                 continue
             if section == 'spend':
-                # cumulative change in this department's baseline since the start, in %
+                # Cumulative change in this department's baseline since the start.
                 base = budget.SPEND_DEFAULTS[item]['default']
                 value = (s.dept_spend.get(item, base) / base - 1) * 100
             else:
@@ -93,15 +135,17 @@ def pick_next(year, block, ideology):
             if hit and random.random() < chance:
                 done.append(cid)
                 s.crisis_reason = '📒 Your budget choices have consequences.'
-                s.last_crisis = cid
+                _record_crisis(s, cid)
                 return cid
 
     if year < 5 and random.random() < state.diff()['crisis']:
-        options = [c for c in RANDOM_POOL if c != last] or RANDOM_POOL
-        s.last_crisis = random.choice(options)
+        options = recent_crisis_pool(recent, lookback=6)
+        weights = [_crisis_weight(crisis_id, s) for crisis_id in options]
+        crisis_id = random.choices(options, weights=weights, k=1)[0]
+        _record_crisis(s, crisis_id)
         s.crisis_reason = "🚨 Events, dear boy, events. An unforeseen crisis has struck!"
-        return s.last_crisis
-        
+        return crisis_id
+
     return None
 
 def _fmt(fx):
