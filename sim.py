@@ -849,6 +849,12 @@ def check(n=None, difficulty=None):
         option = {'label': 'A cross-party public service plan', 'ideology': 'Social Democratic', 'effect': {}}
         _, coalition_votes = parliament._simulate_party_vote(option)
         partner_ayes = coalition_votes['Liberal Democrats']['ayes']
+        s.cab_opinion = 20.0
+        _, strained_coalition_votes = parliament._simulate_party_vote(option)
+        s.cab_opinion = 90.0
+        _, stable_coalition_votes = parliament._simulate_party_vote(option)
+        if stable_coalition_votes['Liberal Democrats']['ayes'] <= strained_coalition_votes['Liberal Democrats']['ayes']:
+            failures.append("Coalition partner discipline did not respond to Cabinet confidence.")
         s.government_coalition_partners = []
         _, opposition_votes = parliament._simulate_party_vote(option)
         opposition_ayes = opposition_votes['Liberal Democrats']['ayes']
