@@ -43,6 +43,10 @@ def get(crisis_id):
 def _record_crisis(s, crisis_id):
     """Record a selected crisis in a rolling history used to prevent repetitive COBRA events."""
     history = list(s.get('crisis_event_history', []))
+    # Older saves have only last_crisis; migrate it before adding the new item.
+    previous = s.get('last_crisis')
+    if previous and (not history or history[-1] != previous):
+        history.append(previous)
     if not history or history[-1] != crisis_id:
         history.append(crisis_id)
     s.crisis_event_history = history[-20:]
@@ -85,6 +89,9 @@ def pick_next(year, block, ideology):
     s.crisis_reason = ''
     last = s.get('last_crisis')
     recent = list(s.get('crisis_event_history', []))
+    if last and (not recent or recent[-1] != last):
+        recent.append(last)
+        s.crisis_event_history = recent[-20:]
 
     def fresh(crisis_id, lookback=5):
         return crisis_id not in set(recent[-lookback:]) and crisis_id != last
