@@ -854,6 +854,12 @@ def check(n=None, difficulty=None):
         minority_projection = parliament.projected_ayes()
         if strong_majority_projection <= minority_projection:
             failures.append("A minority government did not face a lower projected Commons vote than a majority government.")
+        s.government_working_majority = 40
+        majority_budget_votes = budget.commons_ayes(backbench=60)
+        s.government_working_majority = -56
+        minority_budget_votes = budget.commons_ayes(backbench=60)
+        if majority_budget_votes - minority_budget_votes < 30:
+            failures.append("A minority government's Budget vote was not sufficiently harder than a majority government's.")
 
         s.election_result = {
             'win': True, 'kind': 'coalition', 'margin': 19, 'mandate_strength': 1,
@@ -869,6 +875,14 @@ def check(n=None, difficulty=None):
             failures.append("Coalition formation details were not retained for the new term.")
         if s.get('political_capital_points') != 3:
             failures.append("A coalition government did not begin with a reduced political-capital allowance.")
+        saved_parliament = dict(s.parliament_seats)
+        saved_partners = list(s.government_coalition_partners)
+        save_error = state.import_save(state.export_save())
+        if save_error:
+            failures.append(f"A save containing the current Parliament could not be reloaded: {save_error}")
+        elif (parliament._party_seats(st.session_state) != saved_parliament
+              or st.session_state.get('government_coalition_partners') != saved_partners):
+            failures.append("Save/load did not retain the elected Parliament and coalition agreement.")
 
         new_run('Labour', 'Normal', 31416)
         s = st.session_state
