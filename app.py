@@ -419,7 +419,12 @@ if s.year > 5:
     humphrey_message(f"Congratulations, Chancellor. We have survived the electorate. {extra}, but you remain at the Treasury.")
     if r['kind'] == 'majority':
         boost = round(min(15.0, max(5.0, r['margin'] / 10.0)), 1)
-        st.success(f"**YOU SURVIVED!** A majority government returns.\n\n🎉 **ELECTION HONEYMOON:** +**{boost}** to approval and political confidence, with five political-capital points.")
+        seat_swing = int(r.get('seat_changes', {}).get(s.party, 0))
+        capital_points = 4 if seat_swing <= -35 else 5
+        if seat_swing <= -20:
+            st.warning(f"**YOU SURVIVED, BUT THE PARTY HAS LOST {abs(seat_swing)} SEATS.** The election honeymoon is +{boost} to approval, but Cabinet and backbench confidence will be hit. The new term begins with {capital_points} political-capital points.")
+        else:
+            st.success(f"**YOU SURVIVED!** A majority government returns.\n\n🎉 **ELECTION HONEYMOON:** +**{boost}** to approval and political confidence, with five political-capital points.")
     elif r['kind'] == 'coalition':
         boost = round(max(1.0, min(4.0, 1.0 + max(0, int(r['margin'])) / 20.0)), 1)
         st.info(f"**COALITION AGREEMENT REACHED.** The shared mandate brings +{boost} public approval, but party unity is strained and the new term begins with three political-capital points.")
