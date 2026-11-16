@@ -848,13 +848,16 @@ def _apply(draft=None, annual_settlement=None):
     s.inflation = round(s.inflation + imp['inflation'], 2)
     country.nudge({'real_wages': imp['real_wages'], 'unemployment': imp['unemployment']})
     _set_scheme_delivery_after_budget(old, new)
+    # An annual Budget applies the full rate to this year's latest baseline.
+    # An emergency Budget applies only the change from the current approved rate.
+    for key in SPEND_DEFAULTS:
+        rate_change = _spend_rate_change(
+            old.get('spend', {}).get(key, 0.0), new.get('spend', {}).get(key, 0.0),
+            annual_settlement
+        )
+        if abs(rate_change) > 0.0001:
+            s.dept_spend[key] = round(float(s.dept_spend[key]) * (1.0 + rate_change / 100.0), 1)
     if annual_settlement:
-        # The previous year's reduction is already inside dept_spend. Apply this
-        # year's full recurring rate to that latest cash baseline, even when the
-        # player leaves the slider unchanged from the previous Budget.
-        for key in SPEND_DEFAULTS:
-            rate = float(new.get('spend', {}).get(key, 0.0))
-            s.dept_spend[key] = round(float(s.dept_spend[key]) * (1.0 + rate / 100.0), 1)
         s.budget_settlement_applied_period = period
     s.budget_applied = new
     # Enact tax thresholds only as part of the delivered Budget package.
@@ -1195,8 +1198,11 @@ def forecast(b, years=3):
     forecast_department_spend = {}
     for key in SPEND_DEFAULTS:
         cash = float(s.dept_spend[key])
-        if annual_settlement:
-            cash *= 1.0 + float(b.get('spend', {}).get(key, 0.0)) / 100.0
+        initial_rate_change = _spend_rate_change(
+            s.budget_applied.get('spend', {}).get(key, 0.0),
+            b.get('spend', {}).get(key, 0.0), annual_settlement
+        )
+        cash *= 1.0 + initial_rate_change / 100.0
         forecast_department_spend[key] = cash
     for i in range(1, years + 1):
         # Year 1 includes the current Budget settlement. Repeat that same rate in
@@ -1580,7 +1586,7 @@ def render_red_book(cur):
             rows.append({'Department': sp['short'], 'Start of term (£bn)': round(start, 1), 'Baseline now (£bn)': round(base, 1),
                          'This Budget (£bn)': round(prop, 1), 'Change since start': f"{(prop / start - 1) * 100:+.1f}%"})
         st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-        st.caption('Percentage changes compound into next year\'s baseline when spring arrives.')
+        st.caption('The same annual percentage is applied to the latest cash baseline at each annual Budget. Emergency Budgets apply only the change in the approved rate.')
         last = s.get('budget_last_tax', {})
         trows = []
         for k, tx in TAXES.items():
