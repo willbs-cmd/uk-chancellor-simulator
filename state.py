@@ -239,6 +239,7 @@ def _defaults():
         parliament_next_bonus=0, parliament_last_vote=None, parliament_history=[],
         parliament_actions={}, parliament_last_strategy=None,
         local_election_due=False, local_election_result=None, local_election_history=[], opening_parliament_seats={}, opening_mandate_pending=False,
+        parliament_seats={}, government_type='majority', government_coalition_partners=[], government_working_majority=39, coalition_stability=70.0,
         election_campaign_done=False, election_night_started=False, election_campaign_strategy='',
         election_campaign_turnout=0.0, election_campaign_approval=0.0, election_campaign_week=1,
         election_campaign_actions=[], constituency_incumbents={}, previous_election_seats={},
@@ -290,6 +291,11 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.fiscal_calendar_initialised = True
     s.budget_day_type = 'annual'
     s.opening_parliament_seats = opening_seat_allocation(party) or {}
+    s.parliament_seats = dict(s.opening_parliament_seats)
+    s.government_type = 'regional' if party in REGIONAL else 'majority'
+    s.government_coalition_partners = []
+    s.government_working_majority = (int(s.parliament_seats.get(party, 0)) - 326) if s.parliament_seats else 0
+    s.coalition_stability = 70.0
     s.opening_mandate_pending = party not in REGIONAL
     for k, v in sc['set'].items():
         s[k] = v
@@ -375,7 +381,8 @@ SAVE_KEYS = [
     'election_campaign_done', 'election_night_started', 'election_campaign_strategy',
     'election_campaign_turnout', 'election_campaign_approval', 'election_campaign_week', 'election_campaign_actions',
     'constituency_incumbents', 'previous_election_seats', 'opening_parliament_seats', 'opening_mandate_pending',
-    'election_broadcast_stage',
+    'election_broadcast_stage', 'parliament_seats', 'government_type', 'government_coalition_partners',
+    'government_working_majority', 'coalition_stability',
     'spending_review_last_period', 'spending_review_plan', 'spending_review_history', 'spending_review_due',
     'autumn_statement_history', 'autumn_statement_due', 'emergency_budget_history', 'emergency_budget_last_period', 'active_emergency_budget', 'emergency_replaces_spring_budget',
     'local_grant_uplift_bn', 'barnett_pass_through_pct', 'council_tax_referendum_threshold',
