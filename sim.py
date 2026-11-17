@@ -282,7 +282,8 @@ def check(n=None, difficulty=None):
     try:
         cabinet_checks()
         cabinet_rivalry_checks()
-        print("Cabinet management and rivalry regression: PASS")
+        cabinet_relationship_checks()
+        print("Cabinet management, rivalry and relationship regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 

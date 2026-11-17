@@ -340,7 +340,8 @@ def resolve_relationship_issue(choice):
             loyalty[dept] = max(0.0, float(loyalty.get(dept, 30)) - 12)
             outcome = f"You refuse to be pressured by {minister}. Their loyalty collapses."
             if loyalty[dept] <= 15:
-                record_resignation(s, dept, "Resigned after an unresolved dispute with the Chancellor")
+                record_resignation(s, minister, "Resigned after an unresolved dispute with the Chancellor")
+                loyalty[dept] = 50.0
                 outcome += " They resign; the post is vacant pending a Prime Ministerial appointment."
         else:
             return False
