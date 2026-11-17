@@ -79,6 +79,9 @@ def ensure(s=None):
     s.setdefault("ministerial_relationship_issue_year", "")
     s.setdefault("ministerial_relationship_history", [])
     s.setdefault("ministerial_profiles", {})
+    s.setdefault("ministerial_latest_appraisals", [])
+    s.setdefault("ministerial_appraisal_history", [])
+    s.setdefault("ministerial_poor_review_years", {})
     ensure_profiles(s)
     competence = dict(s.get("ministerial_competence", {}))
     for key in budget.DEPARTMENT_MINISTERS:
@@ -163,7 +166,9 @@ def annual_review(s=None):
     commitments = dict(s.get("ministerial_delivery_commitments", {}))
     rows = []
     for department, service in SERVICE_FOR_DEPARTMENT.items():
-        if str(s.get("cabinet_ministers", {}).get(department, "")).startswith("Vacant"):
+        minister_name = str(s.get("cabinet_ministers", {}).get(department, "") or "").strip()
+        # Do not appraise portfolios that have no appointed minister.
+        if not minister_name or minister_name.startswith(("Vacant", "New appointment")):
             continue
         score = float(scores.get(service, 60.0))
         old_score = float(previous.get(service, score))
@@ -185,7 +190,7 @@ def annual_review(s=None):
         if float(s.get("party_opinion", 50.0)) >= 65 and profile.get("personality") == "Party loyalist":
             loyalty_delta += 0.2
         loyalty[department] = round(max(0.0, min(100.0, float(loyalty.get(department, 60.0)) + loyalty_delta)), 1)
-        minister = str(s.get("cabinet_ministers", {}).get(department, department))
+        minister = minister_name
         appraisal_score = max(0.0, min(100.0, competence[department] * 0.45
                               + score * 0.40 + max(-10.0, min(10.0, change * 2.5))))
         if appraisal_score >= 80:

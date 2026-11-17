@@ -245,15 +245,15 @@ def cabinet_checks():
     })
     cabinet_management.annual_review(poor)
     first = poor.ministerial_latest_appraisals[0]
-    assert first["grade"] == "At risk" and first["warning"] == "Private warning"
+    assert first["grade"] == "At risk" and first["warning"] == "Private warning", f"First poor appraisal was {first}"
     poor.year = 2
     poor.ministerial_review_year = ""
     poor.public_service_history = [{"NHS": 35.0}, {"NHS": 20.0}]
     cabinet_management.annual_review(poor)
     second = poor.ministerial_latest_appraisals[0]
-    assert second["poor_years"] == 2 and second["warning"] == "Recommend Prime Ministerial review"
-    assert poor.ministerial_competence["health"] < 25.0
-    assert len(poor.ministerial_appraisal_history) == 2
+    assert second["poor_years"] == 2 and second["warning"] == "Recommend Prime Ministerial review", f"Second poor appraisal was {second}"
+    assert poor.ministerial_competence["health"] < 25.0, f"Repeated poor appraisal did not affect competence: {poor.ministerial_competence}"
+    assert len(poor.ministerial_appraisal_history) == 2, f"Expected two annual appraisal records, got {len(poor.ministerial_appraisal_history)}"
     return True
 
 def cabinet_relationship_checks():
