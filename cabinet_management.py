@@ -7,6 +7,7 @@ removes Cabinet ministers.
 import streamlit as st
 import budget
 import random
+import hashlib
 
 OPENING_COMPETENCE = {
     "health": 66.0, "education": 63.0, "welfare": 61.0, "justice": 58.0,
@@ -14,6 +15,48 @@ OPENING_COMPETENCE = {
     "climate": 64.0, "aid": 62.0, "culture": 65.0, "other": 60.0,
     "social_care": 61.0, "local_government": 59.0,
     "public_sector_pay": 63.0, "skills": 67.0,
+}
+PARTY_FACTIONS = {
+    "Labour": ["Party Mainstream", "Labour Right", "Soft Left", "Socialist Left"],
+    "Conservative": ["Party Mainstream", "One Nation", "Thatcherite Right", "New Right"],
+    "Liberal Democrats": ["Social Liberal", "Economic Liberal", "Federalist", "Party Mainstream"],
+    "Reform UK": ["Populist", "Free-Market", "National Conservative"],
+    "Green Party": ["Green Pragmatist", "Eco-Socialist", "Decentralist"],
+    "SNP": ["SNP Mainstream", "Social Democratic", "Independence Pragmatist"],
+    "Plaid Cymru": ["Civic Nationalist", "Welsh Social Democrat", "Welsh Socialist"],
+}
+PERSONALITIES = {
+    "Technocratic manager": {"delivery": 0.35, "loyalty": 0.0, "ambition": 0.0, "lobbying": 0.65},
+    "Party loyalist": {"delivery": 0.0, "loyalty": 0.35, "ambition": -0.15, "lobbying": 0.0},
+    "Ambitious operator": {"delivery": -0.05, "loyalty": -0.10, "ambition": 0.65, "lobbying": 0.15},
+    "Public campaigner": {"delivery": 0.0, "loyalty": 0.10, "ambition": 0.15, "lobbying": 0.70},
+    "Fiscal hawk": {"delivery": 0.10, "loyalty": 0.05, "ambition": -0.05, "lobbying": -0.60},
+}
+PERSONALITY_NAMES = tuple(PERSONALITIES)
+FACTION_IDEOLOGIES = {
+    "Party Mainstream": ["Centric", "Social Democratic"],
+    "Labour Right": ["Social Democratic", "Centric"],
+    "Soft Left": ["Social Democratic", "Hard Left"],
+    "Socialist Left": ["Hard Left"],
+    "One Nation": ["Centric", "Social Democratic"],
+    "Thatcherite Right": ["Free-Market", "Fiscal Austerity"],
+    "New Right": ["Free-Market", "Fiscal Austerity"],
+    "Social Liberal": ["Centric", "Social Democratic"],
+    "Economic Liberal": ["Centric", "Free-Market"],
+    "Federalist": ["Centric", "Social Democratic"],
+    "Populist": ["Free-Market", "Fiscal Austerity"],
+    "National Conservative": ["Fiscal Austerity", "Centric"],
+    "Green Pragmatist": ["Social Democratic", "Centric"],
+    "Eco-Socialist": ["Hard Left", "Social Democratic"],
+    "Decentralist": ["Social Democratic", "Centric"],
+    "SNP Mainstream": ["Social Democratic", "Centric"],
+    "Independence Pragmatist": ["Centric", "Social Democratic"],
+    "Civic Nationalist": ["Centric", "Social Democratic"],
+    "Welsh Social Democrat": ["Social Democratic", "Centric"],
+    "Welsh Socialist": ["Hard Left", "Social Democratic"],
+    "Government Mainstream": ["Centric", "Social Democratic"],
+    "Reformist": ["Social Democratic", "Free-Market"],
+    "Traditionalist": ["Centric", "Fiscal Austerity"],
 }
 SERVICE_FOR_DEPARTMENT = {
     "health": "NHS", "social_care": "NHS", "education": "Education",
@@ -35,10 +78,40 @@ def ensure(s=None):
     s.setdefault("ministerial_relationship_issue", None)
     s.setdefault("ministerial_relationship_issue_year", "")
     s.setdefault("ministerial_relationship_history", [])
+    s.setdefault("ministerial_profiles", {})
+    ensure_profiles(s)
     competence = dict(s.get("ministerial_competence", {}))
     for key in budget.DEPARTMENT_MINISTERS:
         competence.setdefault(key, OPENING_COMPETENCE.get(key, 60.0))
     s.ministerial_competence = competence
+
+
+def ensure_profiles(s=None):
+    """Assign stable simulated faction/personality profiles to current ministers."""
+    s = s or st.session_state
+    profiles = dict(s.get("ministerial_profiles", {}))
+    party = str(s.get("party", ""))
+    factions = PARTY_FACTIONS.get(party, ["Government Mainstream", "Reformist", "Traditionalist"])
+    seed = str(s.get("seed", 0))
+    for department, name in s.get("cabinet_ministers", {}).items():
+        name = str(name or "")
+        if not name or name.startswith(("Vacant", "New appointment")):
+            continue
+        existing = profiles.get(department, {})
+        if existing.get("minister") == name and existing.get("party") == party:
+            continue
+        digest = hashlib.sha256(f"{seed}:{party}:{department}:{name}".encode("utf-8")).hexdigest()
+        profiles[department] = {
+            "minister": name, "party": party,
+            "faction": factions[int(digest[:8], 16) % len(factions)],
+            "personality": PERSONALITY_NAMES[int(digest[8:16], 16) % len(PERSONALITY_NAMES)],
+        }
+    s.ministerial_profiles = profiles
+
+
+def profile_for(s, department):
+    ensure_profiles(s)
+    return dict(s.get("ministerial_profiles", {}).get(department, {}))
 
 
 def service_effect(s, service):
@@ -77,12 +150,21 @@ def annual_review(s=None):
         old_score = float(previous.get(service, score))
         change = score - old_score
         delta = 0.25 if score >= 68 and change >= 0 else (-0.25 if score < 42 and change < 0 else 0.0)
+        profile = profile_for(s, department)
+        traits = PERSONALITIES.get(profile.get("personality"), {})
+        delta += float(traits.get("delivery", 0.0))
         commitment = commitments.get(department)
         if commitment and commitment != tick:
             delta += 0.25 if change >= 0 else -0.25
             commitments.pop(department, None)
         competence[department] = round(max(20.0, min(95.0, float(competence.get(department, 60.0)) + delta)), 1)
         loyalty_delta = 1.0 if change >= 0.8 else (-1.0 if change <= -0.8 else 0.0)
+        loyalty_delta += float(traits.get("loyalty", 0.0))
+        faction_ideologies = FACTION_IDEOLOGIES.get(profile.get("faction"), ["Centric"])
+        latest_ideology = str(s.get("last_ideology", "Centric"))
+        loyalty_delta += 0.2 if latest_ideology in faction_ideologies else -0.2
+        if float(s.get("party_opinion", 50.0)) >= 65 and profile.get("personality") == "Party loyalist":
+            loyalty_delta += 0.2
         loyalty[department] = round(max(0.0, min(100.0, float(loyalty.get(department, 60.0)) + loyalty_delta)), 1)
         rows.append({"department": department, "service": service, "score": round(score, 1),
                      "change": round(change, 1), "competence": competence[department],
@@ -124,7 +206,10 @@ def update_rivalries(s=None):
         gap_skill = abs(float(competence.get(left, 60.0)) - float(competence.get(right, 60.0)))
         gap_loyalty = abs(float(loyalty.get(left, 60.0)) - float(loyalty.get(right, 60.0)))
         refusal_gap = abs(int(refusals.get(left_name, 0)) - int(refusals.get(right_name, 0)))
-        pressure = max(0.0, gap_skill - 10.0) * 0.22 + max(0.0, gap_loyalty - 20.0) * 0.10 + min(4, refusal_gap) * 0.8
+        left_traits = PERSONALITIES.get(profile_for(s, left).get("personality"), {})
+        right_traits = PERSONALITIES.get(profile_for(s, right).get("personality"), {})
+        ambition_pressure = (float(left_traits.get("ambition", 0.0)) + float(right_traits.get("ambition", 0.0))) * 1.5
+        pressure = max(0.0, gap_skill - 10.0) * 0.22 + max(0.0, gap_loyalty - 20.0) * 0.10 + min(4, refusal_gap) * 0.8 + ambition_pressure
         relief = 0.7 if gap_skill < 8 and gap_loyalty < 15 else 0.0
         tension = round(max(0.0, min(100.0, float(tensions.get(key, 24.0)) + pressure - relief)), 1)
         tensions[key] = tension
@@ -245,7 +330,9 @@ def generate_relationship_issue(s=None, tick=None):
         dept, minister = min(vulnerable, key=lambda x: float(loyalty.get(x[0], 60)))
         issue = {"kind": "resignation", "department": dept, "minister": minister,
                  "text": f"{minister} privately warns that continued Treasury opposition may leave them unable to remain in Cabinet."}
-    elif serious and rng.random() < 0.72:
+    elif serious and rng.random() < 0.62 + min(0.25, max(
+            float(PERSONALITIES.get(profile_for(s, r.get("key", "").split("|")[0]).get("personality"), {}).get("ambition", 0.0))
+            for r in serious) * 0.25):
         row = rng.choice(serious)
         pair = str(row.get("key", "")).split("|")
         if len(pair) != 2:
@@ -256,7 +343,13 @@ def generate_relationship_issue(s=None, tick=None):
                  "rival_department": rival_dept, "rival": rival, "tension": float(row.get("tension", 55)),
                  "text": f"Reports suggest {minister} has been briefing privately against {rival} over overlapping responsibilities and influence with Number 10."}
     elif rng.random() < 0.58:
-        dept, minister = rng.choice(active)
+        weighted = []
+        for dept_key, minister_name in active:
+            profile = profile_for(s, dept_key)
+            lobby_trait = float(PERSONALITIES.get(profile.get("personality"), {}).get("lobbying", 0.0))
+            ideological_distance = 0.25 if str(s.get("last_ideology", "Centric")) not in FACTION_IDEOLOGIES.get(profile.get("faction"), ["Centric"]) else 0.0
+            weighted.append((dept_key, minister_name, max(0.15, 1.0 + lobby_trait + ideological_distance)))
+        dept, minister, _ = rng.choices(weighted, weights=[item[2] for item in weighted], k=1)[0]
         cost = round(rng.uniform(1.0, 3.5), 1)
         issue = {"kind": "lobbying", "department": dept, "minister": minister, "cost": cost,
                  "text": f"{minister} wants a private meeting and is pressing the Treasury for £{cost:.1f}bn of extra departmental support."}
