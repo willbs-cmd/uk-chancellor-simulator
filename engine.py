@@ -1235,6 +1235,9 @@ def proceed_to_spring():
     household.advance(s)
     regional_economy.advance(s)
     public_services.advance(s)
+    # Public-service capacity feeds back into productive potential with a
+    # modest, bounded effect rather than an instant GDP windfall.
+    s.growth = round(s.growth + float(s.get('public_service_productivity_effect', 0.0)), 2)
     devolution.annual_update()
     world_drag = float(s.get('world_cycle', 0.0))
     s.growth = round(s.growth + world_drag * 0.12, 2)

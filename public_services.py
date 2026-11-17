@@ -33,6 +33,20 @@ def _clip(value, low=0.0, high=100.0):
     return max(low, min(high, float(value)))
 
 
+def productivity_growth_effect(scores):
+    """Small annual growth contribution from the level of productive public services."""
+    weights = {
+        "Education": 0.30,
+        "Transport": 0.25,
+        "Local government": 0.20,
+        "NHS": 0.15,
+        "Justice": 0.10,
+    }
+    weighted_score = sum(float(scores.get(key, SERVICES[key]["start"])) * weight
+                         for key, weight in weights.items())
+    return round(_clip((weighted_score - 60.0) * 0.005, -0.12, 0.12), 3)
+
+
 def ensure(s=None):
     s = s or st.session_state
     scores = dict(s.get("public_service_scores", {}))
@@ -92,6 +106,9 @@ def advance(s=None):
         notes.append(f"{key} {change:+.1f}")
 
     s.public_service_scores = scores
+    # Better-performing schools, transport, local services and healthcare support
+    # skills, labour participation and the reliability of the wider economy.
+    s.public_service_productivity_effect = productivity_growth_effect(scores)
 
     # Pay settlements and staff morale create a separate, visible industrial-relations risk.
     pay_ratio = _department_ratio(s, "public_sector_pay")
@@ -123,7 +140,8 @@ def advance(s=None):
 
     s.public_service_history = (list(s.public_service_history) + [{
         "Year": f"Term {s.get('term', 1)}, Year {s.get('year', 1)}",
-        **scores
+        **scores,
+        "Productivity growth effect (pp)": s.public_service_productivity_effect,
     }])[-20:]
     s.public_service_year_notes = notes
 
@@ -178,7 +196,7 @@ def render():
     s = st.session_state
     ensure(s)
     st.markdown("### Public Services & Government Performance")
-    st.caption("Service outcomes evolve gradually from funding, workforce capacity and demand. Scores are illustrative gameplay indices, not official statistics.")
+    st.caption("Service outcomes evolve gradually from funding, workforce capacity and demand. Stronger education, transport, health and local services also support long-run productivity. Scores are illustrative gameplay indices, not official statistics.")
     scores = s.public_service_scores
     cols = st.columns(5)
     for col, (key, spec) in zip(cols, SERVICES.items()):

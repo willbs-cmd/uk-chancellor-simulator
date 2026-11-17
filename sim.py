@@ -1306,6 +1306,21 @@ def check(n=None, difficulty=None):
             if not isinstance(effect.get('fx', {}), dict):
                 failures.append(f"Delayed consequence at {key}, option {option_ix} has invalid effects.")
 
+    # Public-service investment should create a small, bounded productivity
+    # effect: weak services drag on growth; stronger services support it.
+    try:
+        import public_services
+        weak_services = {key: 35.0 for key in public_services.SERVICES}
+        strong_services = {key: 85.0 for key in public_services.SERVICES}
+        weak_effect = public_services.productivity_growth_effect(weak_services)
+        strong_effect = public_services.productivity_growth_effect(strong_services)
+        if not (weak_effect < 0 < strong_effect):
+            failures.append("Public-service productivity feedback does not reward stronger service performance.")
+        if abs(weak_effect) > 0.12 or abs(strong_effect) > 0.12:
+            failures.append("Public-service productivity feedback exceeds its annual safety bounds.")
+    except Exception as exc:
+        failures.append(f"Public-service productivity regression check failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
