@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 import budget
+import country
 
 SERVICES = {
     "NHS": {"label": "NHS access & capacity", "start": 54.0, "departments": ("health", "social_care"),

@@ -1321,6 +1321,31 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Public-service productivity regression check failed: {exc}")
 
+        weak_employment = public_services.employment_unemployment_effect(weak_services)
+        strong_employment = public_services.employment_unemployment_effect(strong_services)
+        if not (weak_employment > 0 > strong_employment):
+            failures.append("Public-service labour-market feedback does not reduce unemployment when services improve.")
+        if abs(weak_employment) > 0.06 or abs(strong_employment) > 0.06:
+            failures.append("Public-service labour-market feedback exceeds its annual safety bounds.")
+
+        # Repeated calls in one game year must not apply the employment channel twice.
+        test_state = FakeState(
+            term=1, year=1, country={"unemployment": 5.0, "real_wages": 0.5},
+            dept_spend={}, public_service_scores=dict(strong_services),
+            public_service_last_tick="", public_service_history=[],
+            public_service_events=[], public_service_strikes=[],
+            public_service_resolved=[], public_service_year_notes=[],
+            inflation=2.0, headroom=0.0, deficit=0.0, seed=17
+        )
+        public_services.advance(test_state)
+        unemployment_after_first = test_state.country["unemployment"]
+        history_after_first = len(test_state.public_service_history)
+        public_services.advance(test_state)
+        if test_state.country["unemployment"] != unemployment_after_first:
+            failures.append("Public-service employment effect was applied more than once in a game year.")
+        if len(test_state.public_service_history) != history_after_first:
+            failures.append("Public-service history duplicated during an idempotence check.")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
