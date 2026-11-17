@@ -28,6 +28,7 @@ import devolution
 import fiscal_events
 import government_missions
 import cabinet_management
+import political_pressure
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -356,8 +357,11 @@ def execute_decision(opt):
     treasury_officials.review_policy(decision.get('title', 'Policy decision'), opt.get('label', ''), applied_effect)
     apply_effect(applied_effect)
     parliament.apply_fallout(vote)
+    pressure_issue = political_pressure.review_policy(s, decision, opt, vote)
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
     s.message = (s.message + " " + parliament_note).strip()
+    if pressure_issue:
+        s.event_cards.append({'title': 'Political pressure · Cabinet dissent' if pressure_issue.get('kind') == 'ministerial_dissent' else 'Political pressure · Backbench rebellion', 'text': pressure_issue.get('text', ''), 'summary': 'A response is required on the Chancellor’s Desk.'})
     s.event_cards.append({
         'title': f"Commons vote · {vote['status']}",
         'text': f"{decision['title']}: {opt['label']}",

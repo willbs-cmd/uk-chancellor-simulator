@@ -63,6 +63,7 @@ import scenarios as scen  # noqa: E402
 import state  # noqa: E402
 import government_missions  # noqa: E402
 import cabinet_management  # noqa: E402
+import political_pressure  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -298,7 +299,25 @@ def check(n=None, difficulty=None):
         strong_case = cabinet_management.reshuffle_assessment(assessment_state, "health")
         assert weak_case["score"] > strong_case["score"], "Poor performance and weak loyalty should strengthen the case for replacement."
         assert weak_case["band"] == "High" and strong_case["band"] == "Low"
-        print("Cabinet management, rivalry, relationships and reshuffle assessment regression: PASS")
+        pressure_state = FakeState({
+            "seed": 123, "term": 1, "year": 2, "block": 1, "party": "Labour",
+            "cabinet_ministers": {"health": "Health Secretary"},
+            "ministerial_loyalty": {"health": 20.0}, "ministerial_profiles": {
+                "health": {"minister": "Health Secretary", "party": "Labour", "faction": "Socialist Left", "personality": "Public campaigner"}
+            },
+            "political_pressure_issue": None, "political_pressure_history": [],
+            "political_capital_points": 2, "headroom": 5.0, "cab_opinion": 50.0,
+            "pm_opinion": 50.0, "backbench_opinion": 50.0, "media_opinion": 50.0, "approval": 50.0,
+        })
+        issue = political_pressure.review_policy(pressure_state, {"title": "Fiscal package"}, {"ideology": "Fiscal Austerity"}, {"rebels": 35})
+        if issue:
+            assert issue["kind"] in {"ministerial_dissent", "backbench_rebellion"}
+            assert political_pressure.resolve_issue("negotiate")
+            assert pressure_state["political_pressure_issue"] is None
+            assert pressure_state["political_capital_points"] == 1
+            assert pressure_state["headroom"] == 4.7
+        assert political_pressure.review_policy(pressure_state, {"title": "Next"}, {"ideology": "Centric"}, {"rebels": 0}) is None or pressure_state.get("political_pressure_issue") is None
+        print("Cabinet management, political pressure and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 

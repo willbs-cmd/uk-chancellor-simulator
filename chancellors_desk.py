@@ -7,6 +7,7 @@ import politics
 import budget
 import state
 import cabinet_management
+import political_pressure
 from theme import phase_info
 
 
@@ -176,6 +177,26 @@ def render(on_restart):
                     st.markdown("**Overlapping portfolio tensions**")
                     st.dataframe(rivalry_rows, hide_index=True, use_container_width=True)
                     st.caption("Tension rises when overlapping ministers diverge in competence, loyalty or repeated Treasury disputes. Serious rivalries can weaken Cabinet unity.")
+                pressure_issue = s.get("political_pressure_issue")
+                if pressure_issue:
+                    st.markdown("**Political pressure · Response required**")
+                    st.warning(pressure_issue.get("text", "A political dispute needs your attention."))
+                    if pressure_issue.get("leaked"):
+                        st.caption("A briefing has reached the press. Media sentiment and public approval have already been affected.")
+                    cols = st.columns(3)
+                    with cols[0]:
+                        if st.button("Stand firm", key="political_pressure_stand", use_container_width=True):
+                            political_pressure.resolve_issue("stand_firm")
+                            st.rerun()
+                    with cols[1]:
+                        if st.button("Negotiate", key="political_pressure_negotiate", use_container_width=True, disabled=int(s.get("political_capital_points", 0)) < 1):
+                            political_pressure.resolve_issue("negotiate")
+                            st.rerun()
+                    with cols[2]:
+                        if st.button("Allow briefing", key="political_pressure_briefing", use_container_width=True):
+                            political_pressure.resolve_issue("briefing")
+                            st.rerun()
+                    st.caption("Negotiation costs one political-capital point and £0.3bn of headroom. Standing firm risks Cabinet relations; allowing a briefing damages the Government's public image.")
                 relationship_issue = s.get("ministerial_relationship_issue")
                 if relationship_issue:
                     st.markdown("**A private Cabinet approach**")
