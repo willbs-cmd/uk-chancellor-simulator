@@ -2077,6 +2077,27 @@ def render(submit=None, after_summary=None):
 
 # ---------------------------------------------------------------- Spending Review: multi-year departmental settlements
 
+def spending_review_projection(current, proposed, year2_uplift, year3_uplift):
+    """Build a transparent department-by-department three-year cash settlement."""
+    rows = []
+    for key, spec in SPEND_DEFAULTS.items():
+        base = float(current.get(key, spec['default']))
+        year1 = float(proposed.get(key, base))
+        year2 = year1 * (1.0 + float(year2_uplift) / 100.0)
+        year3 = year2 * (1.0 + float(year3_uplift) / 100.0)
+        rows.append({
+            "department": key,
+            "label": spec['label'],
+            "current": round(base, 1),
+            "year1": round(year1, 1),
+            "year2": round(year2, 1),
+            "year3": round(year3, 1),
+            "change_year1": round(year1 - base, 1),
+            "change_year3": round(year3 - base, 1),
+        })
+    return rows
+
+
 def apply_spending_review_rollforward(s, target_year):
     """Apply the approved year-two/year-three departmental settlement once per year."""
     plan = s.get('spending_review_plan', {})
@@ -2253,6 +2274,23 @@ def render_spending_review():
         {"Spending year": f"Government Year {review_year + 2} · planned", "Annual departmental budgets": f"£{proposed_total * (1 + year2_uplift / 100) * (1 + year3_uplift / 100):,.1f}bn", "Annual change": f"{year3_uplift:+.1f}%"},
     ]
     st.dataframe(pd.DataFrame(path_rows), hide_index=True, use_container_width=True)
+    projected_departments = spending_review_projection(
+        s.dept_spend, draft if draft else s.dept_spend, year2_uplift, year3_uplift
+    )
+    with st.expander("Department-by-department three-year settlement", expanded=False):
+        st.caption("Cash allocations are shown for each department across all three years. Year 2 and Year 3 apply the forward annual uplifts to each department's agreed Year 1 baseline.")
+        detail_rows = [{
+            "Department": row["label"],
+            "Current": f"£{row['current']:,.1f}bn",
+            f"Year {review_year}": f"£{row['year1']:,.1f}bn",
+            f"Year {review_year + 1}": f"£{row['year2']:,.1f}bn",
+            f"Year {review_year + 2}": f"£{row['year3']:,.1f}bn",
+            "Change by final year": f"£{row['change_year3']:+,.1f}bn",
+        } for row in projected_departments]
+        st.dataframe(pd.DataFrame(detail_rows), hide_index=True, use_container_width=True)
+        projected_total_y3 = sum(row["year3"] for row in projected_departments)
+        st.metric("Total departmental cash by final year", f"£{projected_total_y3:,.1f}bn",
+                  f"£{projected_total_y3 - current_total:+,.1f}bn vs today's baseline")
 
     with st.expander("What the settlement means", expanded=False):
         st.write("Higher allocations improve the capacity of services over time but increase the annual spending baseline. Large unfunded settlements can worsen borrowing, reduce fiscal headroom and unsettle markets.")

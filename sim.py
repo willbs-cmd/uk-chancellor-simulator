@@ -829,6 +829,24 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Save/load smoke test failed: {exc}")
 
+    # Three-year Spending Review projections are department-specific, compound
+    # the forward uplifts, and do not mutate the approved/current allocation ledger.
+    try:
+        current_allocations = {"health": 100.0, "education": 80.0}
+        proposed_allocations = {"health": 105.0, "education": 78.0}
+        projected = budget.spending_review_projection(current_allocations, proposed_allocations, 2.0, 3.0)
+        by_department = {row["department"]: row for row in projected}
+        health = by_department["health"]
+        education = by_department["education"]
+        if health["year1"] != 105.0 or health["year2"] != 107.1 or health["year3"] != 110.3:
+            failures.append("Health Spending Review projection did not compound the Year 2 and Year 3 uplifts.")
+        if education["year1"] != 78.0 or education["year2"] != 79.6 or education["year3"] != 82.0:
+            failures.append("Education Spending Review projection did not preserve its distinct Year 1 settlement.")
+        if current_allocations != {"health": 100.0, "education": 80.0}:
+            failures.append("Spending Review projection mutated current departmental allocations.")
+    except Exception as exc:
+        failures.append(f"Spending Review projection regression failed: {exc}")
+
     # The next Budget editor must hydrate from the newly approved ledger,
     # not retain stale Streamlit widget values from the previous Budget.
     try:
