@@ -279,10 +279,18 @@ def cabinet_rivalry_checks():
 
 def political_survival_checks():
     import political_survival
-    weak = FakeState({"term":1,"year":2,"seed":41,"party":"Labour","pm_opinion":32.0,
-        "pm_trust":45.0,"approval":38.0,"party_opinion":35.0,"backbench_opinion":30.0,
-        "public_service_strikes":[{"severity":2.0,"duration_years":2}],
+    weak = FakeState({"term":1,"year":2,"seed":1,"party":"Labour","pm_opinion":20.0,
+        "pm_trust":45.0,"approval":25.0,"party_opinion":20.0,"backbench_opinion":20.0,
+        "public_service_strikes":[{"severity":3.0,"duration_years":3}],
         "leadership_last_review":0,"leadership_issue":None,"leadership_history":[],"event_cards":[]})
+    import hashlib
+    # Pick a reproducible seed that places this deliberately severe case inside its event chance.
+    for candidate_seed in range(1, 500):
+        raw=f"{candidate_seed}:1:2:leadership-speculation"
+        roll=int(hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8],16)%100
+        if roll < 31:
+            weak.seed=candidate_seed
+            break
     issue=political_survival.annual_review(weak)
     assert issue is not None and issue["pressure"] >= 18.0 and issue["challenger"]
     pressure=weak["leadership_pressure"]
