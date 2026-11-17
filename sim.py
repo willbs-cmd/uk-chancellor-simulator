@@ -223,6 +223,31 @@ def cabinet_checks():
     assert len(fake.ministerial_delivery_history) == 1
     return True
 
+def cabinet_rivalry_checks():
+    fake = FakeState({
+        "term": 1, "year": 2,
+        "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
+        "ministerial_competence": {"health": 90.0, "social_care": 40.0},
+        "ministerial_loyalty": {"health": 90.0, "social_care": 40.0},
+        "ministerial_refusals": {}, "ministerial_rivalries": {},
+        "ministerial_rivalry_history": [], "ministerial_resignations": [],
+        "ministerial_vacancy_year": {}, "public_service_scores": {},
+        "public_service_history": [], "ministerial_delivery_history": [],
+        "ministerial_review_year": "", "ministerial_meeting_year": "",
+        "ministerial_review_history": [], "ministerial_delivery_commitments": {},
+        "cab_opinion": 60.0,
+    })
+    cabinet_management.ensure(fake)
+    rows = cabinet_management.update_rivalries(fake)
+    assert rows and rows[0]["tension"] > 24.0, "Large portfolio differences should increase rivalry tension"
+    assert fake.cab_opinion < 60.0, "Severe rivalry should modestly reduce Cabinet unity"
+    department = cabinet_management.record_resignation(fake, "Health Secretary", "Test resignation")
+    assert department == "health"
+    assert str(fake.cabinet_ministers["health"]).startswith("Vacant")
+    assert fake.ministerial_resignations[-1]["minister"] == "Health Secretary"
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -236,7 +261,8 @@ def check(n=None, difficulty=None):
     failures = []
     try:
         cabinet_checks()
-        print("Cabinet management regression: PASS")
+        cabinet_rivalry_checks()
+        print("Cabinet management and rivalry regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 

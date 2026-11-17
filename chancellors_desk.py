@@ -164,6 +164,16 @@ def render(on_restart):
                     })
                 st.dataframe(roster, hide_index=True, use_container_width=True)
                 st.caption("Competence influences delivery gradually; loyalty affects how ministers respond to Treasury decisions. These are simulated ratings.")
+                rivalry_history = list(s.get("ministerial_rivalry_history", []))
+                latest_rivalries = rivalry_history[-1].get("rows", []) if rivalry_history else []
+                rivalry_rows = [
+                    {"Portfolio rivalry": row["label"], "Ministers": row["ministers"], "Tension": f'{row["tension"]:.0f}/100'}
+                    for row in latest_rivalries
+                ]
+                if rivalry_rows:
+                    st.markdown("**Overlapping portfolio tensions**")
+                    st.dataframe(rivalry_rows, hide_index=True, use_container_width=True)
+                    st.caption("Tension rises when overlapping ministers diverge in competence, loyalty or repeated Treasury disputes. Serious rivalries can weaken Cabinet unity.")
                 meeting_tick = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
                 if s.get("ministerial_meeting_year") != meeting_tick:
                     meeting_dept = st.selectbox(

@@ -29,6 +29,8 @@ def ensure(s=None):
     s.setdefault("ministerial_meeting_year", "")
     s.setdefault("ministerial_review_history", [])
     s.setdefault("ministerial_delivery_commitments", {})
+    s.setdefault("ministerial_rivalries", {})
+    s.setdefault("ministerial_rivalry_history", [])
     competence = dict(s.get("ministerial_competence", {}))
     for key in budget.DEPARTMENT_MINISTERS:
         competence.setdefault(key, OPENING_COMPETENCE.get(key, 60.0))
@@ -85,6 +87,78 @@ def annual_review(s=None):
     s.ministerial_loyalty = loyalty
     s.ministerial_delivery_commitments = commitments
     s.ministerial_delivery_history = (list(s.get("ministerial_delivery_history", [])) + [{"year": tick, "rows": rows}])[-20:]
+    update_rivalries(s)
+
+
+
+# Overlapping portfolios can develop rivalries over influence and scarce settlements.
+RIVALRY_PAIRS = (
+    ("health", "social_care", "Health and social care"),
+    ("education", "skills", "Education and skills"),
+    ("transport", "local_government", "Transport and local government"),
+    ("housing", "local_government", "Housing and local government"),
+    ("defence", "aid", "Defence and international development"),
+)
+
+
+def update_rivalries(s=None):
+    """Update portfolio tensions once per annual review; ratings remain bounded."""
+    s = s or st.session_state
+    ensure(s)
+    tensions = dict(s.get("ministerial_rivalries", {}))
+    competence = s.get("ministerial_competence", {})
+    loyalty = s.get("ministerial_loyalty", {})
+    refusals = s.get("ministerial_refusals", {})
+    cabinet = s.get("cabinet_ministers", {})
+    rows = []
+    for left, right, label in RIVALRY_PAIRS:
+        left_name, right_name = str(cabinet.get(left, "")), str(cabinet.get(right, ""))
+        if not left_name or not right_name or left_name.startswith(("Vacant", "New appointment")) or right_name.startswith(("Vacant", "New appointment")):
+            continue
+        key = f"{left}|{right}"
+        gap_skill = abs(float(competence.get(left, 60.0)) - float(competence.get(right, 60.0)))
+        gap_loyalty = abs(float(loyalty.get(left, 60.0)) - float(loyalty.get(right, 60.0)))
+        refusal_gap = abs(int(refusals.get(left_name, 0)) - int(refusals.get(right_name, 0)))
+        pressure = max(0.0, gap_skill - 10.0) * 0.22 + max(0.0, gap_loyalty - 20.0) * 0.10 + min(4, refusal_gap) * 0.8
+        relief = 0.7 if gap_skill < 8 and gap_loyalty < 15 else 0.0
+        tension = round(max(0.0, min(100.0, float(tensions.get(key, 24.0)) + pressure - relief)), 1)
+        tensions[key] = tension
+        rows.append({"key": key, "label": label, "ministers": f"{left_name} / {right_name}", "tension": tension})
+    s.ministerial_rivalries = tensions
+    history = list(s.get("ministerial_rivalry_history", []))
+    tick = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+    history.append({"year": tick, "rows": rows})
+    s.ministerial_rivalry_history = history[-20:]
+    serious = sum(1 for row in rows if row["tension"] >= 75)
+    if serious:
+        s.cab_opinion = round(max(0.0, float(s.get("cab_opinion", 50.0)) - min(1.0, serious * 0.25)), 1)
+    return rows
+
+
+def record_resignation(s, minister, reason):
+    """Record a departure and leave the affected portfolio vacant for Number 10 to fill."""
+    cabinet = dict(s.get("cabinet_ministers", {}))
+    department = next((key for key, name in cabinet.items() if str(name) == str(minister)), None)
+    if department is not None:
+        cabinet[department] = "Vacant — awaiting Prime Minister"
+        s.cabinet_ministers = cabinet
+        vacancies = dict(s.get("ministerial_vacancy_year", {}))
+        vacancies[department] = int(s.get("year", 1))
+        s.ministerial_vacancy_year = vacancies
+        loyalty = dict(s.get("ministerial_loyalty", {}))
+        loyalty[department] = 50.0
+        s.ministerial_loyalty = loyalty
+        competence = dict(s.get("ministerial_competence", {}))
+        competence[department] = 60.0
+        s.ministerial_competence = competence
+    resignations = list(s.get("ministerial_resignations", []))
+    resignations.append({
+        "minister": str(minister), "year": int(s.get("year", 1)),
+        "term": int(s.get("term", 1)), "reason": str(reason),
+        "department": department,
+    })
+    s.ministerial_resignations = resignations[-20:]
+    return department
 
 
 def hold_private_meeting(department, approach):

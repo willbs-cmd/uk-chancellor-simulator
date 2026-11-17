@@ -917,11 +917,11 @@ def resolve_ministerial_dispute(choice):
         s.cab_opinion = round(_clip(s.cab_opinion - 4.0), 1)
         s.pm_opinion = round(_clip(s.pm_opinion - 2.0), 1)
         outcome = f"The {minister} publicly attacks the Treasury's approach. The row dominates the political news cycle."
-        if loyalty[minister] <= 15:
-            resignations = list(s.get('ministerial_resignations', []))
-            resignations.append({'minister': minister, 'year': int(s.get('year', 1)), 'term': int(s.get('term', 1)), 'reason': 'Resigned after a public dispute with the Chancellor'})
-            s.ministerial_resignations = resignations[-20:]
-            outcome += f" The {minister} resigns from Cabinet."
+        if loyalty[minister] <= 25:
+            cabinet_management.record_resignation(
+                s, minister, "Resigned after a public dispute with the Chancellor"
+            )
+            outcome += f" The {minister} resigns from Cabinet. The post is now vacant pending a Prime Ministerial appointment."
     else:
         return
     s.ministerial_loyalty = loyalty
