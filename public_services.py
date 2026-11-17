@@ -241,7 +241,7 @@ def resolve_strike(strike_id, choice):
         # Acceptance is deterministic: a better offer and constructive workforce
         # relations help, while severe disputes make unions harder to satisfy.
         acceptance_score = fraction * 100 + max(-8.0, min(8.0, (morale - 52.0) * 0.35))
-        acceptance_threshold = 70.0 + severity * 7.0
+        acceptance_threshold = 68.0 + severity * 5.0
         accepted = choice == "final_offer" or acceptance_score >= acceptance_threshold
         if accepted:
             s.headroom = round(float(s.get("headroom", 0.0)) - amount, 1)
