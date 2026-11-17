@@ -277,6 +277,29 @@ def cabinet_rivalry_checks():
     return True
 
 
+def political_survival_checks():
+    import political_survival
+    weak = FakeState({"term":1,"year":2,"seed":41,"party":"Labour","pm_opinion":32.0,
+        "pm_trust":45.0,"approval":38.0,"party_opinion":35.0,"backbench_opinion":30.0,
+        "public_service_strikes":[{"severity":2.0,"duration_years":2}],
+        "leadership_last_review":0,"leadership_issue":None,"leadership_history":[],"event_cards":[]})
+    issue=political_survival.annual_review(weak)
+    assert issue is not None and issue["pressure"] >= 18.0 and issue["challenger"]
+    pressure=weak["leadership_pressure"]
+    assert political_survival.annual_review(weak) is None
+    assert weak["leadership_pressure"] == pressure
+    before=weak["pm_trust"]
+    assert political_survival.resolve(weak,"back_pm")
+    assert weak["leadership_issue"] is None and weak["pm_trust"] > before
+    assert weak["leadership_history"][-1]["choice"] == "back_pm"
+    weak.update({"year":3,"leadership_last_review":2,"pm_opinion":30.0,
+        "party_opinion":28.0,"backbench_opinion":25.0})
+    assert political_survival.annual_review(weak) is not None
+    assert political_survival.resolve(weak,"stay_neutral")
+    assert weak["leadership_issue"] is None
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -289,6 +312,8 @@ def check(n=None, difficulty=None):
     contract = thresholds['contract']
     failures = []
     try:
+        import political_survival
+        political_survival_checks()
         cabinet_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()

@@ -1581,6 +1581,8 @@ def proceed_to_spring():
     s.feature_notice = ''
     s.feature_notice_phase = 0
     pm_relationship_annual_review(s)
+    import political_survival
+    political_survival.annual_review(s)
     government_missions.record_year(s)
     performance_report.create_report()
     s.year += 1

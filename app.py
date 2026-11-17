@@ -47,6 +47,8 @@ def restart():
 
 # ==================== PERMANENT CHANCELLOR'S DESK ====================
 chancellors_desk.render(restart)
+import political_survival
+political_survival.render(st.session_state)
 
 
 # ==================== SETUP SCREEN ====================
