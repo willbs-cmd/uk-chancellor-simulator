@@ -3249,16 +3249,45 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     min-width:100% !important;
     width:100% !important;
   }
-  [data-testid="stTabs"] [role="tablist"] {
-    overflow-x:auto !important;
-    flex-wrap:nowrap !important;
-    scrollbar-width:thin !important;
+  /* All primary and nested tabs remain visible on a phone: no clipped
+     final tab and no floating scroll-arrow overlay. */
+  [data-testid="stTabs"] [role="tablist"],
+  [data-testid="stTabs"] [data-baseweb="tab-list"] {
+    display:flex !important;
+    flex-flow:row wrap !important;
+    align-items:stretch !important;
+    justify-content:stretch !important;
+    gap:.3rem !important;
+    overflow:visible !important;
+    width:100% !important;
+    padding:.2rem 0 .45rem !important;
+    scrollbar-width:none !important;
   }
-  [data-testid="stTabs"] button[role="tab"] {
-    flex:0 0 auto !important;
-    white-space:nowrap !important;
-    padding:.5rem .65rem !important;
-    font-size:.82rem !important;
+  [data-testid="stTabs"] [role="tablist"] > button:not([role="tab"]),
+  [data-testid="stTabs"] [data-baseweb="tab-list"] > button:not([data-baseweb="tab"]) {
+    display:none !important;
+  }
+  [data-testid="stTabs"] button[role="tab"],
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    box-sizing:border-box !important;
+    flex:1 1 calc(25% - .3rem) !important;
+    width:calc(25% - .3rem) !important;
+    min-width:0 !important;
+    max-width:calc(25% - .2rem) !important;
+    min-height:2.75rem !important;
+    height:auto !important;
+    padding:.42rem .18rem !important;
+    margin:0 !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
+    text-align:center !important;
+    justify-content:center !important;
+    font-size:.72rem !important;
+    line-height:1.12 !important;
+  }
+  [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+    min-width:0 !important;
+    padding-top:.65rem !important;
   }
   [data-testid="stDataFrame"], [data-testid="stTable"] {
     max-width:100% !important;
