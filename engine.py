@@ -361,7 +361,7 @@ def execute_decision(opt):
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
     s.message = (s.message + " " + parliament_note).strip()
     if pressure_issue:
-        s.event_cards.append({'title': 'Political pressure · Cabinet dissent' if pressure_issue.get('kind') == 'ministerial_dissent' else 'Political pressure · Backbench rebellion', 'text': pressure_issue.get('text', ''), 'summary': 'A response is required on the Chancellor’s Desk.'})
+        s.event_cards.append({'title': 'Political pressure · Cabinet dissent' if pressure_issue.get('kind') == 'ministerial_dissent' else ('Political pressure · Parliamentary faction' if pressure_issue.get('kind') == 'parliamentary_bloc' else 'Political pressure · Backbench rebellion'), 'text': pressure_issue.get('text', ''), 'summary': 'A response is required on the Chancellor’s Desk.'})
     s.event_cards.append({
         'title': f"Commons vote · {vote['status']}",
         'text': f"{decision['title']}: {opt['label']}",

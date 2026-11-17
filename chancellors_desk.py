@@ -196,7 +196,10 @@ def render(on_restart):
                         if st.button("Allow briefing", key="political_pressure_briefing", use_container_width=True):
                             political_pressure.resolve_issue("briefing")
                             st.rerun()
-                    st.caption("Negotiation costs one political-capital point and £0.3bn of headroom. Standing firm risks Cabinet relations; allowing a briefing damages the Government's public image.")
+                    if pressure_issue.get("kind") == "parliamentary_bloc":
+                        st.caption(f"Parliamentary faction: {pressure_issue.get('party', 'Government')} · {pressure_issue.get('rebel_count', 0)} rebels from {pressure_issue.get('seats', 0)} seats. Negotiating may secure support for later votes; standing firm risks wider party discontent.")
+                    else:
+                        st.caption("Negotiation costs one political-capital point and £0.3bn of headroom. Standing firm risks Cabinet relations; allowing a briefing damages the Government's public image.")
                 relationship_issue = s.get("ministerial_relationship_issue")
                 if relationship_issue:
                     st.markdown("**A private Cabinet approach**")

@@ -64,6 +64,59 @@ def review_policy(s, decision, option, vote):
         s.political_pressure_issue = issue
         s.political_pressure_history = (list(s.get("political_pressure_history", [])) + [dict(issue)])[-20:]
         return issue
+    # Identify a governing-party bloc, rather than treating all rebels as one anonymous group.
+    party_votes = vote.get("party_votes", {}) if isinstance(vote.get("party_votes", {}), dict) else {}
+    government = s.get("party", "Government")
+    coalition = set(s.get("government_coalition_partners", [])) if s.get("government_type") == "coalition" else set()
+    candidates = []
+    for party, row in party_votes.items():
+        if party != government and party not in coalition:
+            continue
+        seats = max(0, int(row.get("seats", 0)))
+        party_rebels = max(0, int(row.get("rebels", 0)))
+        share = party_rebels / max(1, seats)
+        threshold = 0.28 if party in coalition else 0.22
+        if seats >= 20 and party_rebels >= 12 and share >= threshold:
+            candidates.append((share, party_rebels, party, seats))
+    if candidates:
+        share, party_rebels, party, seats = sorted(candidates, reverse=True)[0]
+        if _stable_roll(s, f"bloc:{decision.get('title')}:{party}:{ideology}") < 52:
+            if party == "Labour" and ideology == "Fiscal Austerity":
+                bloc = "Socialist Left and soft-left MPs"
+                demand = "protect public services and reverse the sharpest spending reductions"
+            elif party == "Conservative" and ideology in {"Hard Left", "Social Democratic"}:
+                bloc = "One Nation and fiscal conservative MPs"
+                demand = "scale back unfunded commitments and retain fiscal discipline"
+            elif party == "Liberal Democrats" and ideology == "Fiscal Austerity":
+                bloc = "Social Liberal MPs"
+                demand = "protect local services and soften the distributional impact"
+            elif party == "Green Party":
+                bloc = "Green and eco-socialist MPs"
+                demand = "strengthen the environmental and public-investment commitments"
+            elif party == "SNP" and ideology == "Fiscal Austerity":
+                bloc = "Social democratic MPs"
+                demand = "protect devolved services and regional funding"
+            elif party == "Plaid Cymru" and ideology == "Fiscal Austerity":
+                bloc = "Welsh social democratic MPs"
+                demand = "protect Welsh public services and Barnett funding"
+            elif party == "Reform UK" and ideology in {"Hard Left", "Social Democratic"}:
+                bloc = "Free-market and national conservative MPs"
+                demand = "scale back the intervention and reduce the tax burden"
+            else:
+                bloc = f"{party} parliamentary faction"
+                demand = "make targeted changes before the next Commons vote"
+            issue = {
+                "kind": "parliamentary_bloc", "department": "", "minister": f"{party} MPs",
+                "party": party, "bloc": bloc, "faction": bloc, "personality": "",
+                "decision": decision.get("title", "Government policy"), "ideology": ideology,
+                "pressure": round(min(100.0, share * 100.0), 1), "rebel_count": party_rebels,
+                "seats": seats, "leaked": False,
+                "created": f"{int(s.get('term', 1))}:{int(s.get('year', 1))}:{int(s.get('block', 1))}",
+                "text": f"{party} rebels: {party_rebels} of {seats} MPs from the {bloc} have voted against {decision.get('title', 'the proposal')}. They are demanding that the Treasury {demand}.",
+            }
+            s.political_pressure_issue = issue
+            s.political_pressure_history = (list(s.get("political_pressure_history", [])) + [dict(issue)])[-20:]
+            return issue
     if rebellion >= 28 and _stable_roll(s, f"rebellion:{decision.get('title')}") < 48:
         issue = {
             "kind": "backbench_rebellion", "department": "", "minister": "Government backbenchers",
@@ -104,14 +157,20 @@ def resolve_issue(choice, s=None):
         else:
             loyalty[department] = round(_clip(current + 1.0), 1)
         s.ministerial_loyalty = loyalty
+    bloc_issue = issue.get("kind") == "parliamentary_bloc"
     if choice == "stand_firm":
         s.cab_opinion = round(_clip(float(s.get("cab_opinion", 50.0)) - (1.5 if department else 0.5)), 1)
         s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) + 0.4), 1)
-        outcome = "You stand by the decision. The Treasury keeps control of the policy, but Cabinet relations take a hit."
+        if bloc_issue:
+            s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) - 3.0), 1)
+            s.party_opinion = round(_clip(float(s.get("party_opinion", 50.0)) - 2.0), 1)
+        outcome = "You stand by the decision. The Treasury keeps control of the policy, but Cabinet and parliamentary relations take a hit."
     elif choice == "negotiate":
         s.cab_opinion = round(_clip(float(s.get("cab_opinion", 50.0)) + 1.5), 1)
         s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) + 0.5), 1)
-        s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) + 1.0), 1)
+        s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) + (3.0 if bloc_issue else 1.0)), 1)
+        if bloc_issue:
+            s.party_opinion = round(_clip(float(s.get("party_opinion", 50.0)) + 2.0), 1)
         outcome = "You negotiate a limited compromise, spending one political-capital point and £0.3bn of headroom to restore working relations."
     else:
         s.media_opinion = round(_clip(float(s.get("media_opinion", 50.0)) - 2.0), 1)
@@ -122,10 +181,10 @@ def resolve_issue(choice, s=None):
     trust = float(s.get("pm_trust", 70.0))
     pm_view = float(s.get("pm_opinion", 50.0))
     if choice == "stand_firm":
-        trust -= 5.0 if department else 3.0
+        trust -= 5.0 if department else (4.0 if bloc_issue else 3.0)
         pm_view -= 1.5
     elif choice == "negotiate":
-        trust += 3.0
+        trust += 3.0 if department else (2.5 if bloc_issue else 3.0)
         pm_view += 1.5
     else:
         trust -= 4.0

@@ -329,7 +329,45 @@ def check(n=None, difficulty=None):
         assert political_pressure.resolve_issue("stand_firm", warning_state)
         assert warning_state["active_pm_meeting"]["pressure_origin"] == "political_pressure"
         assert warning_state["pm_trust"] == 56.0
-        print("Cabinet management, political pressure, Number 10 escalation and reshuffle assessment regression: PASS")
+        bloc_state = FakeState({
+            "seed": 1, "term": 1, "year": 2, "block": 1, "party": "Labour",
+            "government_type": "majority", "government_coalition_partners": [],
+            "political_pressure_issue": None, "political_pressure_history": [],
+        })
+        bloc_vote = {"rebels": 90, "party_votes": {
+            "Labour": {"seats": 400, "rebels": 140},
+            "Conservative": {"seats": 180, "rebels": 20},
+        }}
+        bloc_issue = None
+        for seed in range(1, 100):
+            bloc_state.seed = seed
+            bloc_issue = political_pressure.review_policy(
+                bloc_state, {"title": "Public spending package"},
+                {"ideology": "Fiscal Austerity"}, bloc_vote
+            )
+            if bloc_issue:
+                break
+        assert bloc_issue is not None, "A sufficiently large governing-party faction rebellion should create a targeted issue."
+        assert bloc_issue["kind"] == "parliamentary_bloc"
+        assert bloc_issue["party"] == "Labour" and bloc_issue["rebel_count"] == 140
+        bloc_state.political_capital_points = 1
+        bloc_state.headroom = 3.0
+        bloc_state.pm_trust = 70.0
+        bloc_state.pm_opinion = 70.0
+        bloc_state.cab_opinion = 50.0
+        bloc_state.backbench_opinion = 50.0
+        bloc_state.party_opinion = 50.0
+        bloc_state.approval = 50.0
+        bloc_state.media_opinion = 50.0
+        bloc_state.ministerial_loyalty = {}
+        bloc_state.event_cards = []
+        bloc_state.message = ""
+        bloc_state.humphrey_note = ""
+        assert political_pressure.resolve_issue("negotiate", bloc_state)
+        assert bloc_state["backbench_opinion"] == 53.0
+        assert bloc_state["party_opinion"] == 52.0
+        assert bloc_state["headroom"] == 2.7
+        print("Cabinet management, parliamentary faction pressure, Number 10 escalation and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 
