@@ -94,8 +94,43 @@ def advance(s=None):
         return
     s.public_service_last_tick = tick
     scores = dict(s.public_service_scores)
-    country = s.get("country", {})
+    country = dict(s.get("country", {}))
     notes = []
+
+    # An unresolved dispute becomes real industrial action in the following year.
+    # This is deliberately separate from the initial warning and is idempotent
+    # because the annual tick guard above is set before any consequences apply.
+    active_strikes = []
+    for strike in list(s.public_service_strikes):
+        if strike.get("paused"):
+            strike = dict(strike)
+            strike["paused"] = False
+            strike["text"] = strike.get("text", "") + " The mediation period has expired without a lasting agreement."
+        strike = dict(strike)
+        severity = min(3.0, float(strike.get("severity", 1.0)) + 0.35)
+        strike["severity"] = round(severity, 1)
+        strike["last_escalated"] = tick
+        service_key = ("NHS" if strike.get("id") == "NHS workforce" else
+                       "Education" if strike.get("id") == "Education workforce" else
+                       "Local government")
+        disruption = 0.35 + severity * 0.30
+        scores[service_key] = round(_clip(scores.get(service_key, 60.0) - disruption, 10, 95), 1)
+        if strike.get("id") == "NHS workforce":
+            country["nhs_morale"] = _clip(float(country.get("nhs_morale", 52.0)) - 2.0 - severity * 0.45)
+            country["nhs_waiting"] = max(0.0, float(country.get("nhs_waiting", 7.4)) + 0.12 + severity * 0.06)
+        elif strike.get("id") == "Education workforce":
+            country["schools"] = _clip(float(country.get("schools", 62.0)) - 0.7 - severity * 0.15)
+        else:
+            country["rail"] = _clip(float(country.get("rail", 82.0)) - 0.7 - severity * 0.15)
+        s.approval = round(_clip(float(s.get("approval", 50.0)) - 0.25 - severity * 0.12), 1)
+        active_strikes.append(strike)
+        notes.append(f"{strike.get('group', strike.get('id', 'Public-sector'))} strike disruption worsened")
+        s.public_service_events = (list(s.get("public_service_events", [])) + [{
+            "year": tick, "title": f"{strike.get('group', 'Public-sector workers')} action escalates",
+            "detail": f"Industrial action has reduced {service_key.lower()} performance by {disruption:.1f} points this year."
+        }])[-20:]
+    s.public_service_strikes = active_strikes
+    s.country = country
 
     for key, spec in SERVICES.items():
         funding = sum(_department_ratio(s, dep) for dep in spec["departments"]) / len(spec["departments"])
@@ -199,7 +234,11 @@ def resolve_strike(strike_id, choice):
         s.headroom = round(float(s.headroom) - mediation_cost, 1)
         s.deficit = round(float(s.deficit) + mediation_cost, 1)
         s.approval = _clip(float(s.approval) + 0.3)
-        outcome = f"You appoint an independent mediator, spending £{mediation_cost:.1f}bn on a temporary package. The dispute is paused, not permanently settled."
+        s.public_service_strikes = [
+            ({**x, "paused": True, "severity": round(max(0.5, float(x.get("severity", 1.0)) - 0.25), 1)})
+            if x.get("id") == strike_id else x for x in s.public_service_strikes
+        ]
+        outcome = f"You appoint an independent mediator, spending £{mediation_cost:.1f}bn on a temporary package. The dispute is paused for now; unions will return if no lasting agreement is reached."
     elif choice == "hold":
         scores["NHS" if strike_id == "NHS workforce" else ("Education" if strike_id == "Education workforce" else "Local government")] = _clip(
             scores.get("NHS", 50) - 1.5 - severity * 0.4, 10, 95)
@@ -210,7 +249,8 @@ def resolve_strike(strike_id, choice):
     else:
         return
     s.public_service_scores = scores
-    s.public_service_strikes = [x for x in s.public_service_strikes if x.get("id") != strike_id]
+    if choice != "mediate":
+        s.public_service_strikes = [x for x in s.public_service_strikes if x.get("id") != strike_id]
     s.public_service_resolved = (list(s.public_service_resolved) + [{
         "year": f"Term {s.get('term', 1)}, Year {s.get('year', 1)}",
         "group": strike.get("group", strike_id), "decision": choice.title(), "outcome": outcome
