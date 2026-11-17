@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 import budget
+import cabinet_management
 import country as country_data
 
 SERVICES = {
@@ -113,6 +114,8 @@ def advance(s=None):
             change += _department_ratio(s, "local_government") * 1.0
             change += _department_ratio(s, "housing") * 0.8
         # A little natural improvement is possible, but demand and ageing prevent automatic recovery.
+        # Ministerial delivery skill is a small additional influence, not a substitute for funding.
+        change += cabinet_management.service_effect(s, key)
         change += 0.08
         change = max(-1.25, min(1.25, change))
         scores[key] = round(_clip(scores[key] + change, 10, 95), 1)

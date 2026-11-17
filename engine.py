@@ -27,6 +27,7 @@ import public_services
 import devolution
 import fiscal_events
 import government_missions
+import cabinet_management
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -843,6 +844,7 @@ def request_ministerial_reshuffle(department):
         vacancies[department] = int(s.get("year", 1))
         s.ministerial_vacancy_year = vacancies
         s.ministerial_loyalty[department] = 50.0
+        s.setdefault("ministerial_competence", {})[department] = 60.0
         resignations = list(s.get("ministerial_resignations", []))
         resignations.append({
             "minister": current, "year": int(s.get("year", 1)),
@@ -1235,6 +1237,7 @@ def proceed_to_spring():
     household.advance(s)
     regional_economy.advance(s)
     public_services.advance(s)
+    cabinet_management.annual_review(s)
     # Public-service capacity feeds back into productive potential with a
     # modest, bounded effect rather than an instant GDP windfall.
     s.growth = round(s.growth + float(s.get('public_service_productivity_effect', 0.0)), 2)

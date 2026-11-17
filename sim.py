@@ -62,6 +62,7 @@ import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
 import government_missions  # noqa: E402
+import cabinet_management  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -197,6 +198,31 @@ def run(n=200, difficulty='Hardcore'):
 
 
 # ---------------------------------------------------------------- regression check
+def cabinet_checks():
+    """Regression checks for the expanded Cabinet performance model."""
+    fake = FakeState({
+        "term": 1, "year": 1,
+        "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
+        "ministerial_loyalty": {"health": 60.0, "social_care": 60.0},
+        "ministerial_competence": {"health": 80.0, "social_care": 80.0},
+        "public_service_scores": {"NHS": 70.0},
+        "public_service_history": [{"NHS": 68.0}, {"NHS": 70.0}],
+        "ministerial_delivery_history": [], "ministerial_review_year": "",
+        "ministerial_meeting_year": "", "ministerial_review_history": [],
+        "ministerial_delivery_commitments": {},
+    })
+    cabinet_management.ensure(fake)
+    effect = cabinet_management.service_effect(fake, "NHS")
+    assert 0 < effect <= 0.18, f"Strong ministerial team should create a small positive service effect, got {effect}"
+    cabinet_management.annual_review(fake)
+    first_competence = dict(fake.ministerial_competence)
+    cabinet_management.annual_review(fake)
+    assert fake.ministerial_competence == first_competence, "Cabinet annual review applied more than once in a year"
+    assert all(20 <= value <= 95 for value in fake.ministerial_competence.values())
+    assert all(0 <= value <= 100 for value in fake.ministerial_loyalty.values())
+    assert len(fake.ministerial_delivery_history) == 1
+    return True
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -208,6 +234,11 @@ def check(n=None, difficulty=None):
     difficulty = difficulty or thresholds.get('default_difficulty', 'Hardcore')
     contract = thresholds['contract']
     failures = []
+    try:
+        cabinet_checks()
+        print("Cabinet management regression: PASS")
+    except Exception as exc:
+        failures.append(f"Cabinet management regression failed: {exc}")
 
     # Every standard and conditional policy decision must expose six matched options.
     try:

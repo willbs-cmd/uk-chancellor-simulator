@@ -6,6 +6,7 @@ import engine
 import politics
 import budget
 import state
+import cabinet_management
 from theme import phase_info
 
 
@@ -135,6 +136,7 @@ def render(on_restart):
 
         # Ensure the Cabinet roster is available on every phase, not only after opening the Budget screen.
         budget.ensure()
+        cabinet_management.ensure(s)
 
         # Cabinet management: keep the live desk compact; open this only when making a recommendation.
         ministers = s.get("cabinet_ministers", {})
@@ -148,6 +150,38 @@ def render(on_restart):
         cabinet_label = f"Cabinet management · {len(active_posts)} ministers"
         with st.expander(cabinet_label, expanded=bool(s.get("active_dispute"))):
             if active_posts:
+                service_scores = s.get("public_service_scores", {})
+                service_for = cabinet_management.SERVICE_FOR_DEPARTMENT
+                roster = []
+                for key, name in active_posts:
+                    service = service_for.get(key, "")
+                    roster.append({
+                        "Department": budget.SPEND_DEFAULTS.get(key, {}).get("label", key.replace("_", " ").title()),
+                        "Minister": name,
+                        "Competence": f"{float(s.ministerial_competence.get(key, 60)):.0f}/100",
+                        "Loyalty": f"{float(s.get('ministerial_loyalty', {}).get(key, 60)):.0f}/100",
+                        "Service": f"{float(service_scores.get(service, 0)):.0f}/100" if service else "Strategic",
+                    })
+                st.dataframe(roster, hide_index=True, use_container_width=True)
+                st.caption("Competence influences delivery gradually; loyalty affects how ministers respond to Treasury decisions. These are simulated ratings.")
+                meeting_tick = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+                if s.get("ministerial_meeting_year") != meeting_tick:
+                    meeting_dept = st.selectbox(
+                        "Private meeting with a minister", [key for key, _ in active_posts],
+                        format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key)}",
+                        key="desk_ministerial_meeting_department",
+                    )
+                    meet_a, meet_b = st.columns(2)
+                    with meet_a:
+                        if st.button("Back their priorities", key="desk_minister_back", use_container_width=True):
+                            cabinet_management.hold_private_meeting(meeting_dept, "back")
+                            st.rerun()
+                    with meet_b:
+                        if st.button("Demand a delivery plan", key="desk_minister_challenge", use_container_width=True):
+                            cabinet_management.hold_private_meeting(meeting_dept, "challenge")
+                            st.rerun()
+                else:
+                    st.caption("Your annual private Cabinet meeting has been used.")
                 if reshuffle_used:
                     st.caption("You have already made your one reshuffle recommendation this term.")
                 else:
@@ -166,6 +200,12 @@ def render(on_restart):
                         st.rerun()
             else:
                 st.caption("No established Cabinet appointments are currently available to review.")
+            review_history = list(s.get("ministerial_review_history", []))
+            if review_history:
+                st.markdown("**Recent private meetings**")
+                for item in reversed(review_history[-2:]):
+                    st.caption(f"Term/year {item.get('year', '')} · {item.get('minister', '')} · {item.get('approach', '').title()}")
+                    st.write(item.get("outcome", ""))
             recent_reshuffles = list(s.get("cabinet_reshuffle_history", []))
             if recent_reshuffles:
                 st.markdown("**Recent reshuffle correspondence**")
