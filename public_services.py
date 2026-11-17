@@ -73,6 +73,7 @@ def ensure(s=None):
     s.setdefault("public_service_strikes", [])
     s.setdefault("public_service_resolved", [])
     s.setdefault("public_service_year_notes", [])
+    s.setdefault("public_service_strike_impact", {})
 
 
 def _department_ratio(s, key):
@@ -101,6 +102,7 @@ def advance(s=None):
     # This is deliberately separate from the initial warning and is idempotent
     # because the annual tick guard above is set before any consequences apply.
     active_strikes = []
+    strike_pressure = 0.0
     for strike in list(s.public_service_strikes):
         if strike.get("paused"):
             strike = dict(strike)
@@ -108,29 +110,69 @@ def advance(s=None):
             strike["text"] = strike.get("text", "") + " The mediation period has expired without a lasting agreement."
         strike = dict(strike)
         severity = min(3.0, float(strike.get("severity", 1.0)) + 0.35)
+        duration = int(strike.get("duration_years", 0)) + 1
         strike["severity"] = round(severity, 1)
+        strike["duration_years"] = duration
         strike["last_escalated"] = tick
-        service_key = ("NHS" if strike.get("id") == "NHS workforce" else
-                       "Education" if strike.get("id") == "Education workforce" else
-                       "Local government")
+        pressure = severity * min(1.6, 1.0 + 0.2 * max(0, duration - 1))
+        strike_pressure += pressure
+        strike_id = strike.get("id")
         disruption = 0.35 + severity * 0.30
-        scores[service_key] = round(_clip(scores.get(service_key, 60.0) - disruption, 10, 95), 1)
-        if strike.get("id") == "NHS workforce":
+        if strike_id == "NHS workforce":
+            affected = ("NHS",)
             country["nhs_morale"] = _clip(float(country.get("nhs_morale", 52.0)) - 2.0 - severity * 0.45)
             country["nhs_waiting"] = max(0.0, float(country.get("nhs_waiting", 7.4)) + 0.12 + severity * 0.06)
-        elif strike.get("id") == "Education workforce":
+        elif strike_id == "Education workforce":
+            affected = ("Education",)
             country["schools"] = _clip(float(country.get("schools", 62.0)) - 0.7 - severity * 0.15)
+        elif strike_id == "Public-sector pay":
+            affected = tuple(SERVICES)
+            country["schools"] = _clip(float(country.get("schools", 62.0)) - 0.25 - severity * 0.05)
+            country["nhs_morale"] = _clip(float(country.get("nhs_morale", 52.0)) - 0.6 - severity * 0.15)
         else:
+            affected = ("Local government",)
             country["rail"] = _clip(float(country.get("rail", 82.0)) - 0.7 - severity * 0.15)
+        for service_key in affected:
+            service_disruption = disruption if len(affected) == 1 else disruption * 0.42
+            scores[service_key] = round(_clip(scores.get(service_key, 60.0) - service_disruption, 10, 95), 1)
         s.approval = round(_clip(float(s.get("approval", 50.0)) - 0.25 - severity * 0.12), 1)
         active_strikes.append(strike)
         notes.append(f"{strike.get('group', strike.get('id', 'Public-sector'))} strike disruption worsened")
         s.public_service_events = (list(s.get("public_service_events", [])) + [{
             "year": tick, "title": f"{strike.get('group', 'Public-sector workers')} action escalates",
-            "detail": f"Industrial action has reduced {service_key.lower()} performance by {disruption:.1f} points this year."
+            "detail": f"Industrial action has reduced {', '.join(x.lower() for x in affected)} performance; disruption has now lasted {duration} year(s)."
         }])[-20:]
     s.public_service_strikes = active_strikes
     s.country = country
+
+    # Industrial action also carries a wider economic cost. Lost working time,
+    # delayed treatment and interrupted education weaken output and demand;
+    # prolonged disputes compound the drag, but hard caps prevent runaway effects.
+    growth_drag = round(min(0.18, strike_pressure * 0.025), 3)
+    receipts_drag = round(min(0.65, strike_pressure * 0.09), 2)
+    market_drag = round(min(1.2, strike_pressure * 0.35), 2)
+    confidence_drag = round(min(1.0, strike_pressure * 0.25), 2)
+    investment_drag = round(min(0.6, strike_pressure * 0.12), 2)
+    spending_drag = round(min(0.4, strike_pressure * 0.08), 2)
+    if strike_pressure:
+        s.growth = round(float(s.get("growth", 0.8)) - growth_drag, 2)
+        s.headroom = round(float(s.get("headroom", 0.0)) - receipts_drag, 1)
+        s.deficit = round(float(s.get("deficit", 0.0)) + receipts_drag, 1)
+        s.market_conf = round(_clip(float(s.get("market_conf", 55.0)) - market_drag), 1)
+        if "business_confidence" in s:
+            s.business_confidence = round(_clip(float(s.business_confidence) - confidence_drag, 5, 95), 1)
+        if "business_investment" in s:
+            s.business_investment = round(_clip(float(s.business_investment) - investment_drag, 55, 150), 1)
+        if "consumer_spending" in s:
+            s.consumer_spending = round(_clip(float(s.consumer_spending) - spending_drag, 65, 140), 1)
+        notes.append(f"Industrial action reduced annual growth by {growth_drag:.2f}pp and receipts by £{receipts_drag:.2f}bn")
+    s.public_service_strike_impact = {
+        "year": tick, "active_disputes": len(active_strikes),
+        "pressure": round(strike_pressure, 2), "growth_drag_pp": growth_drag,
+        "receipts_drag_bn": receipts_drag, "market_drag": market_drag,
+        "confidence_drag": confidence_drag, "investment_drag": investment_drag,
+        "spending_drag": spending_drag,
+    }
 
     for key, spec in SERVICES.items():
         funding = sum(_department_ratio(s, dep) for dep in spec["departments"]) / len(spec["departments"])
@@ -339,13 +381,20 @@ def render():
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
     if s.public_service_strikes:
         st.markdown("#### Industrial relations")
+        impact = s.get("public_service_strike_impact", {})
+        if impact.get("active_disputes"):
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Annual growth drag", f"-{float(impact.get('growth_drag_pp', 0.0)):.2f}pp")
+            m2.metric("Lost Treasury receipts", f"£{float(impact.get('receipts_drag_bn', 0.0)):.2f}bn")
+            m3.metric("Market confidence impact", f"-{float(impact.get('market_drag', 0.0)):.2f}")
+            st.caption("These are additional annual effects from unresolved action; they are applied once per year and are separate from the cost of any pay settlement.")
         for strike in list(s.public_service_strikes):
             with st.container(border=True):
                 st.markdown(f"**{strike.get('group', 'Public-sector unions')}**")
                 st.write(strike.get("text", "Industrial action is threatened."))
                 demand = float(strike.get("demand_bn", 0.7 + float(strike.get("severity", 1.0)) * 0.45))
                 round_no = int(strike.get("negotiation_round", 0))
-                st.caption(f"Severity: {strike.get('severity', 1.0):.1f}/3 · Raised {strike.get('year', 'this year')} · Indicative union demand: £{demand:.2f}bn a year")
+                st.caption(f"Severity: {strike.get('severity', 1.0):.1f}/3 · Unresolved: {int(strike.get('duration_years', 0))} year(s) · Raised {strike.get('year', 'this year')} · Indicative union demand: £{demand:.2f}bn a year")
                 if round_no:
                     st.info(strike.get("negotiation_message", f"Negotiation round {round_no}: last offer £{float(strike.get('last_offer_bn', 0.0)):.2f}bn a year."))
                 c1, c2, c3 = st.columns(3)

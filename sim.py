@@ -1653,6 +1653,52 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Union negotiation regression check failed: {exc}")
 
+    # Prolonged industrial action should feed through to output, receipts,
+    # confidence and the affected service, exactly once per annual tick.
+    try:
+        import public_services
+        strike_state = FakeState(
+            term=2, year=3, seed=204, approval=55.0, growth=1.2,
+            headroom=12.0, deficit=4.0, market_conf=60.0,
+            business_confidence=55.0, business_investment=101.0,
+            consumer_spending=100.0, inflation=2.0, dept_spend={},
+            public_service_scores={key: 60.0 for key in public_services.SERVICES},
+            public_service_last_tick="", public_service_history=[],
+            public_service_events=[], public_service_year_notes=[],
+            public_service_strike_impact={},
+            public_service_strikes=[{
+                "id": "NHS workforce", "group": "NHS staff",
+                "severity": 2.0, "duration_years": 1,
+                "year": "2:2", "text": "Ongoing NHS strike"
+            }],
+            country={"nhs_morale": 52.0, "nhs_waiting": 7.4,
+                     "schools": 62.0, "rail": 82.0, "unemployment": 4.5}
+        )
+        before_growth = strike_state.growth
+        before_headroom = strike_state.headroom
+        before_market = strike_state.market_conf
+        before_service = strike_state.public_service_scores["NHS"]
+        public_services.advance(strike_state)
+        impact = strike_state.public_service_strike_impact
+        if not (strike_state.growth < before_growth and impact.get("growth_drag_pp", 0) > 0):
+            failures.append("Industrial action did not reduce annual GDP growth.")
+        if not (strike_state.headroom < before_headroom and strike_state.deficit > 4.0):
+            failures.append("Industrial action did not reduce receipts and worsen the deficit.")
+        if not (strike_state.market_conf < before_market and strike_state.business_confidence < 55.0):
+            failures.append("Industrial action did not weaken market and business confidence.")
+        if not (strike_state.public_service_scores["NHS"] < before_service
+                and strike_state.country["nhs_waiting"] > 7.4):
+            failures.append("NHS strike did not worsen service performance and waiting lists.")
+        saved_growth = strike_state.growth
+        saved_headroom = strike_state.headroom
+        saved_history = len(strike_state.public_service_events)
+        public_services.advance(strike_state)
+        if (strike_state.growth != saved_growth or strike_state.headroom != saved_headroom
+                or len(strike_state.public_service_events) != saved_history):
+            failures.append("Industrial-action macro costs were applied more than once in a year.")
+    except Exception as exc:
+        failures.append(f"Industrial-action economic impact regression failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
