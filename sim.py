@@ -431,23 +431,23 @@ def check(n=None, difficulty=None):
         before_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in ('business_confidence', 'household_confidence', 'officials_confidence')}
         record = budget_aftermath.create(aftermath_state, previous, draft,
             {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget')
-        assert record is not None and len(aftermath_state.budget_aftermath_pending) == 1
+        assert record is not None and len(aftermath_state.budget_aftermath_pending) == 1, "Budget aftermath was not queued."
         assert budget_aftermath.create(aftermath_state, previous, draft,
-            {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget') is None
+            {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget') is None, "Duplicate Budget aftermath was queued."
         saved_headroom = float(aftermath_state.headroom)
         budget_aftermath.advance(aftermath_state)
         after_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in before_confidence}
-        assert after_confidence['business_confidence'] > before_confidence['business_confidence']
-        assert after_confidence['household_confidence'] > before_confidence['household_confidence']
-        assert after_confidence['officials_confidence'] > before_confidence['officials_confidence']
-        assert float(aftermath_state.headroom) == saved_headroom, 'Delayed reactions must not repeat fiscal impacts.'
-        assert not aftermath_state.budget_aftermath_pending
+        assert after_confidence['business_confidence'] > before_confidence['business_confidence'], f"Business confidence did not respond: {before_confidence} -> {after_confidence}"
+        assert after_confidence['household_confidence'] > before_confidence['household_confidence'], f"Household confidence did not respond: {before_confidence} -> {after_confidence}"
+        assert after_confidence['officials_confidence'] > before_confidence['officials_confidence'], f"Officials confidence did not respond: {before_confidence} -> {after_confidence}"
+        assert float(aftermath_state.headroom) == saved_headroom, f"Delayed reactions repeated fiscal impacts: {saved_headroom} -> {aftermath_state.headroom}"
+        assert not aftermath_state.budget_aftermath_pending, "Resolved aftermath remained pending."
         history_count = len(aftermath_state.budget_aftermath_history)
         budget_aftermath.advance(aftermath_state)
-        assert len(aftermath_state.budget_aftermath_history) == history_count, 'A Spring rerun must not duplicate the aftermath.'
+        assert len(aftermath_state.budget_aftermath_history) == history_count, f"A Spring rerun duplicated the aftermath: {history_count} -> {len(aftermath_state.budget_aftermath_history)}"
         payload = state.export_save()
-        assert state.import_save(payload) is None
-        assert len(st.session_state.budget_aftermath_history) == history_count
+        assert state.import_save(payload) is None, "Save/load rejected the aftermath state."
+        assert len(st.session_state.budget_aftermath_history) == history_count, "Save/load did not preserve the aftermath history."
     except Exception as exc:
         failures.append(f"Budget aftermath regression failed: {exc}")
 
