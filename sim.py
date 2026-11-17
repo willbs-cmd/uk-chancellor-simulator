@@ -1946,6 +1946,18 @@ def check(n=None, difficulty=None):
             failures.append("Downturn scenario did not worsen growth and fiscal headroom against baseline.")
         if dict(forecast_state) != previous:
             failures.append("Treasury forecast mutated the live game state.")
+        # A downside stress case must worsen fiscal space and raise borrowing costs,
+        # while leaving the live session unchanged.
+        st.session_state = forecast_state
+        central_budget = budget.forecast(budget.defaults(), years=3)
+        stressed_budget = budget.forecast(budget.defaults(), years=3,
+            scenario={"growth": -0.75, "inflation": 0.50, "gilt": 0.35})
+        if not (stressed_budget[-1]["headroom"] < central_budget[-1]["headroom"]
+                and stressed_budget[-1]["debt_interest"] > central_budget[-1]["debt_interest"]):
+            failures.append("OBR-style downside stress did not reduce headroom and increase debt interest.")
+        if dict(forecast_state) != previous:
+            failures.append("OBR-style downside stress mutated the live game state.")
+
         for row in outlook:
             for key in ("GDP after 3 years (£tn)", "Debt (£bn)", "Debt-to-GDP (%)", "Debt interest (£bn)"):
                 if not math.isfinite(float(row[key])):

@@ -1179,7 +1179,7 @@ def commit_budget(ayes, event_type='Spring Budget'):
 
 
 # ---------------------------------------------------------------- the OBR forecast
-def forecast(b, years=3):
+def forecast(b, years=3, scenario=None):
     """A central forecast of the next few springs if you deliver draft ``b`` and nothing else happens.
 
     Uses the same macro rules as the real spring tick (``econ.step``) and the spring debt-interest re-pricing, but
@@ -1189,8 +1189,16 @@ def forecast(b, years=3):
     ensure()
     annual_settlement = _annual_settlement_active()
     imp = impact(s.budget_applied, b, annual_settlement=annual_settlement)
-    v = dict(inflation=round(s.inflation + imp['inflation'], 2), interest_rate=s.interest_rate, gilt_yield=s.gilt_yield,
-             growth=round(s.growth + imp['growth'], 2), debt=s.debt, deficit=round(s.deficit + imp['deficit'], 1),
+    # Scenario adjustments are persistent level shocks to the starting forecast,
+    # not repeated annual shocks. They affect borrowing costs and receipts through
+    # the same macro/debt engine used by the central case.
+    scenario = scenario or {}
+    scenario_growth = float(scenario.get('growth', 0.0))
+    scenario_inflation = float(scenario.get('inflation', 0.0))
+    scenario_gilt = float(scenario.get('gilt', 0.0))
+    v = dict(inflation=round(max(0.0, s.inflation + imp['inflation'] + scenario_inflation), 2),
+             interest_rate=s.interest_rate, gilt_yield=max(0.5, float(s.gilt_yield) + scenario_gilt),
+             growth=round(s.growth + imp['growth'] + scenario_growth, 2), debt=s.debt, deficit=round(s.deficit + imp['deficit'], 1),
              headroom=round(s.headroom + imp['headroom'], 1), market_conf=round(_clip(s.market_conf + imp['market']), 1),
              approval=round(_clip(s.approval + imp['approval']), 1), cycle=s.get('macro_cycle', 'Stagnation'),
              gdp_trillion=float(s.get('gdp_trillion', 3.0)))
@@ -1665,8 +1673,13 @@ def render(submit=None, after_summary=None):
 
     with st.expander('Treasury briefing · three-year outlook', expanded=False):
         briefing_rows = forecast(cur, years=3)
+        downside_rows = forecast(cur, years=3, scenario={'growth': -0.75, 'inflation': 0.50, 'gilt': 0.35})
         lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
+        downside_headroom = min(float(row['headroom']) for row in downside_rows)
         end_debt = float(briefing_rows[-1]['debt'])
+        downside_end_debt = float(downside_rows[-1]['debt'])
+        fiscal_rule_breaches = sum(1 for row in briefing_rows if float(row['headroom']) < 0)
+        downside_breaches = sum(1 for row in downside_rows if float(row['headroom']) < 0)
         market_outlook = _clip(float(s.market_conf) + float(imp.get('market', 0.0)))
         if lowest_headroom < 0:
             obr_verdict = "Fiscal rules at risk"
@@ -1697,6 +1710,16 @@ def render(submit=None, after_summary=None):
             market_detail = "There is some room for a positive reception, provided the fiscal arithmetic holds."
         st.markdown("### The private Treasury briefing")
         st.caption("A pre-delivery assessment for the Chancellor. These are modelled forecasts and political estimates, not official OBR or market statements.")
+        risk_cols = st.columns(3, gap="medium")
+        risk_cols[0].metric("Central-case rule breaches", f"{fiscal_rule_breaches}/3 years")
+        risk_cols[1].metric("Downside headroom", f"£{downside_headroom:.1f}bn", delta=f"£{downside_headroom - lowest_headroom:+.1f}bn vs central", delta_color="inverse")
+        risk_cols[2].metric("Downside debt in year 3", f"{downside_end_debt:.1f}% GDP", delta=f"{downside_end_debt - end_debt:+.1f}pp vs central", delta_color="inverse")
+        if downside_breaches:
+            st.warning(f"OBR-style stress test: the adverse scenario breaches the fiscal rule in {downside_breaches} of the next three years. Build a larger buffer or identify credible savings before delivery.")
+        elif downside_headroom < 5:
+            st.warning("OBR-style stress test: the downside leaves less than £5bn of headroom. The plan is vulnerable to a modest forecast downgrade.")
+        else:
+            st.info("OBR-style stress test: the downside retains a positive fiscal buffer throughout the forecast period.")
         brief_cols = st.columns(3, gap="medium")
         with brief_cols[0]:
             st.markdown("**OBR · Fiscal outlook**")
