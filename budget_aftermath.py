@@ -13,8 +13,8 @@ def create(s, previous, draft, impact, event_type="Spring Budget"):
     s.setdefault("budget_aftermath_created", [])
     s.setdefault("budget_aftermath_history", [])
     period = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
-    sequence = len(s.get("budget_aftermath_created", [])) + 1
-    record_id = f"{period}:{sequence}"
+    event_key = str(event_type).strip().lower().replace(" ", "-")
+    record_id = f"{period}:{event_key}"
     if record_id in s.budget_aftermath_created:
         return None
 
