@@ -2083,15 +2083,16 @@ def spending_review_projection(current, proposed, year2_uplift, year3_uplift):
     for key, spec in SPEND_DEFAULTS.items():
         base = float(current.get(key, spec['default']))
         year1 = float(proposed.get(key, base))
-        year2 = year1 * (1.0 + float(year2_uplift) / 100.0)
-        year3 = year2 * (1.0 + float(year3_uplift) / 100.0)
+        year1 = round(year1, 1)
+        year2 = round(year1 * (1.0 + float(year2_uplift) / 100.0), 1)
+        year3 = round(year2 * (1.0 + float(year3_uplift) / 100.0), 1)
         rows.append({
             "department": key,
             "label": spec['label'],
             "current": round(base, 1),
-            "year1": round(year1, 1),
-            "year2": round(year2, 1),
-            "year3": round(year3, 1),
+            "year1": year1,
+            "year2": year2,
+            "year3": year3,
             "change_year1": round(year1 - base, 1),
             "change_year3": round(year3 - base, 1),
         })
