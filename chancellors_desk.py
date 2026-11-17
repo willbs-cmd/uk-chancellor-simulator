@@ -173,6 +173,23 @@ def render(on_restart):
                         "Service": f"{float(service_scores.get(service, 0)):.0f}/100" if service else "Strategic",
                     })
                 st.dataframe(roster, hide_index=True, use_container_width=True)
+                appraisals = list(s.get("ministerial_latest_appraisals", []))
+                if appraisals:
+                    st.markdown("**Annual ministerial appraisals**")
+                    appraisal_rows = [{
+                        "Minister": row.get("minister", row.get("department", "")),
+                        "Portfolio": budget.SPEND_DEFAULTS.get(row.get("department", ""), {}).get("label", row.get("department", "").replace("_", " ").title()),
+                        "Grade": row.get("grade", "Not rated"),
+                        "Score": f'{float(row.get("appraisal_score", 0)):.0f}/100',
+                        "Review status": row.get("warning", "No formal concern"),
+                        "Recommended action": row.get("recommendation", ""),
+                    } for row in appraisals]
+                    st.dataframe(appraisal_rows, hide_index=True, use_container_width=True)
+                    at_risk = [row for row in appraisals if int(row.get("poor_years", 0)) >= 2]
+                    if at_risk:
+                        st.warning("Repeated underperformance: " + ", ".join(row.get("minister", row.get("department", "")) for row in at_risk) + ". Number 10 has been advised to review these portfolios; only the Prime Minister can decide on appointments.")
+                    else:
+                        st.caption("Appraisals combine ministerial competence, departmental service performance and the direction of travel. A first poor year triggers a private warning; repeated poor reviews prompt advice to Number 10.")
                 st.caption("Faction and temperament are simulated game profiles, not claims about real ministers' personal beliefs. Temperament influences delivery, lobbying and rivalry; faction alignment affects loyalty after policy decisions.")
                 rivalry_history = list(s.get("ministerial_rivalry_history", []))
                 latest_rivalries = rivalry_history[-1].get("rows", []) if rivalry_history else []

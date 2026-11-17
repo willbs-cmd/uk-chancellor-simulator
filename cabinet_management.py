@@ -185,11 +185,42 @@ def annual_review(s=None):
         if float(s.get("party_opinion", 50.0)) >= 65 and profile.get("personality") == "Party loyalist":
             loyalty_delta += 0.2
         loyalty[department] = round(max(0.0, min(100.0, float(loyalty.get(department, 60.0)) + loyalty_delta)), 1)
-        rows.append({"department": department, "service": service, "score": round(score, 1),
-                     "change": round(change, 1), "competence": competence[department],
-                     "loyalty": loyalty[department]})
+        minister = str(s.get("cabinet_ministers", {}).get(department, department))
+        appraisal_score = max(0.0, min(100.0, competence[department] * 0.45
+                              + score * 0.40 + max(-10.0, min(10.0, change * 2.5))))
+        if appraisal_score >= 80:
+            grade = "Outstanding"
+            recommendation = "Recognise strong delivery and maintain support"
+        elif appraisal_score >= 65:
+            grade = "Strong"
+            recommendation = "Maintain current priorities"
+        elif appraisal_score >= 52:
+            grade = "Needs improvement"
+            recommendation = "Agree a private improvement plan"
+        else:
+            grade = "At risk"
+            recommendation = "Issue a formal warning and advise Number 10"
+        poor_years = dict(s.get("ministerial_poor_review_years", {}))
+        poor_years[department] = int(poor_years.get(department, 0)) + 1 if appraisal_score < 52 else 0
+        warning = "No formal concern"
+        if poor_years[department] == 1:
+            warning = "Private warning"
+        elif poor_years[department] >= 2:
+            warning = "Recommend Prime Ministerial review"
+            # Persistent failure has a modest effect; Number 10 still controls appointments.
+            competence[department] = round(max(20.0, competence[department] - 1.0), 1)
+            loyalty[department] = round(max(0.0, loyalty[department] - 0.5), 1)
+        rows.append({"department": department, "minister": minister, "service": service,
+                     "score": round(score, 1), "change": round(change, 1),
+                     "competence": competence[department], "loyalty": loyalty[department],
+                     "appraisal_score": round(appraisal_score, 1), "grade": grade,
+                     "recommendation": recommendation, "warning": warning,
+                     "poor_years": poor_years[department]})
     s.ministerial_competence = competence
     s.ministerial_loyalty = loyalty
+    s.ministerial_poor_review_years = poor_years
+    s.ministerial_latest_appraisals = rows
+    s.ministerial_appraisal_history = (list(s.get("ministerial_appraisal_history", [])) + [{"year": tick, "rows": rows}])[-20:]
     s.ministerial_delivery_commitments = commitments
     s.ministerial_delivery_history = (list(s.get("ministerial_delivery_history", [])) + [{"year": tick, "rows": rows}])[-20:]
     update_rivalries(s)

@@ -223,6 +223,37 @@ def cabinet_checks():
     assert all(20 <= value <= 95 for value in fake.ministerial_competence.values())
     assert all(0 <= value <= 100 for value in fake.ministerial_loyalty.values())
     assert len(fake.ministerial_delivery_history) == 1
+    assert len(fake.ministerial_appraisal_history) == 1
+    assert all(row.get("grade") in {"Outstanding", "Strong", "Needs improvement", "At risk"}
+               for row in fake.ministerial_latest_appraisals)
+    # Repeatedly poor delivery triggers a warning first, then a recommendation to Number 10.
+    poor = FakeState({
+        "term": 1, "year": 1, "seed": 9,
+        "cabinet_ministers": {"health": "Health Secretary"},
+        "ministerial_competence": {"health": 25.0}, "ministerial_loyalty": {"health": 50.0},
+        "public_service_scores": {"NHS": 20.0},
+        "public_service_history": [{"NHS": 35.0}, {"NHS": 20.0}],
+        "ministerial_delivery_history": [], "ministerial_review_year": "",
+        "ministerial_meeting_year": "", "ministerial_review_history": [],
+        "ministerial_delivery_commitments": {}, "ministerial_profiles": {
+            "health": {"minister": "Health Secretary", "party": "Labour",
+                       "faction": "Party Mainstream", "personality": "Technocratic manager"}},
+        "ministerial_poor_review_years": {}, "ministerial_appraisal_history": [],
+        "ministerial_latest_appraisals": {}, "ministerial_rivalries": {},
+        "ministerial_rivalry_history": [], "ministerial_relationship_issue": None,
+        "ministerial_relationship_issue_year": "", "ministerial_relationship_history": [],
+    })
+    cabinet_management.annual_review(poor)
+    first = poor.ministerial_latest_appraisals[0]
+    assert first["grade"] == "At risk" and first["warning"] == "Private warning"
+    poor.year = 2
+    poor.ministerial_review_year = ""
+    poor.public_service_history = [{"NHS": 35.0}, {"NHS": 20.0}]
+    cabinet_management.annual_review(poor)
+    second = poor.ministerial_latest_appraisals[0]
+    assert second["poor_years"] == 2 and second["warning"] == "Recommend Prime Ministerial review"
+    assert poor.ministerial_competence["health"] < 25.0
+    assert len(poor.ministerial_appraisal_history) == 2
     return True
 
 def cabinet_relationship_checks():
