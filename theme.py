@@ -3141,8 +3141,54 @@ section[data-testid="stSidebar"] [data-testid="stDivider"] {
 </style>
 """
 
+# Sidebar flow correction: keep the term panel at its natural content height and
+# reserve real space before section headings. The desk is rendered as separate
+# Streamlit blocks, so its spacing must not depend on compact global block gaps.
+SIDEBAR_FLOW_FIX = """
+<style>
+section[data-testid="stSidebar"] .desk-period {
+  min-height:0 !important;
+  height:auto !important;
+  padding:10px 11px !important;
+  margin:0 0 8px !important;
+  box-sizing:border-box !important;
+}
+section[data-testid="stSidebar"] .desk-section-title {
+  display:block !important;
+  min-height:22px !important;
+  height:auto !important;
+  line-height:1.35 !important;
+  padding:5px 0 7px !important;
+  margin:8px 0 5px !important;
+  box-sizing:border-box !important;
+}
+section[data-testid="stSidebar"] .desk-grid {
+  margin-top:3px !important;
+  margin-bottom:8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+  margin-top:4px !important;
+  margin-bottom:5px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+  row-gap:.72rem !important;
+}
+@media(max-width:760px) {
+  section[data-testid="stSidebar"] .desk-period { min-height:0 !important; }
+  section[data-testid="stSidebar"] .desk-section-title {
+    min-height:24px !important;
+    margin-top:10px !important;
+    padding-bottom:8px !important;
+  }
+}
+</style>
+"""
+
+
 def apply_theme():
-    st.markdown(CSS + REDESIGN_CSS, unsafe_allow_html=True)
+    # Apply this last so the responsive spacing rules cannot be overridden by
+    # the broader redesign stylesheet above.
+    st.markdown(CSS + REDESIGN_CSS + SIDEBAR_FLOW_FIX, unsafe_allow_html=True)
 
 PHASES = {
     1: dict(name='Autumn agenda', title='Autumn · Set the agenda',
