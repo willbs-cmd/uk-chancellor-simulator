@@ -1926,6 +1926,7 @@ def check(n=None, difficulty=None):
     try:
         from treasury import fiscal_outlook
         forecast_state = FakeState({
+            "term": 1, "year": 1, "seed": 2468,
             "gdp_trillion": 3.0, "growth": 1.2, "inflation": 2.4,
             "interest_rate": 4.5, "gilt_yield": 4.6, "debt": 96.0,
             "deficit": 65.0, "headroom": 8.0, "market_conf": 58.0,
@@ -1935,8 +1936,11 @@ def check(n=None, difficulty=None):
             }, "demographic_pressure": 2.0,
             "budget_applied": budget.defaults(),
         })
-        previous = dict(forecast_state)
         st.session_state = forecast_state
+        # Initialise the existing Budget engine's legacy-save defaults before
+        # taking the immutability snapshot; forecast() must not mutate them later.
+        budget.ensure()
+        previous = dict(forecast_state)
         outlook = fiscal_outlook(3)
         by_name = {row["Scenario"]: row for row in outlook}
         if set(by_name) != {"Baseline", "Stronger growth", "Downturn"}:
