@@ -273,6 +273,15 @@ def advance(s=None):
                 "text": development.get("text", ""),
                 "summary": development.get("summary", development.get("group", "Budget aftermath")),
             })
+        if any(x.get("kind") == "industrial_action_risk" for x in item.get("specific_events", [])):
+            ongoing = list(s.get("ongoing_issues", []))
+            active_pay_kinds = {"budget_pay", "pay_review", "pay_strike", "pay_strike_wave"}
+            if not any(x.get("kind") in active_pay_kinds for x in ongoing):
+                ongoing.append({
+                    "kind": "budget_pay", "title": "Public-sector pay dispute following the Budget",
+                    "weeks_left": 1, "source": "budget_aftermath", "period": item.get("period", ""),
+                })
+                s.ongoing_issues = ongoing
     s.budget_aftermath_pending = []
     s.budget_aftermath_applied = list(applied_ids)[-32:]
     s.budget_aftermath_history = history[-24:]

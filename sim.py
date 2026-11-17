@@ -457,6 +457,33 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Budget aftermath regression failed: {exc}")
 
+    # Budget pay restraint can progress through talks, strike ballots and real service disruption.
+    try:
+        new_run('Labour', 'Normal', 97534)
+        dispute_state = st.session_state
+        previous = {k: (dict(v) if isinstance(v, dict) else v) for k, v in budget.read().items()}
+        draft = {k: (dict(v) if isinstance(v, dict) else v) for k, v in previous.items()}
+        draft['spend']['public_sector_pay'] = -2.0
+        dispute_record = budget_aftermath.create(dispute_state, previous, draft,
+            {'market': 0.0, 'growth': 0.0, 'approval': 0.0, 'real_wages': 0.0, 'headroom': 0.0}, 'Spring Budget')
+        assert dispute_record and any(x.get('kind') == 'industrial_action_risk' for x in dispute_record.get('specific_events', []))
+        budget_aftermath.advance(dispute_state)
+        engine._advance_ongoing_issues()
+        assert dispute_state.active_weekly_event['id'] == 'budget_pay_dispute'
+        engine.resolve_weekly_event(2)
+        assert any(x.get('kind') == 'pay_strike' for x in dispute_state.ongoing_issues)
+        engine._advance_ongoing_issues()
+        assert dispute_state.active_weekly_event['id'] == 'pay_strike_escalation'
+        before_country = dict(dispute_state.country)
+        engine.resolve_weekly_event(2)
+        assert dispute_state.country['nhs_waiting'] > before_country['nhs_waiting']
+        assert dispute_state.country['nhs_morale'] < before_country['nhs_morale']
+        assert dispute_state.country['schools'] < before_country['schools']
+        assert dispute_state.country['rail'] < before_country['rail']
+        assert dispute_state.headroom < 10.0, "Industrial action effects should not create fiscal headroom."
+    except Exception as exc:
+        failures.append(f"Industrial relations escalation regression failed: {exc}")
+
     # Every standard and conditional policy decision must expose six matched options.
     try:
         decision_content = load_json('decisions.json')

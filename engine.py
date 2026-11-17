@@ -425,7 +425,47 @@ def _advance_ongoing_issues():
     for issue in issues:
         issue['weeks_left'] = int(issue.get('weeks_left', 1)) - 1
         if issue['weeks_left'] <= 0:
-            if issue['kind'] == 'nhs':
+            if issue['kind'] == 'budget_pay':
+                event = {
+                    'id': 'budget_pay_dispute', 'category': 'Public-sector industrial relations',
+                    'title': 'Public-sector pay dispute reaches the Treasury',
+                    'text': 'Unions representing NHS staff and other public servants say the Budget settlement is insufficient. They have opened formal talks and are consulting members on the next step. The Treasury must decide whether to fund a settlement, commission an independent review or risk coordinated industrial action.',
+                    'options': [
+                        ('Agree a funded multi-year pay settlement', {'headroom': -1.4, 'deficit': 1.4, 'approval': 1.0, 'cab_opinion': 0.8, 'household_confidence': 0.5, 'nhs_morale': 2.0}, 'A funded settlement averts immediate walkouts and gives departments a clearer workforce plan.'),
+                        ('Commission an independent pay review', {'headroom': -0.35, 'approval': 0.4, 'officials_confidence': 0.3, 'media_opinion': 0.3}, 'An independent review creates a route to a settlement, but unions reserve the right to ballot for action.'),
+                        ('Reject the demands and hold the pay envelope', {'headroom': 0.15, 'approval': -1.0, 'media_opinion': -0.6, 'backbench_opinion': -0.4}, 'The Treasury protects its spending limit. Unions move towards coordinated strike ballots.'),
+                    ]}
+            elif issue['kind'] == 'pay_review':
+                event = {
+                    'id': 'pay_review_outcome', 'category': 'Public-sector industrial relations',
+                    'title': 'Independent pay review puts pressure on ministers',
+                    'text': 'The independent review has reported. It warns that recruitment and retention are deteriorating and recommends a funded settlement, phased over the financial year. The unions say they will ballot for action if the recommendation is rejected.',
+                    'options': [
+                        ('Accept the review recommendation', {'headroom': -1.1, 'deficit': 1.1, 'approval': 0.8, 'cab_opinion': 0.6, 'nhs_morale': 1.5}, 'The Government accepts the recommendation and reduces the risk of industrial action.'),
+                        ('Offer a smaller deal with retention measures', {'headroom': -0.55, 'deficit': 0.55, 'approval': 0.4, 'nhs_morale': 0.8, 'officials_confidence': 0.2}, 'A compromise improves some retention measures, but unions say the pay offer still falls short.'),
+                        ('Reject the recommendation', {'approval': -1.4, 'media_opinion': -0.8, 'cab_opinion': -0.5}, 'The review is rejected. Unions announce coordinated strike action across essential public services.'),
+                    ]}
+            elif issue['kind'] == 'pay_strike':
+                event = {
+                    'id': 'pay_strike_escalation', 'category': 'Public-sector industrial relations',
+                    'title': 'Coordinated public-sector strikes disrupt essential services',
+                    'text': 'Strike ballots have delivered mandates across several unions. NHS appointments are being cancelled, schools are preparing closure plans and rail operators warn of severe disruption. The Chancellor faces pressure to settle or agree minimum service arrangements.',
+                    'options': [
+                        ('Negotiate an emergency cross-union settlement', {'headroom': -2.0, 'deficit': 2.0, 'approval': 1.2, 'cab_opinion': 1.0, 'nhs_waiting': -0.2, 'nhs_morale': 2.5, 'schools': 0.5, 'rail': 0.5}, 'A costly emergency settlement ends the coordinated walkouts and begins the process of restoring services.'),
+                        ('Agree minimum service levels while talks continue', {'headroom': -0.3, 'approval': 0.2, 'nhs_waiting': 0.5, 'nhs_morale': -0.5, 'schools': -0.3, 'rail': -0.3, 'media_opinion': 0.2}, 'Minimum service arrangements protect some essential provision, but disruption and negotiations continue.'),
+                        ('Hold the line through the walkouts', {'approval': -2.0, 'media_opinion': -1.0, 'growth': -0.08, 'nhs_waiting': 1.5, 'nhs_morale': -2.5, 'schools': -1.2, 'rail': -1.2, 'backbench_opinion': -0.8}, 'The walkouts intensify. Waiting lists lengthen, school standards and rail reliability fall, and public anger grows.'),
+                    ]}
+            elif issue['kind'] == 'pay_strike_wave':
+                event = {
+                    'id': 'pay_strike_final', 'category': 'Public-sector industrial relations',
+                    'title': 'Industrial dispute becomes a test of government authority',
+                    'text': 'A further round of walkouts is being planned. Employers warn that disruption is becoming harder to manage, while unions say the Government has refused to negotiate seriously. The dispute is now affecting public confidence and departmental delivery.',
+                    'options': [
+                        ('Broker a final settlement with union leaders', {'headroom': -2.4, 'deficit': 2.4, 'approval': 1.4, 'cab_opinion': 1.0, 'nhs_waiting': -0.25, 'nhs_morale': 2.5, 'schools': 0.8, 'rail': 0.8}, 'A final settlement ends the dispute, although the additional pay commitment tightens the fiscal position.'),
+                        ('Expand minimum service requirements', {'headroom': -0.4, 'approval': -0.3, 'nhs_waiting': 0.8, 'nhs_morale': -1.0, 'schools': -0.5, 'rail': -0.5, 'media_opinion': -0.5}, 'More services are protected, but unions challenge the approach and morale remains weak.'),
+                        ('Continue the confrontation', {'approval': -2.5, 'media_opinion': -1.5, 'nhs_waiting': 1.2, 'nhs_morale': -2.0, 'schools': -1.0, 'rail': -1.0, 'growth': -0.1}, 'The Government refuses to shift. Disruption continues and the dispute leaves a lasting mark on public services.'),
+                    ]}
+            elif issue['kind'] == 'nhs':
                 event = {
                     'id': 'followup_nhs_strike', 'category': 'Escalating dispute',
                     'title': 'NHS strike action spreads',
@@ -505,6 +545,10 @@ def _advance_ongoing_issues():
 def _schedule_ongoing_issue(event_id, choice_index):
     """Some choices leave a live dispute which can escalate in a later week."""
     mapping = {
+        ('budget_pay_dispute', 1): ('pay_review', 'Independent public-sector pay review'),
+        ('budget_pay_dispute', 2): ('pay_strike', 'Coordinated public-sector strike ballots'),
+        ('pay_review_outcome', 2): ('pay_strike', 'Coordinated public-sector strike ballots'),
+        ('pay_strike_escalation', 2): ('pay_strike_wave', 'Further round of coordinated walkouts'),
         ('nhs_strike', 2): ('nhs', 'NHS industrial dispute'),
         ('teacher_strike', 2): ('teachers', 'Teachers’ industrial dispute'),
         ('union_pay_pressure', 2): ('union', 'Public-sector pay campaign'),

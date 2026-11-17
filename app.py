@@ -877,6 +877,14 @@ def weekly_event_screen():
     event = s.get('active_weekly_event') or {}
     st.markdown(f"<div class='briefing-kicker'>WEEKLY TREASURY BRIEFING · {event.get('category', 'Government')}</div><div class='briefing-heading'>{event.get('title', 'An unexpected development')}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='briefing-context'>{event.get('text', '')}</div>", unsafe_allow_html=True)
+    if str(event.get('id', '')).startswith(('budget_pay', 'pay_review', 'pay_strike')):
+        country_stats = s.get('country', {}) or {}
+        st.markdown("#### Industrial relations position")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("NHS staff morale", f"{float(country_stats.get('nhs_morale', 52.0)):.0f}/100")
+        c2.metric("NHS waiting list", f"{float(country_stats.get('nhs_waiting', 7.4)):.2f}m")
+        c3.metric("Fiscal headroom", f"£{float(s.get('headroom', 0.0)):.1f}bn")
+        st.caption("An unresolved dispute can escalate from negotiations to ballots and coordinated walkouts, affecting health, schools and rail services.")
     humphrey_message("An awkward development, Chancellor. None of these options is entirely painless. The consequences will be felt in the Treasury and beyond.")
     options = event.get('options', [])
     labels = [item[0] for item in options]
