@@ -44,7 +44,7 @@ def create_report():
         * min(1.6, 1.0 + 0.2 * max(0, int(item.get("duration_years", 0)) - 1))
         for item in strikes
     )
-    industrial = _clamp(100.0 - min(70.0, pressure * 7.0))
+    industrial = _clamp(100.0 - min(70.0, pressure * 9.0))
     overall = round(
         0.225 * economic + 0.225 * service + 0.225 * fiscal
         + 0.225 * political + 0.10 * industrial
