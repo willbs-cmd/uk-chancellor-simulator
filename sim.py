@@ -1921,6 +1921,40 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Phase 3 Number 10 relationship regression failed: {exc}")
 
+    # Phase 1: Treasury scenario forecasts use the macro engine, remain non-mutating,
+    # and distinguish a downside shock from the central case.
+    try:
+        from treasury import fiscal_outlook
+        forecast_state = FakeState({
+            "gdp_trillion": 3.0, "growth": 1.2, "inflation": 2.4,
+            "interest_rate": 4.5, "gilt_yield": 4.6, "debt": 96.0,
+            "deficit": 65.0, "headroom": 8.0, "market_conf": 58.0,
+            "approval": 50.0, "macro_cycle": "Stagnation",
+            "tax_base_index": 1.0, "treasury_last_cost_pressures": {
+                "Total recurring pressures (£bn)": 0.9
+            }, "demographic_pressure": 2.0,
+            "budget_applied": budget.defaults(),
+        })
+        previous = dict(forecast_state)
+        st.session_state = forecast_state
+        outlook = fiscal_outlook(3)
+        by_name = {row["Scenario"]: row for row in outlook}
+        if set(by_name) != {"Baseline", "Stronger growth", "Downturn"}:
+            failures.append("Treasury outlook did not return all three economic scenarios.")
+        elif not (by_name["Downturn"]["Fiscal headroom (£bn)"] < by_name["Baseline"]["Fiscal headroom (£bn)"]
+                  and by_name["Downturn"]["Real growth (%)"] < by_name["Baseline"]["Real growth (%)"]):
+            failures.append("Downturn scenario did not worsen growth and fiscal headroom against baseline.")
+        if dict(forecast_state) != previous:
+            failures.append("Treasury forecast mutated the live game state.")
+        for row in outlook:
+            for key in ("GDP after 3 years (£tn)", "Debt (£bn)", "Debt-to-GDP (%)", "Debt interest (£bn)"):
+                if not math.isfinite(float(row[key])):
+                    failures.append(f"Treasury outlook produced a non-finite {key} value.")
+    except Exception as exc:
+        failures.append(f"Phase 1 Treasury scenario regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:

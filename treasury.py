@@ -153,51 +153,72 @@ def invest(key, amount):
 
 
 def fiscal_outlook(years=3):
-    """Build an illustrative, non-mutating medium-term fiscal projection."""
+    """Project the public finances using the same macro/debt stock-flow engine as the live annual tick.
+
+    Scenarios are illustrative and non-mutating. Positive tax buoyancy is only partly
+    available to the Treasury; downturn receipt losses pass through in full.
+    """
     s = st.session_state
-    gdp = max(0.1, float(s.get("gdp_trillion", 3.0)))
-    growth = float(s.get("growth", 1.0))
-    inflation = float(s.get("inflation", 2.0))
-    deficit = max(0.0, float(s.get("deficit", 0.0)))
-    debt_ratio = max(0.0, float(s.get("debt", 90.0)))
-    headroom = float(s.get("headroom", 0.0))
-    rate = max(0.1, float(s.get("gilt_yield", 4.5)))
-    interest = max(0.0, float(s.get("debt_interest_bill", 10.7)))
-    pressure = float(s.get("treasury_last_cost_pressures", {}).get("Total recurring pressures (£bn)", 1.0))
-    cases = {
-        "Baseline": (growth, inflation, 0.0),
-        "Stronger growth": (growth + 1.0, max(0.0, inflation - 0.2), 0.0),
-        "Downturn": (growth - 1.5, inflation + 0.8, 0.65),
+    years = max(1, min(5, int(years)))
+    starting_gdp = max(0.5, float(s.get("gdp_trillion", 3.0)))
+    base_growth = float(s.get("growth", 1.0))
+    base_inflation = float(s.get("inflation", 2.0))
+    starting_tax_index = max(0.55, float(s.get("tax_base_index", 1.0)))
+    applied = s.get("budget_applied", {})
+    try:
+        import budget
+        tax_receipts_base = sum(budget.revenues(applied or budget.defaults()).values()) / starting_tax_index
+    except Exception:
+        tax_receipts_base = starting_gdp * 160.0
+    recurring = float(s.get("treasury_last_cost_pressures", {}).get("Total recurring pressures (£bn)", 0.85))
+    demographic = float(s.get("demographic_pressure", 0.0))
+    scenarios = {
+        "Baseline": {"growth": 0.0, "inflation": 0.0, "gilt": 0.0, "market": 0.0},
+        "Stronger growth": {"growth": 1.0, "inflation": -0.2, "gilt": -0.10, "market": 1.0},
+        "Downturn": {"growth": -1.5, "inflation": 0.8, "gilt": 0.65, "market": -2.5},
     }
     rows = []
-    for scenario, (g, inf, rate_shock) in cases.items():
-        case_gdp = gdp
-        case_deficit = deficit
-        case_headroom = headroom
-        case_debt = gdp * debt_ratio / 100.0
-        case_interest = interest
+    for label, shock in scenarios.items():
+        v = {
+            "inflation": base_inflation, "interest_rate": float(s.get("interest_rate", 4.5)),
+            "gilt_yield": float(s.get("gilt_yield", 4.5)), "growth": base_growth,
+            "debt": float(s.get("debt", 90.0)), "deficit": max(0.0, float(s.get("deficit", 0.0))),
+            "headroom": float(s.get("headroom", 0.0)), "market_conf": float(s.get("market_conf", 50.0)),
+            "approval": float(s.get("approval", 50.0)), "cycle": s.get("macro_cycle", "Stagnation"),
+            "gdp_trillion": starting_gdp,
+        }
+        tax_index = starting_tax_index
         for year in range(1, years + 1):
-            nominal = max(-8.0, min(15.0, g + inf))
-            case_gdp *= max(0.5, 1.0 + nominal / 100.0)
-            # Approximate automatic tax buoyancy; only 30% of positive receipts
-            # growth becomes fiscal headroom, while downturn losses pass through.
-            receipt_change = case_gdp * 0.16 * (nominal / 100.0)
-            receipt_change = receipt_change * 0.30 if receipt_change > 0 else receipt_change
-            spending_pressure = pressure * (1.0 + max(0.0, inf - 2.0) * 0.08) * (1.04 ** (year - 1))
-            refinancing_cost = case_debt * (0.15 * rate_shock / 100.0)
-            annual_balance_hit = spending_pressure + refinancing_cost - receipt_change
-            case_deficit = max(0.0, case_deficit + annual_balance_hit)
-            case_headroom -= annual_balance_hit
-            case_debt += case_deficit
-            # Gradual repricing only: most outstanding gilts do not reset at once.
-            case_interest += case_debt * 0.15 * (rate_shock / 100.0)
+            v["growth"] = round(v["growth"] + shock["growth"], 2)
+            v["inflation"] = round(max(0.0, v["inflation"] + shock["inflation"]), 2)
+            v["gilt_yield"] = max(0.5, v["gilt_yield"] + shock["gilt"])
+            v["market_conf"] = max(0.0, min(100.0, v["market_conf"] + shock["market"]))
+            v = econ.step(v, None)
+            nominal_growth = ((1.0 + v["growth"] / 100.0) * (1.0 + v["inflation"] / 100.0) - 1.0) * 100.0
+            next_index = max(0.55, tax_index * (1.0 + max(-8.0, min(12.0, nominal_growth * 0.85)) / 100.0))
+            gross_receipts = tax_receipts_base * (next_index - tax_index)
+            growth_receipts = gross_receipts * 0.30 if gross_receipts > 0 else gross_receipts
+            tax_index = next_index
+            inflation_pressure = max(0.0, v["inflation"] - 2.0)
+            nhs_pressure = 0.45 + 0.10 * inflation_pressure + 0.025 * demographic
+            pay_pressure = 0.40 + 0.12 * inflation_pressure + 0.015 * max(0.0, 2.0 - v["growth"])
+            annual_costs = max(0.0, recurring) + max(0.0, nhs_pressure + pay_pressure - 0.85)
+            net_change = growth_receipts - annual_costs
+            v["headroom"] = round(v["headroom"] + net_change, 1)
+            v["deficit"] = round(max(0.0, v["deficit"] - net_change), 1)
+            v["gdp_trillion"] = round(float(v["gdp_trillion"]) * (1.0 + nominal_growth / 100.0), 5)
+        debt_stock = float(v.get("debt_stock_bn", v["gdp_trillion"] * 1000.0 * v["debt"] / 100.0))
         rows.append({
-            "Scenario": scenario,
-            "GDP after 3 years (£tn)": round(case_gdp, 2),
-            "Annual deficit (£bn)": round(case_deficit, 1),
-            "Fiscal headroom (£bn)": round(case_headroom, 1),
-            "Debt (£bn)": round(case_debt, 1),
-            "Debt interest (£bn)": round(max(0.0, case_interest), 1),
+            "Scenario": label,
+            "GDP after 3 years (£tn)": round(float(v["gdp_trillion"]), 2),
+            "Real growth (%)": round(float(v["growth"]), 2),
+            "Inflation (%)": round(float(v["inflation"]), 2),
+            "Annual deficit (£bn)": round(float(v["deficit"]), 1),
+            "Fiscal headroom (£bn)": round(float(v["headroom"]), 1),
+            "Debt (£bn)": round(debt_stock, 1),
+            "Debt-to-GDP (%)": round(float(v["debt"]), 1),
+            "Debt interest (£bn)": round(float(v.get("debt_interest_bill", 10.7)), 1),
+            "Gilt yield (%)": round(float(v["gilt_yield"]), 2),
         })
     return rows
 
