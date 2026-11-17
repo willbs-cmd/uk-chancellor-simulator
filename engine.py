@@ -1224,9 +1224,11 @@ def proceed_to_spring():
     # Trading partners evolve each year; their cycle spills into UK exports and confidence.
     world_economy.ensure(s)
     world_economy.advance(s)
-    economy_tick()
+    # Let household and business demand feed into real growth before the
+    # macro debt calculation uses that year's growth rate.
     import living_economy
     living_economy.advance(s)
+    economy_tick()
     economic_management.annual_update()
     economic_management.run_gilt_auction()
     economic_management.advance_financial_stability()
@@ -1237,7 +1239,14 @@ def proceed_to_spring():
     world_drag = float(s.get('world_cycle', 0.0))
     s.growth = round(s.growth + world_drag * 0.12, 2)
     s.market_conf = round(_clip(s.market_conf + world_drag * 0.8), 1)
-    # Track nominal GDP in £ trillions using real growth and inflation.
+    # Long-run productivity changes the realised growth rate for this year,
+    # so apply it before calculating nominal GDP and the tax-base dividend.
+    s.setdefault('longrun_productivity', 1.0)
+    s.setdefault('pension_pressure', 0.0)
+    s.setdefault('threshold_freeze_years', 0)
+    s.setdefault('political_capital_points', 5)
+    s.growth = round(s.growth + (s.longrun_productivity - 1.0) * 0.04, 2)
+    # Track nominal GDP in £ trillions using final real growth and inflation.
     nominal_growth = ((1 + s.growth / 100.0) * (1 + s.inflation / 100.0) - 1) * 100
     s.gdp_trillion = round(float(s.get('gdp_trillion', 3.0)) * (1 + nominal_growth / 100.0), 3)
     s.setdefault('gdp_history', []).append({
@@ -1251,11 +1260,6 @@ def proceed_to_spring():
     treasury.annual_update(nominal_growth)
     politics.shift_macro_cycle()
     # Long-run pressures compound annually rather than arriving as isolated crises.
-    s.setdefault('longrun_productivity', 1.0)
-    s.setdefault('pension_pressure', 0.0)
-    s.setdefault('threshold_freeze_years', 0)
-    s.setdefault('political_capital_points', 5)
-    s.growth = round(s.growth + (s.longrun_productivity - 1.0) * 0.04, 2)
     if s.get('thresholds_frozen', False):
         s.threshold_freeze_years = float(s.get('threshold_freeze_years', 0)) + 1.0
         scope = s.get('threshold_freeze_scope', 'Personal allowance and all bands')
