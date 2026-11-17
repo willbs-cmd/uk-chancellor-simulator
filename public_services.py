@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 import budget
-import country
+import country as country_data
 
 SERVICES = {
     "NHS": {"label": "NHS access & capacity", "start": 54.0, "departments": ("health", "social_care"),
@@ -129,7 +129,7 @@ def advance(s=None):
     employment_effect = employment_unemployment_effect(scores)
     country_stats = dict(s.get("country", {}))
     if "unemployment" in country_stats:
-        bounds = country.STATS["unemployment"]
+        bounds = country_data.STATS["unemployment"]
         country_stats["unemployment"] = round(_clip(
             float(country_stats["unemployment"]) + employment_effect,
             bounds["lo"], bounds["hi"]), 2)
