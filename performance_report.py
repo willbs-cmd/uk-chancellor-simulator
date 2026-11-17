@@ -34,13 +34,35 @@ def create_report():
         service = 50.0
     fiscal = _clamp(55 + headroom * 2.2 - max(0, deficit - 80) * 0.10 - max(0, debt - 90) * 0.12)
     political = _clamp(0.35 * approval + 0.25 * pm + 0.20 * party + 0.20 * cabinet)
-    overall = round(0.25 * economic + 0.25 * service + 0.25 * fiscal + 0.25 * political)
+
+    # Persistent industrial action is assessed as a distinct part of the
+    # Chancellor's delivery record. Duration compounds the burden gradually;
+    # settled disputes no longer count against the current year's assessment.
+    strikes = list(s.get("public_service_strikes", []))
+    pressure = sum(
+        float(item.get("severity", 1.0))
+        * min(1.6, 1.0 + 0.2 * max(0, int(item.get("duration_years", 0)) - 1))
+        for item in strikes
+    )
+    industrial = _clamp(100.0 - min(70.0, pressure * 7.0))
+    overall = round(
+        0.225 * economic + 0.225 * service + 0.225 * fiscal
+        + 0.225 * political + 0.10 * industrial
+    )
+    election_outlook = (
+        "Strong" if approval >= 65 else
+        "Competitive" if approval >= 50 else
+        "Under pressure" if approval >= 35 else "Severe electoral danger"
+    )
     grade = "A+" if overall >= 90 else "A" if overall >= 80 else "B" if overall >= 70 else "C" if overall >= 60 else "D" if overall >= 50 else "E" if overall >= 40 else "F"
 
     report = {
         "term": int(s.get("term", 1)), "year": year,
         "economic": round(economic), "services": round(service),
         "fiscal": round(fiscal), "political": round(political),
+        "industrial_relations": round(industrial),
+        "active_disputes": len(strikes), "strike_pressure": round(pressure, 2),
+        "election_outlook": election_outlook,
         "overall": overall, "grade": grade,
         "growth": round(growth, 2), "inflation": round(inflation, 2),
         "headroom": round(headroom, 1), "deficit": round(deficit, 1),
@@ -84,9 +106,19 @@ def render():
                         text=f"{goal.get('label', 'Objective')} · {float(goal.get('progress', 0)):.0f}%")
         if mission.get("result"):
             st.success(f"Final mandate result: {mission['result']}")
-    cols = st.columns(4)
-    for col, (label, key) in zip(cols, [("Economy", "economic"), ("Public services", "services"), ("Fiscal record", "fiscal"), ("Political standing", "political")]):
-        col.metric(label, f"{latest[key]}/100")
+    cols = st.columns(5)
+    for col, (label, key) in zip(cols, [
+        ("Economy", "economic"), ("Public services", "services"),
+        ("Fiscal record", "fiscal"), ("Political standing", "political"),
+        ("Industrial relations", "industrial_relations")
+    ]):
+        col.metric(label, f"{latest.get(key, 100)}/100")
+    if latest.get("active_disputes", 0):
+        st.warning(
+            f"{latest['active_disputes']} unresolved industrial dispute(s) "
+            f"weakened this year's report. Strike burden: {latest.get('strike_pressure', 0):.1f}."
+        )
+    st.caption(f"Election outlook indicator: **{latest.get('election_outlook', 'Not assessed')}** · based on the government's approval rating.")
     st.divider()
     st.markdown("#### Year-end figures")
     a, b, c = st.columns(3)
@@ -100,4 +132,4 @@ def render():
     with st.expander("📚 Previous annual reports", expanded=False):
         for item in reversed(reports[:-1]):
             st.markdown(f"**Term {item['term']}, Year {item['year']} — {item['grade']} ({item['overall']}/100)**")
-            st.caption(f"Economy {item['economic']} · Services {item['services']} · Fiscal {item['fiscal']} · Political {item['political']}")
+            st.caption(f"Economy {item['economic']} · Services {item['services']} · Fiscal {item['fiscal']} · Political {item['political']} · Industrial relations {item.get('industrial_relations', 100)}")

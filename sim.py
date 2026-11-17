@@ -1699,6 +1699,35 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Industrial-action economic impact regression failed: {exc}")
 
+    # Annual Chancellor reports should explicitly reflect unresolved strike
+    # duration, while settled disputes no longer depress the industrial score.
+    try:
+        import performance_report
+        report_state = FakeState(
+            term=3, year=2, annual_reports=[], growth=1.5, inflation=2.0,
+            market_conf=58.0, headroom=8.0, deficit=55.0, debt=85.0,
+            approval=54.0, pm_opinion=60.0, party_opinion=62.0,
+            cab_opinion=61.0, country={"nhs_waiting": 6.0, "nhs_morale": 60.0},
+            public_service_strikes=[
+                {"id": "NHS workforce", "severity": 2.5, "duration_years": 3}
+            ], mission_latest={}
+        )
+        st.session_state = report_state
+        strike_report = performance_report.create_report()
+        if not strike_report or strike_report.get("industrial_relations", 100) >= 70:
+            failures.append("Long-running industrial action did not materially reduce the report's industrial-relations score.")
+        if strike_report.get("active_disputes") != 1 or strike_report.get("election_outlook") != "Competitive":
+            failures.append("Annual report omitted the dispute count or approval-based election outlook.")
+        report_state.annual_reports = []
+        report_state.public_service_strikes = []
+        clear_report = performance_report.create_report()
+        if clear_report.get("industrial_relations") != 100:
+            failures.append("Settled industrial action continued to penalise the annual report.")
+        if clear_report.get("overall", 0) <= strike_report.get("overall", 0):
+            failures.append("Unresolved industrial action did not lower the overall Chancellor rating.")
+    except Exception as exc:
+        failures.append(f"Annual industrial-relations report regression failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
