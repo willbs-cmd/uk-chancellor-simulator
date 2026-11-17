@@ -300,7 +300,7 @@ def check(n=None, difficulty=None):
         assert weak_case["score"] > strong_case["score"], "Poor performance and weak loyalty should strengthen the case for replacement."
         assert weak_case["band"] == "High" and strong_case["band"] == "Low"
         pressure_state = FakeState({
-            "seed": 123, "term": 1, "year": 2, "block": 1, "party": "Labour",
+            "seed": 1, "term": 1, "year": 2, "block": 1, "party": "Labour",
             "cabinet_ministers": {"health": "Health Secretary"},
             "ministerial_loyalty": {"health": 20.0}, "ministerial_profiles": {
                 "health": {"minister": "Health Secretary", "party": "Labour", "faction": "Socialist Left", "personality": "Public campaigner"}
@@ -312,7 +312,7 @@ def check(n=None, difficulty=None):
         issue = political_pressure.review_policy(pressure_state, {"title": "Fiscal package"}, {"ideology": "Fiscal Austerity"}, {"rebels": 35})
         if issue:
             assert issue["kind"] in {"ministerial_dissent", "backbench_rebellion"}
-            assert political_pressure.resolve_issue("negotiate")
+            assert political_pressure.resolve_issue("negotiate", pressure_state)
             assert pressure_state["political_pressure_issue"] is None
             assert pressure_state["political_capital_points"] == 1
             assert pressure_state["headroom"] == 4.7

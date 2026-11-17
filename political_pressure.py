@@ -78,9 +78,9 @@ def review_policy(s, decision, option, vote):
     return None
 
 
-def resolve_issue(choice):
+def resolve_issue(choice, s=None):
     """Let the Chancellor choose how to handle a live political dispute."""
-    s = st.session_state
+    s = s if s is not None else st.session_state
     issue = s.get("political_pressure_issue")
     if not issue:
         return False
