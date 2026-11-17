@@ -310,13 +310,13 @@ def check(n=None, difficulty=None):
             "pm_opinion": 50.0, "backbench_opinion": 50.0, "media_opinion": 50.0, "approval": 50.0,
         })
         issue = political_pressure.review_policy(pressure_state, {"title": "Fiscal package"}, {"ideology": "Fiscal Austerity"}, {"rebels": 35})
-        if issue:
-            assert issue["kind"] in {"ministerial_dissent", "backbench_rebellion"}
-            assert political_pressure.resolve_issue("negotiate", pressure_state)
-            assert pressure_state["political_pressure_issue"] is None
-            assert pressure_state["political_capital_points"] == 1
-            assert pressure_state["headroom"] == 4.7
-        assert political_pressure.review_policy(pressure_state, {"title": "Next"}, {"ideology": "Centric"}, {"rebels": 0}) is None or pressure_state.get("political_pressure_issue") is None
+        assert issue is not None, "A sufficiently strong factional disagreement should create a political-pressure incident."
+        assert issue["kind"] == "ministerial_dissent"
+        assert political_pressure.review_policy(pressure_state, {"title": "Repeated rerun"}, {"ideology": "Fiscal Austerity"}, {"rebels": 35}) is None, "An unresolved incident must not be duplicated."
+        assert political_pressure.resolve_issue("negotiate", pressure_state)
+        assert pressure_state["political_pressure_issue"] is None
+        assert pressure_state["political_capital_points"] == 1
+        assert pressure_state["headroom"] == 4.7
         print("Cabinet management, political pressure and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
