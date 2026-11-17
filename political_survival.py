@@ -170,6 +170,82 @@ def set_pm_mandate(s):
     s.pm_mandate_history = history[-20:]
     return priorities
 
+
+def prepare_pm_reshuffle(s):
+    """The incoming PM reviews the weakest portfolio and asks the Chancellor for advice."""
+    import budget
+    import cabinet_management
+    cabinet_management.ensure(s)
+    cabinet = s.get("cabinet_ministers", {})
+    candidates = []
+    for department in budget.DEPARTMENT_MINISTERS:
+        minister = str(cabinet.get(department, ""))
+        if not minister or minister.startswith(("Vacant", "New appointment")):
+            continue
+        competence = float(s.get("ministerial_competence", {}).get(department, 60.0))
+        loyalty = float(s.get("ministerial_loyalty", {}).get(department, 60.0))
+        service = cabinet_management.SERVICE_FOR_DEPARTMENT.get(department)
+        service_score = float(s.get("public_service_scores", {}).get(service, 60.0)) if service else 60.0
+        weakness = 0.55 * (100.0 - competence) + 0.30 * (100.0 - loyalty) + 0.15 * (100.0 - service_score)
+        candidates.append((weakness, department, minister, competence, loyalty, service_score))
+    if not candidates:
+        s.pm_reshuffle_issue = None
+        return None
+    weakness, department, minister, competence, loyalty, service_score = max(candidates)
+    if weakness < 48.0:
+        s.pm_reshuffle_issue = None
+        return None
+    issue = {
+        "term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
+        "department": department, "minister": minister,
+        "weakness": round(weakness, 1), "competence": round(competence, 1),
+        "loyalty": round(loyalty, 1), "service_score": round(service_score, 1),
+        "pm": str(s.get("current_prime_minister", "The Prime Minister")),
+    }
+    s.pm_reshuffle_issue = issue
+    return issue
+
+
+def resolve_pm_reshuffle(s, choice):
+    """The Chancellor advises; the Prime Minister makes the final Cabinet decision."""
+    issue = s.get("pm_reshuffle_issue")
+    if not issue or choice not in {"replace", "retain"}:
+        return False
+    import cabinet_management
+    department = issue["department"]
+    assessment = cabinet_management.reshuffle_assessment(s, department)
+    receptiveness = float(assessment.get("score", 0.0))
+    pm_accepts_replacement = receptiveness >= 58.0
+    replace = pm_accepts_replacement if choice == "replace" else not pm_accepts_replacement
+    minister = str(issue.get("minister", "Cabinet minister"))
+    if replace:
+        cabinet_management.record_resignation(
+            s, minister, "Replaced in the incoming Prime Minister's first Cabinet reshuffle"
+        )
+        s.pm_trust = round(_clip(float(s.get("pm_trust", 50.0)) + (2.0 if choice == "replace" else -1.0)), 1)
+        s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) + (1.0 if choice == "replace" else -1.5)), 1)
+        outcome = f"{issue.get('pm', 'The Prime Minister')} decides that {minister} must leave Cabinet. The {department.replace('_', ' ')} portfolio is vacant until Number 10 appoints a successor."
+        accepted = True
+    else:
+        loyalty = dict(s.get("ministerial_loyalty", {}))
+        loyalty[department] = round(min(100.0, float(loyalty.get(department, 60.0)) + (3.0 if choice == "retain" else 0.0)), 1)
+        s.ministerial_loyalty = loyalty
+        s.pm_trust = round(_clip(float(s.get("pm_trust", 50.0)) + (1.5 if choice == "retain" else -2.0)), 1)
+        s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) + (1.0 if choice == "retain" else -2.0)), 1)
+        outcome = f"{issue.get('pm', 'The Prime Minister')} decides to keep {minister} in Cabinet for now. Your advice has been noted, but Number 10 retains the final say."
+        accepted = False
+    record = dict(issue, advice=choice, pm_replaced=accepted, receptiveness=round(receptiveness, 1), outcome=outcome)
+    history = list(s.get("pm_cabinet_reshuffle_history", []))
+    history.append(record)
+    s.pm_cabinet_reshuffle_history = history[-20:]
+    s.pm_reshuffle_issue = None
+    s.event_cards = list(s.get("event_cards", []))
+    s.event_cards.append({"title": "The new Prime Minister's first reshuffle", "text": outcome,
+                          "summary": "Number 10 makes the final appointment decision"})
+    s.message = outcome
+    s.humphrey_note = "The Prime Minister appoints the Cabinet. The Chancellor may offer advice, but should never mistake advice for authority."
+    return True
+
 def resolve_transition(s, choice):
     """The incoming Prime Minister decides whether the Chancellor stays in post."""
     issue=s.get("pm_transition_issue")
@@ -181,6 +257,7 @@ def resolve_transition(s, choice):
         s.cab_opinion=round(_clip(float(s.get("cab_opinion",50))+2),1)
         s.chancellor_status="retained"
         set_pm_mandate(s)
+        prepare_pm_reshuffle(s)
         outcome=f"{issue.get('new_pm','The new Prime Minister')} confirms that you will remain Chancellor. You have survived the transition, but must now deliver the new administration's priorities."
     else:
         s.chancellor_status="dismissed"
@@ -217,6 +294,28 @@ def render(s):
         with right:
             if st.button("Offer to leave the Treasury",key="pm_transition_dismiss",use_container_width=True):
                 resolve_transition(s,"dismiss")
+                st.rerun()
+        return
+    cabinet_review=s.get("pm_reshuffle_issue")
+    if cabinet_review:
+        st.markdown("### 🏛️ The new Prime Minister's first Cabinet reshuffle")
+        st.info(f"{cabinet_review.get('pm')} is reviewing {cabinet_review.get('minister')} as {cabinet_review.get('department','').replace('_',' ')} Secretary. Number 10 has asked for your confidential recommendation.")
+        a,b=st.columns(2)
+        with a:
+            st.metric("Ministerial competence", f"{cabinet_review.get('competence',60):.0f}/100")
+            st.metric("Department performance", f"{cabinet_review.get('service_score',60):.0f}/100")
+        with b:
+            st.metric("Ministerial loyalty", f"{cabinet_review.get('loyalty',60):.0f}/100")
+            st.metric("Overall review pressure", f"{cabinet_review.get('weakness',0):.0f}/100")
+        st.caption("You can recommend a change or argue for continuity. The Prime Minister makes the final decision, and a replacement leaves a temporary vacancy until Number 10 appoints a successor.")
+        left,right=st.columns(2)
+        with left:
+            if st.button("Recommend replacing the minister",key="pm_reshuffle_replace",type="primary",use_container_width=True):
+                resolve_pm_reshuffle(s,"replace")
+                st.rerun()
+        with right:
+            if st.button("Recommend keeping the minister",key="pm_reshuffle_retain",use_container_width=True):
+                resolve_pm_reshuffle(s,"retain")
                 st.rerun()
         return
     issue=s.get("leadership_issue")

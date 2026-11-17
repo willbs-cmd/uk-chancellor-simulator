@@ -277,6 +277,38 @@ def cabinet_rivalry_checks():
     return True
 
 
+
+def pm_cabinet_reshuffle_checks():
+    import political_survival
+    fake = FakeState({
+        "term": 2, "year": 1, "party": "Labour", "current_prime_minister": "New PM",
+        "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
+        "ministerial_competence": {"health": 35.0, "education": 75.0},
+        "ministerial_loyalty": {"health": 30.0, "education": 75.0},
+        "public_service_scores": {"NHS": 35.0, "Education": 75.0},
+        "pm_opinion": 70.0, "pm_trust": 60.0, "cab_opinion": 55.0,
+        "ministerial_resignations": [], "ministerial_vacancy_year": {},
+        "pm_cabinet_reshuffle_history": [], "event_cards": [],
+    })
+    issue = political_survival.prepare_pm_reshuffle(fake)
+    assert issue and issue["department"] == "health"
+    assert political_survival.resolve_pm_reshuffle(fake, "replace")
+    assert fake["pm_reshuffle_issue"] is None
+    assert str(fake["cabinet_ministers"]["health"]).startswith("Vacant")
+    assert fake["ministerial_resignations"][-1]["minister"] == "Health Secretary"
+    assert fake["pm_cabinet_reshuffle_history"][-1]["pm_replaced"] is True
+    # In a strong ministerial position, the PM should accept advice to retain.
+    stable = FakeState({
+        "term": 1, "year": 2, "party": "Labour", "current_prime_minister": "New PM",
+        "cabinet_ministers": {"health": "Health Secretary"},
+        "ministerial_competence": {"health": 90.0}, "ministerial_loyalty": {"health": 90.0},
+        "public_service_scores": {"NHS": 90.0}, "pm_opinion": 90.0, "cab_opinion": 90.0,
+        "pm_trust": 80.0, "ministerial_resignations": [], "ministerial_vacancy_year": {},
+        "pm_cabinet_reshuffle_history": [], "event_cards": [],
+    })
+    assert political_survival.prepare_pm_reshuffle(stable) is None
+    return True
+
 def political_survival_checks():
     import political_survival
     weak = FakeState({"term":1,"year":2,"seed":1,"party":"Labour","pm_opinion":20.0,
@@ -329,6 +361,7 @@ def political_survival_checks():
     before_budget=dict(weak["budget_applied"])
     political_survival.set_pm_mandate(weak)
     assert weak["budget_applied"]==before_budget
+    assert pm_cabinet_reshuffle_checks()
     weak["pm_transition_issue"]={"year":3,"term":1,"new_pm":"the Deputy Leader","previous_pm":"The Prime Minister"}
     assert political_survival.resolve_transition(weak,"dismiss")
     assert weak["chancellor_status"]=="dismissed" and weak["game_over"]["kind"]=="sacked"

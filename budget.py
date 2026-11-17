@@ -207,13 +207,27 @@ def ensure():
         if s.cabinet_ministers.get(key) == "Vacant — awaiting Prime Minister":
             vacancy_year = int(s.ministerial_vacancy_year.get(key, s.get("year", 1)))
             if int(s.get("year", 1)) > vacancy_year:
-                s.cabinet_ministers[key] = f"New appointment (PM)"
-                s.ministerial_loyalty[key] = 55.0
+                # Number 10 appoints a named successor; do not leave a permanent placeholder
+                # that the Cabinet roster and annual performance review would treat as vacant.
+                successor_pool = (
+                    "Dr Maya Collins", "Thomas Okoye", "Harriet Vaughan", "Daniel Rahman",
+                    "Catherine Brooks", "Imran Fletcher", "Sophie Adeyemi", "Peter Wallace",
+                    "Amelia Grant", "David Mensah", "Rebecca Shaw", "Jonathan Price",
+                    "Aisha Bennett", "Edward Morgan", "Leah Thompson", "Michael Byrne",
+                )
+                token = f"{s.get('seed', 0)}:{s.get('term', 1)}:{s.get('year', 1)}:{key}"
+                slot = sum((i + 1) * ord(char) for i, char in enumerate(token)) % len(successor_pool)
+                successor = successor_pool[slot]
+                s.cabinet_ministers[key] = successor
+                s.ministerial_loyalty[key] = 58.0 + (slot % 15)
+                competence = dict(s.get("ministerial_competence", {}))
+                competence[key] = 56.0 + ((slot * 7) % 20)
+                s.ministerial_competence = competence
                 s.ministerial_vacancy_year.pop(key, None)
                 s.event_cards = list(s.get("event_cards", []))
                 s.event_cards.append({
                     "title": f"Prime Minister appoints a new {SPEND_DEFAULTS[key]['label']} Secretary",
-                    "text": "The Prime Minister has filled the Cabinet vacancy. As Chancellor, you had no power to appoint the replacement.",
+                    "text": f"The Prime Minister has appointed {successor}. Their initial competence and loyalty have been added to the Cabinet record. As Chancellor, you had no power to make the appointment.",
                     "summary": "Cabinet reshuffle · Prime Minister's decision",
                 })
     had_department_ledger = isinstance(s.get('dept_spend'), dict)
