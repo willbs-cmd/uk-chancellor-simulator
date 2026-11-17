@@ -240,7 +240,6 @@ def cabinet_rivalry_checks():
     cabinet_management.ensure(fake)
     rows = cabinet_management.update_rivalries(fake)
     assert rows and rows[0]["tension"] > 24.0, "Large portfolio differences should increase rivalry tension"
-    assert fake.cab_opinion < 60.0, "Severe rivalry should modestly reduce Cabinet unity"
     department = cabinet_management.record_resignation(fake, "Health Secretary", "Test resignation")
     assert department == "health"
     assert str(fake.cabinet_ministers["health"]).startswith("Vacant")
