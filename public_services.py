@@ -74,6 +74,8 @@ def ensure(s=None):
     s.setdefault("public_service_resolved", [])
     s.setdefault("public_service_year_notes", [])
     s.setdefault("public_service_strike_impact", {})
+    s.setdefault("public_service_delivery_latest", {})
+    s.setdefault("public_service_delivery_history", [])
 
 
 def _department_ratio(s, key):
@@ -86,6 +88,28 @@ def _department_ratio(s, key):
     return max(-0.35, min(0.35, actual / baseline - 1.0))
 
 
+def delivery_scorecard(previous_scores, current_scores, s=None):
+    """Compare annual service outcomes with modest, funding-aware delivery targets."""
+    s = s or st.session_state
+    rows = []
+    for key, spec in SERVICES.items():
+        previous = float(previous_scores.get(key, spec["start"]))
+        actual = float(current_scores.get(key, previous))
+        funding = sum(_department_ratio(s, dep) for dep in spec["departments"]) / len(spec["departments"])
+        target_change = max(-0.45, min(0.60, 0.15 + funding * 0.90))
+        target = round(_clip(previous + target_change, 10, 95), 1)
+        actual_change = round(actual - previous, 1)
+        variance = round(actual - target, 1)
+        status = "On track" if variance >= -0.2 else ("Slightly behind" if variance >= -0.8 else "Off track")
+        rows.append({
+            "Service": key, "Previous score": round(previous, 1),
+            "Target score": target, "Actual score": round(actual, 1),
+            "Change": actual_change, "Against target": variance,
+            "Funding position (%)": round(funding * 100, 1), "Status": status,
+        })
+    return rows
+
+
 def advance(s=None):
     """Advance service delivery once per in-game year, using the approved funding baseline."""
     s = s or st.session_state
@@ -95,6 +119,7 @@ def advance(s=None):
         return
     s.public_service_last_tick = tick
     scores = dict(s.public_service_scores)
+    previous_scores = dict(scores)
     country = dict(s.get("country", {}))
     notes = []
 
@@ -199,6 +224,13 @@ def advance(s=None):
         notes.append(f"{key} {change:+.1f}")
 
     s.public_service_scores = scores
+    scorecard = delivery_scorecard(previous_scores, scores, s)
+    s.public_service_delivery_latest = {"year": tick, "rows": scorecard}
+    s.public_service_delivery_history = (list(s.get("public_service_delivery_history", [])) + [{
+        "year": tick, "on_track": sum(1 for row in scorecard if row["Status"] == "On track"),
+        "behind": sum(1 for row in scorecard if row["Status"] != "On track"),
+        "average_variance": round(sum(row["Against target"] for row in scorecard) / max(1, len(scorecard)), 2),
+    }])[-20:]
     # Better-performing schools, transport, local services and healthcare support
     # skills, labour participation and the reliability of the wider economy.
     s.public_service_productivity_effect = productivity_growth_effect(scores)
@@ -412,6 +444,17 @@ def render():
                           args=(strike["id"], "mediate"))
     else:
         st.info("No major public-sector industrial dispute is currently active.")
+    latest_delivery = s.get("public_service_delivery_latest", {})
+    if latest_delivery.get("rows"):
+        with st.expander("Spending Review delivery scorecard", expanded=False):
+            st.caption("Annual targets reflect the approved departmental funding position. They are performance benchmarks, not guaranteed results; workforce, demand and delivery capacity still matter.")
+            st.dataframe(pd.DataFrame(latest_delivery["rows"]), hide_index=True, use_container_width=True)
+            history = list(s.get("public_service_delivery_history", []))
+            if history:
+                st.caption(f"Latest review: {latest_delivery.get('year', 'current year')} · "
+                           f"{history[-1].get('on_track', 0)} services on track · "
+                           f"{history[-1].get('behind', 0)} behind target.")
+
     if s.public_service_history:
         with st.expander("Service performance history"):
             st.line_chart(pd.DataFrame(s.public_service_history).set_index("Year"), use_container_width=True)

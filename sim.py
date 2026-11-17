@@ -1939,6 +1939,42 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Phase 3 Number 10 relationship regression failed: {exc}")
 
+    # Spending Review delivery targets are funding-aware, transparent and non-mutating.
+    try:
+        import public_services
+        score_state = FakeState({
+            "dept_spend": {key: spec["default"] for key, spec in budget.SPEND_DEFAULTS.items()}
+        })
+        previous = {key: 60.0 for key in public_services.SERVICES}
+        baseline_targets = public_services.delivery_scorecard(previous, previous, score_state)
+        score_state.dept_spend["health"] *= 1.10
+        funded_targets = public_services.delivery_scorecard(previous, previous, score_state)
+        base_nhs = next(row for row in baseline_targets if row["Service"] == "NHS")
+        funded_nhs = next(row for row in funded_targets if row["Service"] == "NHS")
+        if funded_nhs["Target score"] <= base_nhs["Target score"]:
+            failures.append("Higher approved NHS funding did not raise its delivery benchmark.")
+        if previous != {key: 60.0 for key in public_services.SERVICES}:
+            failures.append("Delivery scorecard mutated the service-performance inputs.")
+        score_state.public_service_scores = dict(previous)
+        score_state.public_service_last_tick = ""
+        score_state.public_service_strikes = []
+        score_state.country = {"nhs_morale": 52.0, "nhs_waiting": 7.4,
+                               "schools": 62.0, "rail": 82.0, "unemployment": 5.0}
+        score_state.approval = 50.0
+        score_state.term, score_state.year = 1, 1
+        score_state.public_service_history = []
+        score_state.public_service_events = []
+        score_state.public_service_year_notes = []
+        public_services.advance(score_state)
+        if not score_state.get("public_service_delivery_latest", {}).get("rows"):
+            failures.append("Annual service advance did not save its delivery scorecard.")
+        history_count = len(score_state.public_service_delivery_history)
+        public_services.advance(score_state)
+        if len(score_state.public_service_delivery_history) != history_count:
+            failures.append("Annual delivery scorecard was duplicated on a repeated tick.")
+    except Exception as exc:
+        failures.append(f"Spending Review delivery scorecard regression failed: {exc}")
+
     # Phase 1: Treasury scenario forecasts use the macro engine, remain non-mutating,
     # and distinguish a downside shock from the central case.
     try:

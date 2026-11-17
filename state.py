@@ -407,6 +407,7 @@ SAVE_KEYS = [
     'public_service_scores', 'public_service_history', 'public_service_events', 'public_service_last_tick',
     'public_service_strikes', 'public_service_resolved', 'public_service_year_notes',
     'public_service_productivity_effect', 'public_service_employment_effect', 'public_service_strike_impact',
+    'public_service_delivery_latest', 'public_service_delivery_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
     'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report',
     'government_mission', 'mission_term', 'mission_baseline', 'mission_history', 'mission_milestones', 'mission_latest', 'mission_archive', 'mission_finalised', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
