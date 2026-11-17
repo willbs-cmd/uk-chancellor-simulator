@@ -172,7 +172,7 @@ def set_pm_mandate(s):
 
 
 def prepare_pm_reshuffle(s):
-    """The incoming PM reviews the weakest portfolio and asks the Chancellor for advice."""
+    """The incoming PM reviews up to three weak portfolios, one recommendation at a time."""
     import budget
     import cabinet_management
     cabinet_management.ensure(s)
@@ -187,24 +187,18 @@ def prepare_pm_reshuffle(s):
         service = cabinet_management.SERVICE_FOR_DEPARTMENT.get(department)
         service_score = float(s.get("public_service_scores", {}).get(service, 60.0)) if service else 60.0
         weakness = 0.55 * (100.0 - competence) + 0.30 * (100.0 - loyalty) + 0.15 * (100.0 - service_score)
-        candidates.append((weakness, department, minister, competence, loyalty, service_score))
-    if not candidates:
-        s.pm_reshuffle_issue = None
-        return None
-    weakness, department, minister, competence, loyalty, service_score = max(candidates)
-    if weakness < 48.0:
-        s.pm_reshuffle_issue = None
-        return None
-    issue = {
-        "term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
-        "department": department, "minister": minister,
-        "weakness": round(weakness, 1), "competence": round(competence, 1),
-        "loyalty": round(loyalty, 1), "service_score": round(service_score, 1),
-        "pm": str(s.get("current_prime_minister", "The Prime Minister")),
-    }
-    s.pm_reshuffle_issue = issue
-    return issue
-
+        if weakness >= 48.0:
+            candidates.append({
+                "term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
+                "department": department, "minister": minister,
+                "weakness": round(weakness, 1), "competence": round(competence, 1),
+                "loyalty": round(loyalty, 1), "service_score": round(service_score, 1),
+                "pm": str(s.get("current_prime_minister", "The Prime Minister")),
+            })
+    candidates.sort(key=lambda item: (-item["weakness"], item["department"]))
+    s.pm_reshuffle_queue = candidates[:3]
+    s.pm_reshuffle_issue = s.pm_reshuffle_queue.pop(0) if s.pm_reshuffle_queue else None
+    return s.pm_reshuffle_issue
 
 def resolve_pm_reshuffle(s, choice):
     """The Chancellor advises; the Prime Minister makes the final Cabinet decision."""
@@ -239,6 +233,10 @@ def resolve_pm_reshuffle(s, choice):
     history.append(record)
     s.pm_cabinet_reshuffle_history = history[-20:]
     s.pm_reshuffle_issue = None
+    queue = list(s.get("pm_reshuffle_queue", []))
+    if queue:
+        s.pm_reshuffle_issue = queue.pop(0)
+        s.pm_reshuffle_queue = queue
     s.event_cards = list(s.get("event_cards", []))
     s.event_cards.append({"title": "The new Prime Minister's first reshuffle", "text": outcome,
                           "summary": "Number 10 makes the final appointment decision"})
@@ -307,7 +305,7 @@ def render(s):
         with b:
             st.metric("Ministerial loyalty", f"{cabinet_review.get('loyalty',60):.0f}/100")
             st.metric("Overall review pressure", f"{cabinet_review.get('weakness',0):.0f}/100")
-        st.caption("You can recommend a change or argue for continuity. The Prime Minister makes the final decision, and a replacement leaves a temporary vacancy until Number 10 appoints a successor.")
+        st.caption("You can recommend changes or argue for continuity across up to three portfolios. The Prime Minister makes the final decisions; Number 10 appoints successors to any vacancies.")
         left,right=st.columns(2)
         with left:
             if st.button("Recommend replacing the minister",key="pm_reshuffle_replace",type="primary",use_container_width=True):

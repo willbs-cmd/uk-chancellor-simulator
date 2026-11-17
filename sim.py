@@ -294,6 +294,7 @@ def pm_cabinet_reshuffle_checks():
     assert issue and issue["department"] == "health"
     assert political_survival.resolve_pm_reshuffle(fake, "replace")
     assert fake["pm_reshuffle_issue"] is None
+    assert fake["pm_reshuffle_queue"] == []
     assert str(fake["cabinet_ministers"]["health"]).startswith("Vacant")
     assert fake["ministerial_resignations"][-1]["minister"] == "Health Secretary"
     assert fake["pm_cabinet_reshuffle_history"][-1]["pm_replaced"] is True
@@ -307,6 +308,24 @@ def pm_cabinet_reshuffle_checks():
         "pm_cabinet_reshuffle_history": [], "event_cards": [],
     })
     assert political_survival.prepare_pm_reshuffle(stable) is None
+    # The incoming PM can review several weak portfolios in sequence.
+    multi = FakeState({
+        "term": 2, "year": 1, "party": "Labour", "current_prime_minister": "New PM",
+        "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary", "transport": "Transport Secretary"},
+        "ministerial_competence": {"health": 25.0, "education": 30.0, "transport": 35.0},
+        "ministerial_loyalty": {"health": 25.0, "education": 30.0, "transport": 35.0},
+        "public_service_scores": {"NHS": 25.0, "Education": 30.0, "Transport": 35.0},
+        "pm_opinion": 70.0, "pm_trust": 60.0, "cab_opinion": 55.0,
+        "ministerial_resignations": [], "ministerial_vacancy_year": {},
+        "pm_cabinet_reshuffle_history": [], "event_cards": [],
+    })
+    first = political_survival.prepare_pm_reshuffle(multi)
+    assert first and len(multi["pm_reshuffle_queue"]) == 2
+    first_department = first["department"]
+    assert political_survival.resolve_pm_reshuffle(multi, "replace")
+    assert multi["pm_reshuffle_issue"] is not None
+    assert multi["pm_reshuffle_issue"]["department"] != first_department
+    assert len(multi["pm_reshuffle_queue"]) == 1
     return True
 
 def political_survival_checks():
