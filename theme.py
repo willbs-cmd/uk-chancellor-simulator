@@ -3204,6 +3204,89 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     padding-bottom:8px !important;
   }
 }
+
+/* PHONE-FIRST LAYOUT
+   Keep the game canvas full-width on mobile. The Treasury desk starts closed
+   and, when opened, behaves as a compact overlay rather than stealing the
+   majority of the game viewport. */
+@media (max-width:760px) {
+  html, body, [data-testid="stAppViewContainer"], .stApp {
+    width:100% !important;
+    min-width:0 !important;
+    overflow-x:hidden !important;
+  }
+  [data-testid="stMain"], [data-testid="stMainBlockContainer"],
+  .main, .block-container {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+  .block-container {
+    padding: .7rem .72rem 5rem !important;
+  }
+  section[data-testid="stSidebar"] {
+    width:min(84vw,320px) !important;
+    min-width:min(84vw,320px) !important;
+    max-width:320px !important;
+    box-sizing:border-box !important;
+    z-index:1001 !important;
+    box-shadow:8px 0 28px rgba(20,39,60,.16) !important;
+  }
+  section[data-testid="stSidebar"] > div {
+    width:100% !important;
+    min-width:0 !important;
+    padding:.8rem .7rem 1.5rem !important;
+  }
+  [data-testid="stHorizontalBlock"] {
+    flex-wrap:wrap !important;
+    gap:.65rem !important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex:1 1 100% !important;
+    min-width:100% !important;
+    width:100% !important;
+  }
+  [data-testid="stTabs"] [role="tablist"] {
+    overflow-x:auto !important;
+    flex-wrap:nowrap !important;
+    scrollbar-width:thin !important;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    flex:0 0 auto !important;
+    white-space:nowrap !important;
+    padding:.5rem .65rem !important;
+    font-size:.82rem !important;
+  }
+  [data-testid="stDataFrame"], [data-testid="stTable"] {
+    max-width:100% !important;
+    overflow-x:auto !important;
+  }
+  [data-testid="stMetricValue"] {
+    font-size:1.35rem !important;
+    overflow-wrap:anywhere !important;
+  }
+  .office-masthead { padding:12px 13px !important; }
+  .office-brand { gap:9px !important; }
+  .office-monogram { width:40px !important; height:40px !important; }
+  .office-name { font-size:1rem !important; }
+  .briefing-heading { font-size:1.35rem !important; }
+  .ch-bar { gap:7px !important; }
+  .ch-bar .name { width:105px !important; font-size:.78rem !important; }
+  .stButton > button, .stDownloadButton > button {
+    min-height:2.75rem !important;
+    width:100% !important;
+    white-space:normal !important;
+  }
+  input, textarea, [data-baseweb="select"] { max-width:100% !important; }
+}
+@media (max-width:420px) {
+  .block-container { padding-left:.55rem !important; padding-right:.55rem !important; }
+  .office-period { width:100% !important; }
+  .desk-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
 </style>
 """
 

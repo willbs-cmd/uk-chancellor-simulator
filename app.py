@@ -31,7 +31,7 @@ from theme import (apply_theme, crisis_card, event_card, header, humphrey_messag
                    render_hud, render_newspapers, render_polls, render_scorecard, render_timeline, phase_info)
 
 st.set_page_config(page_title='The Chancellor’s Office', layout='wide', page_icon='🏛️',
-                   initial_sidebar_state='expanded')
+                   initial_sidebar_state='collapsed')
 apply_theme()
 state.ensure_init()
 s = st.session_state
