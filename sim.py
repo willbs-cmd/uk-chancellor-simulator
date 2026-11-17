@@ -406,7 +406,7 @@ def check(n=None, difficulty=None):
         assert knife["result"] == "Knife-edge victory" and knife["margin"] == 4
         assert vote_state["backbench_opinion"] == 57.0
         assert vote_state["market_conf"] == 59.2
-        vote_state._data.update({"pm_opinion": 70.0, "party_opinion": 65.0, "backbench_opinion": 60.0,
+        vote_state.update({"pm_opinion": 70.0, "party_opinion": 65.0, "backbench_opinion": 60.0,
                                  "market_conf": 60.0, "approval": 50.0, "gilt_yield": 4.0, "event_cards": []})
         landslide = engine._budget_vote_consequences(vote_state, budget.WIN + 60)
         assert landslide["result"] == "Landslide victory" and landslide["margin"] == 60
