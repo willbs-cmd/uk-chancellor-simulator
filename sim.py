@@ -241,6 +241,13 @@ def cabinet_relationship_checks():
     assert first and first["kind"] == "resignation", "Low ministerial loyalty should trigger a resignation warning."
     assert first == second, "An incident must not regenerate during the same game year."
     assert first["minister"] == "Health Secretary"
+    profile = cabinet_management.profile_for(fake, "health")
+    assert profile.get("faction") and profile.get("personality")
+    assert cabinet_management.profile_for(fake, "health") == profile
+    fake.cabinet_ministers["health"] = "New Health Secretary"
+    successor = cabinet_management.profile_for(fake, "health")
+    assert successor["minister"] == "New Health Secretary"
+    assert successor != profile, "A new appointee should receive a new simulated profile."
     return True
 
 

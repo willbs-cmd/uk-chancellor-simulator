@@ -158,12 +158,14 @@ def render(on_restart):
                     roster.append({
                         "Department": budget.SPEND_DEFAULTS.get(key, {}).get("label", key.replace("_", " ").title()),
                         "Minister": name,
+                        "Faction": cabinet_management.profile_for(s, key).get("faction", "Government"),
+                        "Temperament": cabinet_management.profile_for(s, key).get("personality", "Pragmatist"),
                         "Competence": f"{float(s.ministerial_competence.get(key, 60)):.0f}/100",
                         "Loyalty": f"{float(s.get('ministerial_loyalty', {}).get(key, 60)):.0f}/100",
                         "Service": f"{float(service_scores.get(service, 0)):.0f}/100" if service else "Strategic",
                     })
                 st.dataframe(roster, hide_index=True, use_container_width=True)
-                st.caption("Competence influences delivery gradually; loyalty affects how ministers respond to Treasury decisions. These are simulated ratings.")
+                st.caption("Faction and temperament are simulated game profiles, not claims about real ministers' personal beliefs. Temperament influences delivery, lobbying and rivalry; faction alignment affects loyalty after policy decisions.")
                 rivalry_history = list(s.get("ministerial_rivalry_history", []))
                 latest_rivalries = rivalry_history[-1].get("rows", []) if rivalry_history else []
                 rivalry_rows = [
