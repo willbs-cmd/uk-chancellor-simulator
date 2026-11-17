@@ -212,61 +212,111 @@ def advance(s=None):
 
 
 def resolve_strike(strike_id, choice):
-    """Resolve a live industrial dispute with a fiscal and service-delivery trade-off."""
+    """Manage a live dispute through staged offers or mediation."""
     s = st.session_state
     ensure(s)
-    strike = next((x for x in s.public_service_strikes if x.get("id") == strike_id), None)
+    strikes = list(s.public_service_strikes)
+    strike = next((x for x in strikes if x.get("id") == strike_id), None)
     if not strike:
         return
     severity = float(strike.get("severity", 1.0))
-    cost = 0.7 + severity * 0.45
+    demand = round(float(strike.get("demand_bn", 0.7 + severity * 0.45)), 2)
     scores = dict(s.public_service_scores)
-    if choice == "settle":
-        s.headroom = round(float(s.headroom) - cost, 1)
-        s.deficit = round(float(s.deficit) + cost, 1)
-        scores["NHS" if strike_id == "NHS workforce" else ("Education" if strike_id == "Education workforce" else "Local government")] = _clip(
-            scores.get("NHS", 50) + 1.4 + severity * 0.25, 10, 95)
+    service_key = ("NHS" if strike_id == "NHS workforce" else
+                   "Education" if strike_id == "Education workforce" else "Local government")
+
+    if choice in ("offer", "improve", "final_offer"):
+        round_no = int(strike.get("negotiation_round", 0)) + 1
+        fraction = {"offer": 0.55, "improve": 0.80, "final_offer": 1.0}[choice]
+        if choice == "offer" and round_no > 1:
+            return
+        if choice == "improve" and round_no < 2:
+            return
+        if choice == "final_offer" and round_no < 2:
+            return
+        amount = round(demand * fraction, 2)
+        country = s.get("country", {})
+        morale_key = "nhs_morale" if strike_id == "NHS workforce" else None
+        morale = float(country.get(morale_key, 52.0)) if morale_key else 52.0
+        # Acceptance is deterministic: a better offer and constructive workforce
+        # relations help, while severe disputes make unions harder to satisfy.
+        acceptance_score = fraction * 100 + max(-8.0, min(8.0, (morale - 52.0) * 0.35))
+        acceptance_threshold = 70.0 + severity * 7.0
+        accepted = choice == "final_offer" or acceptance_score >= acceptance_threshold
+        if accepted:
+            s.headroom = round(float(s.get("headroom", 0.0)) - amount, 1)
+            s.deficit = round(float(s.get("deficit", 0.0)) + amount, 1)
+            scores[service_key] = _clip(scores.get(service_key, 50) + 1.4 + severity * 0.25, 10, 95)
+            if strike_id == "NHS workforce":
+                c = dict(country); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) + 5); s.country = c
+            outcome = (f"Unions accept your {round(fraction * 100)}% offer. The settlement costs "
+                       f"£{amount:.2f}bn a year and industrial action is called off.")
+            s.public_service_strikes = [x for x in strikes if x.get("id") != strike_id]
+            decision = "Settlement accepted"
+        else:
+            updated_strikes = []
+            for item in strikes:
+                if item.get("id") == strike_id:
+                    item = {**item, "demand_bn": demand,
+                            "negotiation_round": round_no,
+                            "last_offer_bn": amount,
+                            "last_offer_fraction": fraction,
+                            "severity": round(min(3.0, severity + 0.1), 1),
+                            "negotiation_message": (
+                                f"Unions reject the £{amount:.2f}bn offer. They say it falls short "
+                                "of what is needed to resolve pay and retention pressures."
+                            )}
+                updated_strikes.append(item)
+            s.public_service_strikes = updated_strikes
+            s.approval = _clip(float(s.get("approval", 50.0)) - 0.25)
+            outcome = (f"Unions reject your £{amount:.2f}bn offer. The dispute remains active; "
+                       "you can improve the offer, make a final offer or hold the line.")
+            decision = f"{round(fraction * 100)}% offer rejected"
+    elif choice == "settle":
+        amount = demand
+        s.headroom = round(float(s.get("headroom", 0.0)) - amount, 1)
+        s.deficit = round(float(s.get("deficit", 0.0)) + amount, 1)
+        scores[service_key] = _clip(scores.get(service_key, 50) + 1.4 + severity * 0.25, 10, 95)
         if strike_id == "NHS workforce":
             c = dict(s.get("country", {})); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) + 5); s.country = c
-        outcome = f"You agree a funded settlement costing £{cost:.1f}bn a year. Industrial action is called off, but the Treasury has less headroom."
+        s.public_service_strikes = [x for x in strikes if x.get("id") != strike_id]
+        outcome = f"You agree the full £{amount:.2f}bn-a-year union demand. Industrial action is called off."
+        decision = "Full settlement"
     elif choice == "mediate":
-        mediation_cost = round(cost * 0.25, 1)
-        s.headroom = round(float(s.headroom) - mediation_cost, 1)
-        s.deficit = round(float(s.deficit) + mediation_cost, 1)
-        s.approval = _clip(float(s.approval) + 0.3)
+        mediation_cost = round(demand * 0.25, 2)
+        s.headroom = round(float(s.get("headroom", 0.0)) - mediation_cost, 1)
+        s.deficit = round(float(s.get("deficit", 0.0)) + mediation_cost, 1)
+        s.approval = _clip(float(s.get("approval", 50.0)) + 0.3)
         s.public_service_strikes = [
             ({**x, "paused": True, "severity": round(max(0.5, float(x.get("severity", 1.0)) - 0.25), 1)})
-            if x.get("id") == strike_id else x for x in s.public_service_strikes
+            if x.get("id") == strike_id else x for x in strikes
         ]
-        outcome = f"You appoint an independent mediator, spending £{mediation_cost:.1f}bn on a temporary package. The dispute is paused for now; unions will return if no lasting agreement is reached."
+        outcome = f"You appoint an independent mediator, spending £{mediation_cost:.2f}bn on a temporary package. The dispute is paused; unions will return if no lasting agreement is reached."
+        decision = "Mediation"
     elif choice == "hold":
-        service_key = ("NHS" if strike_id == "NHS workforce" else
-                       "Education" if strike_id == "Education workforce" else "Local government")
         scores[service_key] = _clip(scores.get(service_key, 50) - 1.5 - severity * 0.4, 10, 95)
-        s.approval = _clip(float(s.approval) - 0.7 - severity * 0.2)
+        s.approval = _clip(float(s.get("approval", 50.0)) - 0.7 - severity * 0.2)
         if strike_id == "NHS workforce":
             c = dict(s.get("country", {})); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) - 4); s.country = c
-        # Holding the line does not magically end industrial action: the dispute
-        # remains live and can escalate at the next annual public-services tick.
         s.public_service_strikes = [
             ({**x, "severity": round(min(3.0, float(x.get("severity", 1.0)) + 0.25), 1),
               "text": x.get("text", "") + " The Chancellor has refused further funding; unions maintain their action."})
-            if x.get("id") == strike_id else x for x in s.public_service_strikes
+            if x.get("id") == strike_id else x for x in strikes
         ]
         outcome = "You refuse extra funding. The Treasury avoids the immediate bill, but the strike continues, morale deteriorates and disruption is likely to deepen."
+        decision = "Held the line"
     else:
         return
+
     s.public_service_scores = scores
-    if choice == "settle":
-        s.public_service_strikes = [x for x in s.public_service_strikes if x.get("id") != strike_id]
-    s.public_service_resolved = (list(s.public_service_resolved) + [{
+    s.public_service_resolved = (list(s.get("public_service_resolved", [])) + [{
         "year": f"Term {s.get('term', 1)}, Year {s.get('year', 1)}",
-        "group": strike.get("group", strike_id), "decision": choice.title(), "outcome": outcome
+        "group": strike.get("group", strike_id), "decision": decision, "outcome": outcome
     }])[-20:]
     s.message = outcome
     s.event_cards = list(s.get("event_cards", [])) + [{
         "title": f"Industrial dispute: {strike.get('group', strike_id)}",
-        "text": outcome, "summary": f"Decision: {choice.title()}"
+        "text": outcome, "summary": f"Decision: {decision}"
     }]
 
 
@@ -293,14 +343,24 @@ def render():
             with st.container(border=True):
                 st.markdown(f"**{strike.get('group', 'Public-sector unions')}**")
                 st.write(strike.get("text", "Industrial action is threatened."))
-                st.caption(f"Severity: {strike.get('severity', 1.0):.1f}/3 · Raised {strike.get('year', 'this year')}")
+                demand = float(strike.get("demand_bn", 0.7 + float(strike.get("severity", 1.0)) * 0.45))
+                round_no = int(strike.get("negotiation_round", 0))
+                st.caption(f"Severity: {strike.get('severity', 1.0):.1f}/3 · Raised {strike.get('year', 'this year')} · Indicative union demand: £{demand:.2f}bn a year")
+                if round_no:
+                    st.info(strike.get("negotiation_message", f"Negotiation round {round_no}: last offer £{float(strike.get('last_offer_bn', 0.0)):.2f}bn a year."))
                 c1, c2, c3 = st.columns(3)
-                if c1.button("Negotiate a settlement", key=f"ps_settle_{strike['id']}"):
-                    resolve_strike(strike["id"], "settle"); st.rerun()
-                if c2.button("Appoint a mediator", key=f"ps_mediate_{strike['id']}"):
-                    resolve_strike(strike["id"], "mediate"); st.rerun()
+                if round_no == 0:
+                    if c1.button("Make opening offer (55%)", key=f"ps_offer_{strike['id']}"):
+                        resolve_strike(strike["id"], "offer"); st.rerun()
+                else:
+                    if c1.button("Improve offer (80%)", key=f"ps_improve_{strike['id']}"):
+                        resolve_strike(strike["id"], "improve"); st.rerun()
+                if c2.button("Final offer (100%)", key=f"ps_final_{strike['id']}"):
+                    resolve_strike(strike["id"], "final_offer" if round_no else "settle"); st.rerun()
                 if c3.button("Hold the line", key=f"ps_hold_{strike['id']}"):
                     resolve_strike(strike["id"], "hold"); st.rerun()
+                st.button("Appoint a mediator", key=f"ps_mediate_{strike['id']}", on_click=resolve_strike,
+                          args=(strike["id"], "mediate"))
     else:
         st.info("No major public-sector industrial dispute is currently active.")
     if s.public_service_history:

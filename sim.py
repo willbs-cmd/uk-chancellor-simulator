@@ -1621,6 +1621,38 @@ def check(n=None, difficulty=None):
         if len(test_state.public_service_history) != history_after_first:
             failures.append("Public-service history duplicated during an idempotence check.")
 
+
+    # Industrial relations: opening offers can be rejected without ending action;
+    # improved offers settle at a lower recurring cost than the full union demand.
+    try:
+        import public_services
+        test_state = FakeState(
+            term=1, year=2, seed=99, approval=55.0, headroom=10.0, deficit=5.0,
+            public_service_scores={key: 55.0 for key in public_services.SERVICES},
+            public_service_strikes=[{
+                "id": "NHS workforce", "group": "NHS staff", "severity": 2.0,
+                "year": "1:2", "text": "Pay dispute", "negotiation_round": 0
+            }],
+            public_service_resolved=[], public_service_events=[], event_cards=[],
+            country={"nhs_morale": 52.0}
+        )
+        st.session_state = test_state
+        public_services.resolve_strike("NHS workforce", "offer")
+        live = next((x for x in test_state.public_service_strikes if x.get("id") == "NHS workforce"), None)
+        if not live or live.get("negotiation_round") != 1:
+            failures.append("Rejected union opening offer did not leave a live dispute and negotiation record.")
+        if test_state.headroom != 10.0:
+            failures.append("A rejected union offer incorrectly charged the Treasury.")
+        public_services.resolve_strike("NHS workforce", "improve")
+        if test_state.public_service_strikes:
+            failures.append("An improved union offer that meets the acceptance threshold did not settle the dispute.")
+        if test_state.headroom >= 10.0 or test_state.deficit <= 5.0:
+            failures.append("Accepted union settlement did not apply its fiscal cost.")
+        if not any("Settlement accepted" in row.get("decision", "") for row in test_state.public_service_resolved):
+            failures.append("Accepted union offer was not recorded in industrial-relations history.")
+    except Exception as exc:
+        failures.append(f"Union negotiation regression check failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
