@@ -118,6 +118,20 @@ def resolve_issue(choice, s=None):
         s.approval = round(_clip(float(s.get("approval", 50.0)) - 0.8), 1)
         s.cab_opinion = round(_clip(float(s.get("cab_opinion", 50.0)) + 0.4), 1)
         outcome = "You allow the ministerial briefing to run. The dispute cools inside Cabinet, but the press questions the Government's unity."
+    # Number 10 watches how the Chancellor handles Cabinet and Commons pressure.
+    trust = float(s.get("pm_trust", 70.0))
+    pm_view = float(s.get("pm_opinion", 50.0))
+    if choice == "stand_firm":
+        trust -= 5.0 if department else 3.0
+        pm_view -= 1.5
+    elif choice == "negotiate":
+        trust += 3.0
+        pm_view += 1.5
+    else:
+        trust -= 4.0
+        pm_view -= 1.0
+    s.pm_trust = round(_clip(trust), 1)
+    s.pm_opinion = round(_clip(pm_view), 1)
     issue = dict(issue)
     issue["resolution"] = choice
     issue["outcome"] = outcome
@@ -128,4 +142,33 @@ def resolve_issue(choice, s=None):
     s.political_pressure_issue = None
     s.message = outcome
     s.humphrey_note = "Political management is a trade-off: standing firm protects the policy, while compromise may preserve the coalition around it."
+    # A sustained loss of trust turns a routine policy dispute into a Number 10 intervention.
+    if (float(s.get("pm_trust", 70.0)) <= 58.0
+            and float(s.get("pm_opinion", 50.0)) <= 65.0
+            and not s.get("active_pm_meeting")
+            and not s.get("active_pm_ultimatum")):
+        s.active_pm_meeting = {
+            "topic": "Number 10 demands a change of approach",
+            "prompt": (
+                "The Prime Minister has seen the latest Cabinet dispute and is concerned that the Treasury is becoming isolated. "
+                "Number 10 wants a more united approach to the Government's programme."
+            ),
+            "pm": (
+                "Chancellor, I cannot have the Treasury repeatedly at odds with the rest of the Government. "
+                "I want you to bring me a credible compromise. If this continues, I will consider moving key economic decisions "
+                "to a Cabinet committee and taking a more direct role in the Treasury's priorities."
+            ),
+            "support": "Accept Number 10's direction",
+            "compromise": "Offer a workable compromise",
+            "stand": "Defend the Treasury's independence",
+            "year": int(s.get("year", 1)),
+            "pressure_origin": "political_pressure",
+            "warning_level": "serious" if float(s.get("pm_trust", 70.0)) <= 45.0 else "warning",
+        }
+        s.message += " Number 10 has intervened: the Prime Minister wants an urgent private meeting."
+        s.event_cards.append({
+            "title": "Number 10 intervenes",
+            "text": "The Prime Minister has summoned the Chancellor after repeated Cabinet and parliamentary disputes.",
+            "summary": "An urgent meeting is waiting in the Decisions tab."
+        })
     return True

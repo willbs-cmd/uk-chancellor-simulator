@@ -732,6 +732,11 @@ def pm_meeting_screen():
     st.markdown("<div class='briefing-kicker'>NUMBER 10 · PRIVATE MEETING</div><div class='briefing-heading'>A conversation with the Prime Minister</div>",unsafe_allow_html=True)
     st.markdown(f"**{meeting.get('topic','Private meeting')}**")
     st.write(meeting.get("prompt","The Prime Minister has asked to discuss the direction of the Government."))
+    if meeting.get("pressure_origin") == "political_pressure":
+        if meeting.get("warning_level") == "serious":
+            st.error("Number 10 is considering taking direct control of economic priorities through a Cabinet committee if the dispute continues.")
+        else:
+            st.warning("The Prime Minister is losing patience with repeated Treasury disagreements and expects a compromise.")
     humphrey_message(meeting.get("pm","The Prime Minister is waiting for your response, Chancellor."))
     st.markdown("### How will you handle it?")
     options=[

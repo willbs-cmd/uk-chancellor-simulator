@@ -317,7 +317,18 @@ def check(n=None, difficulty=None):
         assert pressure_state["political_pressure_issue"] is None
         assert pressure_state["political_capital_points"] == 1
         assert pressure_state["headroom"] == 4.7
-        print("Cabinet management, political pressure and reshuffle assessment regression: PASS")
+        assert pressure_state["pm_trust"] == 73.0, "A negotiated settlement should restore Number 10's trust."
+        warning_state = FakeState({
+            "political_pressure_issue": {"kind": "ministerial_dissent", "department": "health", "created": "1:2:1"},
+            "political_pressure_history": [], "ministerial_loyalty": {"health": 50.0},
+            "pm_trust": 61.0, "pm_opinion": 56.0, "cab_opinion": 50.0,
+            "approval": 50.0, "media_opinion": 50.0, "year": 2, "active_pm_meeting": None,
+            "active_pm_ultimatum": None, "political_capital_points": 0, "headroom": 4.0,
+        })
+        assert political_pressure.resolve_issue("stand_firm", warning_state)
+        assert warning_state["active_pm_meeting"]["pressure_origin"] == "political_pressure"
+        assert warning_state["pm_trust"] == 56.0
+        print("Cabinet management, political pressure, Number 10 escalation and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 

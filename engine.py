@@ -717,6 +717,20 @@ def resolve_pm_meeting(choice):
         "cabinet_support":float(s.cab_opinion)}])[-15:]
     s.active_pm_meeting=None
     s.message=f"NUMBER 10 MEETING — {meeting.get('topic','Private meeting')}. {outcome}"
+    if meeting.get("pressure_origin") == "political_pressure":
+        if choice == "stand" and float(s.get("pm_trust", 70.0)) < 45.0:
+            s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) - 3.0), 1)
+            s.cab_opinion = round(_clip(float(s.get("cab_opinion", 50.0)) - 1.5), 1)
+            s.message += " The PM warns that future economic decisions may be taken through a Number 10-led Cabinet committee, sidelining the Treasury."
+        elif choice == "compromise":
+            s.message += " Number 10 accepts the compromise for now, but expects the Treasury to work more closely with the wider Government."
+        else:
+            s.message += " The Prime Minister is satisfied that you have accepted the Government's direction."
+        s.event_cards.append({
+            "title": "Number 10 · Chancellor's position",
+            "text": outcome,
+            "summary": f"PM trust {float(s.get('pm_trust', 0.0)):.0f}/100 · PM confidence {float(s.get('pm_opinion', 0.0)):.0f}/100"
+        })
     s.humphrey_note="The Prime Minister will remember how you handled that conversation, Chancellor. Number 10 has a long memory, particularly when it is inconvenient."
     state.log("politics","Private meeting with the Prime Minister",choice=label,note=outcome,before=before)
     check_sacked()
