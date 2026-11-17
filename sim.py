@@ -1093,6 +1093,22 @@ def check(n=None, difficulty=None):
     if stressed_out.get('debt_interest_bill', 0) <= calm_out.get('debt_interest_bill', 0):
         failures.append("Debt-interest costs do not rise under fiscal stress.")
 
+    # Fiscal headroom is not borrowing: changing only the rule buffer must not
+    # change the debt stock. The debt ratio must also reflect compounded nominal GDP.
+    debt_test_a = dict(calm_macro, headroom=12.0)
+    debt_test_b = dict(calm_macro, headroom=-20.0)
+    debt_out_a = econ.step(debt_test_a, None)
+    debt_out_b = econ.step(debt_test_b, None)
+    if debt_out_a['debt'] != debt_out_b['debt']:
+        failures.append("Fiscal headroom is incorrectly being counted as additional public borrowing.")
+    expected_nominal = ((1 + debt_out_a['growth'] / 100) * (1 + debt_out_a['inflation'] / 100) - 1) * 100
+    if abs(debt_out_a.get('nominal_gdp_growth', 0) - expected_nominal) > 0.011:
+        failures.append("Debt calculation does not use compounded nominal GDP growth.")
+    expected_debt = (3000.0 * 0.75 + 35.0) / (3000.0 * (1 + expected_nominal / 100)) * 100
+    if abs(debt_out_a['debt'] - round(expected_debt, 1)) > 0.11:
+        failures.append("Public-debt stock-flow calculation is inconsistent with borrowing and nominal GDP.")
+
+
     division_data = load_json('career_divisions.json')
     divisions = division_data.get('divisions', [])
     if len(divisions) < contract.get('minimum_divisions', 15):

@@ -57,9 +57,20 @@ def step(v, incoming_year=None):
 
     o['growth'] = round(o['growth'] + CYCLES.get(o.get('cycle'), 0.0), 2)
 
-    # Debt as a share of GDP: new borrowing adds to it, nominal growth (real growth + inflation) shrinks it.
-    o['debt'] = round(o['debt'] + 0.034 * (o['deficit'] + max(0.0, -o['headroom']) * 0.5)
-                      - o['debt'] * (o['growth'] + o['inflation']) / 100.0, 1)
+    # Debt dynamics use a stock-flow calculation in £bn. Headroom is a fiscal-rule
+    # buffer, not extra borrowing: only the recorded deficit changes the debt stock.
+    # This also uses compounded nominal GDP growth rather than adding real growth
+    # and inflation as a rough approximation.
+    current_gdp_bn = max(500.0, float(o.get('gdp_trillion', 3.0)) * 1000.0)
+    nominal_growth = ((1.0 + o['growth'] / 100.0) * (1.0 + o['inflation'] / 100.0) - 1.0) * 100.0
+    next_gdp_bn = max(500.0, current_gdp_bn * (1.0 + nominal_growth / 100.0))
+    opening_debt_bn = current_gdp_bn * float(o['debt']) / 100.0
+    net_borrowing_bn = float(o['deficit'])
+    stock_flow_adjustment_bn = float(o.get('stock_flow_adjustment_bn', 0.0))
+    closing_debt_bn = max(0.0, opening_debt_bn + net_borrowing_bn + stock_flow_adjustment_bn)
+    o['debt'] = round(closing_debt_bn / next_gdp_bn * 100.0, 1)
+    o['nominal_gdp_growth'] = round(nominal_growth, 2)
+    o['debt_stock_bn'] = round(closing_debt_bn, 1)
     # The Treasury module applies the actual tax-receipt dividend from nominal GDP growth
     # at the annual spring update. Do not add a second abstract growth bonus here.
 
