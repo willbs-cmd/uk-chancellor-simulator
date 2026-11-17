@@ -711,12 +711,144 @@ PM_MEETING_TOPICS = [
 ]
 
 
+def _pm_relationship_status(trust):
+    trust = float(trust)
+    if trust >= 70: return "Strong"
+    if trust >= 55: return "Workable"
+    if trust >= 40: return "Strained"
+    if trust >= 25: return "Critical"
+    return "Breaking point"
+
+
+def pm_relationship_annual_review(s):
+    """Review the PM relationship once per year against the Chancellor's delivery."""
+    year = int(s.get("year", 1))
+    if int(s.get("pm_relationship_last_review", 0)) == year:
+        return None
+    trust_before = float(s.get("pm_trust", 70.0))
+    growth = float(s.get("growth", 0.0))
+    approval = float(s.get("approval", 50.0))
+    market = float(s.get("market_conf", 50.0))
+    disputes = list(s.get("public_service_strikes", []))
+    strike_pressure = sum(
+        float(item.get("severity", 1.0))
+        * min(1.6, 1.0 + 0.2 * max(0, int(item.get("duration_years", 0)) - 1))
+        for item in disputes
+    )
+    change = 0.0
+    reasons = []
+    if growth >= 2.0:
+        change += 0.8; reasons.append("stronger growth")
+    elif growth < 0:
+        change -= 1.0; reasons.append("economic contraction")
+    if approval >= 60:
+        change += 0.8; reasons.append("strong public approval")
+    elif approval < 40:
+        change -= 0.8; reasons.append("weak public approval")
+    if market >= 65:
+        change += 0.4; reasons.append("stable financial markets")
+    elif market < 40:
+        change -= 0.8; reasons.append("market instability")
+    if strike_pressure >= 4:
+        change -= 1.2; reasons.append("prolonged industrial action")
+    elif strike_pressure >= 1.5:
+        change -= 0.6; reasons.append("unresolved industrial disputes")
+    change = round(max(-2.5, min(2.0, change)), 1)
+    trust_after = round(_clip(trust_before + change), 1)
+    s.pm_trust = trust_after
+    s.pm_relationship_last_review = year
+    status = _pm_relationship_status(trust_after)
+    review = {
+        "term": int(s.get("term", 1)), "year": year,
+        "trust_before": round(trust_before, 1), "change": change,
+        "trust_after": trust_after, "status": status,
+        "growth": round(growth, 2), "approval": round(approval, 1),
+        "market_conf": round(market, 1), "active_disputes": len(disputes),
+        "reasons": reasons or ["no major change in the political or economic position"],
+    }
+    s.pm_relationship_history = (list(s.get("pm_relationship_history", [])) + [review])[-15:]
+    s.pm_relationship_status = status
+    s.pm_relationship_latest = review
+    if (trust_after <= 28 and float(s.get("pm_opinion", 50.0)) <= 40
+            and not s.get("active_pm_ultimatum") and not s.get("game_over")):
+        s.active_pm_ultimatum = {
+            "year": year, "pm_opinion": round(float(s.get("pm_opinion", 50.0)), 1),
+            "severity": "serious", "source": "annual_relationship_review",
+        }
+        s.event_cards = (list(s.get("event_cards", [])) + [{
+            "title": "Number 10 questions your future",
+            "text": "The Prime Minister's confidence has collapsed after a year of poor results and a breakdown in personal trust.",
+            "summary": "An ultimatum from Number 10 is waiting in the Decisions tab."
+        }])[-12:]
+    return review
+
+
 def open_pm_meeting():
-    """Open one annual private meeting with the Prime Minister."""
+    """Open an annual private meeting, prioritising the issue causing the greatest tension."""
     s=st.session_state
     if s.get("active_pm_meeting") or int(s.get("pm_meeting_year",0))>=int(s.get("year",1)):
         return False
-    topic=random.choice(PM_MEETING_TOPICS)
+    growth = float(s.get("growth", 0.0))
+    headroom = float(s.get("headroom", 0.0))
+    market = float(s.get("market_conf", 50.0))
+    cabinet = float(s.get("cab_opinion", 50.0))
+    disputes = list(s.get("public_service_strikes", []))
+    strike_pressure = sum(float(x.get("severity", 1.0)) for x in disputes)
+    candidates = []
+    if strike_pressure >= 1.0:
+        candidates.append((4.0 + strike_pressure, {
+            "topic":"Public services and industrial action",
+            "prompt":f"There are {len(disputes)} unresolved public-sector dispute(s), with a combined strike severity of {strike_pressure:.1f}. Service disruption is becoming a political liability.",
+            "pm":"The public expects us to restore services. I need a credible settlement strategy, not another year of disruption.",
+            "support":"Fund a settlement package and seek agreement",
+            "compromise":"Offer a staged deal with productivity conditions",
+            "stand":"Hold the fiscal line and accept continued disruption",
+            "support_cost_bn":1.2,"compromise_cost_bn":0.45
+        }))
+    if market < 48:
+        candidates.append((3.5 + (48-market)/10, {
+            "topic":"Financial markets and fiscal credibility",
+            "prompt":"Market confidence has weakened. Number 10 wants to know whether the Treasury can restore stability without abandoning the Government's programme.",
+            "pm":"I cannot defend a programme that markets no longer believe. Show me how you will restore confidence.",
+            "support":"Prioritise a stricter fiscal plan",
+            "compromise":"Agree a balanced credibility package",
+            "stand":"Defend the current fiscal strategy",
+            "support_cost_bn":0.0,"compromise_cost_bn":0.2
+        }))
+    if headroom < 2:
+        candidates.append((3.0 + min(2.0, abs(headroom)/5), {
+            "topic":"The spending settlement",
+            "prompt":"The Prime Minister wants a visible spending commitment, but fiscal headroom is tight and the Treasury is concerned about affordability.",
+            "pm":"The public needs to see that this Government has priorities. Find room without losing control of the finances.",
+            "support":"Back the PM's spending priority",
+            "compromise":"Offer a smaller, targeted settlement",
+            "stand":"Defend the Treasury's fiscal limits",
+            "support_cost_bn":1.0,"compromise_cost_bn":0.35
+        }))
+    if growth < 0:
+        candidates.append((3.0 + min(2.0, abs(growth)), {
+            "topic":"Economic strategy",
+            "prompt":"The economy has contracted. The PM wants a clear recovery plan and is questioning the Treasury's current approach.",
+            "pm":"We cannot go into another year explaining failure. I need a plan that gets growth moving.",
+            "support":"Adopt Number 10's recovery priorities",
+            "compromise":"Agree a targeted growth package",
+            "stand":"Keep the current strategy and wait for results",
+            "support_cost_bn":0.7,"compromise_cost_bn":0.3
+        }))
+    if cabinet < 48 or float(s.get("party_opinion", 50.0)) < 45:
+        candidates.append((3.0 + (48-cabinet)/12, {
+            "topic":"Party management",
+            "prompt":"The parliamentary party is restless and Cabinet unity is weakening. The PM wants a united front from the Treasury.",
+            "pm":"A public split between Number 10 and the Treasury would be disastrous. Help me keep the party together.",
+            "support":"Publicly back the PM's line",
+            "compromise":"Arrange a joint meeting with concerned MPs",
+            "stand":"Insist the Treasury must speak frankly",
+            "support_cost_bn":0.15,"compromise_cost_bn":0.0
+        }))
+    if candidates:
+        topic = max(candidates, key=lambda item: item[0])[1]
+    else:
+        topic = random.choice(PM_MEETING_TOPICS)
     s.active_pm_meeting={**topic,"year":int(s.get("year",1))}
     return True
 
@@ -735,16 +867,21 @@ def resolve_pm_meeting(choice):
         s.cab_opinion=round(_clip(float(s.cab_opinion)+3),1)
         s.party_opinion=round(_clip(float(s.party_opinion)+2),1)
         s.backbench_opinion=round(_clip(float(s.backbench_opinion)-2),1)
-        s.headroom=round(float(s.headroom)-1.0,1)
-        outcome="You back the Prime Minister's position. Number 10 is pleased, but the Treasury has accepted a £1bn policy commitment and some MPs question the concession."
+        support_cost = max(0.0, float(meeting.get("support_cost_bn", 1.0)))
+        s.headroom=round(float(s.headroom)-support_cost,1)
+        outcome=f"You back the Prime Minister's position. Number 10 is pleased, but the Treasury has accepted a £{support_cost:.2f}bn policy commitment and some MPs question the concession."
         label="Back the Prime Minister"
     elif choice=="compromise":
         s.pm_trust=round(_clip(float(s.get("pm_trust",70))+5),1)
         s.pm_opinion=round(_clip(float(s.pm_opinion)+3),1)
         s.cab_opinion=round(_clip(float(s.cab_opinion)+3),1)
         s.party_opinion=round(_clip(float(s.party_opinion)+1),1)
-        s.market_conf=round(_clip(float(s.market_conf)+1),1)
-        outcome="You broker a compromise. The PM gets a political win, while the Treasury retains some control over the timing and cost."
+        compromise_cost = max(0.0, float(meeting.get("compromise_cost_bn", 0.0)))
+        if compromise_cost:
+            s.headroom=round(float(s.headroom)-compromise_cost,1)
+        if meeting.get("topic") == "Financial markets and fiscal credibility":
+            s.market_conf=round(_clip(float(s.market_conf)+1),1)
+        outcome=f"You broker a compromise. Number 10 gets a political win, while the Treasury retains some control over the timing and cost. The package uses £{compromise_cost:.2f}bn of headroom."
         label="Negotiate a compromise"
     else:
         s.pm_trust=round(_clip(float(s.get("pm_trust",70))-9),1)
@@ -1443,6 +1580,7 @@ def proceed_to_spring():
     s.political_capital_points = 5
     s.feature_notice = ''
     s.feature_notice_phase = 0
+    pm_relationship_annual_review(s)
     government_missions.record_year(s)
     performance_report.create_report()
     s.year += 1

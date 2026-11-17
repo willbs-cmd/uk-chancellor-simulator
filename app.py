@@ -1133,6 +1133,14 @@ with tab_government:
         pmc[1].metric("Personal trust",f"{float(s.get('pm_trust',70)):.0f}/100")
         pmc[2].metric("Cabinet support",f"{float(s.cab_opinion):.0f}/100")
         trust=float(s.get('pm_trust',70))
+        latest_review=s.get("pm_relationship_latest") or {}
+        st.metric("Relationship status", s.get("pm_relationship_status", "Workable"))
+        if latest_review:
+            st.caption(
+                f"Latest annual review · Trust {latest_review.get('trust_before', trust):.0f} → "
+                f"{latest_review.get('trust_after', trust):.0f} ({latest_review.get('change', 0):+.1f})"
+            )
+            st.caption("Assessment: " + ", ".join(latest_review.get("reasons", [])))
         if trust>=70:
             st.success("Number 10 broadly trusts you. The PM is likely to give you room to manage the economy.")
         elif trust>=45:
@@ -1141,6 +1149,14 @@ with tab_government:
             st.warning("Relations are strained. The PM may start bypassing the Treasury or questioning your judgement.")
         else:
             st.error("The relationship is close to breaking point. A serious disagreement could put your job at risk.")
+        if s.get("pm_relationship_history"):
+            with st.expander("Annual relationship reviews", expanded=False):
+                for review in reversed(s.pm_relationship_history[-5:]):
+                    st.caption(
+                        f"Term {review.get('term')} · Year {review.get('year')} · "
+                        f"Trust {review.get('trust_after')}/100 · {review.get('change', 0):+.1f}"
+                    )
+                    st.write(", ".join(review.get("reasons", [])))
         if s.get('pm_meeting_history'):
             with st.expander("Previous Number 10 meetings"):
                 st.dataframe(list(reversed(s.pm_meeting_history)),hide_index=True,use_container_width=True)

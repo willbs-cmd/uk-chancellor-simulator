@@ -1728,6 +1728,45 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Annual industrial-relations report regression failed: {exc}")
 
+    # Phase 3: Number 10 reviews the Chancellor's annual delivery and
+    # prioritises the private meeting around the most urgent live pressure.
+    try:
+        new_run("Labour", "Normal", 9127)
+        pm_state = st.session_state
+        pm_state.year = 2
+        pm_state.pm_trust = 60.0
+        pm_state.growth = -0.8
+        pm_state.approval = 34.0
+        pm_state.market_conf = 35.0
+        pm_state.public_service_strikes = [
+            {"id": "NHS workforce", "severity": 2.5, "duration_years": 2}
+        ]
+        review = engine.pm_relationship_annual_review(pm_state)
+        if review is None or review["change"] >= 0 or pm_state.pm_trust >= 60:
+            failures.append("Poor annual delivery did not weaken PM trust.")
+        trust_after = pm_state.pm_trust
+        review_count = len(pm_state.pm_relationship_history)
+        engine.pm_relationship_annual_review(pm_state)
+        if pm_state.pm_trust != trust_after or len(pm_state.pm_relationship_history) != review_count:
+            failures.append("Annual PM relationship review was not idempotent.")
+        pm_state.active_pm_meeting = None
+        pm_state.pm_meeting_year = 0
+        pm_state.headroom = 8.0
+        pm_state.market_conf = 70.0
+        pm_state.growth = 2.0
+        pm_state.public_service_strikes = [
+            {"id": "NHS workforce", "severity": 2.0, "duration_years": 1}
+        ]
+        assert engine.open_pm_meeting()
+        if pm_state.active_pm_meeting.get("topic") != "Public services and industrial action":
+            failures.append("Number 10 did not prioritise the unresolved industrial dispute.")
+        before_headroom = pm_state.headroom
+        engine.resolve_pm_meeting("compromise")
+        if pm_state.headroom >= before_headroom:
+            failures.append("A negotiated public-sector settlement did not carry a fiscal cost.")
+    except Exception as exc:
+        failures.append(f"Phase 3 Number 10 relationship regression failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
