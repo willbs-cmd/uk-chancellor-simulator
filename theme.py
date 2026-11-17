@@ -3175,6 +3175,29 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
 }
 @media(max-width:760px) {
   section[data-testid="stSidebar"] .desk-period { min-height:0 !important; }
+/* EMERGENCY RESPONSE CONFIRMATION — restore strong contrast on the light office theme. */
+.choice-confirm {
+  background:#f1f7f6 !important;
+  border:1px solid #b8d6d2 !important;
+  border-left:4px solid #397b78 !important;
+  color:#203b59 !important;
+  box-shadow:0 2px 8px rgba(32,59,89,.05) !important;
+}
+.choice-confirm span {
+  color:#397b78 !important;
+  -webkit-text-fill-color:#397b78 !important;
+}
+.choice-confirm strong {
+  color:#203b59 !important;
+  -webkit-text-fill-color:#203b59 !important;
+  font-family:'Manrope',sans-serif !important;
+  font-weight:800 !important;
+  line-height:1.4 !important;
+}
+.choice-confirm small {
+  color:#526b82 !important;
+  -webkit-text-fill-color:#526b82 !important;
+}
   section[data-testid="stSidebar"] .desk-section-title {
     min-height:24px !important;
     margin-top:10px !important;
