@@ -140,7 +140,7 @@ def review_budget(s, draft):
     risks = budget.rebel_risks(draft)
     backbench_risks = [item for item in risks if item[0] == "backbench_opinion"]
     pressure = sum(float(item[1]) for item in backbench_risks)
-    if pressure < 10.0 or not backbench_risks:
+    if pressure < 6.0 or not backbench_risks:
         return None
     key = f"budget:{s.get('budget_day_type', 'annual')}:{s.get('term', 1)}:{s.get('year', 1)}"
     if _stable_roll(s, key) >= 68:
