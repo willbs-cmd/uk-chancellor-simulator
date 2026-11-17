@@ -1109,6 +1109,7 @@ def submit_budget():
     budget.ensure()
     before = state.values()
     draft = s.get('budget_day_draft') or budget.read()
+    previous_budget = {k: (dict(v) if isinstance(v, dict) else v) for k, v in (s.get('budget_applied') or {}).items()}
     annual_settlement = budget._annual_settlement_active()
     if draft != s.budget_applied or annual_settlement:
         budget._apply(draft, annual_settlement=annual_settlement)
@@ -1138,7 +1139,10 @@ def submit_budget():
     s.budget_speech['market_after'] = s.gilt_yield
     budget.resolve_budget_risks()
     event_type = 'Emergency Budget' if s.get('budget_day_type') == 'emergency' else 'Spring Budget'
+    delivered_impact = dict(s.get('budget_impact') or {})
     budget.commit_budget(ayes, event_type=event_type)
+    import budget_aftermath
+    budget_aftermath.create(s, previous_budget, draft, delivered_impact, event_type)
     s.budget_passed = True
     s.budget_day_stage = 4
     s.headlines = generate_headlines(None, True, s.headroom)
@@ -1287,6 +1291,8 @@ def proceed_to_spring():
     state.snapshot()
     before = state.values()
     s.message = 'Spring arrives and a new financial year begins.'
+    import budget_aftermath
+    budget_aftermath.advance(s)
     budget.apply_ongoing()
     if s.get('spad') == 'hawk':
         s.headroom = round(s.headroom + politics.HAWK_SAVING, 1)

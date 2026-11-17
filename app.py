@@ -602,6 +602,13 @@ def budget_screen():
             move=float(speech_data.get('market_move',0))
             st.metric("Opening 10-year gilt yield",f"{float(speech_data.get('market_after',s.gilt_yield)):.2f}%",f"{move:+.2f} percentage points")
             for who,quote in speech_data.get('reactions',[]): st.write(f"**{who}:** {quote}")
+            aftermath = s.get('budget_aftermath_latest') or {}
+            if aftermath:
+                st.markdown("#### Budget aftermath · next Spring")
+                st.caption(aftermath.get('headline', 'The Treasury is monitoring the response to the Budget.'))
+                for reaction in aftermath.get('reactions', []):
+                    st.write(f"**{reaction.get('group', 'Stakeholders')}:** {reaction.get('text', '')}")
+                st.caption("These second-round confidence effects are applied at the next Spring transition; the Budget's tax, spending and debt calculations are not repeated.")
             if is_emergency:
                 emergency = s.get('active_emergency_budget') or {}
                 st.warning(f"Emergency Budget called because: {emergency.get('reason', 'severe fiscal or market conditions')}")

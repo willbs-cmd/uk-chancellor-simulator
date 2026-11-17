@@ -64,6 +64,7 @@ import state  # noqa: E402
 import government_missions  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
+import budget_aftermath  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -419,6 +420,36 @@ def check(n=None, difficulty=None):
         assert vote_state["budget_vote_result"]["noes"] == 650 - (budget.WIN - 3)
     except Exception as exc:
         failures.append(f"Budget vote consequences regression failed: {exc}")
+
+    # A passed Budget creates a single delayed stakeholder response, applied at Spring only once.
+    try:
+        new_run('Labour', 'Normal', 97533)
+        aftermath_state = st.session_state
+        previous = {k: (dict(v) if isinstance(v, dict) else v) for k, v in budget.read().items()}
+        draft = {k: (dict(v) if isinstance(v, dict) else v) for k, v in previous.items()}
+        draft['spend']['public_sector_pay'] = float(draft['spend'].get('public_sector_pay', 0.0)) + 1.0
+        before_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in ('business_confidence', 'household_confidence', 'officials_confidence')}
+        record = budget_aftermath.create(aftermath_state, previous, draft,
+            {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget')
+        assert record is not None and len(aftermath_state.budget_aftermath_pending) == 1
+        assert budget_aftermath.create(aftermath_state, previous, draft,
+            {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget') is None
+        saved_headroom = float(aftermath_state.headroom)
+        budget_aftermath.advance(aftermath_state)
+        after_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in before_confidence}
+        assert after_confidence['business_confidence'] > before_confidence['business_confidence']
+        assert after_confidence['household_confidence'] > before_confidence['household_confidence']
+        assert after_confidence['officials_confidence'] > before_confidence['officials_confidence']
+        assert float(aftermath_state.headroom) == saved_headroom, 'Delayed reactions must not repeat fiscal impacts.'
+        assert not aftermath_state.budget_aftermath_pending
+        history_count = len(aftermath_state.budget_aftermath_history)
+        budget_aftermath.advance(aftermath_state)
+        assert len(aftermath_state.budget_aftermath_history) == history_count, 'A Spring rerun must not duplicate the aftermath.'
+        payload = state.export_save()
+        assert state.import_save(payload) is None
+        assert len(st.session_state.budget_aftermath_history) == history_count
+    except Exception as exc:
+        failures.append(f"Budget aftermath regression failed: {exc}")
 
     # Every standard and conditional policy decision must expose six matched options.
     try:
