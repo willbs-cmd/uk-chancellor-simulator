@@ -1735,6 +1735,7 @@ def check(n=None, difficulty=None):
         pm_state = st.session_state
         pm_state.year = 2
         pm_state.pm_trust = 60.0
+        pm_state.approval = 34.0
         pm_state.growth = -0.8
         pm_state.approval = 34.0
         pm_state.market_conf = 35.0
