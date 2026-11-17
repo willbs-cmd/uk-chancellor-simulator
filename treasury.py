@@ -6,6 +6,8 @@ modest asset appreciation; returns are deliberately conservative and sector-spec
 """
 import streamlit as st
 
+import econ
+
 ASSETS = {
     "renewables": {
         "label": "Renewable energy",
