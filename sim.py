@@ -324,6 +324,7 @@ def check(n=None, difficulty=None):
             "pm_trust": 61.0, "pm_opinion": 56.0, "cab_opinion": 50.0,
             "approval": 50.0, "media_opinion": 50.0, "year": 2, "active_pm_meeting": None,
             "active_pm_ultimatum": None, "political_capital_points": 0, "headroom": 4.0,
+            "event_cards": [], "message": "", "humphrey_note": "",
         })
         assert political_pressure.resolve_issue("stand_firm", warning_state)
         assert warning_state["active_pm_meeting"]["pressure_origin"] == "political_pressure"
