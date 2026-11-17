@@ -22,8 +22,13 @@ def annual_review(s):
     party=float(s.get("party_opinion",50)); backbench=float(s.get("backbench_opinion",50))
     strikes=list(s.get("public_service_strikes",[]))
     strike_pressure=sum(float(x.get("severity",1.0))*min(1.6,1+0.2*max(0,int(x.get("duration_years",0))-1)) for x in strikes)
+    import cabinet_management
+    cabinet = cabinet_management.cabinet_health(s)
+    cabinet_pressure = min(8.0, max(0.0, 55.0-float(cabinet["competence"])) * 0.12
+                           + max(0.0, 50.0-float(cabinet["loyalty"])) * 0.10
+                           + min(3, int(cabinet["low_loyalty"])) * 0.7)
     raw=(max(0,50-pm)*.32+max(0,50-party)*.28+max(0,50-backbench)*.22
-         +max(0,45-approval)*.12+min(8,strike_pressure*1.2))
+         +max(0,45-approval)*.12+min(8,strike_pressure*1.2)+cabinet_pressure)
     pressure=round(min(100,raw*.72+float(s.get("leadership_pressure",0))*.28),1)
     s.leadership_pressure=pressure
     if pressure<18 or s.get("leadership_issue") or s.get("game_over"): return None
@@ -39,7 +44,8 @@ def annual_review(s):
     challenger,faction=profiles.get(str(s.get("party","")) ,("a senior party figure","restless parliamentary colleagues"))
     issue={"year":year,"term":int(s.get("term",1)),"party":str(s.get("party","Government")),
       "pressure":pressure,"challenger":challenger,"faction":faction,"pm_opinion":round(pm,1),
-      "party_opinion":round(party,1),"backbench_opinion":round(backbench,1),
+      "party_opinion":round(party,1),"backbench_opinion":round(backbench,1),"cabinet_competence":cabinet["competence"],
+      "cabinet_loyalty":cabinet["loyalty"],"cabinet_pressure":round(cabinet_pressure,1),
       "text":f"Westminster is discussing whether {challenger} could replace the Prime Minister. {faction.capitalize()} are increasingly restless. The PM wants to know whether the Treasury is loyal."}
     s.leadership_issue=issue
     s.leadership_history=(list(s.get("leadership_history",[]))+[dict(issue)])[-20:]

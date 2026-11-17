@@ -330,6 +330,23 @@ def pm_cabinet_reshuffle_checks():
 
 def political_survival_checks():
     import political_survival
+    # A weak, disloyal Cabinet adds to leadership vulnerability even when public and party ratings are held constant.
+    healthy = FakeState({"term":1,"year":2,"seed":12,"pm_opinion":50.0,"approval":55.0,
+        "party_opinion":55.0,"backbench_opinion":55.0,"leadership_last_review":0,
+        "cabinet_ministers":{"health":"Health Secretary","education":"Education Secretary"},
+        "ministerial_competence":{"health":80.0,"education":80.0},
+        "ministerial_loyalty":{"health":80.0,"education":80.0}})
+    weak_cabinet = FakeState({"term":1,"year":2,"seed":12,"pm_opinion":50.0,"approval":55.0,
+        "party_opinion":55.0,"backbench_opinion":55.0,"leadership_last_review":0,
+        "cabinet_ministers":{"health":"Health Secretary","education":"Education Secretary"},
+        "ministerial_competence":{"health":25.0,"education":30.0},
+        "ministerial_loyalty":{"health":20.0,"education":25.0}})
+    political_survival.annual_review(healthy)
+    political_survival.annual_review(weak_cabinet)
+    assert weak_cabinet["leadership_pressure"] > healthy["leadership_pressure"]
+    assert weak_cabinet["leadership_issue"]["cabinet_pressure"] > 0
+    assert cabinet_management.cabinet_health(weak_cabinet)["low_loyalty"] == 2
+
     weak = FakeState({"term":1,"year":2,"seed":1,"party":"Labour","pm_opinion":20.0,
         "pm_trust":45.0,"approval":25.0,"party_opinion":20.0,"backbench_opinion":20.0,
         "public_service_strikes":[{"severity":3.0,"duration_years":3}],

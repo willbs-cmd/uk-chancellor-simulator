@@ -114,6 +114,25 @@ def profile_for(s, department):
     return dict(s.get("ministerial_profiles", {}).get(department, {}))
 
 
+def cabinet_health(s=None):
+    """Return a compact, derived picture of active ministerial capability and loyalty."""
+    s = s or st.session_state
+    ensure(s)
+    active = [(key, str(name)) for key, name in s.get("cabinet_ministers", {}).items()
+              if name and not str(name).startswith(("Vacant", "New appointment"))]
+    if not active:
+        return {"count": 0, "competence": 60.0, "loyalty": 60.0, "weak_ministers": [], "low_loyalty": 0}
+    competence = s.get("ministerial_competence", {})
+    loyalty = s.get("ministerial_loyalty", {})
+    comp_values = [float(competence.get(key, 60.0)) for key, _ in active]
+    loyalty_values = [float(loyalty.get(key, 60.0)) for key, _ in active]
+    weak = [{"department": key, "minister": name, "competence": float(competence.get(key, 60.0)),
+             "loyalty": float(loyalty.get(key, 60.0))}
+            for key, name in active if float(competence.get(key, 60.0)) < 45.0]
+    return {"count": len(active), "competence": round(sum(comp_values) / len(comp_values), 1),
+            "loyalty": round(sum(loyalty_values) / len(loyalty_values), 1),
+            "weak_ministers": weak, "low_loyalty": sum(1 for value in loyalty_values if value < 35.0)}
+
 def service_effect(s, service):
     """Small annual service-delivery adjustment from relevant ministerial skill."""
     ensure(s)

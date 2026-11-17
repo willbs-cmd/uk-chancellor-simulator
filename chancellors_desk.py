@@ -151,6 +151,13 @@ def render(on_restart):
         cabinet_label = f"Cabinet management · {len(active_posts)} ministers"
         with st.expander(cabinet_label, expanded=bool(s.get("active_dispute"))):
             if active_posts:
+                health = cabinet_management.cabinet_health(s)
+                h1, h2, h3 = st.columns(3)
+                h1.metric("Average competence", str(round(health["competence"])) + "/100")
+                h2.metric("Average loyalty", str(round(health["loyalty"])) + "/100")
+                h3.metric("At-risk ministers", str(len(health["weak_ministers"]) + health["low_loyalty"]))
+                if health["weak_ministers"] or health["low_loyalty"]:
+                    st.caption("Persistent ministerial weakness now contributes to leadership pressure as well as departmental delivery and Cabinet relationships.")
                 service_scores = s.get("public_service_scores", {})
                 service_for = cabinet_management.SERVICE_FOR_DEPARTMENT
                 roster = []
