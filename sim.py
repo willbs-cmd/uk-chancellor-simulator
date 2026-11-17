@@ -398,16 +398,10 @@ def check(n=None, difficulty=None):
 
     # Budget vote margins should create distinct, bounded political and market consequences.
     try:
-        vote_state = type("VoteState", (), {})()
-        vote_state._data = {
+        vote_state = FakeState({
             "pm_opinion": 70.0, "party_opinion": 65.0, "backbench_opinion": 60.0,
             "market_conf": 60.0, "approval": 50.0, "gilt_yield": 4.0, "event_cards": [],
-        }
-        vote_state.get = lambda key, default=None: vote_state._data.get(key, default)
-        vote_state.__setitem__ = lambda key, value: vote_state._data.__setitem__(key, value)
-        vote_state.__getitem__ = lambda key: vote_state._data[key]
-        vote_state.__class__.__getitem__ = lambda self, key: self._data[key]
-        vote_state.__class__.__setitem__ = lambda self, key, value: self._data.__setitem__(key, value)
+        })
         knife = engine._budget_vote_consequences(vote_state, budget.WIN + 4)
         assert knife["result"] == "Knife-edge victory" and knife["margin"] == 4
         assert vote_state["backbench_opinion"] == 57.0
