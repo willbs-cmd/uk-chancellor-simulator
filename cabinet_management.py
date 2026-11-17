@@ -262,6 +262,34 @@ def record_resignation(s, minister, reason):
     return department
 
 
+
+def reshuffle_assessment(s, department):
+    """Estimate how receptive Number 10 is to a Chancellor's replacement request."""
+    minister = str(s.get("cabinet_ministers", {}).get(department, ""))
+    if not minister or minister.startswith(("Vacant", "New appointment")):
+        return {"score": 0.0, "band": "Unavailable", "factors": {}}
+    loyalty = float(s.get("ministerial_loyalty", {}).get(department, 55.0))
+    competence = float(s.get("ministerial_competence", {}).get(department, 60.0))
+    pm = float(s.get("pm_opinion", 50.0))
+    cabinet = float(s.get("cab_opinion", 50.0))
+    service = SERVICE_FOR_DEPARTMENT.get(department)
+    service_score = float(s.get("public_service_scores", {}).get(service, 60.0)) if service else 60.0
+    dispute = s.get("active_dispute") or {}
+    dispute_pressure = 12.0 if dispute.get("minister") == minister else 0.0
+    factors = {
+        "Prime Minister confidence": round(0.45 * pm, 1),
+        "Cabinet support": round(0.25 * cabinet, 1),
+        "Ministerial disloyalty": round(0.30 * (100.0 - loyalty), 1),
+        "Poor ministerial competence": round(0.15 * (60.0 - competence), 1),
+        "Department performance": round(0.10 * (60.0 - service_score), 1),
+        "Active dispute": round(dispute_pressure, 1),
+    }
+    score = max(0.0, min(100.0, sum(factors.values())))
+    band = "High" if score >= 58.0 else ("Moderate" if score >= 48.0 else "Low")
+    return {"score": round(score, 1), "band": band, "factors": factors,
+            "minister": minister, "loyalty": loyalty, "competence": competence,
+            "service_score": service_score}
+
 def hold_private_meeting(department, approach):
     """One annual Chancellor-to-minister meeting; neither choice appoints or dismisses anyone."""
     s = st.session_state

@@ -290,7 +290,15 @@ def check(n=None, difficulty=None):
         cabinet_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
-        print("Cabinet management, rivalry and relationship regression: PASS")
+        assessment_state = FakeState({"cabinet_ministers": {"health": "Health Secretary"}, "ministerial_loyalty": {"health": 20.0}, "ministerial_competence": {"health": 35.0}, "public_service_scores": {"NHS": 35.0}, "pm_opinion": 55.0, "cab_opinion": 55.0})
+        weak_case = cabinet_management.reshuffle_assessment(assessment_state, "health")
+        assessment_state.ministerial_loyalty["health"] = 90.0
+        assessment_state.ministerial_competence["health"] = 85.0
+        assessment_state.public_service_scores["NHS"] = 85.0
+        strong_case = cabinet_management.reshuffle_assessment(assessment_state, "health")
+        assert weak_case["score"] > strong_case["score"], "Poor performance and weak loyalty should strengthen the case for replacement."
+        assert weak_case["band"] == "High" and strong_case["band"] == "Low"
+        print("Cabinet management, rivalry, relationships and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 

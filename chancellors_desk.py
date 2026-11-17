@@ -246,9 +246,16 @@ def render(on_restart):
                         format_func=lambda key: f"{ministers.get(key, key)} · {budget.SPEND_DEFAULTS.get(key, {}).get('label', key.replace('_', ' ').title())}",
                         key="desk_reshuffle_department",
                     )
+                    assessment = cabinet_management.reshuffle_assessment(s, dept)
                     st.caption(
-                        f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(dept, 50.0)):.0f}/100. "
-                        "A weak relationship or active dispute makes Number 10 more receptive."
+                        f"Number 10's current receptiveness: {assessment['band']} · "
+                        f"Ministerial competence {assessment.get('competence', 60):.0f}/100 · "
+                        f"Department performance {assessment.get('service_score', 60):.0f}/100 · "
+                        f"Loyalty {assessment.get('loyalty', 50):.0f}/100."
+                    )
+                    st.caption(
+                        "The Prime Minister weighs their own confidence, Cabinet unity, ministerial loyalty, "
+                        "competence, departmental results and any active dispute. A recommendation can still be rejected."
                     )
                     if st.button("Recommend minister replacement", use_container_width=True, help="Recommend a Cabinet replacement to the Prime Minister."):
                         engine.request_ministerial_reshuffle(dept)

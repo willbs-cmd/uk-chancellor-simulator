@@ -826,13 +826,11 @@ def request_ministerial_reshuffle(department):
     state.checkpoint()
     before = state.values()
     state.snapshot()
-    loyalty = float(s.get("ministerial_loyalty", {}).get(department, 55.0))
+    assessment = cabinet_management.reshuffle_assessment(s, department)
+    score = float(assessment["score"])
+    accepted = score >= 58.0
     pm = float(s.get("pm_opinion", 50.0))
     cabinet = float(s.get("cab_opinion", 50.0))
-    dispute = s.get("active_dispute") or {}
-    dispute_pressure = 12.0 if dispute.get("minister") == current else 0.0
-    score = 0.45 * pm + 0.25 * cabinet + 0.30 * (100.0 - loyalty) + dispute_pressure
-    accepted = score >= 58.0
     used.append(term)
     s.cabinet_reshuffle_terms = used[-10:]
     history = list(s.get("cabinet_reshuffle_history", []))
