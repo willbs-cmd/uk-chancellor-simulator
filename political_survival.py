@@ -102,6 +102,74 @@ def resolve(s,choice):
     return True
 
 
+
+PM_MANDATES = {
+    "Labour": [
+        ("Protect NHS funding", "Increase health spending and reduce waiting lists.", "health"),
+        ("Keep working-age taxes stable", "Avoid increases to income tax and employee National Insurance.", "income_tax"),
+        ("Invest for long-term growth", "Prioritise transport, housing, science and skills.", "investment"),
+        ("Strengthen local services", "Support councils, housing and local transport.", "local"),
+    ],
+    "Conservative": [
+        ("Keep taxes on working people down", "Avoid increases to income tax and employee National Insurance.", "income_tax"),
+        ("Restore fiscal headroom", "Show a credible path to lower borrowing and sustainable spending.", "spending"),
+        ("Strengthen national defence", "Protect defence capability and equipment budgets.", "defence"),
+        ("Back private-sector investment", "Prioritise capital investment, infrastructure and skills.", "investment"),
+    ],
+    "Liberal Democrats": [
+        ("Improve health and social care", "Provide additional support for health and care services.", "health"),
+        ("Fairer taxation", "Avoid shifting the burden onto lower and middle earners.", "fair_tax"),
+        ("Invest in local communities", "Support councils, housing and local transport.", "local"),
+        ("Accelerate clean-energy investment", "Increase climate and clean-energy spending.", "green"),
+    ],
+    "Reform UK": [
+        ("Cut the tax burden", "Avoid increases to income tax and employee National Insurance.", "income_tax"),
+        ("Reduce borrowing", "Keep the Budget within a credible fiscal envelope.", "spending"),
+        ("Strengthen border and national security", "Protect defence and security-related spending.", "defence"),
+        ("Back regional infrastructure", "Prioritise housing, local government and transport.", "local"),
+    ],
+    "Green Party": [
+        ("Accelerate the green transition", "Increase climate and clean-energy investment.", "green"),
+        ("Strengthen public services", "Provide additional support for health and care services.", "health"),
+        ("Invest in communities", "Support councils, housing and local transport.", "local"),
+        ("Fairer taxation", "Avoid shifting the burden onto lower and middle earners.", "fair_tax"),
+    ],
+    "SNP": [
+        ("Protect health and care", "Provide additional support for health and care services.", "health"),
+        ("Invest in regional infrastructure", "Support housing, councils and transport.", "local"),
+        ("Support skills and growth", "Prioritise transport, housing, science and skills.", "investment"),
+        ("Maintain fiscal credibility", "Keep borrowing within a credible fiscal envelope.", "spending"),
+    ],
+    "Plaid Cymru": [
+        ("Invest in Welsh communities", "Support housing, councils and transport.", "local"),
+        ("Improve health and care", "Provide additional support for health and care services.", "health"),
+        ("Back clean-energy growth", "Increase climate and clean-energy spending.", "green"),
+        ("Invest for regional growth", "Prioritise transport, housing, science and skills.", "investment"),
+    ],
+}
+
+
+def set_pm_mandate(s):
+    """Replace Number 10's Budget requests after a PM change; never alter the Budget itself."""
+    party = str(s.get("party", ""))
+    package = PM_MANDATES.get(party, PM_MANDATES["Labour"])
+    priorities = [dict(title=title, detail=detail, tag=tag) for title, detail, tag in package]
+    s.budget_pm_priorities = priorities
+    s.budget_pm_assessment = []
+    s.budget_pm_met_count = 0
+    s.pm_policy_mandate = {
+        "pm": str(s.get("current_prime_minister", "The Prime Minister")),
+        "party": party,
+        "priority": str((s.get("pm_profile") or {}).get("priority", "Economic stability")),
+        "year": int(s.get("year", 1)),
+        "term": int(s.get("term", 1)),
+        "requests": priorities,
+    }
+    history = list(s.get("pm_mandate_history", []))
+    history.append(dict(s.pm_policy_mandate))
+    s.pm_mandate_history = history[-20:]
+    return priorities
+
 def resolve_transition(s, choice):
     """The incoming Prime Minister decides whether the Chancellor stays in post."""
     issue=s.get("pm_transition_issue")
@@ -112,6 +180,7 @@ def resolve_transition(s, choice):
         s.pm_opinion=round(_clip(float(s.get("pm_opinion",58))+7),1)
         s.cab_opinion=round(_clip(float(s.get("cab_opinion",50))+2),1)
         s.chancellor_status="retained"
+        set_pm_mandate(s)
         outcome=f"{issue.get('new_pm','The new Prime Minister')} confirms that you will remain Chancellor. You have survived the transition, but must now deliver the new administration's priorities."
     else:
         s.chancellor_status="dismissed"
@@ -139,6 +208,7 @@ def render(s):
         st.markdown(f"**New Prime Minister's priority:** {transition.get('priority')}  ")
         st.caption(transition.get("approach","The incoming administration is setting its economic direction."))
         st.write("The new Prime Minister is reviewing ministerial appointments. Your response to the leadership contest and your record in office will influence the decision.")
+        st.info("If retained, you will receive a new set of Prime Ministerial Budget priorities. These will shape the next Budget negotiation, but will not automatically change tax rates, spending or the existing Budget.")
         left,right=st.columns(2)
         with left:
             if st.button("Accept the new PM's direction and remain Chancellor",key="pm_transition_retain",type="primary",use_container_width=True):

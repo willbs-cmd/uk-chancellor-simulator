@@ -320,6 +320,15 @@ def political_survival_checks():
     assert political_survival.resolve_transition(weak,"retain")
     assert weak["pm_transition_issue"] is None and weak["chancellor_status"]=="retained"
     assert weak["pm_trust"] >= 60 and weak["pm_history"][-1]["decision"]=="retain"
+    mandate=weak["budget_pm_priorities"]
+    assert len(mandate)==4 and {item["tag"] for item in mandate}=={"health","income_tax","investment","local"}
+    assert weak["pm_policy_mandate"]["pm"]=="the Deputy Leader"
+    assert weak["pm_mandate_history"][-1]["requests"]==mandate
+    # A PM change changes only the political requests, not the live Budget ledgers.
+    weak["budget_applied"]={"tax":{"income":20.0},"spend":{"health":3.0}}
+    before_budget=dict(weak["budget_applied"])
+    political_survival.set_pm_mandate(weak)
+    assert weak["budget_applied"]==before_budget
     weak["pm_transition_issue"]={"year":3,"term":1,"new_pm":"the Deputy Leader","previous_pm":"The Prime Minister"}
     assert political_survival.resolve_transition(weak,"dismiss")
     assert weak["chancellor_status"]=="dismissed" and weak["game_over"]["kind"]=="sacked"
