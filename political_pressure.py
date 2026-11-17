@@ -131,6 +131,42 @@ def review_policy(s, decision, option, vote):
     return None
 
 
+def review_budget(s, draft):
+    """Raise one targeted faction dispute before the Budget is put to the Commons."""
+    if s.get("political_pressure_issue"):
+        return None
+    import budget
+
+    risks = budget.rebel_risks(draft)
+    backbench_risks = [item for item in risks if item[0] == "backbench_opinion"]
+    pressure = sum(float(item[1]) for item in backbench_risks)
+    if pressure < 10.0 or not backbench_risks:
+        return None
+    key = f"budget:{s.get('budget_day_type', 'annual')}:{s.get('term', 1)}:{s.get('year', 1)}"
+    if _stable_roll(s, key) >= 68:
+        return None
+    stat, size, demand = sorted(backbench_risks, key=lambda item: float(item[1]), reverse=True)[0]
+    projected = budget.projected_ayes(draft)
+    party = str(s.get("party", "Government"))
+    issue = {
+        "kind": "budget_rebellion", "department": "", "minister": f"{party} parliamentary factions",
+        "party": party, "bloc": "Budget-rebel factions", "faction": "Budget-rebel factions",
+        "decision": "Spring Budget" if s.get("budget_day_type") != "emergency" else "Emergency Budget",
+        "ideology": "Fiscal package", "pressure": round(min(100.0, pressure), 1),
+        "rebel_count": max(12, int(round(pressure * 1.4))), "projected_ayes": int(projected),
+        "risk": {"stat": stat, "size": float(size), "message": demand},
+        "leaked": False,
+        "created": f"{int(s.get('term', 1))}:{int(s.get('year', 1))}:budget",
+        "text": (
+            f"{party} MPs are threatening a Budget rebellion. {demand} "
+            f"The Whips currently project {projected} votes before the package is delivered."
+        ),
+    }
+    s.political_pressure_issue = issue
+    s.political_pressure_history = (list(s.get("political_pressure_history", [])) + [dict(issue)])[-20:]
+    return issue
+
+
 def resolve_issue(choice, s=None):
     """Let the Chancellor choose how to handle a live political dispute."""
     s = s if s is not None else st.session_state
@@ -139,6 +175,41 @@ def resolve_issue(choice, s=None):
         return False
     if choice not in {"stand_firm", "negotiate", "briefing"}:
         return False
+    if issue.get("kind") == "budget_rebellion":
+        if choice == "negotiate":
+            risk = issue.get("risk", {})
+            if not risk:
+                return False
+            import budget
+            budget._negotiate_rebel(risk.get("message", ""), risk.get("stat", "backbench_opinion"), float(risk.get("size", 0.0)))
+            if risk.get("message") not in s.get("whip_negotiations", []):
+                s.message = "The Treasury cannot afford the requested concession from its current headroom."
+                return False
+            s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) + 1.5), 1)
+            s.party_opinion = round(_clip(float(s.get("party_opinion", 50.0)) + 1.0), 1)
+            outcome = "You have secured a targeted Budget concession. The Whips expect the faction's threatened rebellion to be reduced."
+        elif choice == "stand_firm":
+            s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) - 2.5), 1)
+            s.party_opinion = round(_clip(float(s.get("party_opinion", 50.0)) - 1.5), 1)
+            outcome = "You reject the faction's demand and keep the Budget unchanged. The Whips warn that more MPs may vote against it."
+        else:
+            s.media_opinion = round(_clip(float(s.get("media_opinion", 50.0)) - 2.0), 1)
+            s.approval = round(_clip(float(s.get("approval", 50.0)) - 0.8), 1)
+            s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 50.0)) - 1.0), 1)
+            outcome = "You allow the Budget dispute to become public. The package is unchanged and the press questions the Government's unity."
+        s.pm_trust = round(_clip(float(s.get("pm_trust", 70.0)) + (1.5 if choice == "negotiate" else -2.0)), 1)
+        s.pm_opinion = round(_clip(float(s.get("pm_opinion", 50.0)) + (1.0 if choice == "negotiate" else -0.5)), 1)
+        issue = dict(issue)
+        issue["resolution"] = choice
+        issue["outcome"] = outcome
+        history = list(s.get("political_pressure_history", []))
+        if history and history[-1].get("created") == issue.get("created"):
+            history[-1] = issue
+        s.political_pressure_history = history[-20:]
+        s.political_pressure_issue = None
+        s.message = outcome
+        s.humphrey_note = "A Budget concession is cheaper than a defeat, but every concession uses scarce fiscal room."
+        return True
     capital = int(s.get("political_capital_points", 0))
     if choice == "negotiate" and capital < 1:
         s.message = "You need one political-capital point to negotiate a compromise."

@@ -367,6 +367,31 @@ def check(n=None, difficulty=None):
         assert bloc_state["backbench_opinion"] == 53.0
         assert bloc_state["party_opinion"] == 52.0
         assert bloc_state["headroom"] == 2.7
+        # A serious Budget-specific faction demand must be raised before delivery,
+        # and a negotiated concession must use the existing Whips' mitigation ledger.
+        new_run('Labour', 'Normal', 78123)
+        budget_state = st.session_state
+        budget_state.political_pressure_issue = None
+        budget_state.political_pressure_history = []
+        budget_state.political_capital_points = 3
+        budget_state.headroom = 8.0
+        budget_state.event_cards = []
+        draft = budget.read()
+        draft['spend']['health'] = -3.5
+        budget_issue = None
+        for seed in range(1, 100):
+            budget_state.seed = seed
+            budget_issue = political_pressure.review_budget(budget_state, draft)
+            if budget_issue:
+                break
+        assert budget_issue is not None, "A material Budget rebellion risk should sometimes trigger targeted pre-vote pressure."
+        assert budget_issue['kind'] == 'budget_rebellion'
+        assert budget_issue['risk']['message'] in [item[2] for item in budget.rebel_risks(draft)]
+        original_headroom = float(budget_state.headroom)
+        assert political_pressure.resolve_issue('negotiate', budget_state)
+        assert budget_issue['risk']['message'] in budget_state.whip_negotiations
+        assert float(budget_state.headroom) == round(original_headroom - 0.75, 1)
+        assert budget_state.political_pressure_issue is None
         print("Cabinet management, parliamentary faction pressure, Number 10 escalation and reshuffle assessment regression: PASS")
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")

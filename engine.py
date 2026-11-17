@@ -1050,6 +1050,14 @@ def submit_budget():
         draft = s.get('budget_day_draft') or budget.read()
         s.budget_day_draft = draft
         s.budget_day_speech = speech.compose(draft)
+        pressure_issue = political_pressure.review_budget(s, draft)
+        if pressure_issue:
+            s.event_cards = list(s.get('event_cards', []))
+            s.event_cards.append({
+                'title': 'Budget rebellion · faction demands',
+                'text': pressure_issue.get('text', ''),
+                'summary': 'The Whips need your response before the Budget vote.'
+            })
         s.budget_day_stage = 3
         return 'speech'
     state.checkpoint()

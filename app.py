@@ -24,6 +24,7 @@ import household
 import regional_economy
 import public_services
 import chancellors_desk
+import political_pressure
 import government_missions
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
@@ -696,9 +697,28 @@ def budget_screen():
         final_draft = s.get("budget_day_draft") or budget.read()
         budget_day_scorecard(final_draft, "Final Budget announcement sheet")
         st.warning(f"Once delivered, the {event_name} is put to the Commons. A failed vote ends the Chancellor’s career.")
+        budget_issue = s.get("political_pressure_issue")
+        budget_issue_live = bool(budget_issue and budget_issue.get("kind") == "budget_rebellion")
+        if budget_issue_live:
+            st.error("**The Whips report a threatened Budget rebellion**")
+            st.write(budget_issue.get("text", "A parliamentary faction is demanding changes before the vote."))
+            st.caption("A negotiated concession costs £0.50bn–£0.75bn of headroom and reduces the relevant faction's rebellion risk. Standing firm leaves the Budget unchanged; allowing a briefing risks public and parliamentary support.")
+            pressure_cols = st.columns(3, gap="small")
+            with pressure_cols[0]:
+                if st.button("Negotiate a concession", key="budget_pressure_negotiate", type="primary", use_container_width=True, disabled=float(s.get("headroom", 0.0)) < 0.75):
+                    political_pressure.resolve_issue("negotiate")
+                    st.rerun()
+            with pressure_cols[1]:
+                if st.button("Stand firm", key="budget_pressure_stand", use_container_width=True):
+                    political_pressure.resolve_issue("stand_firm")
+                    st.rerun()
+            with pressure_cols[2]:
+                if st.button("Allow public briefing", key="budget_pressure_briefing", use_container_width=True):
+                    political_pressure.resolve_issue("briefing")
+                    st.rerun()
         if st.button("← Return to Budget controls", use_container_width=True):
             s.budget_editor_restore_draft = True; s.budget_day_stage = 0; st.rerun()
-        if st.button(f"Deliver {event_name} & open the markets",type="primary"):
+        if st.button(f"Deliver {event_name} & open the markets",type="primary", disabled=budget_issue_live):
             engine.submit_budget(); st.rerun()
 
 
