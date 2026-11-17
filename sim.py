@@ -223,6 +223,27 @@ def cabinet_checks():
     assert len(fake.ministerial_delivery_history) == 1
     return True
 
+def cabinet_relationship_checks():
+    """Incidents are deterministic and do not repeat on a Streamlit rerun."""
+    fake = FakeState({
+        "term": 1, "year": 3, "seed": 77,
+        "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
+        "ministerial_loyalty": {"health": 20.0, "social_care": 60.0},
+        "ministerial_competence": {"health": 60.0, "social_care": 60.0},
+        "ministerial_refusals": {}, "ministerial_rivalries": {},
+        "ministerial_rivalry_history": [], "ministerial_relationship_issue": None,
+        "ministerial_relationship_issue_year": "", "ministerial_relationship_history": [],
+        "ministerial_delivery_history": [], "ministerial_delivery_commitments": {},
+    })
+    cabinet_management.ensure(fake)
+    first = cabinet_management.generate_relationship_issue(fake)
+    second = cabinet_management.generate_relationship_issue(fake)
+    assert first and first["kind"] == "resignation", "Low ministerial loyalty should trigger a resignation warning."
+    assert first == second, "An incident must not regenerate during the same game year."
+    assert first["minister"] == "Health Secretary"
+    return True
+
+
 def cabinet_rivalry_checks():
     fake = FakeState({
         "term": 1, "year": 2,

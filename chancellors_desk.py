@@ -174,6 +174,49 @@ def render(on_restart):
                     st.markdown("**Overlapping portfolio tensions**")
                     st.dataframe(rivalry_rows, hide_index=True, use_container_width=True)
                     st.caption("Tension rises when overlapping ministers diverge in competence, loyalty or repeated Treasury disputes. Serious rivalries can weaken Cabinet unity.")
+                relationship_issue = s.get("ministerial_relationship_issue")
+                if relationship_issue:
+                    st.markdown("**A private Cabinet approach**")
+                    st.info(relationship_issue.get("text", "A minister wants to speak to the Chancellor."))
+                    kind = relationship_issue.get("kind")
+                    if kind == "lobbying":
+                        cols = st.columns(3)
+                        with cols[0]:
+                            if st.button("Agree funding", key="cabinet_issue_fund", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("fund")
+                                st.rerun()
+                        with cols[1]:
+                            if st.button("Request a plan", key="cabinet_issue_plan", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("plan")
+                                st.rerun()
+                        with cols[2]:
+                            if st.button("Refuse", key="cabinet_issue_refuse", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("refuse")
+                                st.rerun()
+                    elif kind == "briefing":
+                        cols = st.columns(3)
+                        with cols[0]:
+                            if st.button("Mediate", key="cabinet_issue_mediate", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("mediate")
+                                st.rerun()
+                        with cols[1]:
+                            if st.button("Back the minister", key="cabinet_issue_back", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("back")
+                                st.rerun()
+                        with cols[2]:
+                            if st.button("Warn both", key="cabinet_issue_warn", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("warn")
+                                st.rerun()
+                    elif kind == "resignation":
+                        cols = st.columns(2)
+                        with cols[0]:
+                            if st.button("Offer a compromise", key="cabinet_issue_compromise", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("compromise")
+                                st.rerun()
+                        with cols[1]:
+                            if st.button("Stand firm", key="cabinet_issue_stand", use_container_width=True):
+                                cabinet_management.resolve_relationship_issue("stand")
+                                st.rerun()
                 meeting_tick = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
                 if s.get("ministerial_meeting_year") != meeting_tick:
                     meeting_dept = st.selectbox(

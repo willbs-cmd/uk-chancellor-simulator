@@ -6,6 +6,7 @@ removes Cabinet ministers.
 """
 import streamlit as st
 import budget
+import random
 
 OPENING_COMPETENCE = {
     "health": 66.0, "education": 63.0, "welfare": 61.0, "justice": 58.0,
@@ -31,6 +32,9 @@ def ensure(s=None):
     s.setdefault("ministerial_delivery_commitments", {})
     s.setdefault("ministerial_rivalries", {})
     s.setdefault("ministerial_rivalry_history", [])
+    s.setdefault("ministerial_relationship_issue", None)
+    s.setdefault("ministerial_relationship_issue_year", "")
+    s.setdefault("ministerial_relationship_history", [])
     competence = dict(s.get("ministerial_competence", {}))
     for key in budget.DEPARTMENT_MINISTERS:
         competence.setdefault(key, OPENING_COMPETENCE.get(key, 60.0))
@@ -88,6 +92,7 @@ def annual_review(s=None):
     s.ministerial_delivery_commitments = commitments
     s.ministerial_delivery_history = (list(s.get("ministerial_delivery_history", [])) + [{"year": tick, "rows": rows}])[-20:]
     update_rivalries(s)
+    generate_relationship_issue(s, tick)
 
 
 
@@ -211,5 +216,145 @@ def hold_private_meeting(department, approach):
     s.message = outcome
     s.humphrey_note = "A private ministerial conversation can improve cooperation, but departmental delivery still depends on resources, staff and demand."
     state.log("politics", f"Private meeting with {current}", choice=approach.title(), before=before, note=outcome)
+    state.record()
+    return True
+
+
+def generate_relationship_issue(s=None, tick=None):
+    """Generate at most one deterministic ministerial incident per game year."""
+    s = s or st.session_state
+    ensure(s)
+    tick = tick or f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+    if s.get("ministerial_relationship_issue_year") == tick:
+        return s.get("ministerial_relationship_issue")
+    s.ministerial_relationship_issue_year = tick
+    if s.get("ministerial_relationship_issue"):
+        return s.get("ministerial_relationship_issue")
+    cabinet = s.get("cabinet_ministers", {})
+    active = [(k, str(v)) for k, v in cabinet.items()
+              if v and not str(v).startswith(("Vacant", "New appointment"))]
+    if not active:
+        return None
+    rng = random.Random(f"{s.get('seed', 0)}:{tick}:cabinet-relationships")
+    loyalty = s.get("ministerial_loyalty", {})
+    vulnerable = [(k, n) for k, n in active if float(loyalty.get(k, 60)) <= 35]
+    latest = list(s.get("ministerial_rivalry_history", []))
+    rows = latest[-1].get("rows", []) if latest else []
+    serious = [r for r in rows if float(r.get("tension", 0)) >= 55]
+    if vulnerable:
+        dept, minister = min(vulnerable, key=lambda x: float(loyalty.get(x[0], 60)))
+        issue = {"kind": "resignation", "department": dept, "minister": minister,
+                 "text": f"{minister} privately warns that continued Treasury opposition may leave them unable to remain in Cabinet."}
+    elif serious and rng.random() < 0.72:
+        row = rng.choice(serious)
+        pair = str(row.get("key", "")).split("|")
+        if len(pair) != 2:
+            return None
+        dept, rival_dept = pair
+        minister, rival = str(cabinet.get(dept, "")), str(cabinet.get(rival_dept, ""))
+        issue = {"kind": "briefing", "department": dept, "minister": minister,
+                 "rival_department": rival_dept, "rival": rival, "tension": float(row.get("tension", 55)),
+                 "text": f"Reports suggest {minister} has been briefing privately against {rival} over overlapping responsibilities and influence with Number 10."}
+    elif rng.random() < 0.58:
+        dept, minister = rng.choice(active)
+        cost = round(rng.uniform(1.0, 3.5), 1)
+        issue = {"kind": "lobbying", "department": dept, "minister": minister, "cost": cost,
+                 "text": f"{minister} wants a private meeting and is pressing the Treasury for £{cost:.1f}bn of extra departmental support."}
+    else:
+        return None
+    issue.update({"year": int(s.get("year", 1)), "term": int(s.get("term", 1)), "tick": tick})
+    s.ministerial_relationship_issue = issue
+    return issue
+
+
+def resolve_relationship_issue(choice):
+    """Resolve a ministerial approach without giving the Chancellor PM appointment powers."""
+    s = st.session_state
+    ensure(s)
+    issue = s.get("ministerial_relationship_issue")
+    if not issue:
+        return False
+    kind, dept = issue.get("kind"), issue.get("department")
+    minister = str(issue.get("minister", "Cabinet minister"))
+    loyalty = dict(s.get("ministerial_loyalty", {}))
+    import state
+    state.checkpoint()
+    before = state.values()
+    state.snapshot()
+    if kind == "lobbying":
+        cost = float(issue.get("cost", 1.0))
+        if choice == "fund":
+            s.headroom = round(float(s.get("headroom", 0)) - cost, 1)
+            s.deficit = round(float(s.get("deficit", 0)) + cost, 1)
+            loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 7)
+            s.cab_opinion = min(100.0, float(s.get("cab_opinion", 50)) + 0.5)
+            outcome = f"You agree £{cost:.1f}bn of extra support for {minister}. Relations improve, but borrowing rises."
+        elif choice == "plan":
+            loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 2)
+            plans = dict(s.get("ministerial_delivery_commitments", {}))
+            plans[dept] = issue.get("tick", "")
+            s.ministerial_delivery_commitments = plans
+            outcome = f"You ask {minister} for a costed delivery plan before agreeing extra money."
+        elif choice == "refuse":
+            loyalty[dept] = max(0.0, float(loyalty.get(dept, 60)) - 6)
+            refusals = dict(s.get("ministerial_refusals", {}))
+            refusals[minister] = int(refusals.get(minister, 0)) + 1
+            s.ministerial_refusals = refusals
+            outcome = f"You reject {minister}'s request. Their loyalty falls and they may take the argument to Cabinet."
+        else:
+            return False
+    elif kind == "briefing":
+        rival_dept, rival = issue.get("rival_department"), str(issue.get("rival", "the rival minister"))
+        tensions = dict(s.get("ministerial_rivalries", {}))
+        key = f"{dept}|{rival_dept}"
+        tension = float(tensions.get(key, issue.get("tension", 55)))
+        if choice == "mediate":
+            tensions[key] = max(0.0, tension - 12)
+            loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 2)
+            loyalty[rival_dept] = min(100.0, float(loyalty.get(rival_dept, 60)) + 2)
+            s.cab_opinion = min(100.0, float(s.get("cab_opinion", 50)) + 1)
+            outcome = f"You bring {minister} and {rival} together and clarify their overlapping responsibilities."
+        elif choice == "back":
+            tensions[key] = min(100.0, tension + 8)
+            loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 4)
+            loyalty[rival_dept] = max(0.0, float(loyalty.get(rival_dept, 60)) - 5)
+            s.cab_opinion = max(0.0, float(s.get("cab_opinion", 50)) - 1)
+            outcome = f"You back {minister}'s account. They are grateful, but {rival} feels isolated and Cabinet tensions worsen."
+        elif choice == "warn":
+            tensions[key] = max(0.0, tension - 5)
+            loyalty[dept] = max(0.0, float(loyalty.get(dept, 60)) - 1)
+            loyalty[rival_dept] = max(0.0, float(loyalty.get(rival_dept, 60)) - 1)
+            outcome = f"You warn both ministers that briefing against colleagues is unacceptable."
+        else:
+            return False
+        s.ministerial_rivalries = tensions
+    elif kind == "resignation":
+        if choice == "compromise":
+            cost = 1.5
+            s.headroom = round(float(s.get("headroom", 0)) - cost, 1)
+            s.deficit = round(float(s.get("deficit", 0)) + cost, 1)
+            loyalty[dept] = min(100.0, float(loyalty.get(dept, 30)) + 18)
+            s.pm_opinion = min(100.0, float(s.get("pm_opinion", 50)) + 1)
+            outcome = f"You offer a £{cost:.1f}bn compromise to keep {minister} in Cabinet."
+        elif choice == "stand":
+            loyalty[dept] = max(0.0, float(loyalty.get(dept, 30)) - 12)
+            outcome = f"You refuse to be pressured by {minister}. Their loyalty collapses."
+            if loyalty[dept] <= 15:
+                record_resignation(s, dept, "Resigned after an unresolved dispute with the Chancellor")
+                outcome += " They resign; the post is vacant pending a Prime Ministerial appointment."
+        else:
+            return False
+    else:
+        return False
+    s.ministerial_loyalty = loyalty
+    s.ministerial_relationship_issue = None
+    history = list(s.get("ministerial_relationship_history", []))
+    history.append({"year": issue.get("tick", ""), "kind": kind, "minister": minister,
+                    "choice": choice, "outcome": outcome})
+    s.ministerial_relationship_history = history[-20:]
+    s.message = outcome
+    s.humphrey_note = "You can negotiate funding and relationships as Chancellor; only the Prime Minister appoints or dismisses ministers."
+    state.log("politics", f"Cabinet approach: {minister}", choice=choice.title(),
+              before=before, note=outcome)
     state.record()
     return True
