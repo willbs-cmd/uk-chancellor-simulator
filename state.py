@@ -258,7 +258,7 @@ def _defaults():
         cabinet_ministers={}, ministerial_loyalty={}, ministerial_competence={}, ministerial_delivery_history=[],
         ministerial_review_year="", ministerial_meeting_year="", ministerial_review_history=[], ministerial_delivery_commitments={}, ministerial_rivalries={}, ministerial_rivalry_history=[],
         ministerial_resignations=[], ministerial_refusals={}, active_dispute=None,
-        ministerial_relationship_issue=None, ministerial_relationship_issue_year="", ministerial_relationship_history=[], ministerial_profiles={}, ministerial_profiles={},
+        ministerial_relationship_issue=None, ministerial_relationship_issue_year="", ministerial_relationship_history=[], ministerial_profiles={},
         spending_review_last_period='', spending_review_plan={}, spending_review_history=[], spending_review_due=False,
         local_grant_uplift_bn=0.0, barnett_pass_through_pct=100, council_tax_referendum_threshold=5.0,
         social_care_precept_cap=2.0, regional_growth_fund_bn=0.0, local_finance_pressure=42.0,
