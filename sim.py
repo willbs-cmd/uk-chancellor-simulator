@@ -427,11 +427,17 @@ def check(n=None, difficulty=None):
         aftermath_state = st.session_state
         previous = {k: (dict(v) if isinstance(v, dict) else v) for k, v in budget.read().items()}
         draft = {k: (dict(v) if isinstance(v, dict) else v) for k, v in previous.items()}
-        draft['spend']['public_sector_pay'] = float(draft['spend'].get('public_sector_pay', 0.0)) + 1.0
+        draft['spend']['public_sector_pay'] = -2.0
+        draft['spend']['health'] = -2.0
+        draft['tax']['corp'] = float(draft['tax'].get('corp', 25.0)) + 2.0
+        draft['tax']['income'] = float(draft['tax'].get('income', 20.0)) + 1.0
+        draft['spend_pol']['nuclear'] = True
         before_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in ('business_confidence', 'household_confidence', 'officials_confidence')}
         record = budget_aftermath.create(aftermath_state, previous, draft,
             {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget')
         assert record is not None and len(aftermath_state.budget_aftermath_pending) == 1, "Budget aftermath was not queued."
+        event_kinds = {item['kind'] for item in record.get('specific_events', [])}
+        assert {'industrial_action_risk', 'nhs_delivery_pressure', 'business_tax_review', 'investment_commitment', 'household_tax_squeeze'} <= event_kinds, f"Specific Budget reactions missing: {event_kinds}"
         assert budget_aftermath.create(aftermath_state, previous, draft,
             {'market': 2.0, 'growth': 0.2, 'approval': 1.0, 'real_wages': 0.3, 'headroom': 1.5}, 'Spring Budget') is None, "Duplicate Budget aftermath was queued."
         saved_headroom = float(aftermath_state.headroom)
