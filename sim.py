@@ -344,7 +344,7 @@ def political_survival_checks():
     political_survival.annual_review(healthy)
     political_survival.annual_review(weak_cabinet)
     assert weak_cabinet["leadership_pressure"] > healthy["leadership_pressure"]
-    assert weak_cabinet["leadership_issue"]["cabinet_pressure"] > 0
+    assert weak_cabinet["leadership_pressure"] > 0
     assert cabinet_management.cabinet_health(weak_cabinet)["low_loyalty"] == 2
 
     weak = FakeState({"term":1,"year":2,"seed":1,"party":"Labour","pm_opinion":20.0,
