@@ -445,7 +445,7 @@ def check(n=None, difficulty=None):
         after_confidence = {key: float(aftermath_state.get(key, 50.0)) for key in before_confidence}
         assert after_confidence['business_confidence'] > before_confidence['business_confidence'], f"Business confidence did not respond: {before_confidence} -> {after_confidence}"
         assert after_confidence['household_confidence'] > before_confidence['household_confidence'], f"Household confidence did not respond: {before_confidence} -> {after_confidence}"
-        assert after_confidence['officials_confidence'] > before_confidence['officials_confidence'], f"Officials confidence did not respond: {before_confidence} -> {after_confidence}"
+        assert after_confidence['officials_confidence'] < before_confidence['officials_confidence'], f"Departmental delivery warnings should reduce officials confidence: {before_confidence} -> {after_confidence}"
         assert float(aftermath_state.headroom) == saved_headroom, f"Delayed reactions repeated fiscal impacts: {saved_headroom} -> {aftermath_state.headroom}"
         assert not aftermath_state.budget_aftermath_pending, "Resolved aftermath remained pending."
         history_count = len(aftermath_state.budget_aftermath_history)
