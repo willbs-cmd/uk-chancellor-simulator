@@ -3025,6 +3025,119 @@ section[data-testid="stSidebar"] [data-testid="stDivider"] {
   }
 }
 
+
+/* SIDEBAR OVERLAP FIX — restore real vertical separation between Streamlit blocks.
+   The previous compact pass reduced the sidebar's block gap too aggressively. */
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+  gap:.68rem !important;
+  row-gap:.68rem !important;
+}
+section[data-testid="stSidebar"] .desk-brand {
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-height:58px !important;
+  height:auto !important;
+  box-sizing:border-box !important;
+  padding:5px 2px 10px !important;
+  margin:0 0 5px !important;
+  overflow:visible !important;
+}
+section[data-testid="stSidebar"] .desk-brand > div:last-child {
+  min-width:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+}
+section[data-testid="stSidebar"] .desk-monogram {
+  flex:0 0 42px !important;
+  width:42px !important;
+  height:42px !important;
+}
+section[data-testid="stSidebar"] .desk-title {
+  line-height:1.15 !important;
+  white-space:normal !important;
+}
+section[data-testid="stSidebar"] .desk-period {
+  display:flex !important;
+  flex-direction:column !important;
+  gap:4px !important;
+  min-height:92px !important;
+  height:auto !important;
+  box-sizing:border-box !important;
+  padding:10px 11px !important;
+  margin:0 0 8px !important;
+  overflow:visible !important;
+}
+section[data-testid="stSidebar"] .desk-period > span,
+section[data-testid="stSidebar"] .desk-period > strong,
+section[data-testid="stSidebar"] .desk-period > small {
+  display:block !important;
+  line-height:1.3 !important;
+  margin:0 !important;
+}
+section[data-testid="stSidebar"] .desk-section-title {
+  display:block !important;
+  min-height:14px !important;
+  height:auto !important;
+  line-height:1.3 !important;
+  margin:9px 0 5px !important;
+  padding:1px 0 !important;
+  overflow:visible !important;
+}
+section[data-testid="stSidebar"] .desk-grid {
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:7px !important;
+  margin:0 0 5px !important;
+  padding:0 !important;
+}
+section[data-testid="stSidebar"] .desk-tile {
+  min-height:58px !important;
+  height:auto !important;
+  box-sizing:border-box !important;
+  justify-content:center !important;
+  padding:7px 8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+  flex:0 0 auto !important;
+  min-height:46px !important;
+  height:auto !important;
+  margin:2px 0 3px !important;
+  overflow:visible !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  min-height:44px !important;
+  height:auto !important;
+  padding:9px 10px !important;
+  line-height:1.3 !important;
+  white-space:normal !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  padding:7px 10px 10px !important;
+}
+section[data-testid="stSidebar"] .desk-warning {
+  min-height:30px !important;
+  height:auto !important;
+  box-sizing:border-box !important;
+  margin:4px 0 !important;
+  padding:7px 8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stDivider"] {
+  margin:10px 0 7px !important;
+}
+@media(max-width:760px) {
+  section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap:.72rem !important;
+    row-gap:.72rem !important;
+  }
+  section[data-testid="stSidebar"] .desk-period { min-height:96px !important; }
+  section[data-testid="stSidebar"] .desk-section-title { margin-top:11px !important; }
+}
+
 </style>
 """
 
