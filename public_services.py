@@ -240,16 +240,24 @@ def resolve_strike(strike_id, choice):
         ]
         outcome = f"You appoint an independent mediator, spending £{mediation_cost:.1f}bn on a temporary package. The dispute is paused for now; unions will return if no lasting agreement is reached."
     elif choice == "hold":
-        scores["NHS" if strike_id == "NHS workforce" else ("Education" if strike_id == "Education workforce" else "Local government")] = _clip(
-            scores.get("NHS", 50) - 1.5 - severity * 0.4, 10, 95)
+        service_key = ("NHS" if strike_id == "NHS workforce" else
+                       "Education" if strike_id == "Education workforce" else "Local government")
+        scores[service_key] = _clip(scores.get(service_key, 50) - 1.5 - severity * 0.4, 10, 95)
         s.approval = _clip(float(s.approval) - 0.7 - severity * 0.2)
         if strike_id == "NHS workforce":
             c = dict(s.get("country", {})); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) - 4); s.country = c
-        outcome = "You refuse extra funding. The Treasury avoids the immediate bill, but disruption and staff morale worsen."
+        # Holding the line does not magically end industrial action: the dispute
+        # remains live and can escalate at the next annual public-services tick.
+        s.public_service_strikes = [
+            ({**x, "severity": round(min(3.0, float(x.get("severity", 1.0)) + 0.25), 1),
+              "text": x.get("text", "") + " The Chancellor has refused further funding; unions maintain their action."})
+            if x.get("id") == strike_id else x for x in s.public_service_strikes
+        ]
+        outcome = "You refuse extra funding. The Treasury avoids the immediate bill, but the strike continues, morale deteriorates and disruption is likely to deepen."
     else:
         return
     s.public_service_scores = scores
-    if choice != "mediate":
+    if choice == "settle":
         s.public_service_strikes = [x for x in s.public_service_strikes if x.get("id") != strike_id]
     s.public_service_resolved = (list(s.public_service_resolved) + [{
         "year": f"Term {s.get('term', 1)}, Year {s.get('year', 1)}",
