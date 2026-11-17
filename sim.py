@@ -396,6 +396,36 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Cabinet management regression failed: {exc}")
 
+    # Budget vote margins should create distinct, bounded political and market consequences.
+    try:
+        vote_state = type("VoteState", (), {})()
+        vote_state._data = {
+            "pm_opinion": 70.0, "party_opinion": 65.0, "backbench_opinion": 60.0,
+            "market_conf": 60.0, "approval": 50.0, "gilt_yield": 4.0, "event_cards": [],
+        }
+        vote_state.get = lambda key, default=None: vote_state._data.get(key, default)
+        vote_state.__setitem__ = lambda key, value: vote_state._data.__setitem__(key, value)
+        vote_state.__getitem__ = lambda key: vote_state._data[key]
+        vote_state.__class__.__getitem__ = lambda self, key: self._data[key]
+        vote_state.__class__.__setitem__ = lambda self, key, value: self._data.__setitem__(key, value)
+        knife = engine._budget_vote_consequences(vote_state, budget.WIN + 4)
+        assert knife["result"] == "Knife-edge victory" and knife["margin"] == 4
+        assert vote_state["backbench_opinion"] == 57.0
+        assert vote_state["market_conf"] == 59.2
+        vote_state._data.update({"pm_opinion": 70.0, "party_opinion": 65.0, "backbench_opinion": 60.0,
+                                 "market_conf": 60.0, "approval": 50.0, "gilt_yield": 4.0, "event_cards": []})
+        landslide = engine._budget_vote_consequences(vote_state, budget.WIN + 60)
+        assert landslide["result"] == "Landslide victory" and landslide["margin"] == 60
+        assert vote_state["backbench_opinion"] == 62.0
+        assert vote_state["market_conf"] == 60.6
+        assert vote_state["gilt_yield"] == 3.96
+        defeat = engine._budget_vote_consequences(vote_state, budget.WIN - 3)
+        assert defeat["result"] == "Defeat" and defeat["margin"] == -3
+        assert vote_state["market_conf"] == 56.6
+        assert vote_state["budget_vote_result"]["noes"] == 650 - (budget.WIN - 3)
+    except Exception as exc:
+        failures.append(f"Budget vote consequences regression failed: {exc}")
+
     # Every standard and conditional policy decision must expose six matched options.
     try:
         decision_content = load_json('decisions.json')

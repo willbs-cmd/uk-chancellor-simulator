@@ -580,11 +580,16 @@ def budget_screen():
         left, right = st.columns([3, 2], gap='large')
         with left:
             st.markdown("<div class='pane-title'>Parliamentary vote</div>", unsafe_allow_html=True)
-            ayes = s.get('vote_ayes') or budget.commons_ayes()
-            txt = f'**Ayes:** {ayes} | **Noes:** {650 - ayes}'
-            if ayes >= budget.WIN + 40: st.success(f'**House of Commons:** The Budget passed with a thumping majority!\n\n{txt}')
-            elif ayes >= budget.WIN + 15: st.info(f'**House of Commons:** The Budget passed.\n\n{txt}')
-            else: st.warning(f'**House of Commons:** The Budget barely scraped through!\n\n{txt}')
+            vote_result = s.get('budget_vote_result') or {}
+            ayes = int(vote_result.get('ayes', s.get('vote_ayes') or budget.commons_ayes()))
+            margin = int(vote_result.get('margin', ayes - budget.WIN))
+            txt = f'**Ayes:** {ayes} | **Noes:** {650 - ayes} | **Majority over threshold:** {margin:+d}'
+            if margin >= 50: st.success(f'**House of Commons:** Landslide Budget victory.\\n\\n{txt}')
+            elif margin >= 25: st.success(f'**House of Commons:** Comfortable Budget victory.\\n\\n{txt}')
+            elif margin >= 10: st.info(f'**House of Commons:** Narrow Budget victory.\\n\\n{txt}')
+            else: st.warning(f'**House of Commons:** Knife-edge Budget victory.\\n\\n{txt}')
+            if vote_result.get('summary'):
+                st.caption(vote_result['summary'])
             speech_data=s.get('budget_speech') or {}
             st.markdown(f"#### {event_name} speech")
             if speech_data.get('text'): st.markdown('> '+speech_data['text'])

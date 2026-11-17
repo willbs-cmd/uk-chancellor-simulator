@@ -949,6 +949,49 @@ def resolve_ministerial_dispute(choice):
 
 
 # ================================================================ the budget & the spring tick
+def _budget_vote_consequences(s, ayes):
+    """Record a Commons result once and apply proportionate political/market fallout."""
+    required = int(budget.WIN)
+    margin = int(ayes) - required
+    if margin < 0:
+        result = "Defeat"
+        effects = {"pm_opinion": -8.0, "party_opinion": -8.0, "backbench_opinion": -7.0,
+                   "market_conf": -4.0, "approval": -2.0, "gilt_yield": 0.12}
+        summary = f"The Budget is defeated by {abs(margin)} votes. The Government's authority and market confidence are badly damaged."
+    elif margin < 10:
+        result = "Knife-edge victory"
+        effects = {"pm_opinion": -2.5, "party_opinion": -2.0, "backbench_opinion": -3.0,
+                   "market_conf": -0.8, "approval": -0.4, "gilt_yield": 0.03}
+        summary = "The Budget scrapes through by fewer than ten votes. Number 10 questions the Chancellor's grip on the parliamentary party."
+    elif margin < 25:
+        result = "Narrow victory"
+        effects = {"pm_opinion": 0.3, "party_opinion": 0.6, "backbench_opinion": -0.8,
+                   "market_conf": 0.1, "approval": 0.0, "gilt_yield": 0.0}
+        summary = "The Budget passes, but the modest majority leaves the Whips warning that future divisions will need careful handling."
+    elif margin < 50:
+        result = "Comfortable victory"
+        effects = {"pm_opinion": 1.2, "party_opinion": 1.5, "backbench_opinion": 1.0,
+                   "market_conf": 0.4, "approval": 0.3, "gilt_yield": -0.02}
+        summary = "A comfortable Commons majority strengthens the Chancellor's position and reassures financial markets."
+    else:
+        result = "Landslide victory"
+        effects = {"pm_opinion": 2.0, "party_opinion": 2.0, "backbench_opinion": 2.0,
+                   "market_conf": 0.6, "approval": 0.5, "gilt_yield": -0.04}
+        summary = "The Budget wins a commanding majority. The Chancellor's authority is strengthened across Parliament."
+    for key, change in effects.items():
+        current = float(s.get(key, 0.0))
+        updated = current + change
+        s[key] = round(_clip(updated), 2) if key != "gilt_yield" else round(max(0.1, updated), 2)
+    record = {"result": result, "ayes": int(ayes), "noes": 650 - int(ayes),
+              "required": required, "margin": margin, "summary": summary}
+    s.budget_vote_result = record
+    s.vote_ayes = int(ayes)
+    s.event_cards = list(s.get("event_cards", []))
+    s.event_cards.append({"title": f"Commons vote · {result}", "text": summary,
+                          "summary": f"{ayes} ayes · {650 - int(ayes)} noes · {margin:+d} against the threshold"})
+    return record
+
+
 def submit_budget():
     """Submit the Budget. Applies any unapplied slider changes, delivers the revolt penalties, then holds the vote.
 
@@ -1074,10 +1117,12 @@ def submit_budget():
     budget.apply_irritants()
     politics.check_pledges()
     ayes = budget.commons_ayes()
+    vote_result = _budget_vote_consequences(s, ayes)
     if ayes < budget.WIN:
         s.sacked = True
-        s.sacked_reason = (f"Your backbenchers revolted and the Budget fell by {budget.WIN - ayes} votes ({ayes} ayes). "
+        s.sacked_reason = (f"The Commons defeated your Budget by {budget.WIN - ayes} votes ({ayes} ayes to {650 - ayes} noes). "
                            "Losing a Budget is treated as an automatic vote of no confidence. The Government has collapsed.")
+        s.message = vote_result["summary"]
         end_run('sacked')
         return 'sacked'
     if s.approval < 40:
