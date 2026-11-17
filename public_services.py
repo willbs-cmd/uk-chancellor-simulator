@@ -47,6 +47,18 @@ def productivity_growth_effect(scores):
     return round(_clip((weighted_score - 60.0) * 0.005, -0.12, 0.12), 3)
 
 
+def employment_unemployment_effect(scores):
+    """Annual unemployment change (percentage points) from public-service capability."""
+    weights = {
+        "Education": 0.30, "NHS": 0.25, "Transport": 0.20,
+        "Local government": 0.15, "Justice": 0.10,
+    }
+    weighted_score = sum(float(scores.get(key, SERVICES[key]["start"])) * weight
+                         for key, weight in weights.items())
+    # Skills, health, transport and local support make it easier to enter and remain in work.
+    return round(_clip((60.0 - weighted_score) * 0.0025, -0.06, 0.06), 3)
+
+
 def ensure(s=None):
     s = s or st.session_state
     scores = dict(s.get("public_service_scores", {}))
@@ -110,6 +122,19 @@ def advance(s=None):
     # skills, labour participation and the reliability of the wider economy.
     s.public_service_productivity_effect = productivity_growth_effect(scores)
 
+    # A separate, small labour-supply channel: service capability affects how easily
+    # people can gain or retain work. The tax-receipt effect follows through the
+    # existing living-economy update in the next year.
+    employment_effect = employment_unemployment_effect(scores)
+    country_stats = dict(s.get("country", {}))
+    if "unemployment" in country_stats:
+        bounds = country.STATS["unemployment"]
+        country_stats["unemployment"] = round(_clip(
+            float(country_stats["unemployment"]) + employment_effect,
+            bounds["lo"], bounds["hi"]), 2)
+        s.country = country_stats
+    s.public_service_employment_effect = employment_effect
+
     # Pay settlements and staff morale create a separate, visible industrial-relations risk.
     pay_ratio = _department_ratio(s, "public_sector_pay")
     inflation = float(s.get("inflation", 2.0))
@@ -141,6 +166,7 @@ def advance(s=None):
     s.public_service_history = (list(s.public_service_history) + [{
         "Year": f"Term {s.get('term', 1)}, Year {s.get('year', 1)}",
         **scores,
+        "Employment effect (pp unemployment)": employment_effect,
         "Productivity growth effect (pp)": s.public_service_productivity_effect,
     }])[-20:]
     s.public_service_year_notes = notes
@@ -231,4 +257,11 @@ def render():
     if s.public_service_resolved:
         with st.expander("Industrial relations history"):
             st.dataframe(list(reversed(s.public_service_resolved)), hide_index=True, use_container_width=True)
-    st.caption("More funding improves the odds of better outcomes, but workforce shortages, inflation, demand and delivery capacity can delay or dilute the benefit.")
+    employment_effect = float(s.get("public_service_employment_effect", 0.0))
+    productivity_effect = float(s.get("public_service_productivity_effect", 0.0))
+    st.caption(
+        f"Annual economic spillover: public-service capability changes unemployment by "
+        f"{employment_effect:+.2f} percentage points and contributes {productivity_effect:+.2f} "
+        f"percentage points to productivity growth. These are gradual, bounded effects; "
+        "workforce shortages, inflation, demand and delivery capacity can delay or dilute improvements."
+    )
