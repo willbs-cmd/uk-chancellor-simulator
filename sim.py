@@ -229,7 +229,7 @@ def cabinet_rivalry_checks():
         "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
         "ministerial_competence": {"health": 90.0, "social_care": 40.0},
         "ministerial_loyalty": {"health": 90.0, "social_care": 40.0},
-        "ministerial_refusals": {}, "ministerial_rivalries": {},
+        "ministerial_refusals": {}, "ministerial_rivalries": {"health|social_care": 80.0},
         "ministerial_rivalry_history": [], "ministerial_resignations": [],
         "ministerial_vacancy_year": {}, "public_service_scores": {},
         "public_service_history": [], "ministerial_delivery_history": [],

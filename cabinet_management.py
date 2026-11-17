@@ -135,11 +135,22 @@ def update_rivalries(s=None):
     return rows
 
 
+REQUEST_PORTFOLIO = {
+    "Health Secretary": "health", "Defence Secretary": "defence",
+    "Education Secretary": "education", "Transport Secretary": "transport",
+    "Home Secretary": "justice", "Foreign Secretary": "aid",
+    "Science Secretary": "science", "Culture Secretary": "culture",
+}
+
+
 def record_resignation(s, minister, reason):
     """Record a departure and leave the affected portfolio vacant for Number 10 to fill."""
     cabinet = dict(s.get("cabinet_ministers", {}))
     department = next((key for key, name in cabinet.items() if str(name) == str(minister)), None)
-    if department is not None:
+    if department is None:
+        department = REQUEST_PORTFOLIO.get(str(minister))
+    departing_name = cabinet.get(department, str(minister)) if department else str(minister)
+    if department is not None and department in cabinet:
         cabinet[department] = "Vacant — awaiting Prime Minister"
         s.cabinet_ministers = cabinet
         vacancies = dict(s.get("ministerial_vacancy_year", {}))
@@ -153,9 +164,9 @@ def record_resignation(s, minister, reason):
         s.ministerial_competence = competence
     resignations = list(s.get("ministerial_resignations", []))
     resignations.append({
-        "minister": str(minister), "year": int(s.get("year", 1)),
-        "term": int(s.get("term", 1)), "reason": str(reason),
-        "department": department,
+        "minister": str(departing_name), "portfolio": str(minister),
+        "year": int(s.get("year", 1)), "term": int(s.get("term", 1)),
+        "reason": str(reason), "department": department,
     })
     s.ministerial_resignations = resignations[-20:]
     return department
