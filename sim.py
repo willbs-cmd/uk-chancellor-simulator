@@ -305,6 +305,24 @@ def political_survival_checks():
     assert political_survival.annual_review(weak) is not None
     assert political_survival.resolve(weak,"stay_neutral")
     assert weak["leadership_issue"] is None
+    # Force a reproducible successful leadership challenge, then test the incoming PM's decision.
+    weak.update({"leadership_issue":{"year":3,"term":1,"pressure":65.0,"challenger":"the Deputy Leader"},
+        "current_prime_minister":"The Prime Minister","pm_transition_issue":None,"pm_history":[],
+        "chancellor_appointment_history":[],"chancellor_status":"incumbent","game_over":None})
+    for candidate_seed in range(1,500):
+        raw=f"{candidate_seed}:1:3:leadership-challenge"
+        roll=int(hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8],16)%100
+        if roll < 58:
+            weak.seed=candidate_seed
+            break
+    assert political_survival.resolve(weak,"back_challenger")
+    assert weak["pm_transition_issue"] is not None, "A strong successful challenge should trigger a new PM appointment review."
+    assert political_survival.resolve_transition(weak,"retain")
+    assert weak["pm_transition_issue"] is None and weak["chancellor_status"]=="retained"
+    assert weak["pm_trust"] >= 60 and weak["pm_history"][-1]["decision"]=="retain"
+    weak["pm_transition_issue"]={"year":3,"term":1,"new_pm":"the Deputy Leader","previous_pm":"The Prime Minister"}
+    assert political_survival.resolve_transition(weak,"dismiss")
+    assert weak["chancellor_status"]=="dismissed" and weak["game_over"]["kind"]=="sacked"
     return True
 
 

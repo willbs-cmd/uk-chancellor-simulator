@@ -63,7 +63,30 @@ def resolve(s,choice):
         s.pm_opinion=round(_clip(float(s.get("pm_opinion",50))-3),1)
         s.party_opinion=round(_clip(float(s.get("party_opinion",50))+(2.5 if pressure>=35 else 1)),1)
         s.backbench_opinion=round(_clip(float(s.get("backbench_opinion",50))+(2 if pressure>=35 else .5)),1)
-        outcome="You privately signal that the party needs a change. Restless MPs welcome the signal, but the PM may regard you as disloyal."
+        chance=min(85,max(20,int(pressure*.9)))
+        if _roll(s,"leadership-challenge") < chance:
+            previous=str(s.get("current_prime_minister","The Prime Minister"))
+            new_pm=str(issue.get("challenger","A senior party figure"))
+            styles={
+                "Labour":("Public investment and service reform","Growth through skills, infrastructure and public services"),
+                "Conservative":("Tax restraint and private-sector growth","Lower taxes, spending discipline and business investment"),
+                "Liberal Democrats":("Public service renewal and constitutional reform","Local growth, public services and political reform"),
+                "Reform UK":("Tax reduction and state reform","Smaller government, lower taxes and tighter spending"),
+                "Green Party":("Green investment and redistribution","Climate investment, public ownership and inequality reduction"),
+                "SNP":("Public investment and constitutional priorities","Scottish economic powers and public service investment"),
+                "Plaid Cymru":("Welsh investment and regional renewal","Regional development, public services and devolution"),
+            }
+            priorities=styles.get(str(s.get("party","")),("A new political direction","Economic stability and party renewal"))
+            s.current_prime_minister=new_pm
+            s.pm_profile={"priority":priorities[0],"approach":priorities[1],"party":str(s.get("party",""))}
+            s.pm_transition_issue={"year":int(s.get("year",1)),"term":int(s.get("term",1)),
+                "previous_pm":previous,"new_pm":new_pm,"pressure":pressure,
+                "priority":priorities[0],"approach":priorities[1]}
+            s.pm_opinion=58.0
+            s.pm_trust=48.0
+            outcome=f"The leadership challenge succeeds. {new_pm} becomes Prime Minister and is reviewing the Treasury team. You must establish whether you have a place in the new administration."
+        else:
+            outcome="You privately back the challenger, but the leadership challenge fails. The Prime Minister survives and now knows where your loyalties lay."
     else:
         s.pm_trust=round(_clip(float(s.get("pm_trust",70))-1),1)
         s.party_opinion=round(_clip(float(s.get("party_opinion",50))+.5),1)
@@ -79,9 +102,55 @@ def resolve(s,choice):
     return True
 
 
+def resolve_transition(s, choice):
+    """The incoming Prime Minister decides whether the Chancellor stays in post."""
+    issue=s.get("pm_transition_issue")
+    if not issue or choice not in {"retain","dismiss"}:
+        return False
+    if choice=="retain":
+        s.pm_trust=round(_clip(float(s.get("pm_trust",48))+17),1)
+        s.pm_opinion=round(_clip(float(s.get("pm_opinion",58))+7),1)
+        s.cab_opinion=round(_clip(float(s.get("cab_opinion",50))+2),1)
+        s.chancellor_status="retained"
+        outcome=f"{issue.get('new_pm','The new Prime Minister')} confirms that you will remain Chancellor. You have survived the transition, but must now deliver the new administration's priorities."
+    else:
+        s.chancellor_status="dismissed"
+        s.sacked=True
+        s.sacked_reason=f"{issue.get('new_pm','The new Prime Minister')} has appointed a different Chancellor as part of the new administration."
+        s.game_over={"kind":"sacked","title":"Removed by the new Prime Minister","text":s.sacked_reason}
+        outcome=s.sacked_reason
+    s.pm_transition_issue=None
+    record={"year":int(issue.get("year",s.get("year",1))),"term":int(issue.get("term",s.get("term",1))),
+        "previous_pm":issue.get("previous_pm"),"new_pm":issue.get("new_pm"),
+        "decision":choice,"outcome":outcome,"priority":issue.get("priority")}
+    s.pm_history=(list(s.get("pm_history",[]))+[record])[-20:]
+    s.chancellor_appointment_history=(list(s.get("chancellor_appointment_history",[]))+[record])[-20:]
+    s.message=outcome
+    s.humphrey_note="A new Prime Minister is entitled to a fresh team. It is customary to pretend this was always the plan."
+    return True
+
+
 def render(s):
+    if s.get("game_over") or s.get("step")!="game": return
+    transition=s.get("pm_transition_issue")
+    if transition:
+        st.markdown("### 🏛️ A new Prime Minister takes office")
+        st.warning(f"{transition.get('new_pm')} has replaced {transition.get('previous_pm')} after a successful leadership challenge.")
+        st.markdown(f"**New Prime Minister's priority:** {transition.get('priority')}  ")
+        st.caption(transition.get("approach","The incoming administration is setting its economic direction."))
+        st.write("The new Prime Minister is reviewing ministerial appointments. Your response to the leadership contest and your record in office will influence the decision.")
+        left,right=st.columns(2)
+        with left:
+            if st.button("Accept the new PM's direction and remain Chancellor",key="pm_transition_retain",type="primary",use_container_width=True):
+                resolve_transition(s,"retain")
+                st.rerun()
+        with right:
+            if st.button("Offer to leave the Treasury",key="pm_transition_dismiss",use_container_width=True):
+                resolve_transition(s,"dismiss")
+                st.rerun()
+        return
     issue=s.get("leadership_issue")
-    if not issue or s.get("game_over") or s.get("step")!="game": return
+    if not issue: return
     st.markdown("### 🏛️ Party leadership under pressure")
     st.warning(issue.get("text","The Prime Minister's position is under scrutiny."))
     st.caption(f"Leadership pressure: {float(issue.get('pressure',0)):.0f}/100 · Potential challenger: {issue.get('challenger','Senior party figure')}")
