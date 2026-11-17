@@ -156,7 +156,7 @@ def render_autumn_statement_event():
 
 
 def render_phase_action():
-    """Render a compact fiscal status attached to the current policy phase."""
+    """Show one compact fiscal status, avoiding stacked notices after the Autumn Statement."""
     s = st.session_state
     _, used = _used()
     notice_is_current = (
@@ -167,50 +167,59 @@ def render_phase_action():
     if s.block == 1:
         if "autumn" in used:
             capital = int(s.get("political_capital_points", 0))
-            capital_text = (
-                f"Political capital remaining: {capital}/5."
-                if notice_is_current else
-                "Your opening fiscal statement is complete."
-            )
-            st.markdown(
-                "<div class='phase-status is-complete'>"
-                "<span>FISCAL EVENT · DELIVERED</span>"
-                "<strong>Autumn Statement</strong>"
-                f"<small>{capital_text}</small>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            detail = f"Published · Political capital remaining: {capital}/5."
+            status = "is-complete"
+            eyebrow = "FISCAL EVENT · DELIVERED"
         elif "autumn_skipped" in used:
-            st.markdown(
-                "<div class='phase-status is-neutral'>"
-                "<span>FISCAL EVENT · NOT PUBLISHED</span>"
-                "<strong>Autumn Statement</strong>"
-                "<small>The Spring Budget remains the main fiscal event.</small>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            detail = "Not published · The Spring Budget remains the main fiscal event."
+            status = "is-neutral"
+            eyebrow = "FISCAL EVENT · SKIPPED"
         else:
-            if notice_is_current:
-                st.info(s.feature_notice)
-            st.info("The Autumn Statement is a separate fiscal event. You may proceed without publishing one.")
-    else:
-        if notice_is_current:
-            st.info(s.feature_notice)
+            detail = (
+                str(s.get("feature_notice", "")).strip()
+                if notice_is_current and s.get("feature_notice")
+                else "A separate optional fiscal event. You may proceed without publishing one."
+            )
+            status = "is-neutral"
+            eyebrow = "FISCAL EVENT · UPCOMING"
+
+        st.markdown(
+            "<div class='phase-status " + status + "'>"
+            "<span>" + eyebrow + "</span>"
+            "<strong>Autumn Statement</strong>"
+            "<small>" + detail + "</small>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    elif notice_is_current and s.get("feature_notice"):
+        st.markdown(
+            "<div class='phase-status is-neutral'>"
+            "<span>TREASURY UPDATE</span>"
+            "<strong>" + str(s.get("feature_notice", "")).strip() + "</strong>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
     if s.block == 2:
-        st.markdown("### Emergency fiscal watch")
-        st.caption("An Emergency Budget is not a routine annual mini-budget. It is called only when serious market, recession, fiscal-rule or government-confidence conditions require a full revised package.")
         market = float(s.get("market_conf", 50.0))
         gilt = float(s.get("gilt_yield", 4.5))
         headroom = float(s.get("headroom", 0.0))
         growth = float(s.get("growth", 0.0))
         severe = (market <= 27 and gilt >= 6.25) or (growth <= -2.5 and market <= 40) or (headroom <= -18 and market <= 32)
         if s.get("active_emergency_budget"):
-            st.error("An Emergency Budget has been called. It will appear as a separate event before normal business continues.")
+            label = "An Emergency Budget has been called. It will appear as a separate event before normal business continues."
+            status, eyebrow = "is-neutral", "EMERGENCY FISCAL WATCH"
         elif severe:
-            st.warning("The fiscal position is approaching emergency territory. The Treasury is monitoring the next market and economic update.")
+            label = "The fiscal position is approaching emergency territory. The Treasury is monitoring the next market and economic update."
+            status, eyebrow = "is-neutral", "EMERGENCY FISCAL WATCH"
         else:
-            st.info("No Emergency Budget is currently required. The Chancellor can continue with the Government's normal programme.")
+            label = "No Emergency Budget is currently required. Normal government business can continue."
+            status, eyebrow = "is-neutral", "EMERGENCY FISCAL WATCH"
+        st.markdown(
+            "<div class='phase-status " + status + "'>"
+            "<span>" + eyebrow + "</span><small>" + label + "</small></div>",
+            unsafe_allow_html=True,
+        )
 
 def render():
     s = st.session_state

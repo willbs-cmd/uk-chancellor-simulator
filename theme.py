@@ -2859,6 +2859,172 @@ section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
 }
 .phase-status.is-neutral > span { color:#8a6827 !important; }
 
+
+/* FINAL SPACING PASS — compact, even rhythm across the Chancellor's workspace. */
+.block-container {
+  padding-top:.72rem !important;
+  padding-bottom:1rem !important;
+}
+.block-container [data-testid="stVerticalBlock"] {
+  gap:.5rem !important;
+}
+.block-container [data-testid="stHorizontalBlock"] {
+  gap:.72rem !important;
+}
+.block-container h1 { margin:.12rem 0 .32rem !important; }
+.block-container h2 { margin:.22rem 0 .3rem !important; }
+.block-container h3 { margin:.18rem 0 .2rem !important; }
+.block-container p { margin-top:.12rem; margin-bottom:.28rem; }
+.block-container hr { margin:.45rem 0 !important; }
+
+/* Top navigation: give each tab a little breathing room without wasting height. */
+.block-container [data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap:.38rem !important;
+  margin-bottom:.12rem !important;
+  padding-bottom:.25rem !important;
+}
+.block-container [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+  padding-top:.52rem !important;
+}
+.block-container [data-testid="stTabs"] button[data-baseweb="tab"] {
+  padding:.42rem .72rem !important;
+  min-height:2.15rem !important;
+}
+
+/* Decision header, briefing note and event status sit closer together. */
+.briefing-kicker { margin:1px 0 2px !important; }
+.briefing-heading {
+  padding-bottom:7px !important;
+  margin:0 0 5px !important;
+}
+.briefing-context {
+  padding:10px 13px !important;
+  margin:4px 0 5px !important;
+  line-height:1.48 !important;
+}
+.humphrey-note {
+  margin:5px 0 6px !important;
+  padding:12px 15px !important;
+  border-radius:10px !important;
+}
+.humphrey-note-top { margin-bottom:4px !important; }
+.humphrey-note p { line-height:1.43 !important; }
+.phase-status {
+  gap:1px !important;
+  padding:7px 11px !important;
+  margin:2px 0 4px !important;
+}
+.phase-status > strong { font-size:.9rem !important; }
+.phase-status > small { line-height:1.3 !important; }
+.block-container [data-testid="stAlert"] {
+  margin:2px 0 4px !important;
+  padding:.58rem .78rem !important;
+  border-radius:8px !important;
+}
+.block-container [data-testid="stAlert"] p {
+  margin:0 !important;
+  line-height:1.38 !important;
+}
+
+/* Cabinet choices: compact rows, aligned to the same grid. */
+.decision-section-head {
+  margin:.38rem 0 .24rem !important;
+  gap:10px !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] {
+  gap:7px !important;
+}
+.st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] > label {
+  min-height:46px !important;
+  padding:7px 9px !important;
+}
+.st-key-decision_brief {
+  padding:11px !important;
+  margin:3px 0 5px !important;
+}
+.st-key-decision_brief [data-testid="stMetric"] {
+  min-height:62px !important;
+  padding:7px 9px !important;
+}
+.decision-brief-label { margin:6px 0 2px !important; }
+
+/* The left desk should read as one compact briefing, not a long stack of cards. */
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+  gap:.32rem !important;
+}
+section[data-testid="stSidebar"] .desk-brand {
+  padding:1px 1px 7px !important;
+  margin-bottom:0 !important;
+}
+section[data-testid="stSidebar"] .desk-period {
+  padding:6px 9px !important;
+  margin:0 !important;
+}
+section[data-testid="stSidebar"] .desk-section-title {
+  margin:6px 0 3px !important;
+  line-height:1.15 !important;
+}
+section[data-testid="stSidebar"] .desk-grid {
+  gap:5px !important;
+  margin-top:0 !important;
+}
+section[data-testid="stSidebar"] .desk-tile {
+  min-height:51px !important;
+  padding:5px 7px !important;
+  gap:0 !important;
+}
+section[data-testid="stSidebar"] .desk-tile-label {
+  line-height:1.2 !important;
+}
+section[data-testid="stSidebar"] .desk-tile strong {
+  line-height:1.15 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+  margin:0 !important;
+  border-radius:8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  min-height:2.15rem !important;
+  height:auto !important;
+  padding:.34rem .52rem !important;
+  line-height:1.2 !important;
+  font-size:.73rem !important;
+  box-sizing:border-box !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  padding:.22rem .5rem .4rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+  margin:.08rem 0 .2rem !important;
+  line-height:1.32 !important;
+}
+section[data-testid="stSidebar"] .desk-warning {
+  margin:1px 0 !important;
+  padding:5px 7px !important;
+}
+section[data-testid="stSidebar"] .desk-diary {
+  padding:3px 1px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stButton"] button,
+section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
+  min-height:2rem !important;
+  padding:.3rem .48rem !important;
+  line-height:1.2 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stDivider"] {
+  margin:.28rem 0 !important;
+}
+
+/* Keep the compact layout responsive and allow longer option labels to wrap cleanly. */
+@media(max-width:760px) {
+  .block-container [data-testid="stHorizontalBlock"] { gap:.48rem !important; }
+  .briefing-context { padding:9px 11px !important; }
+  .humphrey-note { padding:10px 12px !important; }
+  .st-key-policy_options [data-testid="stRadio"] [role="radiogroup"] {
+    grid-template-columns:1fr !important;
+  }
+}
+
 </style>
 """
 

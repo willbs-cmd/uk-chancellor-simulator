@@ -161,7 +161,7 @@ def render(on_restart):
                         f"Current ministerial loyalty: {float(s.get('ministerial_loyalty', {}).get(dept, 50.0)):.0f}/100. "
                         "A weak relationship or active dispute makes Number 10 more receptive."
                     )
-                    if st.button("Recommend a Cabinet replacement to the PM", use_container_width=True):
+                    if st.button("Recommend minister replacement", use_container_width=True, help="Recommend a Cabinet replacement to the Prime Minister."):
                         engine.request_ministerial_reshuffle(dept)
                         st.rerun()
             else:
