@@ -1253,6 +1253,23 @@ with area_office:
     else:
         decision_screen()
 
+    # Keep the consequences of recent choices visible from the main workspace.
+    # The full chronological record remains available in The News.
+    recent_history = list(s.get('history', []))[-4:]
+    pending_consequences = sorted(
+        list(s.get('pending', [])),
+        key=lambda item: item.get('due', 0)
+    )
+    with st.expander('Recent decisions & consequences', expanded=bool(pending_consequences)):
+        if pending_consequences:
+            st.markdown('**Consequences still to come**')
+            render_timeline([], pending_consequences)
+        if recent_history:
+            st.markdown('**Latest decisions**')
+            render_timeline(recent_history)
+        if not pending_consequences and not recent_history:
+            st.caption('Your decision record will appear here as the government takes action.')
+
 with area_budget:
     st.markdown('### The Budget')
     st.caption('Taxation, departmental spending, borrowing, fiscal rules and formal fiscal events.')
