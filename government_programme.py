@@ -760,7 +760,7 @@ def preflight(s, decision, option, stance="consensus", accepted_amendments=None)
     )
     preview = _apply_stance_to_copy(s, stance)
     fiscal = costing(preview, decision, adjusted_option)
-    cabinet = cabinet_review(s, decision, adjusted_option, stance, amendment_outcomes=negotiation["outcomes"])
+    cabinet = cabinet_review(preview, decision, adjusted_option, stance, amendment_outcomes=negotiation["outcomes"])
     prime_minister = prime_minister_review(preview, adjusted_option, cabinet, fiscal)
     return {
         "fiscal": fiscal, "cabinet": cabinet, "prime_minister": prime_minister,

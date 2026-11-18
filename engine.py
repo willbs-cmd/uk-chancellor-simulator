@@ -407,9 +407,9 @@ def execute_decision(opt, cabinet_stance='consensus', programme_priority=None, c
     )
     ideology, effect = opt['ideology'], opt['effect']
     cabinet_stance = apply_cabinet_stance(s, cabinet_stance)
-    assessment = assess_decision(opt, cabinet_stance)
     governance = {"fiscal": government_programme.costing(s, decision, opt)}
     cabinet_review = government_programme.cabinet_review(s, decision, opt, cabinet_stance, amendment_outcomes=negotiation['outcomes'])
+    assessment = assess_decision(opt, cabinet_stance, cabinet_support=cabinet_review['support_pct'])
     pm_review = government_programme.prime_minister_review(s, opt, cabinet_review, governance["fiscal"])
     governance["cabinet"] = cabinet_review
     governance["prime_minister"] = pm_review
