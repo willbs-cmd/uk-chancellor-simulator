@@ -1350,6 +1350,88 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
   border-radius:20px !important;
 }
 
+
+/* Six-workspace navigation and mobile usability refinement.
+   Keep the six main areas on one horizontal rail on phones rather than
+   squeezing labels into unreadable columns or wrapping them unpredictably. */
+[data-testid="stTabs"] [role="tablist"] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,164,92,.65) rgba(22,51,38,.55);
+}
+[data-testid="stTabs"] button[role="tab"] {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 42px;
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+[data-testid="stTabs"] button[role="tab"]:focus-visible {
+  outline: 2px solid var(--brass) !important;
+  outline-offset: 2px;
+  z-index: 2;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  box-shadow: inset 0 -2px 0 var(--brass);
+}
+@media (max-width: 760px) {
+  .block-container {
+    padding-left: .72rem !important;
+    padding-right: .72rem !important;
+    padding-top: 2.65rem !important;
+  }
+  [data-testid="stTabs"] [role="tablist"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100%;
+    gap: 4px !important;
+    padding: 0 2px 7px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    scroll-snap-align: start;
+    min-height: 44px;
+    padding: .55rem .72rem !important;
+    font-size: .82rem !important;
+  }
+  [data-testid="stMetric"] {
+    padding: 8px 9px !important;
+    min-width: 0;
+  }
+  [data-testid="stMetricValue"] {
+    font-size: clamp(1.15rem, 5vw, 1.55rem) !important;
+    overflow-wrap: anywhere;
+  }
+  [data-testid="stDataFrame"],
+  [data-testid="stTable"] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  [data-testid="stButton"] button,
+  [data-testid="stDownloadButton"] button {
+    min-height: 44px;
+  }
+  .sc-card { min-width: 0; }
+  .hud-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+  .hud-note { grid-column: 1 / -1; }
+}
+@media (max-width: 390px) {
+  .block-container {
+    padding-left: .55rem !important;
+    padding-right: .55rem !important;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    font-size: .77rem !important;
+    padding-left: .58rem !important;
+    padding-right: .58rem !important;
+  }
+  .sc-value { font-size: 1.25rem !important; }
+}
+
 </style>
 """
 
