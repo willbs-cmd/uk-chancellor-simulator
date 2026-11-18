@@ -383,6 +383,7 @@ SAVE_KEYS = [
     'treasury_last_tax_uplift', 'treasury_last_investment_income',
     'treasury_cumulative_income', 'treasury_notice',
     'treasury_cost_pressure_history', 'treasury_last_cost_pressures',
+    'business_confidence', 'business_investment', 'consumer_spending', 'labour_demand', 'living_economy_history', 'living_economy_last_year', 'productivity_index', 'productivity_growth',
     'thresholds_frozen', 'personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold', 'gdp_trillion', 'gdp_history', 'world_economy', 'world_history', 'world_cycle', 'temporary_shock',
     'threshold_freeze_scope', 'inheritance_nil_rate_band', 'vat_registration_threshold',
     'retirement_age', 'retirement_age_annual_saving', 'state_pension_weekly', 'state_pension_uprating',

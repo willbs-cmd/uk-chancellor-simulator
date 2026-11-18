@@ -1996,6 +1996,33 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Spending Review delivery scorecard regression failed: {exc}")
 
+    # Phase 1: wages, productivity and labour-market tightness feed back into growth and prices.
+    try:
+        import living_economy
+        macro_state = FakeState({
+            "term": 1, "year": 1, "growth": 1.0, "inflation": 2.0,
+            "interest_rate": 4.5, "market_conf": 65.0, "approval": 50.0,
+            "business_confidence": 70.0, "business_investment": 125.0,
+            "consumer_spending": 110.0, "labour_demand": 100.0,
+            "productivity_index": 100.0, "productivity_growth": 0.0,
+            "living_economy_history": [], "living_economy_last_year": "",
+            "headroom": 8.0, "deficit": 60.0, "gdp_trillion": 3.0,
+            "country": {"real_wages": 1.0, "unemployment": 3.5},
+        })
+        living_economy.advance(macro_state)
+        if macro_state.productivity_growth <= 0 or macro_state.productivity_index <= 100:
+            failures.append("Strong investment and confidence did not lift productive capacity.")
+        if macro_state.growth <= 1.0:
+            failures.append("Productivity and demand did not feed through to real growth.")
+        if macro_state.inflation <= 2.0:
+            failures.append("Strong wage growth and a tight labour market did not create modest price pressure.")
+        snapshot = dict(macro_state)
+        living_economy.advance(macro_state)
+        if dict(macro_state) != snapshot:
+            failures.append("Living-economy annual feedback was not idempotent.")
+    except Exception as exc:
+        failures.append(f"Wages/productivity/employment feedback regression failed: {exc}")
+
     # Phase 1: Treasury scenario forecasts use the macro engine, remain non-mutating,
     # and distinguish a downside shock from the central case.
     try:

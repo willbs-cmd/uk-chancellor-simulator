@@ -13,6 +13,8 @@ def ensure(s=None):
     s.setdefault("business_investment", 100.0)
     s.setdefault("consumer_spending", 100.0)
     s.setdefault("labour_demand", 100.0)
+    s.setdefault("productivity_index", 100.0)
+    s.setdefault("productivity_growth", 0.0)
     s.setdefault("living_economy_history", [])
     s.setdefault("living_economy_last_year", "")
     return s
@@ -59,7 +61,15 @@ def advance(s=None):
                      + (s.business_investment - 100.0) * 0.014
                      + (s.business_confidence - 52.0) * 0.006)
     growth_impulse = _clip(demand_signal, -0.35, 0.45)
-    s.growth = round(_clip(growth + growth_impulse, -8.0, 8.0), 2)
+    # Investment and confidence gradually build productive capacity; unlike a demand
+    # boost, this persists as a small supply-side contribution to future output.
+    productivity_change = _clip(
+        (s.business_investment - 100.0) * 0.0015 + (s.business_confidence - 52.0) * 0.0008,
+        -0.12, 0.16
+    )
+    s.productivity_growth = round(productivity_change, 3)
+    s.productivity_index = round(_clip(s.productivity_index * (1.0 + productivity_change / 100.0), 85, 125), 3)
+    s.growth = round(_clip(growth + growth_impulse + productivity_change, -8.0, 8.0), 2)
 
     # Jobs react with a lag; pay improves when demand is strong and unemployment is low.
     job_change = (growth_impulse * 0.20
@@ -73,6 +83,14 @@ def advance(s=None):
     if "real_wages" in c:
         c["real_wages"] = round(_clip(real_wages + wage_impulse, country.STATS["real_wages"]["lo"],
                                       country.STATS["real_wages"]["hi"]), 2)
+    # Pay growth above productivity and a tight labour market can feed prices;
+    # weak pay growth or spare capacity eases pressure. Keep this second-round
+    # effect small because the Bank-rate/inflation response is handled by econ.step.
+    wage_price_pressure = _clip(
+        (float(c.get("real_wages", real_wages)) - s.productivity_growth) * 0.035
+        + (4.5 - new_unemployment) * 0.012, -0.10, 0.10
+    )
+    s.inflation = round(_clip(float(s.get("inflation", inflation)) + wage_price_pressure, 0.0, 12.0), 2)
     s.labour_demand = round(_clip(100.0 + (4.5 - new_unemployment) * 5.0
                                   + (s.business_investment - 100.0) * 0.25, 60, 140), 1)
 
@@ -95,6 +113,9 @@ def advance(s=None):
         "Unemployment": new_unemployment,
         "Real wage growth": c.get("real_wages", real_wages),
         "Growth impulse (pp)": round(growth_impulse, 2),
+        "Productivity growth (pp)": s.productivity_growth,
+        "Wage-price pressure (pp)": round(wage_price_pressure, 3),
+        "Productivity index": s.productivity_index,
         "Tax receipt effect (£bn)": round(demand_receipts, 2),
     }
     s.living_economy_history = (list(s.living_economy_history) + [row])[-25:]
@@ -104,11 +125,14 @@ def render():
     s = ensure()
     st.markdown("### Living economy")
     st.caption("Illustrative simulation indices, not official ONS statistics. Business investment, household demand and employment now feed back into annual GDP growth and Treasury receipts.")
-    cols = st.columns(4)
+    cols = st.columns(3)
     cols[0].metric("Business confidence", f"{s.business_confidence:.0f}/100")
     cols[1].metric("Business investment", f"{s.business_investment:.1f}", "Index · 100 at start")
     cols[2].metric("Consumer spending", f"{s.consumer_spending:.1f}", "Index · 100 at start")
-    cols[3].metric("Labour demand", f"{s.labour_demand:.1f}", "Index · 100 at start")
+    extra = st.columns(3)
+    extra[0].metric("Unemployment", f"{float((s.get('country') or {}).get('unemployment', 4.3)):.1f}%")
+    extra[1].metric("Productivity index", f"{s.productivity_index:.2f}", f"{s.productivity_growth:+.2f}pp annual growth")
+    extra[2].metric("Real wage growth", f"{float((s.get('country') or {}).get('real_wages', 0.0)):+.1f}%")
     if s.get("living_economy_history"):
         with st.expander("Living economy history"):
             st.dataframe(list(reversed(s.living_economy_history)), hide_index=True, use_container_width=True)
