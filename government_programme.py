@@ -355,7 +355,7 @@ def prime_minister_review(s, option, cabinet, fiscal):
 
 
 def _apply_stance_to_copy(s, stance):
-    preview = {key: deepcopy(value) for key, value in dict(s).items()}
+    preview = _PreviewState(dict(s))
     for key, delta in _STANCE_EFFECTS.get(stance, _STANCE_EFFECTS["consensus"]).items():
         preview[key] = round(_clip(float(preview.get(key, 50.0)) + delta), 1)
     return preview
@@ -383,7 +383,7 @@ def _department_for_policy(priority, decision):
     return PRIORITIES.get(priority, {}).get("department", "other")
 
 
-def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote, quality):
+def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote, quality, fiscal=None):
     """Log the complete authorisation journey and queue any approved delivery."""
     ensure(s)
     programme = s["annual_government_programme"]
@@ -391,7 +391,7 @@ def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote
         priority = "general"
     s.policy_proposal_sequence = int(s.get("policy_proposal_sequence", 0)) + 1
     proposal_id = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}-{s.policy_proposal_sequence}"
-    fiscal = costing(s, decision, option)
+    fiscal = fiscal or costing(s, decision, option)
     vote_status = str(vote.get("status", "Not submitted"))
     pm_status = prime_minister.get("status", "Rejected by the Prime Minister")
     cabinet_status = cabinet.get("status", "Cabinet review unavailable")
