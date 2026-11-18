@@ -254,7 +254,10 @@ def fiscal_outlook(years=3):
             v["inflation"] = round(max(0.0, min(12.0,
                 v["inflation"] + wage_price_pressure)), 2)
 
-            v = econ.step(v, None)
+            # Use the same IMF year anchor as the live engine, one forecast year
+            # ahead for each projected step.
+            incoming_year = econ.game_year(int(s.get("term", 1)), int(s.get("year", 1))) + year
+            v = econ.step(v, incoming_year)
             nominal_growth = ((1.0 + v["growth"] / 100.0) * (1.0 + v["inflation"] / 100.0) - 1.0) * 100.0
             next_index = max(0.55, tax_index * (1.0 + max(-8.0, min(12.0, nominal_growth * 0.85)) / 100.0))
             gross_receipts = tax_receipts_base * (next_index - tax_index)

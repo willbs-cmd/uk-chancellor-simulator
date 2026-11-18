@@ -2047,6 +2047,10 @@ def check(n=None, difficulty=None):
         by_name = {row["Scenario"]: row for row in outlook}
         if set(by_name) != {"Baseline", "Stronger growth", "Downturn"}:
             failures.append("Treasury outlook did not return all three economic scenarios.")
+        required_macro_fields = ("Bank Rate (%)", "Unemployment (%)", "Real wage growth (%)",
+                                 "Productivity growth (pp)", "GDP (£tn)")
+        if any(any(field not in row for field in required_macro_fields) for row in outlook):
+            failures.append("Treasury outlook omitted a required labour-market or productivity projection.")
         elif not (by_name["Downturn"]["Fiscal headroom (£bn)"] < by_name["Baseline"]["Fiscal headroom (£bn)"]
                   and by_name["Downturn"]["Real growth (%)"] < by_name["Baseline"]["Real growth (%)"]):
             failures.append("Downturn scenario did not worsen growth and fiscal headroom against baseline.")
@@ -2080,7 +2084,9 @@ def check(n=None, difficulty=None):
             failures.append("OBR-style downside stress mutated the live game state.")
 
         for row in outlook:
-            for key in ("GDP after 3 years (£tn)", "Debt (£bn)", "Debt-to-GDP (%)", "Debt interest (£bn)"):
+            for key in ("GDP (£tn)", "Bank Rate (%)", "Unemployment (%)", "Real wage growth (%)",
+                        "Productivity growth (pp)", "GDP after 3 years (£tn)",
+                        "Debt (£bn)", "Debt-to-GDP (%)", "Debt interest (£bn)"):
                 if not math.isfinite(float(row[key])):
                     failures.append(f"Treasury outlook produced a non-finite {key} value.")
     except Exception as exc:

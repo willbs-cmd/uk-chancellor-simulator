@@ -1472,16 +1472,17 @@ def proceed_to_spring():
     state.snapshot()
     before = state.values()
     s.message = 'Spring arrives and a new financial year begins.'
-    # Capture the central forecast for the incoming year before the realised
-    # Spring economic, labour-market and fiscal effects are applied.
-    import forecast_accuracy
-    forecast_accuracy.record_vintage(s)
     import budget_aftermath
     budget_aftermath.advance(s)
     budget.apply_ongoing()
     if s.get('spad') == 'hawk':
         s.headroom = round(s.headroom + politics.HAWK_SAVING, 1)
         s.message += f' Your Fiscal Hawk finds £{politics.HAWK_SAVING:.1f}B of efficiency savings.'
+    # Capture the central forecast once known fiscal commitments and the
+    # Spending Review's ongoing settings have been accounted for, but before the
+    # new year's macroeconomic and labour-market outcome is realised.
+    import forecast_accuracy
+    forecast_accuracy.record_vintage(s)
     s.pm_opinion = round(_clip(s.pm_opinion + (5 if s.headroom > 0 else -5)), 1)
     # Trading partners evolve each year; their cycle spills into UK exports and confidence.
     world_economy.ensure(s)
