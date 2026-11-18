@@ -1103,7 +1103,8 @@ def briefing():
             render_newspapers(*s.headlines)
     else:
         st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
-    opposition_campaign.render(s)
+    # Opposition responses live in the dedicated Opposition tab; do not render
+    # the same keyed Streamlit buttons a second time inside the briefing tab.
     with st.expander('Decision history', expanded=False):
         render_timeline(s.history, sorted(s.pending, key=lambda p: p['due']))
 
