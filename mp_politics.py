@@ -145,9 +145,9 @@ def _make_profile(s, seat, party, margin):
     digest = _hash_int(seed, term, code, party, "mp-profile")
     factions = cabinet_management.PARTY_FACTIONS.get(party, ["Party Mainstream", "Government Mainstream"])
     faction = factions[digest % len(factions)]
-    first = _FIRST_NAMES[_hash_int(seed, code, party, "first") % len(_FIRST_NAMES)]
-    last = _LAST_NAMES[_hash_int(seed, code, party, "last") % len(_LAST_NAMES)]
-    priorities = {item: 28 + (_hash_int(seed, code, party, item) % 68) for item in PRIORITIES}
+    first = _FIRST_NAMES[_hash_int(seed, term, code, party, "first") % len(_FIRST_NAMES)]
+    last = _LAST_NAMES[_hash_int(seed, term, code, party, "last") % len(_LAST_NAMES)]
+    priorities = {item: 28 + (_hash_int(seed, term, code, party, item) % 68) for item in PRIORITIES}
     local_issue = _local_issue(seat)
     priorities[local_issue] = max(priorities[local_issue], 78)
     order = sorted(PRIORITIES, key=lambda item: priorities[item], reverse=True)
@@ -158,13 +158,18 @@ def _make_profile(s, seat, party, margin):
         "name": f"{first} {last}", "faction": faction, "priorities": priorities,
         "top_priority": order[0], "second_priority": order[1],
         "local_issue": local_issue, "margin": round(margin, 1),
-        "is_marginal": margin < 5.0,
+        "term": term, "is_marginal": margin < 5.0,
     }
 
 
 def ensure(s=None):
     s = s or st.session_state
     profiles = dict(s.get("mp_profiles", {}))
+    current_term = int(s.get("term", 1))
+    # Avoid re-reading and rebuilding the full 650-seat register on every
+    # Streamlit rerun. A new Parliament refreshes all profiles once by term.
+    if len(profiles) == 650 and int(s.get("mp_roster_term", 0)) == current_term:
+        return profiles
     seats = _load_constituencies()
     result = s.get("election_result") or {}
     rows = result.get("constituency_results", []) if isinstance(result, dict) else []
@@ -185,7 +190,8 @@ def ensure(s=None):
         if party not in state.PARTIES:
             party = s.get("party", "Labour")
         margin = row.get("margin", old.get("margin", 8.0))
-        if not old or old.get("party") != party:
+        if (not old or old.get("party") != party
+                or int(old.get("term", -1)) != current_term):
             updated[code] = _make_profile(s, seat, party, margin)
         else:
             profile = dict(old)

@@ -2201,6 +2201,18 @@ def check(n=None, difficulty=None):
         if not all(0 <= float(value) <= 100 for mp in roster.values()
                    for value in mp.get("priorities", {}).values()):
             failures.append("An MP's local priority score fell outside its 0–100 range.")
+        original_names = {code: mp.get("name") for code, mp in roster.items()}
+        mp_state.term = 2
+        next_term_roster = mp_politics.ensure(mp_state)
+        if (len(next_term_roster) != 650
+                or any(int(mp.get("term", 0)) != 2 for mp in next_term_roster.values())):
+            failures.append("A new Parliament did not receive a refreshed set of term-two MP profiles.")
+        if not any(next_term_roster[code].get("name") != original_names.get(code)
+                   for code in next_term_roster):
+            failures.append("MP profiles did not refresh their fictional identities after a general election.")
+        refreshed_again = mp_politics.ensure(mp_state)
+        if refreshed_again != next_term_roster:
+            failures.append("The constituency MP roster changed during repeated Streamlit-style reruns.")
     except Exception as exc:
         failures.append(f"Phase 2 individual MP and constituency regression failed: {exc}")
     finally:
