@@ -374,7 +374,7 @@ def assess_decision(opt, cabinet_stance="consensus"):
     }
 
 
-def execute_decision(opt, cabinet_stance='consensus'):
+def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
     """Run one policy decision. ``opt`` is an option dict from ``current_options()``."""
     s = st.session_state
     # Migrate older in-progress saves created before the branching decision system.
@@ -402,9 +402,11 @@ def execute_decision(opt, cabinet_stance='consensus'):
     assessment = assess_decision(opt, cabinet_stance)
     import government_programme
     government_programme.ensure(s)
-    governance = government_programme.preflight(s, decision, opt, cabinet_stance)
-    cabinet_review = governance["cabinet"]
-    pm_review = governance["prime_minister"]
+    governance = {"fiscal": government_programme.costing(s, decision, opt)}
+    cabinet_review = government_programme.cabinet_review(s, decision, opt, cabinet_stance)
+    pm_review = government_programme.prime_minister_review(s, opt, cabinet_review, governance["fiscal"])
+    governance["cabinet"] = cabinet_review
+    governance["prime_minister"] = pm_review
     if pm_review["factor"] > 0:
         vote = parliament.review_bill(decision, opt)
     else:

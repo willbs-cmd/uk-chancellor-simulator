@@ -345,6 +345,8 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     if s.game_mode == 'chancellor':
         import government_missions
         government_missions.start_mission(s, government_mission)
+        import government_programme
+        government_programme.ensure(s)
     s.prev = values()
     s.term_start = snapshot_all()
     record()

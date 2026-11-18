@@ -27,6 +27,7 @@ import long_run_simulation
 import public_services
 import chancellors_desk
 import cabinet_management
+import government_programme
 import political_pressure
 import opposition_campaign
 import government_missions
@@ -42,6 +43,7 @@ s = st.session_state
 fiscal_events.ensure_state(s)
 if s.get('step') == 'game':
     government_missions.ensure(s)
+    government_programme.ensure(s)
 
 
 def restart():
@@ -1073,7 +1075,24 @@ def decision_screen():
             "treasury": "Prioritise fiscal credibility and market reassurance. The Treasury gains influence, but Cabinet and backbench support may suffer.",
         }
         st.caption(stance_details[stance])
+        programme = government_programme.current(s)
+        suggested_priority = government_programme.classify_policy(decision, selected)
+        priority_choices = ["general", *programme.get("priorities", [])]
+        priority_labels = {"general": "General government business"}
+        priority_labels.update({key: government_programme.priority_label(key) for key in programme.get("priorities", [])})
+        default_priority = suggested_priority if suggested_priority in priority_choices else "general"
+        programme_priority = st.selectbox(
+            "Government Programme priority", priority_choices,
+            index=priority_choices.index(default_priority),
+            format_func=lambda key: priority_labels[key],
+            key=f"proposal_priority_{s.term}_{s.year}_{s.block}",
+            help="Link this proposal to one of the Government's adopted annual priorities, or leave it as general business."
+        )
         assessment = engine.assess_decision(selected, stance)
+        governance_preview = government_programme.preflight(s, decision, selected, stance)
+        fiscal_preview = governance_preview["fiscal"]
+        cabinet_preview = governance_preview["cabinet"]
+        pm_preview = governance_preview["prime_minister"]
         effect_text = state.fmt_fx(selected.get('effect', {}))
         st.markdown("<div class='decision-brief-label'>TREASURY & CABINET ASSESSMENT</div>", unsafe_allow_html=True)
         with st.container(key='decision_brief', border=True):
@@ -1084,6 +1103,20 @@ def decision_screen():
             m3.metric("Likely vote", assessment['vote_label'])
             st.caption("MODELLED POLICY EFFECTS · Before delivery and Commons adjustments")
             st.markdown(f"<div class='decision-impact'>{effect_text or 'No immediate numerical effect is listed.'}</div>", unsafe_allow_html=True)
+            st.markdown("**Treasury costing & funding assessment**")
+            f1, f2, f3 = st.columns(3, gap='small')
+            f1.metric("Headroom effect", f"£{fiscal_preview['headroom_delta']:+.1f}bn")
+            f2.metric("Borrowing effect", f"£{fiscal_preview['deficit_delta']:+.1f}bn")
+            f3.metric("Fiscal risk", fiscal_preview["fiscal_risk"])
+            st.caption(f"{fiscal_preview['funding']} {fiscal_preview['risk_detail']}")
+            if fiscal_preview["macro"]:
+                st.caption("Other modelled outcomes: " + " · ".join(f"{name} {value:+.2f} {unit}" for name, value, unit in fiscal_preview["macro"]))
+            st.markdown("**Government approval route**")
+            r1, r2, r3 = st.columns(3, gap='small')
+            r1.metric("Cabinet support", f"{cabinet_preview['support_pct']:.0f}%", help="Estimated support among serving ministers based on their faction, loyalty, competence and your chosen approach.")
+            r2.metric("Cabinet position", cabinet_preview["status"])
+            r3.metric("Number 10 forecast", pm_preview["status"], help=f"Modelled PM approval score: {pm_preview['score']:.0f}/100.")
+            st.caption("The Prime Minister can stop a proposal or require changes before it reaches the Commons. The Commons then runs its own vote.")
             st.markdown("**Delivery risks & constraints**")
             for risk in assessment['risks']:
                 st.markdown(f"- {risk}")
@@ -1095,7 +1128,7 @@ def decision_screen():
         st.markdown("<div class='decision-authority'>DECISION PENDING · Your selection has no effect until authorised.</div>", unsafe_allow_html=True)
     with st.container(key='decision_authorise'):
         if st.button('Take this decision to Cabinet & Commons', type='primary', disabled=choice is None, use_container_width=True):
-            engine.execute_decision(options[labels.index(choice)], cabinet_stance=stance)
+            engine.execute_decision(options[labels.index(choice)], cabinet_stance=stance, programme_priority=programme_priority)
             st.rerun()
 
 
@@ -1263,6 +1296,8 @@ with area_office:
     else:
         decision_screen()
 
+    government_programme.render_summary(s)
+
     # Keep the consequences of recent choices visible from the main workspace.
     # The full chronological record remains available in The News.
     recent_history = list(s.get('history', []))[-4:]
@@ -1384,11 +1419,13 @@ with area_cabinet:
             engine.open_pm_meeting()
             st.rerun()
     st.divider()
-    cabinet_tabs = st.tabs(['Departmental delivery', 'Annual reports'])
+    cabinet_tabs = st.tabs(['Departmental delivery', 'Annual reports', 'Government Programme'])
     with cabinet_tabs[0]:
         chancellor_office.render()
     with cabinet_tabs[1]:
         performance_report.render()
+    with cabinet_tabs[2]:
+        government_programme.render(s)
 
 with area_parliament:
     st.markdown('### Parliament')
