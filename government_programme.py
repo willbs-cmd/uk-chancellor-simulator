@@ -4,7 +4,6 @@ The Chancellor remains the player. Ministers provide Cabinet recommendations,
 the Prime Minister controls final executive clearance, and the Commons retains
 its existing vote model. Budget ledgers are deliberately not modified here.
 """
-from copy import deepcopy
 import streamlit as st
 
 
@@ -422,6 +421,7 @@ def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote
         "priority_label": priority_label(priority),
         "cabinet_status": cabinet_status,
         "cabinet_support": float(cabinet.get("support_pct", 0.0)),
+        "cabinet_positions": list(cabinet.get("positions", [])),
         "prime_minister_status": pm_status,
         "prime_minister_score": float(prime_minister.get("score", 0.0)),
         "commons_status": vote_status,
@@ -623,6 +623,21 @@ def render(s=None):
         st.dataframe(display[::-1], hide_index=True, use_container_width=True)
     else:
         st.info("No proposals have entered the authorisation process yet.")
+
+    latest = list(reversed(proposals[-5:]))
+    if latest:
+        with st.expander("Cabinet roll-call and ministerial positions"):
+            for item in latest:
+                st.markdown(f"**{item['title']}** · {item['cabinet_status']}")
+                if item.get("cabinet_positions"):
+                    st.dataframe([{
+                        "Minister": row.get("minister", ""),
+                        "Faction": row.get("faction", ""),
+                        "Position": row.get("position", ""),
+                        "Assessment": row.get("score", 0),
+                    } for row in item["cabinet_positions"]], hide_index=True, use_container_width=True)
+                else:
+                    st.caption("Cabinet support was estimated from overall Cabinet confidence.")
 
     st.divider()
     st.markdown("#### Departmental implementation tracker")

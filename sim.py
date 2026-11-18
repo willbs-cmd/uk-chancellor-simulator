@@ -62,6 +62,7 @@ import imf_outlook  # noqa: E402
 import scenarios as scen  # noqa: E402
 import state  # noqa: E402
 import government_missions  # noqa: E402
+import government_programme  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
 import budget_aftermath  # noqa: E402
@@ -204,6 +205,76 @@ def run(n=200, difficulty='Hardcore'):
 
 
 # ---------------------------------------------------------------- regression check
+def government_programme_checks():
+    """Annual priorities, treasury costing, executive stages and delivery records remain connected."""
+    fake = FakeState({
+        "term": 1, "year": 1, "party": "Labour", "seed": 4132,
+        "government_mission": "balanced_renewal", "headroom": 8.0, "deficit": 100.0,
+        "growth": 0.8, "pm_opinion": 78.0, "pm_trust": 72.0, "cab_opinion": 68.0,
+        "market_conf": 65.0, "backbench_opinion": 60.0, "party_opinion": 70.0,
+        "cabinet_ministers": {}, "ministerial_loyalty": {}, "ministerial_competence": {},
+        "ministerial_profiles": {}, "annual_programme_history": [], "policy_proposals": [],
+        "policy_deliveries": [], "policy_proposal_sequence": 0,
+    })
+    government_programme.ensure(fake)
+    assert len(fake.cabinet_ministers) >= 10, "A new government needs a working ministerial roster."
+    programme = government_programme.current(fake)
+    assert len(programme["priorities"]) == 3 and not programme["declared"]
+    assert government_programme.set_priorities(fake, ["growth", "public_services"])
+    assert not government_programme.set_priorities(fake, ["growth"]), "The annual programme must contain two or three priorities."
+    proposal = {"title": "NHS hospital capacity reform", "text": "Reduce hospital waiting lists and support NHS staff."}
+    option = {"label": "Expand NHS capacity", "ideology": "Social Democratic",
+              "effect": {"headroom": -2.0, "deficit": 2.0, "growth": 0.2}}
+    fiscal = government_programme.costing(fake, proposal, option)
+    assert fiscal["headroom_delta"] == -2.0 and fiscal["deficit_delta"] == 2.0
+    assert fiscal["funding"].startswith("Uses approximately £2.0bn")
+    before = (fake.pm_opinion, fake.pm_trust, fake.cab_opinion)
+    preview = government_programme.preflight(fake, proposal, option, "consensus")
+    assert before == (fake.pm_opinion, fake.pm_trust, fake.cab_opinion), "Preflight must not mutate the live save."
+    assert preview["cabinet"]["total"] >= 10 and preview["prime_minister"]["status"] == "Approved"
+    low_pm = FakeState(dict(fake))
+    low_pm.update({"pm_opinion": 10.0, "pm_trust": 10.0, "cab_opinion": 20.0, "headroom": -10.0})
+    low_fiscal = government_programme.costing(low_pm, proposal, option)
+    low_cabinet = government_programme.cabinet_review(low_pm, proposal, option, "treasury")
+    low_decision = government_programme.prime_minister_review(low_pm, option, low_cabinet, low_fiscal)
+    assert low_decision["status"] == "Rejected by the Prime Minister"
+    cabinet = preview["cabinet"]
+    pm = preview["prime_minister"]
+    vote = {"status": "Passed", "ayes": 390, "noes": 260, "factor": 1.0}
+    record = government_programme.record_proposal(fake, proposal, option, "public_services", cabinet, pm, vote, 0.82, fiscal=fiscal)
+    assert record["outcome"] == "Approved for delivery" and record["delivery_id"]
+    initial = fake.policy_deliveries[0]["progress"]
+    government_programme.close_annual_programme(fake)
+    first_advance = fake.policy_deliveries[0]["progress"]
+    assert first_advance > initial, "Approved policy should move through departmental delivery each year."
+    government_programme.close_annual_programme(fake)
+    assert fake.policy_deliveries[0]["progress"] == first_advance, "Annual delivery must not advance twice in one year."
+    fake.year = 2
+    next_programme = government_programme.start_annual_programme(fake, carry_forward=True)
+    assert next_programme["priorities"] == ["growth", "public_services"]
+    assert not next_programme["declared"] and len(fake.annual_programme_history) == 1
+    stopped = FakeState(dict(fake))
+    stopped.year = 2
+    stopped.policy_deliveries = []
+    stopped.policy_proposals = []
+    stopped.policy_proposal_sequence = 0
+    stopped.cabinet_ministers = dict(fake.cabinet_ministers)
+    stopped.ministerial_loyalty = dict(fake.ministerial_loyalty)
+    stopped.ministerial_competence = dict(fake.ministerial_competence)
+    stopped.ministerial_profiles = dict(fake.ministerial_profiles)
+    stopped.annual_government_programme = dict(fake.annual_government_programme)
+    stopped.annual_programme_history = []
+    stopped.headroom = -10.0
+    stopped.pm_opinion = 10.0
+    stopped.pm_trust = 10.0
+    stopped.cab_opinion = 20.0
+    cabinet_stop = government_programme.cabinet_review(stopped, proposal, option, "treasury")
+    pm_stop = government_programme.prime_minister_review(stopped, option, cabinet_stop, government_programme.costing(stopped, proposal, option))
+    rejected_vote = {"status": "Not submitted", "ayes": 0, "noes": 0, "factor": 0.0}
+    rejected = government_programme.record_proposal(stopped, proposal, option, "public_services", cabinet_stop, pm_stop, rejected_vote, 0.0)
+    assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries
+    return True
+
 def cabinet_policy_negotiation_checks():
     """The three pre-vote approaches create distinct, bounded political trade-offs."""
     consensus = FakeState({"cab_opinion": 60.0, "pm_trust": 70.0})
@@ -473,6 +544,7 @@ def check(n=None, difficulty=None):
         import political_survival
         political_survival_checks()
         cabinet_checks()
+        government_programme_checks()
         cabinet_policy_negotiation_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
