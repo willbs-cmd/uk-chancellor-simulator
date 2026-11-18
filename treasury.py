@@ -224,6 +224,28 @@ def fiscal_outlook(years=3):
         })
     return rows
 
+def scenario_exposure(outlook):
+    """Summarise the extra fiscal and debt-interest exposure in the downturn case."""
+    by_name = {row["Scenario"]: row for row in outlook}
+    if "Baseline" not in by_name or "Downturn" not in by_name:
+        raise ValueError("Outlook must contain Baseline and Downturn scenarios.")
+    baseline = by_name["Baseline"]
+    downturn = by_name["Downturn"]
+    return {
+        "baseline_headroom": float(baseline["Fiscal headroom (£bn)"]),
+        "downturn_headroom": float(downturn["Fiscal headroom (£bn)"]),
+        "headroom_at_risk": round(
+            float(baseline["Fiscal headroom (£bn)"]) - float(downturn["Fiscal headroom (£bn)"]), 1
+        ),
+        "extra_debt_interest": round(
+            float(downturn["Debt interest (£bn)"]) - float(baseline["Debt interest (£bn)"]), 1
+        ),
+        "debt_ratio_increase": round(
+            float(downturn["Debt-to-GDP (%)"]) - float(baseline["Debt-to-GDP (%)"]), 1
+        ),
+    }
+
+
 def render():
     """Treasury investment desk and a transparent record of passive receipts."""
     ensure()
@@ -251,12 +273,25 @@ def render():
         st.dataframe(outlook, hide_index=True, use_container_width=True)
         base = next(row for row in outlook if row["Scenario"] == "Baseline")
         downside = next(row for row in outlook if row["Scenario"] == "Downturn")
-        oc = st.columns(3)
-        oc[0].metric("Baseline headroom in year 3", f"£{base['Fiscal headroom (£bn)']:.1f}bn")
-        oc[1].metric("Downturn headroom in year 3", f"£{downside['Fiscal headroom (£bn)']:.1f}bn")
-        oc[2].metric("Baseline debt interest", f"£{base['Debt interest (£bn)']:.1f}bn")
-        if downside["Fiscal headroom (£bn)"] < 0:
-            st.warning("The downturn scenario exhausts the current fiscal buffer. Consider rebuilding headroom or reducing exposure to permanent commitments.")
+        exposure = scenario_exposure(outlook)
+        oc = st.columns(4)
+        oc[0].metric("Baseline headroom · year 3", f"£{exposure['baseline_headroom']:.1f}bn")
+        oc[1].metric("Downturn headroom · year 3", f"£{exposure['downturn_headroom']:.1f}bn")
+        oc[2].metric("Headroom at risk", f"£{exposure['headroom_at_risk']:.1f}bn",
+                     help="Baseline year-three headroom minus downturn year-three headroom.")
+        oc[3].metric("Extra annual debt interest", f"£{exposure['extra_debt_interest']:.1f}bn",
+                     help="Downturn debt-interest bill minus the baseline bill in year three.")
+        st.caption(
+            f"Under the downturn, debt-to-GDP is {exposure['debt_ratio_increase']:+.1f} percentage points "
+            f"higher than the baseline by year three. These are scenario differences, not extra costs "
+            "that have been applied to the live Budget."
+        )
+        if exposure["downturn_headroom"] < 0:
+            st.warning("The downturn scenario pushes the year-three fiscal position into negative headroom. Consider rebuilding the buffer or reducing exposure to permanent commitments.")
+        elif exposure["headroom_at_risk"] > 0:
+            st.info(f"The downside shock puts £{exposure['headroom_at_risk']:.1f}bn of the projected year-three fiscal buffer at risk.")
+        else:
+            st.success("The downturn scenario does not reduce year-three headroom against the baseline in this projection.")
     st.divider()
     st.markdown("### 🏦 Treasury investment fund")
     st.caption("Invest available fiscal headroom in public assets. Capital is committed upfront; income and asset values update each spring.")

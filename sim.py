@@ -1978,7 +1978,7 @@ def check(n=None, difficulty=None):
     # Phase 1: Treasury scenario forecasts use the macro engine, remain non-mutating,
     # and distinguish a downside shock from the central case.
     try:
-        from treasury import fiscal_outlook
+        from treasury import fiscal_outlook, scenario_exposure
         forecast_state = FakeState({
             "term": 1, "year": 1, "seed": 2468,
             "gdp_trillion": 3.0, "growth": 1.2, "inflation": 2.4,
@@ -2004,6 +2004,21 @@ def check(n=None, difficulty=None):
             failures.append("Downturn scenario did not worsen growth and fiscal headroom against baseline.")
         if dict(forecast_state) != previous:
             failures.append("Treasury forecast mutated the live game state.")
+        exposure = scenario_exposure(outlook)
+        expected_headroom_risk = round(
+            by_name["Baseline"]["Fiscal headroom (£bn)"] - by_name["Downturn"]["Fiscal headroom (£bn)"], 1
+        )
+        expected_interest_rise = round(
+            by_name["Downturn"]["Debt interest (£bn)"] - by_name["Baseline"]["Debt interest (£bn)"], 1
+        )
+        if exposure["headroom_at_risk"] != expected_headroom_risk:
+            failures.append("Treasury downside exposure misstates the headroom at risk.")
+        if exposure["extra_debt_interest"] != expected_interest_rise:
+            failures.append("Treasury downside exposure misstates additional debt interest.")
+        if exposure["headroom_at_risk"] <= 0 or exposure["extra_debt_interest"] < 0:
+            failures.append("Downturn exposure summary did not identify the expected fiscal risk.")
+        if dict(forecast_state) != previous:
+            failures.append("Treasury exposure summary mutated the live game state.")
         # A downside stress case must worsen fiscal space and raise borrowing costs,
         # while leaving the live session unchanged.
         st.session_state = forecast_state
