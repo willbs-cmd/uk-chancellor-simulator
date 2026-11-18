@@ -1064,7 +1064,16 @@ def decision_screen():
                           help='Each approach has different economic, political and delivery trade-offs.')
     if choice is not None:
         selected = options[labels.index(choice)]
-        assessment = engine.assess_decision(selected)
+        st.markdown("#### Cabinet approach")
+        stance_labels = {"consensus": "Build Cabinet consensus", "compromise": "Offer a Cabinet compromise", "treasury": "Defend the Treasury position"}
+        stance = st.radio("How will you prepare the proposal?", list(stance_labels), format_func=lambda key: stance_labels[key], horizontal=True, key=f"cabinet_stance_{s.term}_{s.year}_{s.block}", label_visibility="collapsed", help="Consensus improves Number 10 and Cabinet confidence. A compromise wins wider support but slightly dilutes delivery. A Treasury-led approach reassures markets but risks ministerial friction.")
+        stance_details = {
+            "consensus": "Build unity before the vote. Cabinet confidence and Number 10 trust improve, strengthening delivery.",
+            "compromise": "Make concessions to secure wider ministerial and backbench support. The proposal is more deliverable politically, but its impact is slightly diluted.",
+            "treasury": "Prioritise fiscal credibility and market reassurance. The Treasury gains influence, but Cabinet and backbench support may suffer.",
+        }
+        st.caption(stance_details[stance])
+        assessment = engine.assess_decision(selected, stance)
         effect_text = state.fmt_fx(selected.get('effect', {}))
         st.markdown("<div class='decision-brief-label'>TREASURY & CABINET ASSESSMENT</div>", unsafe_allow_html=True)
         with st.container(key='decision_brief', border=True):
@@ -1086,7 +1095,7 @@ def decision_screen():
         st.markdown("<div class='decision-authority'>DECISION PENDING · Your selection has no effect until authorised.</div>", unsafe_allow_html=True)
     with st.container(key='decision_authorise'):
         if st.button('Take this decision to Cabinet & Commons', type='primary', disabled=choice is None, use_container_width=True):
-            engine.execute_decision(options[labels.index(choice)])
+            engine.execute_decision(options[labels.index(choice)], cabinet_stance=stance)
             st.rerun()
 
 

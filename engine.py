@@ -291,7 +291,21 @@ def current_options():
     return decisions.get_options(d, f"{s.seed}-{s.term}-{s.year}-{s.block}", s.show_tags)
 
 
-def assess_decision(opt):
+def apply_cabinet_stance(s, stance):
+    """Apply the political trade-off chosen before a policy goes to the Commons."""
+    effects = {
+        "consensus": {"cab_opinion": 0.8, "pm_trust": 0.4},
+        "compromise": {"cab_opinion": 1.4, "backbench_opinion": 0.8, "party_opinion": 0.3},
+        "treasury": {"market_conf": 0.6, "cab_opinion": -1.0, "backbench_opinion": -0.4},
+    }
+    if stance not in effects:
+        stance = "consensus"
+    for key, change in effects[stance].items():
+        s[key] = round(_clip(float(s.get(key, 50.0)) + change), 1)
+    s["last_cabinet_stance"] = stance
+    return stance
+
+def assess_decision(opt, cabinet_stance="consensus"):
     """Estimate how deliverable a proposal is in the current political and fiscal climate.
 
     This is deliberately a modest modifier: policy choice still matters most, but a weak
@@ -309,7 +323,8 @@ def assess_decision(opt):
         + alignment * 0.035
         - fiscal_pressure * 0.10
     )
-    confidence = round(max(0.72, min(1.08, confidence)), 2)
+    stance_adjustment = {"consensus": 0.04, "compromise": -0.03, "treasury": 0.01}.get(cabinet_stance, 0.0)
+    confidence = round(max(0.72, min(1.08, confidence + stance_adjustment)), 2)
     # Keep the assessment resilient if an older saved session or deployment is
     # missing the newer Parliament helper.
     projected_fn = getattr(parliament, "projected_ayes", None)
@@ -359,7 +374,7 @@ def assess_decision(opt):
     }
 
 
-def execute_decision(opt):
+def execute_decision(opt, cabinet_stance='consensus'):
     """Run one policy decision. ``opt`` is an option dict from ``current_options()``."""
     s = st.session_state
     # Migrate older in-progress saves created before the branching decision system.
@@ -383,8 +398,10 @@ def execute_decision(opt):
     ideology, effect = opt['ideology'], opt['effect']
     decision = current_decision()
 
-    assessment = assess_decision(opt)
+    cabinet_stance = apply_cabinet_stance(s, cabinet_stance)
+    assessment = assess_decision(opt, cabinet_stance)
     vote = parliament.review_bill(decision, opt)
+    vote["cabinet_stance"] = cabinet_stance
     implementation = vote['factor']
     delivery_factor = assessment['confidence']
     combined_factor = implementation * delivery_factor
@@ -398,7 +415,8 @@ def execute_decision(opt):
         'title': decision.get('title', 'Policy decision'),
         'ideology': ideology,
         'choice': opt.get('label', ''),
-        'branch_id': decision.get('branch_id')
+        'branch_id': decision.get('branch_id'),
+        'cabinet_stance': cabinet_stance
     })
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
