@@ -26,6 +26,7 @@ import regional_economy
 import long_run_simulation
 import public_services
 import chancellors_desk
+import cabinet_management
 import political_pressure
 import opposition_campaign
 import government_missions
@@ -1174,30 +1175,32 @@ def economy():
     long_run_simulation.render(s)
 
 
-# ==================== MAIN NAVIGATION ====================
-# Keep the core action visible in one place; supporting information is separated
-# into compact workspaces so the player does not have to scroll through everything.
+# ==================== SIX-AREA GAME NAVIGATION ====================
+# The six primary workspaces keep all existing game systems accessible while
+# reducing the number of competing top-level destinations.
 _has_briefing = bool(s.event_cards or s.get('message') or s.get('humphrey_note') or s.get('headlines'))
 _is_budget_phase = (
     (s.block == 3 and s.active_crisis is None and not s.get('active_request') and not s.get('active_dispute'))
     or bool(s.get('spending_review_due')) or bool(s.get('autumn_statement_due')) or bool(s.get('active_emergency_budget'))
 )
 
-tab_action, tab_briefing, tab_economy, tab_government, tab_treasury, tab_household, tab_regions, tab_services = st.tabs([
-    'Decisions' + (' •' if _is_budget_phase else ''),
-    'Briefing' + (' •' if _has_briefing else ''),
-    'Economy',
-    'Government',
-    'Treasury',
-    'Households',
-    'Regions',
-    'Public Services'
+area_office, area_budget, area_economy, area_cabinet, area_parliament, area_news = st.tabs([
+    'Chancellor’s Office',
+    'The Budget' + (' •' if _is_budget_phase else ''),
+    'The Economy',
+    'Cabinet',
+    'Parliament',
+    'The News' + (' •' if _has_briefing else '')
 ])
 
-with tab_action:
-    if s.get('local_election_due'):
-        local_elections.render(widget_namespace='action')
-    elif s.get('active_pm_ultimatum'):
+with area_office:
+    st.markdown('### Chancellor’s Office')
+    st.caption('Your working dashboard: decisions, immediate priorities and the next move in government.')
+    if _is_budget_phase:
+        st.info('A fiscal event or Budget decision is ready. Open **The Budget** to continue.')
+    if s.get('active_crisis') or s.get('active_weekly_event') or s.get('active_request') or s.get('active_dispute'):
+        st.warning('An outstanding decision needs your attention below.')
+    if s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
     elif s.get('active_pm_meeting'):
         pm_meeting_screen()
@@ -1215,7 +1218,15 @@ with tab_action:
         weekly_event_screen()
     elif s.get('active_request'):
         request_screen()
-    elif s.get('active_emergency_budget'):
+    elif _is_budget_phase:
+        st.info('Your next fiscal decision is waiting in **The Budget**.')
+    else:
+        decision_screen()
+
+with area_budget:
+    st.markdown('### The Budget')
+    st.caption('Taxation, departmental spending, borrowing, fiscal rules and formal fiscal events.')
+    if s.get('active_emergency_budget'):
         budget_screen()
     elif s.get('spending_review_due'):
         budget.render_spending_review()
@@ -1224,101 +1235,125 @@ with tab_action:
     elif _is_budget_phase:
         budget_screen()
     else:
-        decision_screen()
+        budget_tabs = st.tabs(['Budget & fiscal events', 'Treasury position', 'Gilts & investment', 'OBR & markets', 'Local government'])
+        with budget_tabs[0]:
+            fiscal_events.render_treasury_overview()
+            st.divider()
+            budget_screen()
+        with budget_tabs[1]:
+            fiscal_events.render_treasury_overview()
+            forecast_accuracy.render_dashboard(s)
+        with budget_tabs[2]:
+            treasury.render()
+            features.render()
+        with budget_tabs[3]:
+            economic_management.render()
+        with budget_tabs[4]:
+            devolution.render()
 
-with tab_briefing:
-    briefing()
+with area_economy:
+    st.markdown('### The Economy')
+    st.caption('Growth, inflation, employment, productivity, households, regions and public services.')
+    economy_tabs = st.tabs(['Economic outlook', 'Households', 'Regions', 'Public services'])
+    with economy_tabs[0]:
+        economy()
+    with economy_tabs[1]:
+        household.render()
+    with economy_tabs[2]:
+        regional_economy.render()
+    with economy_tabs[3]:
+        public_services.render()
 
-with tab_economy:
-    economy()
+with area_cabinet:
+    st.markdown('### Cabinet')
+    st.caption('Ministerial performance, departmental delivery, relationships and Number 10.')
+    cabinet_management.ensure(s)
+    cabinet_health = cabinet_management.cabinet_health(s)
+    c1, c2, c3 = st.columns(3)
+    c1.metric('Serving ministers', cabinet_health['count'])
+    c2.metric('Average competence', f"{cabinet_health['competence']:.0f}/100")
+    c3.metric('Average loyalty', f"{cabinet_health['loyalty']:.0f}/100")
+    minister_rows = []
+    for department, minister in s.get('cabinet_ministers', {}).items():
+        profile = cabinet_management.profile_for(s, department)
+        competence = float(s.get('ministerial_competence', {}).get(department, 60.0))
+        loyalty = float(s.get('ministerial_loyalty', {}).get(department, 60.0))
+        minister_rows.append({
+            'Department': str(department).replace('_', ' ').title(),
+            'Minister': minister or 'Vacant',
+            'Competence': round(competence),
+            'Loyalty': round(loyalty),
+            'Faction': profile.get('faction', '—'),
+            'Personality': profile.get('personality', '—')
+        })
+    if minister_rows:
+        st.dataframe(pd.DataFrame(minister_rows), hide_index=True, use_container_width=True,
+                     column_config={
+                         'Competence': st.column_config.ProgressColumn('Competence', min_value=0, max_value=100),
+                         'Loyalty': st.column_config.ProgressColumn('Loyalty', min_value=0, max_value=100)
+                     })
+    else:
+        st.info('Ministerial appointments will appear here once the Cabinet is formed.')
+    if cabinet_health['weak_ministers']:
+        st.warning('Ministers with weak delivery records: ' + ', '.join(
+            item['minister'] for item in cabinet_health['weak_ministers']
+        ))
+    if s.get('ministerial_latest_appraisals'):
+        with st.expander('Latest ministerial appraisals'):
+            st.dataframe(s.get('ministerial_latest_appraisals', []), hide_index=True, use_container_width=True)
+    if s.get('ministerial_relationship_issue'):
+        st.warning('A ministerial relationship issue is active. Resolve it through the Chancellor’s Office.')
+    st.divider()
+    st.markdown('#### Number 10 relationship')
+    pmc = st.columns(3)
+    pmc[0].metric('PM confidence', f"{float(s.pm_opinion):.0f}/100")
+    pmc[1].metric('Personal trust', f"{float(s.get('pm_trust', 70)):.0f}/100")
+    pmc[2].metric('Cabinet support', f"{float(s.cab_opinion):.0f}/100")
+    st.metric('Relationship status', s.get('pm_relationship_status', 'Workable'))
+    latest_review = s.get('pm_relationship_latest') or {}
+    if latest_review:
+        st.caption(
+            f"Latest annual review · Trust {latest_review.get('trust_before', 0):.0f} → "
+            f"{latest_review.get('trust_after', 0):.0f} ({latest_review.get('change', 0):+.1f})"
+        )
+        st.caption('Assessment: ' + ', '.join(latest_review.get('reasons', [])))
+    if s.get('pm_meeting_history'):
+        with st.expander('Previous Number 10 meetings'):
+            st.dataframe(list(reversed(s.pm_meeting_history)), hide_index=True, use_container_width=True)
+    if s.get('active_pm_meeting'):
+        st.info('A private meeting with the PM is waiting in the Chancellor’s Office.')
+    elif int(s.get('pm_meeting_year', 0)) < int(s.year):
+        if st.button('Request private meeting with the PM', key='cabinet_request_pm_meeting', type='primary'):
+            engine.open_pm_meeting()
+            st.rerun()
+    st.divider()
+    cabinet_tabs = st.tabs(['Departmental delivery', 'Annual reports'])
+    with cabinet_tabs[0]:
+        chancellor_office.render()
+    with cabinet_tabs[1]:
+        performance_report.render()
 
-with tab_government:
-    st.markdown('### Government')
-    st.caption('Political support, parliamentary scrutiny, local elections and your record in office.')
-    gov_mandate, gov_polls, gov_parliament, gov_local, gov_office, gov_number10, gov_reports = st.tabs(['Mandate', 'Polling', 'Commons', 'Local', 'Chancellor’s Office', 'Number 10', 'Annual reports'])
-    with gov_mandate:
+with area_parliament:
+    st.markdown('### Parliament')
+    st.caption('Commons votes, constituency MPs, rebellions, local elections and party management.')
+    parliament_tabs = st.tabs(['House of Commons', 'Local elections', 'Government mandate'])
+    with parliament_tabs[0]:
+        parliament.render()
+    with parliament_tabs[1]:
+        local_elections.render(widget_namespace='parliament')
+    with parliament_tabs[2]:
         government_missions.render(s)
-    with gov_polls:
+
+with area_news:
+    st.markdown('### The News')
+    st.caption('Your daily briefing, opposition attacks, polling, headlines and public reaction.')
+    news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition'])
+    with news_tabs[0]:
+        briefing()
+    with news_tabs[1]:
         if s.get('poll_history'):
             render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
         else:
             st.info('Polling history will appear after the first update.')
-    with gov_parliament:
-        parliament.render()
-    with gov_local:
-        local_elections.render(widget_namespace='government')
-    with gov_office:
-        chancellor_office.render()
-    with gov_number10:
-        st.markdown("#### Your relationship with the Prime Minister")
-        pmc=st.columns(3)
-        pmc[0].metric("PM confidence",f"{float(s.pm_opinion):.0f}/100")
-        pmc[1].metric("Personal trust",f"{float(s.get('pm_trust',70)):.0f}/100")
-        pmc[2].metric("Cabinet support",f"{float(s.cab_opinion):.0f}/100")
-        trust=float(s.get('pm_trust',70))
-        latest_review=s.get("pm_relationship_latest") or {}
-        st.metric("Relationship status", s.get("pm_relationship_status", "Workable"))
-        if latest_review:
-            st.caption(
-                f"Latest annual review · Trust {latest_review.get('trust_before', trust):.0f} → "
-                f"{latest_review.get('trust_after', trust):.0f} ({latest_review.get('change', 0):+.1f})"
-            )
-            st.caption("Assessment: " + ", ".join(latest_review.get("reasons", [])))
-        if trust>=70:
-            st.success("Number 10 broadly trusts you. The PM is likely to give you room to manage the economy.")
-        elif trust>=45:
-            st.info("The relationship is workable, but disagreements are beginning to matter.")
-        elif trust>=25:
-            st.warning("Relations are strained. The PM may start bypassing the Treasury or questioning your judgement.")
-        else:
-            st.error("The relationship is close to breaking point. A serious disagreement could put your job at risk.")
-        if s.get("pm_relationship_history"):
-            with st.expander("Annual relationship reviews", expanded=False):
-                for review in reversed(s.pm_relationship_history[-5:]):
-                    st.caption(
-                        f"Term {review.get('term')} · Year {review.get('year')} · "
-                        f"Trust {review.get('trust_after')}/100 · {review.get('change', 0):+.1f}"
-                    )
-                    st.write(", ".join(review.get("reasons", [])))
-        if s.get('pm_meeting_history'):
-            with st.expander("Previous Number 10 meetings"):
-                st.dataframe(list(reversed(s.pm_meeting_history)),hide_index=True,use_container_width=True)
-        if s.get('active_pm_meeting'):
-            st.warning("A private meeting is waiting in the Decisions tab.")
-        elif int(s.get('pm_meeting_year',0))>=int(s.year):
-            st.caption("You have already held your private meeting with the PM this year. Another will be available next year.")
-        else:
-            st.caption("You can request one formal private meeting with the PM each year. The topic will reflect the political and economic pressures facing the Government.")
-            if st.button("Request a private meeting with the PM",type="primary",use_container_width=True):
-                engine.open_pm_meeting()
-                st.rerun()
-    with gov_reports:
-        performance_report.render()
-
-with tab_treasury:
-    st.markdown('### Treasury')
-    st.caption('Monitor the public finances, prepare for scheduled fiscal events and manage government borrowing.')
-    treasury_tabs = st.tabs(['Treasury position', 'Investments & gilts', 'Institutions & tools', 'OBR & markets', 'Local government'])
-    with treasury_tabs[0]:
-        fiscal_events.render_treasury_overview()
-        forecast_accuracy.render_dashboard(s)
-    with treasury_tabs[1]:
-        treasury.render()
-    with treasury_tabs[2]:
-        features.render()
-    with treasury_tabs[3]:
-        economic_management.render()
-    with treasury_tabs[4]:
-        devolution.render()
-
-
-with tab_household:
-    household.render()
-
-
-with tab_regions:
-    regional_economy.render()
-
-
-with tab_services:
-    public_services.render()
+    with news_tabs[2]:
+        opposition_campaign.render(s)
