@@ -2294,6 +2294,31 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Phase 2: newspaper headlines should react to realised economic and
+    # public-service conditions after policy effects, not only ideological labels.
+    try:
+        new_run("Labour", "Normal", 63130)
+        headline_state = st.session_state
+        headline_state.inflation = 5.4
+        headline_state.growth = -1.0
+        price_headlines = engine.generate_headlines("Centric")
+        if not any("INFLATION" in item for item in price_headlines):
+            failures.append("High inflation did not generate a price-pressure newspaper headline.")
+        headline_state.inflation = 2.0
+        headline_state.growth = -1.6
+        recession_headlines = engine.generate_headlines("Social Democratic")
+        if not any("CONTRACTS" in item or "DOWNTURN" in item for item in recession_headlines):
+            failures.append("Negative real growth did not generate a recession newspaper headline.")
+        headline_state.growth = 1.2
+        headline_state.public_service_strikes = [{"id": "NHS", "severity": 2.0}]
+        strike_headlines = engine.generate_headlines("Centric")
+        if not any("STRIKE" in item or "SERVICES" in item for item in strike_headlines):
+            failures.append("Unresolved public-sector strikes did not influence newspaper headlines.")
+    except Exception as exc:
+        failures.append(f"Phase 2 public/media headline regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:

@@ -66,10 +66,13 @@ def reseed(tag=''):
 
 # ================================================================ headlines
 def generate_headlines(ideology, is_budget=False, headroom=0):
+    s = st.session_state
     if is_budget:
-        if headroom > 2.0: return ("AUSTERITY BUDGET IGNORES THE POOR", "CHANCELLOR BUILDS FISCAL FORTRESS", "A PRUDENT BUDGET AT LAST")
-        elif headroom < -2.0: return ("END TO AUSTERITY!", "MARKETS PANIC OVER DEFICIT SPENDING", "RECKLESS BORROWING THREATENS ECONOMY")
-        else: return ("A MIXED BAG FOR WORKERS", "CHANCELLOR WALKS THE TIGHTROPE", "PLAYING IT SAFE BEFORE ELECTION")
+        if headroom > 2.0:
+            return ("AUSTERITY BUDGET IGNORES THE POOR", "CHANCELLOR BUILDS FISCAL FORTRESS", "A PRUDENT BUDGET AT LAST")
+        elif headroom < -2.0:
+            return ("END TO AUSTERITY!", "MARKETS PANIC OVER DEFICIT SPENDING", "RECKLESS BORROWING THREATENS ECONOMY")
+        return ("A MIXED BAG FOR WORKERS", "CHANCELLOR WALKS THE TIGHTROPE", "PLAYING IT SAFE BEFORE ELECTION")
 
     headlines = {
         'Hard Left': (
@@ -93,7 +96,55 @@ def generate_headlines(ideology, is_budget=False, headroom=0):
             random.choice(["TOUGH MEDICINE ADMINISTERED", "BELTS TIGHTENED AT THE TREASURY", "THE DEFICIT HAWKS RETURN"]),
             random.choice(["BALANCING THE BOOKS", "FISCAL RESPONSIBILITY AT LAST", "HARD CHOICES, RIGHT DECISIONS"])),
     }
-    return headlines.get(ideology, headlines['Centric'])
+    base = headlines.get(ideology, headlines['Centric'])
+    country_stats = s.get("country") or {}
+    inflation = float(s.get("inflation", 2.0))
+    growth = float(s.get("growth", 0.0))
+    unemployment = float(country_stats.get("unemployment", 4.5))
+    headroom_now = float(s.get("headroom", 0.0))
+    strikes = list(s.get("public_service_strikes", []))
+    service_scores = s.get("public_service_scores") or {}
+    weakest_service = min([float(value) for value in service_scores.values()] or [65.0])
+
+    # Three editorial voices react to the realised state after the policy choice.
+    # The most politically salient economic or public-service weakness takes priority.
+    if inflation >= 4.5:
+        return (
+            "FAMILIES FEEL THE PRICE SQUEEZE",
+            f"INFLATION HOLDS AT {inflation:.1f}% AS TREASURY FACES QUESTIONS",
+            "CHANCELLOR'S PLAN FAILS TO COOL PRICES",
+        )
+    if growth < -0.25:
+        return (
+            "WORKERS FEAR A NEW ECONOMIC DOWNTURN",
+            f"ECONOMY CONTRACTS AS GROWTH FALLS TO {growth:.1f}%",
+            "TREASURY'S GROWTH STRATEGY UNDER FIRE",
+        )
+    if unemployment >= 6.0:
+        return (
+            "WORKING TOWNS DEMAND ACTION ON JOBS",
+            f"UNEMPLOYMENT RISES TO {unemployment:.1f}%",
+            "CHANCELLOR HAS NO ANSWER FOR JOB LOSSES",
+        )
+    if strikes or weakest_service < 48.0:
+        return (
+            "PUBLIC SERVICES UNDER STRAIN",
+            f"{len(strikes)} UNRESOLVED STRIKE DISPUTE(S) AS SERVICES COME UNDER PRESSURE",
+            "GOVERNMENT LOSING CONTROL OF PUBLIC SERVICES",
+        )
+    if headroom_now < 0:
+        return (
+            "TREASURY RULES ARE BACK IN THE RED",
+            f"FISCAL HEADROOM FALLS TO £{headroom_now:.1f}BN",
+            "BORROWING WARNING PUTS CHANCELLOR ON THE DEFENSIVE",
+        )
+    if growth >= 2.2 and inflation <= 2.5 and unemployment < 5.0:
+        return (
+            "GROWTH AND JOBS OFFER GOVERNMENT A LIFT",
+            "ECONOMY GATHERS MOMENTUM AS PRICES EASE",
+            "CHANCELLOR CLAIMS EARLY ECONOMIC DIVIDEND",
+        )
+    return base
 
 
 # ================================================================ political capital & polls
@@ -349,7 +400,6 @@ def execute_decision(opt):
         'choice': opt.get('label', ''),
         'branch_id': decision.get('branch_id')
     })
-    s.headlines = generate_headlines(ideology)
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
     # Put each major proposal to a Commons vote before applying its full effects.
@@ -362,6 +412,7 @@ def execute_decision(opt):
     pm_delta = float(s.get('pm_opinion', 50.0)) - float(before.get('pm_opinion', 50.0))
     vote_trust = 0.55 if vote.get('status') == 'Passed' else (-0.45 if vote.get('status') == 'Passed with amendments' else -1.25)
     s.pm_trust = round(_clip(float(s.get('pm_trust', 70.0)) + max(-2.0, min(2.0, pm_delta * 0.22 + vote_trust))), 1)
+    s.headlines = generate_headlines(ideology)
     pressure_issue = political_pressure.review_policy(s, decision, opt, vote)
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
     s.message = (s.message + " " + parliament_note).strip()
