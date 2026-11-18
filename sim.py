@@ -304,7 +304,7 @@ def cabinet_portfolio_politics_checks():
     assert strained_review["positions"][0]["score"] < clear_review["positions"][0]["score"]
     assert strained_review["positions"][0]["rivalry_penalty"] == 6.0
     new_run("Labour", "Normal", 764231)
-    st.session_state.parliament_seats = {party: (400 if party == "Labour" else 0) for party in state.PARTIES}
+    st.session_state.parliament_seats = {party: (400 if party == "Labour" else (250 if party == "Conservative" else 0)) for party in state.PARTIES}
     st.session_state.government_type = "majority"
     st.session_state.government_coalition_partners = []
     high_ayes, _ = parliament._simulate_party_vote(option, bonus=0, cabinet_support=85.0)

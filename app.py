@@ -1088,11 +1088,11 @@ def decision_screen():
             key=f"proposal_priority_{s.term}_{s.year}_{s.block}",
             help="Link this proposal to one of the Government's adopted annual priorities, or leave it as general business."
         )
-        assessment = engine.assess_decision(selected, stance)
         governance_preview = government_programme.preflight(s, decision, selected, stance)
         fiscal_preview = governance_preview["fiscal"]
         cabinet_preview = governance_preview["cabinet"]
         pm_preview = governance_preview["prime_minister"]
+        assessment = engine.assess_decision(selected, stance, cabinet_support=cabinet_preview["support_pct"])
         effect_text = state.fmt_fx(selected.get('effect', {}))
         st.markdown("<div class='decision-brief-label'>TREASURY & CABINET ASSESSMENT</div>", unsafe_allow_html=True)
         with st.container(key='decision_brief', border=True):

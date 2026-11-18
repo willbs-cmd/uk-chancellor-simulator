@@ -305,7 +305,7 @@ def apply_cabinet_stance(s, stance):
     s["last_cabinet_stance"] = stance
     return stance
 
-def assess_decision(opt, cabinet_stance="consensus"):
+def assess_decision(opt, cabinet_stance="consensus", cabinet_support=None):
     """Estimate how deliverable a proposal is in the current political and fiscal climate.
 
     This is deliberately a modest modifier: policy choice still matters most, but a weak
@@ -339,6 +339,10 @@ def assess_decision(opt, cabinet_stance="consensus"):
         projected = int(326 + 0.80 * (float(s.get('backbench_opinion', 60)) - 40)
                         + 0.45 * (float(s.get('party_opinion', 65)) - 50)
                         + 0.12 * (float(s.get('approval', 48)) - 50))
+    if cabinet_support is not None:
+        # Reflect the Cabinet signal in the preview, using the same political direction
+        # as the subsequent party-vote model.
+        projected += int(round(max(-17.0, min(17.0, (float(cabinet_support) - 50.0) * 0.34))))
     projected = max(0, min(650, projected))
     if projected >= parliament.CLEAR_PASS:
         vote_label = "Likely clear passage"
