@@ -400,12 +400,25 @@ def execute_decision(opt, cabinet_stance='consensus'):
 
     cabinet_stance = apply_cabinet_stance(s, cabinet_stance)
     assessment = assess_decision(opt, cabinet_stance)
-    vote = parliament.review_bill(decision, opt)
+    import government_programme
+    government_programme.ensure(s)
+    governance = government_programme.preflight(s, decision, opt, cabinet_stance)
+    cabinet_review = governance["cabinet"]
+    pm_review = governance["prime_minister"]
+    if pm_review["factor"] > 0:
+        vote = parliament.review_bill(decision, opt)
+    else:
+        vote = {"status": "Not submitted", "factor": 0.0, "ayes": 0, "noes": 0,
+                "rebels": 0, "party_votes": {}, "explanation": "The Prime Minister withheld executive approval."}
     vote["cabinet_stance"] = cabinet_stance
+    vote["cabinet_status"] = cabinet_review["status"]
+    vote["prime_minister_status"] = pm_review["status"]
     implementation = vote['factor']
     delivery_factor = assessment['confidence']
-    combined_factor = implementation * delivery_factor
-    applied_effect = parliament.scale_effect(effect, combined_factor)
+    cabinet_factor = float(cabinet_review["factor"])
+    pm_factor = float(pm_review["factor"])
+    combined_factor = implementation * delivery_factor * cabinet_factor * pm_factor
+    applied_effect = parliament.scale_effect(effect, combined_factor) if pm_factor > 0 else {}
     s.message = effect.get('message', 'Decision applied.')
     s.last_ideology = ideology
     s.policy_history.append({
@@ -416,31 +429,65 @@ def execute_decision(opt, cabinet_stance='consensus'):
         'ideology': ideology,
         'choice': opt.get('label', ''),
         'branch_id': decision.get('branch_id'),
-        'cabinet_stance': cabinet_stance
+        'cabinet_stance': cabinet_stance,
+        'cabinet_status': cabinet_review['status'],
+        'prime_minister_status': pm_review['status']
     })
     s.ideology_counts[ideology] = s.ideology_counts.get(ideology, 0) + 1
 
     # Put each major proposal to a Commons vote before applying its full effects.
-    country.apply_decision(ideology, scale=combined_factor)
-    treasury_officials.review_policy(decision.get('title', 'Policy decision'), opt.get('label', ''), applied_effect)
-    apply_effect(applied_effect)
-    parliament.apply_fallout(vote)
+    if pm_factor > 0:
+        country.apply_decision(ideology, scale=combined_factor)
+        treasury_officials.review_policy(decision.get('title', 'Policy decision'), opt.get('label', ''), applied_effect)
+        apply_effect(applied_effect)
+        parliament.apply_fallout(vote)
+    else:
+        s.cab_opinion = round(_clip(float(s.get('cab_opinion', 60.0)) - 0.4), 1)
     # The PM's personal trust responds to the Chancellor's parliamentary judgement,
     # separately from the broader public-facing confidence score.
     pm_delta = float(s.get('pm_opinion', 50.0)) - float(before.get('pm_opinion', 50.0))
-    vote_trust = 0.55 if vote.get('status') == 'Passed' else (-0.45 if vote.get('status') == 'Passed with amendments' else -1.25)
+    vote_trust = (-0.9 if pm_factor <= 0 else (0.55 if vote.get('status') == 'Passed' else (-0.45 if vote.get('status') == 'Passed with amendments' else -1.25)))
     s.pm_trust = round(_clip(float(s.get('pm_trust', 70.0)) + max(-2.0, min(2.0, pm_delta * 0.22 + vote_trust))), 1)
     s.headlines = generate_headlines(ideology)
-    pressure_issue = political_pressure.review_policy(s, decision, opt, vote)
-    parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
-    s.message = (s.message + " " + parliament_note).strip()
+    pressure_issue = political_pressure.review_policy(s, decision, opt, vote) if pm_factor > 0 else None
+    if pm_factor <= 0:
+        parliament_note = "The proposal was stopped by the Prime Minister before it reached the Commons."
+    else:
+        parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
+    governance_note = (
+        f"Cabinet: {cabinet_review['status']} ({cabinet_review['support_pct']:.0f}% support). "
+        f"Number 10: {pm_review['status']}."
+    )
+    s.message = (s.message + " " + governance_note + " " + parliament_note).strip()
+    proposal_record = government_programme.record_proposal(
+        s, decision, opt, programme_priority, cabinet_review, pm_review, vote,
+        combined_factor, fiscal=governance["fiscal"]
+    )
+    if s.policy_history:
+        s.policy_history[-1].update({
+            "programme_priority": proposal_record["priority_label"],
+            "cabinet_status": cabinet_review["status"],
+            "prime_minister_status": pm_review["status"],
+            "authorisation_outcome": proposal_record["outcome"],
+        })
     if pressure_issue:
         s.event_cards.append({'title': 'Political pressure · Cabinet dissent' if pressure_issue.get('kind') == 'ministerial_dissent' else ('Political pressure · Parliamentary faction' if pressure_issue.get('kind') == 'parliamentary_bloc' else 'Political pressure · Backbench rebellion'), 'text': pressure_issue.get('text', ''), 'summary': 'A response is required on the Chancellor’s Desk.'})
     s.event_cards.append({
-        'title': f"Commons vote · {vote['status']}",
-        'text': f"{decision['title']}: {opt['label']}",
-        'summary': f"{vote['ayes']} ayes · {vote['noes']} noes · {combined_factor:.0%} of the proposal delivered (Commons {implementation:.0%} × delivery {delivery_factor:.0%})"
+        'title': 'Cabinet review · ' + cabinet_review['status'],
+        'text': f"{cabinet_review['support_pct']:.0f}% of the simulated ministerial team supports the proposal.",
+        'summary': f"{cabinet_review['support']} support · {cabinet_review['amendments']} seek amendments · {cabinet_review['oppose']} oppose"
     })
+    s.event_cards.append({
+        'title': 'Number 10 · ' + pm_review['status'],
+        'text': pm_review['message'],
+        'summary': f"Prime Ministerial approval score: {pm_review['score']:.0f}/100"
+    })
+    if pm_factor > 0:
+        s.event_cards.append({
+            'title': f"Commons vote · {vote['status']}",
+            'text': f"{decision['title']}: {opt['label']}",
+            'summary': f"{vote['ayes']} ayes · {vote['noes']} noes · {combined_factor:.0%} delivered (Commons {implementation:.0%} × Cabinet {cabinet_factor:.0%} × PM {pm_factor:.0%} × delivery {delivery_factor:.0%})"
+        })
 
     d_app = s.approval - before['approval']
     d_head = s.headroom - before['headroom']
@@ -451,7 +498,7 @@ def execute_decision(opt, cabinet_stance='consensus'):
     opposition_campaign.review_after_decision(s, decision, opt)
 
     s.steps += 1
-    if opt['delayed']:
+    if opt['delayed'] and combined_factor > 0:
         spec = dict(opt['delayed'])
         spec['fx'] = parliament.scale_effect(spec['fx'], combined_factor)
         s.pending.append(dict(due=s.steps + spec['after'], title=spec['title'], text=spec['text'], fx=spec['fx']))
@@ -1675,10 +1722,13 @@ def proceed_to_spring():
     import political_survival
     political_survival.annual_review(s)
     government_missions.record_year(s)
+    import government_programme
+    government_programme.close_annual_programme(s)
     performance_report.create_report()
     # Compare the vintage with the fully realised annual outcome exactly once.
     forecast_accuracy.settle_vintage(s)
     s.year += 1
+    government_programme.start_annual_programme(s, carry_forward=True)
     s.autumn_statement_due = s.year <= 5
     fiscal_events.schedule_spending_review(s)
     budget.apply_spending_review_rollforward(s, s.year)
@@ -2070,6 +2120,8 @@ def continue_term():
     government_missions.start_mission(
         s, s.get('government_mission', 'balanced_renewal'), preserve_history=True
     )
+    import government_programme
+    government_programme.start_annual_programme(s, carry_forward=False)
     s.message = message
     state.snapshot()
     s.term_start = state.snapshot_all()
