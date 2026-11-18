@@ -67,6 +67,8 @@ import political_pressure  # noqa: E402
 import budget_aftermath  # noqa: E402
 import mp_politics  # noqa: E402
 import opposition_campaign  # noqa: E402
+import long_run_simulation  # noqa: E402
+import regional_economy  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -2316,6 +2318,128 @@ def check(n=None, difficulty=None):
             failures.append("Unresolved public-sector strikes did not influence newspaper headlines.")
     except Exception as exc:
         failures.append(f"Phase 2 public/media headline regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Phase 3: population, housing, energy, climate and trade pressures evolve
+    # once per year, respond to long-term investment and stay inside safe bounds.
+    try:
+        new_run("Labour", "Normal", 74101)
+        pressure_state = st.session_state
+        pressure_state.country["homes_built"] = 150.0
+        pressure_state.country["house_ratio"] = 8.3
+        pressure_state.country["homeless"] = 126.0
+        pressure_state.country["energy_bills"] = 1750.0
+        pressure_state.country["netzero"] = 20.0
+        pressure_state.business_confidence = 55.0
+        pressure_state.labour_demand = 100.0
+        pressure_state.world_cycle = 0.6
+        pressure_state.world_economy = {"Trade partner": {"growth": 0.4}}
+        pressure_state.housing_supply_gap = 220.0
+        pressure_state.energy_security = 40.0
+        pressure_state.clean_energy_share = 25.0
+        pressure_state.grid_capacity_index = 40.0
+        pressure_state.energy_import_exposure = 80.0
+        pressure_state.climate_resilience = 30.0
+        pressure_state.dependency_ratio = 61.0
+        population_before = float(pressure_state.population_millions)
+        working_share_before = float(pressure_state.working_age_share)
+        dependency_before = float(pressure_state.dependency_ratio)
+        housing_gap_before = float(pressure_state.housing_supply_gap)
+        energy_bill_before = float(pressure_state.country["energy_bills"])
+        climate_before = float(pressure_state.climate_resilience)
+        headroom_before = float(pressure_state.headroom)
+        row = long_run_simulation.advance(pressure_state)
+        if not row or len(pressure_state.long_run_history) != 1:
+            failures.append("The annual long-run model did not record its first year.")
+        if (float(pressure_state.population_millions) <= population_before
+                or float(pressure_state.working_age_share) >= working_share_before
+                or float(pressure_state.dependency_ratio) <= dependency_before):
+            failures.append("Population ageing and working-age demographics did not evolve as expected.")
+        if float(pressure_state.housing_supply_gap) <= housing_gap_before:
+            failures.append("A shortage of home completions did not increase the housing supply gap.")
+        if (float(pressure_state.country["house_ratio"]) <= 8.3
+                or float(pressure_state.country["homeless"]) <= 126.0):
+            failures.append("Housing pressure did not feed through into affordability and homelessness.")
+        if float(pressure_state.country["energy_bills"]) <= energy_bill_before:
+            failures.append("Low energy security and external exposure did not raise household bills.")
+        if float(pressure_state.climate_resilience) >= climate_before:
+            failures.append("Climate resilience did not erode without adaptation investment.")
+        headroom_after = float(pressure_state.headroom)
+        long_run_simulation.advance(pressure_state)
+        if (len(pressure_state.long_run_history) != 1
+                or float(pressure_state.headroom) != headroom_after):
+            failures.append("The long-run annual model applied twice during the same in-game year.")
+        for key in ("population_millions", "working_age_share", "dependency_ratio",
+                    "housing_supply_gap", "energy_security", "climate_resilience",
+                    "trade_resilience", "regional_inequality_index"):
+            if not math.isfinite(float(pressure_state.get(key, 0.0))):
+                failures.append(f"The long-run model produced a non-finite {key} value.")
+    except Exception as exc:
+        failures.append(f"Phase 3 long-run structural regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Long-term investment should improve the associated trend rather than only
+    # creating a one-off announcement effect.
+    try:
+        new_run("Labour", "Normal", 74102)
+        baseline_state = st.session_state
+        baseline_state.country["homes_built"] = 150.0
+        baseline_state.housing_supply_gap = 220.0
+        baseline_state.energy_security = 40.0
+        baseline_state.clean_energy_share = 25.0
+        baseline_state.grid_capacity_index = 40.0
+        baseline_state.energy_import_exposure = 80.0
+        baseline_state.climate_resilience = 30.0
+        baseline_state.country["energy_bills"] = 1750.0
+        baseline_state.dependency_ratio = 61.0
+        baseline_state.world_cycle = 0.6
+        baseline_state.world_economy = {"Trade partner": {"growth": 0.4}}
+        long_run_simulation.advance(baseline_state)
+        baseline_outcome = {
+            "housing_gap": float(baseline_state.housing_supply_gap),
+            "energy_security": float(baseline_state.energy_security),
+            "energy_bill": float(baseline_state.country["energy_bills"]),
+            "climate": float(baseline_state.climate_resilience),
+            "trade": float(baseline_state.trade_resilience),
+        }
+        new_run("Labour", "Normal", 74102)
+        investment_state = st.session_state
+        investment_state.country["homes_built"] = 150.0
+        investment_state.housing_supply_gap = 220.0
+        investment_state.energy_security = 40.0
+        investment_state.clean_energy_share = 25.0
+        investment_state.grid_capacity_index = 40.0
+        investment_state.energy_import_exposure = 80.0
+        investment_state.climate_resilience = 30.0
+        investment_state.country["energy_bills"] = 1750.0
+        investment_state.dependency_ratio = 61.0
+        investment_state.world_cycle = 0.6
+        investment_state.world_economy = {"Trade partner": {"growth": 0.4}}
+        long_run_simulation.apply_event_choice(investment_state, "housing_supply_crunch", 0)
+        long_run_simulation.apply_event_choice(investment_state, "grid_connection_bottleneck", 0)
+        long_run_simulation.apply_event_choice(investment_state, "climate_resilience_warning", 0)
+        long_run_simulation.apply_event_choice(investment_state, "ageing_workforce_gap", 0)
+        long_run_simulation.apply_event_choice(investment_state, "supply_chain_realign", 0)
+        policy_before = dict(investment_state.long_run_policy_stock)
+        long_run_simulation.advance(investment_state)
+        if not all(float(investment_state.long_run_policy_stock[key]) < float(policy_before[key])
+                   for key in long_run_simulation.POLICY_STOCK_KEYS):
+            failures.append("Long-term policy capacity did not decay gradually between annual reviews.")
+        if (float(investment_state.housing_supply_gap) >= baseline_outcome["housing_gap"]
+                or float(investment_state.energy_security) <= baseline_outcome["energy_security"]
+                or float(investment_state.country["energy_bills"]) >= baseline_outcome["energy_bill"]
+                or float(investment_state.climate_resilience) <= baseline_outcome["climate"]
+                or float(investment_state.trade_resilience) <= baseline_outcome["trade"]):
+            failures.append("Long-term investment did not improve housing, energy, climate and trade resilience relative to the no-investment path.")
+        assessment = long_run_simulation.legacy_assessment(investment_state)
+        if assessment.get("overall", 0) <= 0 or not long_run_simulation.legacy_summary(investment_state):
+            failures.append("The structural legacy assessment did not produce a valid summary.")
+        if any(not 0 <= float(value) <= 100 for key, value in assessment.items() if key != "overall"):
+            failures.append("A structural legacy component fell outside 0–100.")
+    except Exception as exc:
+        failures.append(f"Phase 3 long-term investment/legacy regression failed: {exc}")
     finally:
         st.session_state = FakeState()
 

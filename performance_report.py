@@ -2,6 +2,7 @@
 import streamlit as st
 
 import government_missions
+import long_run_simulation
 
 
 def _clamp(x):
@@ -45,9 +46,13 @@ def create_report():
         for item in strikes
     )
     industrial = _clamp(100.0 - min(70.0, pressure * 9.0))
+    long_term = long_run_simulation.legacy_assessment(s)
+    # Today's delivery remains important, but long-term structural resilience
+    # now has a visible 12% share of the annual assessment.
     overall = round(
-        0.225 * economic + 0.225 * service + 0.225 * fiscal
-        + 0.225 * political + 0.10 * industrial
+        0.20 * economic + 0.20 * service + 0.20 * fiscal
+        + 0.20 * political + 0.08 * industrial
+        + 0.12 * float(long_term.get("overall", 50))
     )
     election_outlook = (
         "Strong" if approval >= 65 else
@@ -61,6 +66,11 @@ def create_report():
         "economic": round(economic), "services": round(service),
         "fiscal": round(fiscal), "political": round(political),
         "industrial_relations": round(industrial),
+        "long_term_resilience": int(long_term.get("overall", 50)),
+        "long_term_components": dict(long_term),
+        "housing_legacy": int(long_term.get("housing", 50)),
+        "energy_legacy": int(long_term.get("energy", 50)),
+        "climate_legacy": int(long_term.get("climate", 50)),
         "active_disputes": len(strikes), "strike_pressure": round(pressure, 2),
         "election_outlook": election_outlook,
         "overall": overall, "grade": grade,
@@ -88,7 +98,7 @@ def create_report():
 def render():
     s = st.session_state
     st.markdown('### Annual performance reports')
-    st.caption("An annual assessment of your record as Chancellor. Each category is scored out of 100; the overall rating weights all four equally.")
+    st.caption("An annual assessment of your record as Chancellor. Long-term structural resilience carries 12% of the overall score, reflecting the future consequences of today's decisions.")
     reports = list(s.get("annual_reports", []))
     if not reports:
         st.info("Your first report will be produced at the end of your first in-game year.")
@@ -106,13 +116,28 @@ def render():
                         text=f"{goal.get('label', 'Objective')} · {float(goal.get('progress', 0)):.0f}%")
         if mission.get("result"):
             st.success(f"Final mandate result: {mission['result']}")
-    cols = st.columns(5)
+    cols = st.columns(3)
     for col, (label, key) in zip(cols, [
         ("Economy", "economic"), ("Public services", "services"),
-        ("Fiscal record", "fiscal"), ("Political standing", "political"),
-        ("Industrial relations", "industrial_relations")
+        ("Fiscal record", "fiscal")
     ]):
         col.metric(label, f"{latest.get(key, 100)}/100")
+    cols = st.columns(3)
+    for col, (label, key) in zip(cols, [
+        ("Political standing", "political"), ("Industrial relations", "industrial_relations"),
+        ("Long-term resilience", "long_term_resilience")
+    ]):
+        col.metric(label, f"{latest.get(key, 100)}/100")
+    components = latest.get("long_term_components", {})
+    if components:
+        st.caption(
+            "Structural legacy · Housing {housing}/100 · Demographics {demographic}/100 · "
+            "Energy {energy}/100 · Climate {climate}/100 · Regional balance {regional}/100 · "
+            "Trade resilience {trade}/100".format(**{
+                key: components.get(key, 50) for key in
+                ("housing", "demographic", "energy", "climate", "regional", "trade")
+            })
+        )
     if latest.get("active_disputes", 0):
         st.warning(
             f"{latest['active_disputes']} unresolved industrial dispute(s) "

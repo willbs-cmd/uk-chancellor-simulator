@@ -88,6 +88,11 @@ def apply_event_choice(s, event_id, choice_index):
             1: {"energy": 7.0},
             2: {"energy": -2.0},
         },
+        "energy_grid_connections": {
+            0: {"energy": 14.0},
+            1: {"energy": 7.0},
+            2: {"energy": -2.0},
+        },
         "climate_resilience_warning": {
             0: {"climate": 13.0},
             1: {"climate": 8.0},
@@ -190,14 +195,14 @@ def advance(s=None):
     s.housing_demand_thousands = round(housing_demand, 1)
     shortage = max(0.0, float(s.housing_supply_gap) - 150.0)
     affordability_change = (
-        0.008 + min(0.045, shortage * 0.00016)
-        - max(0.0, completions - housing_demand) * 0.0012
-        - stock["housing"] * 0.0004
+        0.025 + min(0.06, shortage * 0.00025)
+        - max(0.0, completions - housing_demand) * 0.0018
+        - stock["housing"] * 0.0008
     )
     homelessness_change = (
-        max(0.0, shortage) * 0.0025
-        + max(0.0, housing_demand - completions) * 0.009
-        - stock["housing"] * 0.025
+        max(0.0, shortage) * 0.006
+        + max(0.0, housing_demand - completions) * 0.025
+        - stock["housing"] * 0.045
     )
     _nudge_country(s, {
         "house_ratio": affordability_change,
@@ -235,7 +240,7 @@ def advance(s=None):
         + world_cycle * 1.35
         - (float(s.clean_energy_share) - 38.0) * 0.08
     )
-    energy_bill_change = _clip(energy_price_pressure * 0.10, -28.0, 48.0)
+    energy_bill_change = _clip(energy_price_pressure * 4.5, -35.0, 55.0)
     _nudge_country(s, {"energy_bills": energy_bill_change})
     s.inflation = round(_clip(
         float(s.get("inflation", 2.0)) + energy_bill_change / 1750.0 * 0.22,
