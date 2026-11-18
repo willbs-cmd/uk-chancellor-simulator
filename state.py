@@ -254,7 +254,10 @@ def _defaults():
         government_mission='balanced_renewal', mission_term=1, mission_baseline={},
         mission_history=[], mission_milestones=[], mission_latest=None, mission_archive=[], mission_finalised=False,
         budget_alternatives={}, budget_risk_outcome=None, budget_scheme_delivery={'tax': {}, 'spend': {}},
-        obr_forecasts=[], obr_latest=None, boe_independence=75.0,
+        obr_forecasts=[], obr_latest=None,
+        forecast_accuracy_vintages=[], forecast_accuracy_history=[], forecast_accuracy_latest=None,
+        active_forecast_review=None, forecast_accuracy_last_settled='', forecast_reliability=70.0,
+        boe_independence=75.0,
         boe_last_statement='The Monetary Policy Committee is monitoring inflation and activity.', boe_history=[],
         dmo_strategy='Balanced issuance', dmo_maturity=10, dmo_index_share=25,
         dmo_last_action='No change to the issuance strategy yet.', stress_test_result=None,
@@ -411,7 +414,9 @@ SAVE_KEYS = [
     'public_service_delivery_latest', 'public_service_delivery_history',
     'parliament_next_bonus', 'parliament_last_vote', 'parliament_history',
     'parliament_actions', 'parliament_last_strategy', 'officials_confidence', 'officials_log', 'officials_last_advice', 'officials_actions', 'annual_reports', 'latest_annual_report',
-    'government_mission', 'mission_term', 'mission_baseline', 'mission_history', 'mission_milestones', 'mission_latest', 'mission_archive', 'mission_finalised', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'government_mission', 'mission_term', 'mission_baseline', 'mission_history', 'mission_milestones', 'mission_latest', 'mission_archive', 'mission_finalised', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest',
+    'forecast_accuracy_vintages', 'forecast_accuracy_history', 'forecast_accuracy_latest',
+    'active_forecast_review', 'forecast_accuracy_last_settled', 'forecast_reliability', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 

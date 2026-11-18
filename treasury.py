@@ -180,7 +180,37 @@ def fiscal_outlook(years=3):
         "Downturn": {"growth": -1.5, "inflation": 0.8, "gilt": 0.65, "market": -2.5},
     }
     rows = []
+    country = s.get("country") or {}
+    unemployment = float(country.get("unemployment", 4.5))
+    real_wage_growth = float(country.get("real_wages", 0.0))
+    productivity_index = float(s.get("productivity_index", 100.0))
+    productivity_growth = float(s.get("productivity_growth", 0.0))
+    business_confidence = float(s.get("business_confidence", 52.0))
+    business_investment = float(s.get("business_investment", 100.0))
     for label, shock in scenarios.items():
+        unemployment = float(country.get("unemployment", 4.5))
+        real_wage_growth = float(country.get("real_wages", 0.0))
+        productivity_index = float(s.get("productivity_index", 100.0))
+        productivity_growth = float(s.get("productivity_growth", 0.0))
+        business_confidence = float(s.get("business_confidence", 52.0))
+        business_investment = float(s.get("business_investment", 100.0))
+        for _forecast_year in range(1, years + 1):
+            # A simple labour-market/productivity projection follows the same
+            # directional feedbacks used in the live living-economy update.
+            growth_gap = base_growth - 1.2
+            unemployment = max(2.0, min(15.0, unemployment - growth_gap * 0.07))
+            productivity_growth = max(-0.12, min(0.16,
+                (business_investment - 100.0) * 0.0015
+                + (business_confidence - 52.0) * 0.0008))
+            productivity_index = max(85.0, min(125.0,
+                productivity_index * (1.0 + productivity_growth / 100.0)))
+            real_wage_growth = max(-5.0, min(8.0,
+                real_wage_growth + (base_growth - 1.2) * 0.035
+                - max(0.0, base_inflation - 2.0) * 0.025))
+            business_confidence = max(5.0, min(95.0,
+                business_confidence + (base_growth - 1.0) * 0.12))
+            business_investment = max(55.0, min(150.0,
+                business_investment + (business_confidence - 52.0) * 0.025))
         v = {
             "inflation": base_inflation, "interest_rate": float(s.get("interest_rate", 4.5)),
             "gilt_yield": float(s.get("gilt_yield", 4.5)), "growth": base_growth,
@@ -212,8 +242,14 @@ def fiscal_outlook(years=3):
         debt_stock = float(v.get("debt_stock_bn", v["gdp_trillion"] * 1000.0 * v["debt"] / 100.0))
         rows.append({
             "Scenario": label,
-            "GDP after 3 years (£tn)": round(float(v["gdp_trillion"]), 2),
+            f"GDP after {years} year{'s' if years != 1 else ''} (£tn)": round(float(v["gdp_trillion"]), 2),
+            "GDP (£tn)": round(float(v["gdp_trillion"]), 2),
             "Real growth (%)": round(float(v["growth"]), 2),
+            "Bank Rate (%)": round(float(v["interest_rate"]), 2),
+            "Unemployment (%)": round(float(unemployment), 2),
+            "Real wage growth (%)": round(float(real_wage_growth), 2),
+            "Productivity growth (pp)": round(float(productivity_growth), 3),
+            "Productivity index": round(float(productivity_index), 2),
             "Inflation (%)": round(float(v["inflation"]), 2),
             "Annual deficit (£bn)": round(float(v["deficit"]), 1),
             "Fiscal headroom (£bn)": round(float(v["headroom"]), 1),

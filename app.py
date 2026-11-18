@@ -16,6 +16,7 @@ import local_elections
 import scenarios as scen
 import state
 import treasury
+import forecast_accuracy
 import chancellor_office
 import devolution
 import performance_report
@@ -1084,6 +1085,8 @@ with tab_action:
         pm_meeting_screen()
     elif s.get('active_gilt_emergency'):
         gilt_emergency_screen()
+    elif s.get('active_forecast_review'):
+        forecast_accuracy.render_review(s)
     elif s.get('active_financial_crisis'):
         financial_crisis_screen()
     elif s.active_crisis is not None:
@@ -1180,6 +1183,7 @@ with tab_treasury:
     treasury_tabs = st.tabs(['Treasury position', 'Investments & gilts', 'Institutions & tools', 'OBR & markets', 'Local government'])
     with treasury_tabs[0]:
         fiscal_events.render_treasury_overview()
+        forecast_accuracy.render_dashboard(s)
     with treasury_tabs[1]:
         treasury.render()
     with treasury_tabs[2]:

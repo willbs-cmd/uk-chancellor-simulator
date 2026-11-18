@@ -1472,6 +1472,10 @@ def proceed_to_spring():
     state.snapshot()
     before = state.values()
     s.message = 'Spring arrives and a new financial year begins.'
+    # Capture the central forecast for the incoming year before the realised
+    # Spring economic, labour-market and fiscal effects are applied.
+    import forecast_accuracy
+    forecast_accuracy.record_vintage(s)
     import budget_aftermath
     budget_aftermath.advance(s)
     budget.apply_ongoing()
@@ -1585,6 +1589,8 @@ def proceed_to_spring():
     political_survival.annual_review(s)
     government_missions.record_year(s)
     performance_report.create_report()
+    # Compare the vintage with the fully realised annual outcome exactly once.
+    forecast_accuracy.settle_vintage(s)
     s.year += 1
     s.autumn_statement_due = s.year <= 5
     fiscal_events.schedule_spending_review(s)

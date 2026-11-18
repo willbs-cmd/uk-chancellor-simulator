@@ -390,6 +390,8 @@ def render(on_restart):
             diary.append(("PENDING", "Private meeting with the PM"))
         if s.get("active_gilt_emergency"):
             diary.append(("NOW", "Gilt-market emergency"))
+        if s.get("active_forecast_review"):
+            diary.append(("NOW", "Treasury forecast review · response required"))
         if s.get("active_financial_crisis"):
             diary.append(("NOW", "Financial stability response"))
         if s.get("active_crisis"):
