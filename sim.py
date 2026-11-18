@@ -65,6 +65,8 @@ import government_missions  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
 import budget_aftermath  # noqa: E402
+import mp_politics  # noqa: E402
+import opposition_campaign  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -2161,6 +2163,122 @@ def check(n=None, difficulty=None):
             failures.append("Forecast review unexpectedly changed the approved Budget ledger.")
     except Exception as exc:
         failures.append(f"Phase 1 forecast accuracy/review regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Phase 2: the 650 constituency MPs have fictional profiles with local priorities,
+    # party totals reconcile to the opening Parliament, and individual voting is repeatable.
+    try:
+        new_run("Labour", "Normal", 63127)
+        mp_state = st.session_state
+        roster = mp_politics.ensure(mp_state)
+        if len(roster) != 650 or mp_state.get("mp_roster_count") != 650:
+            failures.append("The constituency MP register did not create exactly 650 MPs.")
+        party_counts = {party: sum(1 for mp in roster.values() if mp.get("party") == party)
+                        for party in state.PARTIES}
+        opening_seats = mp_state.get("opening_parliament_seats", {})
+        if party_counts != opening_seats:
+            failures.append("Individual constituency MPs did not reconcile to the opening parliamentary seat totals.")
+        if any(not mp.get("constituency") or not mp.get("name") or not mp.get("top_priority")
+               for mp in roster.values()):
+            failures.append("One or more simulated MPs lacks a constituency, name or political priority.")
+        option = {
+            "label": "Test public-service settlement",
+            "ideology": "Social Democratic",
+            "effect": {"health": 1.5, "education": 1.0, "growth": 0.08, "real_wages": 0.2},
+        }
+        base_votes, base_party = parliament._simulate_party_vote(option, 0)
+        individual_votes, individual_party, mp_summary = mp_politics.simulate_vote(option, base_party, mp_state)
+        repeat_votes, repeat_party, repeat_summary = mp_politics.simulate_vote(option, base_party, mp_state)
+        if sum(int(row.get("seats", 0)) for row in individual_party.values()) != 650:
+            failures.append("Individualised Commons voting did not account for all 650 seats.")
+        if individual_votes != sum(int(row.get("ayes", 0)) for row in individual_party.values()):
+            failures.append("Individualised Commons ayes do not match the party-by-party vote totals.")
+        if mp_summary.get("mp_count") != 650 or mp_summary.get("rebel_count") < 0:
+            failures.append("The MP vote summary omitted the individualised parliamentary electorate.")
+        if individual_votes != repeat_votes or individual_party != repeat_party or mp_summary != repeat_summary:
+            failures.append("Individual MP voting was not deterministic for the same game state and policy.")
+        if not all(0 <= float(value) <= 100 for mp in roster.values()
+                   for value in mp.get("priorities", {}).values()):
+            failures.append("An MP's local priority score fell outside its 0–100 range.")
+    except Exception as exc:
+        failures.append(f"Phase 2 individual MP and constituency regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Phase 2: funding a Cabinet lobby increases the department's actual recurring
+    # cash baseline as well as charging the Treasury once for the accepted settlement.
+    try:
+        new_run("Labour", "Normal", 63128)
+        lobby_state = st.session_state
+        cabinet_management.ensure(lobby_state)
+        lobby_state.cabinet_ministers = {"health": "Health Secretary"}
+        lobby_state.ministerial_loyalty = {"health": 55.0}
+        lobby_state.ministerial_relationship_issue = {
+            "kind": "lobbying", "department": "health", "minister": "Health Secretary",
+            "cost": 2.0, "tick": "1:1",
+        }
+        before_department = float(lobby_state.dept_spend.get("health", 0.0))
+        before_headroom = float(lobby_state.headroom)
+        before_deficit = float(lobby_state.deficit)
+        ok = cabinet_management.resolve_relationship_issue("fund")
+        if not ok:
+            failures.append("The Chancellor could not approve the Cabinet minister's funding request.")
+        if (float(lobby_state.dept_spend.get("health", 0.0)) != round(before_department + 2.0, 1)
+                or float(lobby_state.headroom) != round(before_headroom - 2.0, 1)
+                or float(lobby_state.deficit) != round(before_deficit + 2.0, 1)):
+            failures.append("Cabinet lobbying did not increase the department's recurring cash baseline and charge the agreed cost.")
+        if lobby_state.get("ministerial_relationship_issue") is not None:
+            failures.append("The Cabinet funding request remained active after resolution.")
+    except Exception as exc:
+        failures.append(f"Phase 2 Cabinet funding-lobby regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Phase 2: opposition criticism is tied to the Chancellor's weakest economic
+    # indicator, can be answered, affects polling and does not regenerate in-year.
+    try:
+        new_run("Labour", "Normal", 63129)
+        opposition_state = st.session_state
+        opposition_state.block = 1
+        opposition_state.growth = -2.2
+        opposition_state.inflation = 5.5
+        opposition_state.headroom = -8.0
+        opposition_state.debt = 112.0
+        opposition_state.country["unemployment"] = 7.2
+        opposition_state.country["real_wages"] = -1.0
+        opposition_state.disposable_income_index = 94.0
+        opposition_state.public_service_scores = {"NHS": 42.0, "Education": 50.0}
+        opposition_state.public_service_strikes = [
+            {"id": "NHS", "severity": 2.0, "duration_years": 1}
+        ]
+        period = f"{opposition_state.term}:{opposition_state.year}"
+        while opposition_campaign._roll(opposition_state, period) >= 92:
+            opposition_state.seed += 1
+        attack = opposition_campaign.review_after_decision(
+            opposition_state, {"title": "Economic programme"}, {"label": "Annual plan"}
+        )
+        if not attack or attack.get("theme") not in {
+            "growth", "prices", "jobs", "fiscal", "services", "living_standards"
+        }:
+            failures.append("Poor economic conditions did not produce an evidence-led opposition attack.")
+        elif not attack.get("party") or not attack.get("evidence"):
+            failures.append("Opposition attack omitted the opposing party or the evidence it cites.")
+        poll_count = len(opposition_state.poll_history["Period"])
+        headroom_before = float(opposition_state.headroom)
+        ok, _ = opposition_campaign.resolve("plan", opposition_state)
+        if not ok or opposition_state.get("active_opposition_attack") is not None:
+            failures.append("The Chancellor could not resolve the opposition's economic attack.")
+        if (float(opposition_state.headroom) >= headroom_before
+                or len(opposition_state.poll_history["Period"]) != poll_count + 1):
+            failures.append("A corrective response did not change fiscal headroom and update polling.")
+        history_count = len(opposition_state.get("opposition_attack_history", []))
+        if opposition_campaign.review_after_decision(
+            opposition_state, {"title": "Repeated action"}, {"label": "Repeated action"}
+        ) is not None or len(opposition_state.get("opposition_attack_history", [])) != history_count:
+            failures.append("The opposition generated a duplicate attack in the same fiscal year.")
+    except Exception as exc:
+        failures.append(f"Phase 2 opposition campaign regression failed: {exc}")
     finally:
         st.session_state = FakeState()
 
