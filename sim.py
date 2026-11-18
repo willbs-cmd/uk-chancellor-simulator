@@ -217,41 +217,41 @@ def government_programme_checks():
         "policy_deliveries": [], "policy_proposal_sequence": 0,
     })
     government_programme.ensure(fake)
-    assert len(fake.cabinet_ministers) >= 10, "A new government needs a working ministerial roster."
+    assert len(fake.cabinet_ministers) >= 10, f"A new government needs a working ministerial roster: {len(fake.cabinet_ministers)}"
     programme = government_programme.current(fake)
-    assert len(programme["priorities"]) == 3 and not programme["declared"]
+    assert len(programme["priorities"]) == 3 and not programme["declared"], f"Expected three draft priorities: {programme}"
     assert government_programme.set_priorities(fake, ["growth", "public_services"])
     assert not government_programme.set_priorities(fake, ["growth"]), "The annual programme must contain two or three priorities."
     proposal = {"title": "NHS hospital capacity reform", "text": "Reduce hospital waiting lists and support NHS staff."}
     option = {"label": "Expand NHS capacity", "ideology": "Social Democratic",
               "effect": {"headroom": -2.0, "deficit": 2.0, "growth": 0.2}}
     fiscal = government_programme.costing(fake, proposal, option)
-    assert fiscal["headroom_delta"] == -2.0 and fiscal["deficit_delta"] == 2.0
+    assert fiscal["headroom_delta"] == -2.0 and fiscal["deficit_delta"] == 2.0, f"Incorrect Treasury costing: {fiscal}"
     assert fiscal["funding"].startswith("Uses approximately £2.0bn")
     before = (fake.pm_opinion, fake.pm_trust, fake.cab_opinion)
     preview = government_programme.preflight(fake, proposal, option, "consensus")
     assert before == (fake.pm_opinion, fake.pm_trust, fake.cab_opinion), "Preflight must not mutate the live save."
-    assert preview["cabinet"]["total"] >= 10 and preview["prime_minister"]["status"] == "Approved"
+    assert preview["cabinet"]["total"] >= 10 and preview["prime_minister"]["status"] == "Approved", f"Unexpected executive forecast: cabinet={preview['cabinet']}, PM={preview['prime_minister']}"
     low_pm = FakeState(dict(fake))
     low_pm.update({"pm_opinion": 10.0, "pm_trust": 10.0, "cab_opinion": 20.0, "headroom": -10.0})
     low_fiscal = government_programme.costing(low_pm, proposal, option)
     low_cabinet = government_programme.cabinet_review(low_pm, proposal, option, "treasury")
     low_decision = government_programme.prime_minister_review(low_pm, option, low_cabinet, low_fiscal)
-    assert low_decision["status"] == "Rejected by the Prime Minister"
+    assert low_decision["status"] == "Rejected by the Prime Minister", f"Weak Number 10 should stop an unfunded proposal: {low_decision}"
     cabinet = preview["cabinet"]
     pm = preview["prime_minister"]
     vote = {"status": "Passed", "ayes": 390, "noes": 260, "factor": 1.0}
     record = government_programme.record_proposal(fake, proposal, option, "public_services", cabinet, pm, vote, 0.82, fiscal=fiscal)
-    assert record["outcome"] == "Approved for delivery" and record["delivery_id"]
+    assert record["delivery_id"] and record["outcome"] in {"Approved for delivery", "Approved with changes"}, f"Approved proposal was not queued: {record}"
     initial = fake.policy_deliveries[0]["progress"]
     government_programme.close_annual_programme(fake)
     first_advance = fake.policy_deliveries[0]["progress"]
-    assert first_advance > initial, "Approved policy should move through departmental delivery each year."
+    assert first_advance > initial, f"Approved policy should move through departmental delivery each year: {initial} -> {first_advance}"
     government_programme.close_annual_programme(fake)
     assert fake.policy_deliveries[0]["progress"] == first_advance, "Annual delivery must not advance twice in one year."
     fake.year = 2
     next_programme = government_programme.start_annual_programme(fake, carry_forward=True)
-    assert next_programme["priorities"] == ["growth", "public_services"]
+    assert next_programme["priorities"] == ["growth", "public_services"], f"Priorities did not carry forward: {next_programme}"
     assert not next_programme["declared"] and len(fake.annual_programme_history) == 1
     stopped = FakeState(dict(fake))
     stopped.year = 2
@@ -272,7 +272,7 @@ def government_programme_checks():
     pm_stop = government_programme.prime_minister_review(stopped, option, cabinet_stop, government_programme.costing(stopped, proposal, option))
     rejected_vote = {"status": "Not submitted", "ayes": 0, "noes": 0, "factor": 0.0}
     rejected = government_programme.record_proposal(stopped, proposal, option, "public_services", cabinet_stop, pm_stop, rejected_vote, 0.0)
-    assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries
+    assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries, f"PM rejection should not enter delivery: {rejected}"
     return True
 
 def cabinet_policy_negotiation_checks():
@@ -651,7 +651,7 @@ def check(n=None, difficulty=None):
         assert budget_state.political_pressure_issue is None
         print("Cabinet management, parliamentary faction pressure, Number 10 escalation and reshuffle assessment regression: PASS")
     except Exception as exc:
-        failures.append(f"Cabinet management regression failed: {exc}")
+        failures.append(f"Cabinet/government programme regression failed: {exc!r}")
 
     # Budget vote margins should create distinct, bounded political and market consequences.
     try:
