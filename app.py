@@ -26,6 +26,7 @@ import regional_economy
 import public_services
 import chancellors_desk
 import political_pressure
+import opposition_campaign
 import government_missions
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
 from theme import (apply_theme, crisis_card, event_card, header, humphrey_message, news_box,
@@ -1089,6 +1090,7 @@ def briefing():
             render_newspapers(*s.headlines)
     else:
         st.info('No new briefings yet. Headlines and consequences will appear here after decisions.')
+    opposition_campaign.render(s)
     with st.expander('Decision history', expanded=False):
         render_timeline(s.history, sorted(s.pending, key=lambda p: p['due']))
 

@@ -357,6 +357,11 @@ def execute_decision(opt):
     treasury_officials.review_policy(decision.get('title', 'Policy decision'), opt.get('label', ''), applied_effect)
     apply_effect(applied_effect)
     parliament.apply_fallout(vote)
+    # The PM's personal trust responds to the Chancellor's parliamentary judgement,
+    # separately from the broader public-facing confidence score.
+    pm_delta = float(s.get('pm_opinion', 50.0)) - float(before.get('pm_opinion', 50.0))
+    vote_trust = 0.55 if vote.get('status') == 'Passed' else (-0.45 if vote.get('status') == 'Passed with amendments' else -1.25)
+    s.pm_trust = round(_clip(float(s.get('pm_trust', 70.0)) + max(-2.0, min(2.0, pm_delta * 0.22 + vote_trust))), 1)
     pressure_issue = political_pressure.review_policy(s, decision, opt, vote)
     parliament_note = f"Commons vote: {vote['status']} ({vote['ayes']} ayes, {vote['noes']} noes). {vote['explanation']}"
     s.message = (s.message + " " + parliament_note).strip()
@@ -373,6 +378,8 @@ def execute_decision(opt):
     update_political_capital(ideology, d_app, d_head)
     s.humphrey_note = decisions.reaction(ideology, d_app, s.market_conf - before['market_conf'], opt['delayed'])
     update_polls(_period_label())
+    import opposition_campaign
+    opposition_campaign.review_after_decision(s, decision, opt)
 
     s.steps += 1
     if opt['delayed']:

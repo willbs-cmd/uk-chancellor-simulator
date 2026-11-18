@@ -87,30 +87,40 @@ def _estimated_results(s):
     }
     _, results = engine.compute_seats(polls, return_details=True)
     opening = s.get("opening_parliament_seats", {})
-    player = s.get("party")
-    if (s.get("opening_mandate_pending") and player in state.PARTIES
-            and player not in state.REGIONAL and opening):
-        target = int(opening.get(player, 365))
-        current = sum(1 for row in results if row.get("winner") == player)
-        if current < target:
-            available = sorted(
-                (row for row in results if row.get("winner") != player),
-                key=lambda row: (float(row.get("margin", 0.0)), row.get("code", "")),
-            )
-            for row in available[:target - current]:
-                displaced = row.get("winner")
-                row["winner"], row["runner_up"] = player, displaced
+    if opening and sum(int(opening.get(party, 0)) for party in state.PARTIES) == 650:
+        targets = {party: int(opening.get(party, 0)) for party in state.PARTIES}
+        counts = {party: sum(1 for row in results if row.get("winner") == party)
+                  for party in state.PARTIES}
+        # Match the actual opening Commons arithmetic exactly, while preserving
+        # the closest local contests as the seats most likely to change hands.
+        while any(counts[p] != targets[p] for p in state.PARTIES):
+            deficits = [p for p in state.PARTIES if counts[p] < targets[p]]
+            surpluses = {p for p in state.PARTIES if counts[p] > targets[p]}
+            if not deficits or not surpluses:
+                break
+            moved = False
+            for receiving_party in deficits:
+                candidates = sorted(
+                    (row for row in results if row.get("winner") in surpluses),
+                    key=lambda row: (
+                        0 if row.get("runner_up") == receiving_party else 1,
+                        float(row.get("margin", 0.0)), row.get("code", ""),
+                    ),
+                )
+                if not candidates:
+                    continue
+                row = candidates[0]
+                losing_party = row.get("winner")
+                row["winner"], row["runner_up"] = receiving_party, losing_party
                 row["margin"] = max(0.1, float(row.get("margin", 0.0)))
                 row["is_marginal"] = True
-        elif current > target:
-            available = sorted(
-                (row for row in results if row.get("winner") == player),
-                key=lambda row: (float(row.get("margin", 0.0)), row.get("code", "")),
-                reverse=True,
-            )
-            for row in available[:current - target]:
-                replacement = row.get("runner_up")
-                row["winner"], row["runner_up"] = replacement, player
+                counts[losing_party] -= 1
+                counts[receiving_party] += 1
+                moved = True
+                if counts[receiving_party] >= targets[receiving_party]:
+                    break
+            if not moved:
+                break
     return {str(row.get("code", "")): row for row in results}
 
 
