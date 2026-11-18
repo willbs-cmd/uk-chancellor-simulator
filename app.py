@@ -1124,7 +1124,8 @@ def decision_screen():
             if delayed:
                 st.markdown(f"**Later consequence — {delayed.get('title', 'Follow-up event')}**")
                 st.caption(f"{delayed.get('text', 'A later consequence may follow.')} Expected timing: about {delayed.get('after', 1)} action(s) later.")
-            st.caption(f"Estimated combined implementation: {assessment['combined_factor']:.0%}. The final result depends on the Commons vote and your government's ability to deliver.")
+            projected_factor = assessment['combined_factor'] * cabinet_preview['factor'] * pm_preview['factor']
+            st.caption(f"Estimated combined implementation: {projected_factor:.0%}, including the projected Cabinet and Number 10 decisions. The result then depends on the actual Commons vote and departmental delivery.")
         st.markdown("<div class='decision-authority'>DECISION PENDING · Your selection has no effect until authorised.</div>", unsafe_allow_html=True)
     with st.container(key='decision_authorise'):
         if st.button('Take this decision to Cabinet & Commons', type='primary', disabled=choice is None, use_container_width=True):

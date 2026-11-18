@@ -129,13 +129,14 @@ def start_annual_programme(s, carry_forward=True):
     if isinstance(current, dict):
         archive = list(s.get("annual_programme_history", []))
         old = dict(current)
-        old["overall_progress"] = overall_progress(s, old)
-        old["proposal_count"] = sum(
-            1 for item in s.get("policy_proposals", [])
-            if int(item.get("term", -1)) == int(old.get("term", -2))
-            and int(item.get("year", -1)) == int(old.get("year", -2))
-        )
-        archive.append(old)
+        if not any(item.get("period") == old.get("period") for item in archive):
+            old["overall_progress"] = overall_progress(s, old)
+            old["proposal_count"] = sum(
+                1 for item in s.get("policy_proposals", [])
+                if int(item.get("term", -1)) == int(old.get("term", -2))
+                and int(item.get("year", -1)) == int(old.get("year", -2))
+            )
+            archive.append(old)
         s["annual_programme_history"] = archive[-25:]
 
     if carry_forward and isinstance(current, dict) and current.get("priorities"):
@@ -493,7 +494,7 @@ def priority_progress(s, priority, programme=None):
         delivery = next((row for row in s.get("policy_deliveries", []) if row.get("id") == item.get("delivery_id")), None)
         delivery_progress = float(delivery.get("progress", 0.0)) if delivery else 0.0
         contribution += float(item.get("priority_weight", 0.0)) * 0.60 + delivery_progress / 100.0 * 0.40
-    return round(min(100.0, contribution / 2.0 * 100.0), 1)
+    return round(min(100.0, contribution * 100.0), 1)
 
 
 def overall_progress(s, programme=None):
@@ -605,14 +606,14 @@ def render(s=None):
             and int(item.get("term", -1)) == int(programme.get("term", -2))
             and int(item.get("year", -1)) == int(programme.get("year", -2))
         )
-        rows.append({"Priority": priority_label(priority), "Progress": f"{progress:.0f}%", "Proposals": f"{count}/2"})
+        rows.append({"Priority": priority_label(priority), "Progress": f"{progress:.0f}%", "Proposals": str(count)})
         st.write(f"**{priority_label(priority)}** · {progress:.0f}% · {count} proposal(s)")
         st.progress(int(progress))
         st.caption(PRIORITIES[priority]["description"])
     total = overall_progress(s, programme)
     c1, c2, c3 = st.columns(3)
     c1.metric("Programme progress", f"{total:.0f}%")
-    c2.metric("Proposals this year", sum(int(row["Proposals"].split("/")[0]) for row in rows))
+    c2.metric("Proposals this year", sum(int(row["Proposals"]) for row in rows))
     c3.metric("Departments delivering", len({x["department"] for x in s.get("policy_deliveries", []) if x.get("status") != "Complete"}))
 
     st.divider()
