@@ -2138,6 +2138,7 @@ def check(n=None, difficulty=None):
         headroom_before = float(review_state.headroom)
         deficit_before = float(review_state.deficit)
         capital_before = int(review_state.political_capital_points)
+        approved_ledger_before_review = json.loads(json.dumps(review_state.get("budget_applied", {})))
         ok, _ = forecast_accuracy.resolve_review("commission", review_state)
         if not ok:
             failures.append("The Chancellor could not commission an independent review of the forecast miss.")
@@ -2150,7 +2151,7 @@ def check(n=None, difficulty=None):
         forecast_accuracy.settle_vintage(review_state)
         if len(review_state.forecast_accuracy_history) != history_count:
             failures.append("The same annual Treasury forecast vintage was settled more than once.")
-        if review_state.get("budget_applied") != budget.defaults():
+        if review_state.get("budget_applied") != approved_ledger_before_review:
             failures.append("Forecast review unexpectedly changed the approved Budget ledger.")
     except Exception as exc:
         failures.append(f"Phase 1 forecast accuracy/review regression failed: {exc}")
