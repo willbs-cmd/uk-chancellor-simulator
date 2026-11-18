@@ -1106,11 +1106,12 @@ def decision_screen():
         else:
             accepted_amendments = []
             st.caption("No minister has tabled a specific amendment to this proposal.")
-        governance_preview = government_programme.preflight(s, decision, selected, stance, accepted_amendments)        fiscal_preview = governance_preview["fiscal"]
+        governance_preview = government_programme.preflight(s, decision, selected, stance, accepted_amendments)
+        fiscal_preview = governance_preview["fiscal"]
         cabinet_preview = governance_preview["cabinet"]
         pm_preview = governance_preview["prime_minister"]
-        assessment = engine.assess_decision(selected, stance, cabinet_support=cabinet_preview["support_pct"])
-        effect_text = state.fmt_fx(selected.get('effect', {}))
+        assessment = engine.assess_decision(governance_preview["option"], stance, cabinet_support=cabinet_preview["support_pct"])
+        effect_text = state.fmt_fx(governance_preview["option"].get('effect', {}))
         st.markdown("<div class='decision-brief-label'>TREASURY & CABINET ASSESSMENT</div>", unsafe_allow_html=True)
         with st.container(key='decision_brief', border=True):
             st.markdown(f"**{choice}**")
