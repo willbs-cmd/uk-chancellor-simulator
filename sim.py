@@ -220,17 +220,17 @@ def government_programme_checks():
     assert len(fake.cabinet_ministers) >= 10, f"A new government needs a working ministerial roster: {len(fake.cabinet_ministers)}"
     programme = government_programme.current(fake)
     assert len(programme["priorities"]) == 3 and not programme["declared"], f"Expected three draft priorities: {programme}"
-    assert government_programme.set_priorities(fake, ["growth", "public_services"])
+    assert government_programme.set_priorities(fake, ["growth", "public_services"]), "Could not adopt two annual programme priorities."
     assert not government_programme.set_priorities(fake, ["growth"]), "The annual programme must contain two or three priorities."
     proposal = {"title": "NHS hospital capacity reform", "text": "Reduce hospital waiting lists and support NHS staff."}
     option = {"label": "Expand NHS capacity", "ideology": "Social Democratic",
               "effect": {"headroom": -2.0, "deficit": 2.0, "growth": 0.2}}
     fiscal = government_programme.costing(fake, proposal, option)
     assert fiscal["headroom_delta"] == -2.0 and fiscal["deficit_delta"] == 2.0, f"Incorrect Treasury costing: {fiscal}"
-    assert fiscal["funding"].startswith("Uses approximately £2.0bn")
+    assert fiscal["funding"].startswith("Uses approximately £2.0bn"), f"Funding explanation missing: {fiscal}"
     before = (fake.pm_opinion, fake.pm_trust, fake.cab_opinion)
     preview = government_programme.preflight(fake, proposal, option, "consensus")
-    assert before == (fake.pm_opinion, fake.pm_trust, fake.cab_opinion), "Preflight must not mutate the live save."
+    assert before == (fake.pm_opinion, fake.pm_trust, fake.cab_opinion), f"Preflight mutated live approval stats: before={before}, after={(fake.pm_opinion, fake.pm_trust, fake.cab_opinion)}"
     assert preview["cabinet"]["total"] >= 10 and preview["prime_minister"]["status"] == "Approved", f"Unexpected executive forecast: cabinet={preview['cabinet']}, PM={preview['prime_minister']}"
     low_pm = FakeState(dict(fake))
     low_pm.update({"pm_opinion": 10.0, "pm_trust": 10.0, "cab_opinion": 20.0, "headroom": -10.0})
@@ -248,11 +248,11 @@ def government_programme_checks():
     first_advance = fake.policy_deliveries[0]["progress"]
     assert first_advance > initial, f"Approved policy should move through departmental delivery each year: {initial} -> {first_advance}"
     government_programme.close_annual_programme(fake)
-    assert fake.policy_deliveries[0]["progress"] == first_advance, "Annual delivery must not advance twice in one year."
+    assert fake.policy_deliveries[0]["progress"] == first_advance, f"Annual delivery advanced twice: {first_advance} -> {fake.policy_deliveries[0]['progress']}"
     fake.year = 2
     next_programme = government_programme.start_annual_programme(fake, carry_forward=True)
     assert next_programme["priorities"] == ["growth", "public_services"], f"Priorities did not carry forward: {next_programme}"
-    assert not next_programme["declared"] and len(fake.annual_programme_history) == 1
+    assert not next_programme["declared"] and len(fake.annual_programme_history) == 1, f"Next year should carry priorities as a draft and archive one year: programme={next_programme}, archive={fake.annual_programme_history}"
     stopped = FakeState(dict(fake))
     stopped.year = 2
     stopped.policy_deliveries = []
@@ -544,7 +544,10 @@ def check(n=None, difficulty=None):
         import political_survival
         political_survival_checks()
         cabinet_checks()
-        government_programme_checks()
+        try:
+            government_programme_checks()
+        except Exception as programme_error:
+            raise AssertionError(f"Government Programme regression: {programme_error!r}") from programme_error
         cabinet_policy_negotiation_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
