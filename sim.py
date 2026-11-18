@@ -286,7 +286,7 @@ def cabinet_amendment_negotiation_checks():
         "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
         "ministerial_loyalty": {"health": 60.0, "social_care": 60.0},
         "ministerial_competence": {"health": 60.0, "social_care": 60.0},
-        "ministerial_profiles": {}, "ministerial_rivalries": {"health|social_care": 70.0},
+        "ministerial_profiles": {"health": {"minister": "Health Secretary", "party": "Labour", "faction": cabinet_management.PARTY_FACTIONS["Labour"][0], "personality": "Technocratic manager"}, "social_care": {"minister": "Care Secretary", "party": "Labour", "faction": cabinet_management.PARTY_FACTIONS["Labour"][0], "personality": "Technocratic manager"}}, "ministerial_rivalries": {"health|social_care": 70.0},
         "ministerial_alliances": {}, "ministerial_alliance_history": [],
         "ministerial_refusals": {}, "ministerial_relationship_issue": None,
         "ministerial_relationship_issue_year": "",

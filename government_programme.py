@@ -417,8 +417,6 @@ def prepare_cabinet_amendments(s, decision, option):
         impact_rows[department] = {
             "minister": minister, "impact": impact, "reason": reason,
             "penalty": penalty, "rivalry_reason": rivalry_reason,
-            "amendment_status": amendment_status,
-            "alliance_bonus": round(alliance_bonus, 1),
             "keys": adverse_keys, "profile": profiles.get(department, {}),
             "loyalty": float(loyalty.get(department, 60.0)),
         }
@@ -683,6 +681,8 @@ def cabinet_review(s, decision, option, stance="consensus", amendment_outcomes=N
             "portfolio_reason": portfolio_reason,
             "rivalry_penalty": rivalry_penalty,
             "rivalry_reason": rivalry_reason,
+            "amendment_status": amendment_status,
+            "alliance_bonus": round(alliance_bonus, 1),
         })
 
     if rows:
