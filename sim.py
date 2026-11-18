@@ -204,6 +204,25 @@ def run(n=200, difficulty='Hardcore'):
 
 
 # ---------------------------------------------------------------- regression check
+def cabinet_policy_negotiation_checks():
+    """The three pre-vote approaches create distinct, bounded political trade-offs."""
+    consensus = FakeState({"cab_opinion": 60.0, "pm_trust": 70.0})
+    assert engine.apply_cabinet_stance(consensus, "consensus") == "consensus"
+    assert consensus["cab_opinion"] == 60.8 and consensus["pm_trust"] == 70.4
+    compromise = FakeState({"cab_opinion": 60.0, "backbench_opinion": 55.0, "party_opinion": 65.0})
+    engine.apply_cabinet_stance(compromise, "compromise")
+    assert compromise["cab_opinion"] == 61.4 and compromise["backbench_opinion"] == 55.8
+    assert compromise["party_opinion"] == 65.3
+    treasury = FakeState({"market_conf": 50.0, "cab_opinion": 60.0, "backbench_opinion": 55.0})
+    engine.apply_cabinet_stance(treasury, "treasury")
+    assert treasury["market_conf"] == 50.6 and treasury["cab_opinion"] == 59.0
+    assert treasury["backbench_opinion"] == 54.6
+    bounded = FakeState({"cab_opinion": 100.0, "pm_trust": 100.0})
+    engine.apply_cabinet_stance(bounded, "consensus")
+    assert bounded["cab_opinion"] == 100.0 and bounded["pm_trust"] == 100.0
+    assert engine.apply_cabinet_stance(FakeState({}), "unknown") == "consensus"
+    return True
+
 def cabinet_checks():
     """Regression checks for the expanded Cabinet performance model."""
     fake = FakeState({
@@ -454,6 +473,7 @@ def check(n=None, difficulty=None):
         import political_survival
         political_survival_checks()
         cabinet_checks()
+        cabinet_policy_negotiation_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
         assessment_state = FakeState({"cabinet_ministers": {"health": "Health Secretary"}, "ministerial_loyalty": {"health": 20.0}, "ministerial_competence": {"health": 35.0}, "public_service_scores": {"NHS": 35.0}, "pm_opinion": 55.0, "cab_opinion": 55.0})
