@@ -974,7 +974,13 @@ def resolve_request(accept):
     if accept:
         s.headroom = round(s.headroom - req['cost'], 1)
         s.deficit = round(s.deficit + req['cost'], 1)
-    # Ministers remember whether the Treasury backed their department.
+        # Accepted bids raise the actual annual departmental cash baseline.
+        import cabinet_management
+        department = cabinet_management.REQUEST_PORTFOLIO.get(str(req.get('minister', '')))
+        if department:
+            s.dept_spend = dict(s.get('dept_spend', {}))
+            s.dept_spend[department] = round(float(s.dept_spend.get(department, 0.0)) + float(req['cost']), 1)
+    # Ministers remember whether the Treasury backed the department.
     loyalty = dict(s.get('ministerial_loyalty', {}))
     minister = str(req.get('minister', 'Cabinet minister'))
     loyalty[minister] = round(_clip(float(loyalty.get(minister, 50.0)) + (8.0 if accept else -12.0)), 1)
@@ -989,7 +995,7 @@ def resolve_request(accept):
     for k in OPINION_KEYS:
         if k in fx:
             s[k] = round(_clip(s[k] + fx[k]), 1)
-    verb = (f"You approve the {req['minister']}'s request (£{req['cost']:.1f}B). The minister is now more likely to back your next difficult decision."
+    verb = (f"You approve the {req['minister']}'s request (£{req['cost']:.1f}B). Their department's recurring annual cash baseline rises by £{req['cost']:.1f}bn; the minister is now more likely to back your next difficult decision."
             if accept else f"You refuse the {req['minister']}'s request. The minister will lobby colleagues and may brief against the Treasury.")
     s.message = verb
     s.headlines = None

@@ -462,9 +462,12 @@ def resolve_relationship_issue(choice):
         if choice == "fund":
             s.headroom = round(float(s.get("headroom", 0)) - cost, 1)
             s.deficit = round(float(s.get("deficit", 0)) + cost, 1)
+            # The minister secures an enduring departmental baseline, not a one-off favour.
+            s.dept_spend = dict(s.get("dept_spend", {}))
+            s.dept_spend[dept] = round(float(s.dept_spend.get(dept, 0.0)) + cost, 1)
             loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 7)
             s.cab_opinion = min(100.0, float(s.get("cab_opinion", 50)) + 0.5)
-            outcome = f"You agree £{cost:.1f}bn of extra support for {minister}. Relations improve, but borrowing rises."
+            outcome = f"You agree £{cost:.1f}bn of recurring annual support for {minister}. The department's baseline rises; borrowing and future spending commitments increase."
         elif choice == "plan":
             loyalty[dept] = min(100.0, float(loyalty.get(dept, 60)) + 2)
             plans = dict(s.get("ministerial_delivery_commitments", {}))

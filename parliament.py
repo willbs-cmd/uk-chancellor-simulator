@@ -8,6 +8,7 @@ import math
 import streamlit as st
 
 import state
+import mp_politics
 
 WIN = 326
 CLEAR_PASS = 346
@@ -175,7 +176,8 @@ def review_bill(decision, option):
     s = st.session_state
     bonus = int(s.get("parliament_next_bonus", 0))
     s.parliament_next_bonus = 0
-    votes, party_votes = _simulate_party_vote(option, bonus)
+    base_votes, base_party_votes = _simulate_party_vote(option, bonus)
+    votes, party_votes, mp_summary = mp_politics.simulate_vote(option, base_party_votes, s)
     if votes >= CLEAR_PASS:
         status, factor = "Passed", 1.0
         explanation = "The Commons backs the bill without a substantial amendment."
@@ -193,6 +195,7 @@ def review_bill(decision, option):
         "ideology": option.get("ideology", "Centric"), "ayes": int(votes),
         "noes": int(650 - votes), "status": status, "factor": factor,
         "bonus": bonus, "rebels": rebels, "party_votes": party_votes,
+        "base_ayes": int(base_votes), "mp_summary": mp_summary,
         "explanation": explanation,
     }
     s.parliament_last_vote = record
@@ -411,6 +414,9 @@ def render():
             for item in reversed(history):
                 st.markdown(f"**{item['status']}** · {item['ayes']}–{item['noes']} · {item['choice']}")
                 st.caption(f"{item['title']} — year {item['year']}, phase {item['phase']}. {item['explanation']}")
+
+    with st.expander("👥 MPs and constituency priorities", expanded=False):
+        mp_politics.render_register(s, last)
 
     with st.expander("📖 Parliament glossary", expanded=False):
         st.markdown("**Ayes / noes** are votes for and against. **Whips** organise party voting. A **three-line whip** signals that MPs are expected to vote with the party. A **select committee** scrutinises policy and can publish evidence. A **cross-party compromise** trades concessions for support.")
