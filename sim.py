@@ -332,7 +332,7 @@ def cabinet_portfolio_politics_checks():
               "effect": {"nhs_waiting": -0.4, "health": 0.5}}
     health_effect, health_reason = government_programme._portfolio_interest("health", decision, option)
     education_effect, _ = government_programme._portfolio_interest("education", decision, option)
-    assert health_effect < education_effect, f"Health minister should resist a proposal that harms NHS outcomes: {health_effect}, {education_effect}"
+    assert health_effect > education_effect, f"Health minister should support a proposal that improves NHS outcomes: {health_effect}, {education_effect}"
     assert "departmental" in health_reason.lower() or health_effect > 0
     rivalry_state = FakeState({"ministerial_rivalries": {"health|social_care": 100.0},
                                "ministerial_relationship_issue": None})
