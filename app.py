@@ -1116,6 +1116,21 @@ def decision_screen():
             r1.metric("Cabinet support", f"{cabinet_preview['support_pct']:.0f}%", help="Estimated support among serving ministers based on their faction, loyalty, competence and your chosen approach.")
             r2.metric("Cabinet position", cabinet_preview["status"])
             r3.metric("Number 10 forecast", pm_preview["status"], help=f"Modelled PM approval score: {pm_preview['score']:.0f}/100.")
+            with st.expander(f"Cabinet ministerial roll-call forecast · {cabinet_preview['total']} ministers", expanded=False):
+                roll_call = [{
+                    "Minister": row.get("minister", ""),
+                    "Department": str(row.get("department", "")).replace("_", " ").title(),
+                    "Position": row.get("position", ""),
+                    "Cabinet score": row.get("score", 0),
+                    "Portfolio impact": row.get("portfolio_reason", ""),
+                    "Rivalry penalty": row.get("rivalry_penalty", 0),
+                    "Rivalry pressure": row.get("rivalry_reason", ""),
+                } for row in cabinet_preview.get("positions", [])]
+                if roll_call:
+                    st.dataframe(pd.DataFrame(roll_call), hide_index=True, use_container_width=True)
+                else:
+                    st.caption("No serving ministers were available for an individual roll-call forecast.")
+                st.caption("Ministers now weigh direct effects on their portfolio, their faction and competence, loyalty, and unresolved rivalry with overlapping departments. Cabinet support also feeds into the subsequent Commons vote.")
             st.caption("The Prime Minister can stop a proposal or require changes before it reaches the Commons. The Commons then runs its own vote.")
             st.markdown("**Delivery risks & constraints**")
             for risk in assessment['risks']:

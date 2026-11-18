@@ -402,7 +402,10 @@ def render():
         else:
             st.error(text)
         st.caption(last["explanation"])
-        st.metric("MPs breaking their party line", f"{int(last.get('rebels', 0))}")
+        vote_cols = st.columns(2, gap="small")
+        vote_cols[0].metric("MPs breaking their party line", f"{int(last.get('rebels', 0))}")
+        if last.get("cabinet_support") is not None:
+            vote_cols[1].metric("Cabinet support at authorisation", f"{float(last.get('cabinet_support')):.0f}%")
         party_rows = last.get("party_votes", {})
         if party_rows:
             with st.expander("Party-by-party vote and rebellions", expanded=True):

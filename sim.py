@@ -275,6 +275,43 @@ def government_programme_checks():
     assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries, f"PM rejection should not enter delivery: {rejected}"
     return True
 
+def cabinet_portfolio_politics_checks():
+    """Portfolio interests and rivalry pressures must alter ministerial votes and Commons arithmetic."""
+    decision = {"title": "NHS hospital capacity reform", "text": "Reduce NHS waiting lists and support hospital staff."}
+    option = {"label": "Expand hospital capacity", "ideology": "Social Democratic",
+              "effect": {"nhs_waiting": -0.4, "health": 0.5}}
+    health_effect, health_reason = government_programme._portfolio_interest("health", decision, option)
+    education_effect, _ = government_programme._portfolio_interest("education", decision, option)
+    assert health_effect > education_effect, f"Health minister should recognise a direct NHS benefit: {health_effect}, {education_effect}"
+    assert "departmental" in health_reason.lower() or health_effect > 0
+    rivalry_state = FakeState({"ministerial_rivalries": {"health|social_care": 100.0},
+                               "ministerial_relationship_issue": None})
+    health_penalty, rivalry_reason = government_programme._rivalry_penalty(rivalry_state, "health")
+    social_penalty, _ = government_programme._rivalry_penalty(rivalry_state, "social_care")
+    education_penalty, _ = government_programme._rivalry_penalty(rivalry_state, "education")
+    assert health_penalty == 6.0 and social_penalty == 6.0 and education_penalty == 0.0
+    assert "Health and social care" in rivalry_reason
+    fake = FakeState({
+        "cabinet_ministers": {"health": "Health Secretary"},
+        "ministerial_profiles": {"health": {"minister": "Health Secretary", "party": "Labour",
+            "faction": "Labour Right", "personality": "Technocratic manager"}},
+        "ministerial_competence": {"health": 70.0}, "ministerial_loyalty": {"health": 70.0},
+        "ministerial_rivalries": {}, "cab_opinion": 60.0,
+    })
+    clear_review = government_programme.cabinet_review(fake, decision, option, "consensus")
+    fake.ministerial_rivalries = {"health|social_care": 100.0}
+    strained_review = government_programme.cabinet_review(fake, decision, option, "consensus")
+    assert strained_review["positions"][0]["score"] < clear_review["positions"][0]["score"]
+    assert strained_review["positions"][0]["rivalry_penalty"] == 6.0
+    new_run("Labour", "Normal", 764231)
+    st.session_state.parliament_seats = {party: (400 if party == "Labour" else 0) for party in state.PARTIES}
+    st.session_state.government_type = "majority"
+    st.session_state.government_coalition_partners = []
+    high_ayes, _ = parliament._simulate_party_vote(option, bonus=0, cabinet_support=85.0)
+    low_ayes, _ = parliament._simulate_party_vote(option, bonus=0, cabinet_support=15.0)
+    assert high_ayes > low_ayes, f"Strong Cabinet endorsement should improve the governing-party Commons vote: {high_ayes} vs {low_ayes}"
+    return True
+
 def cabinet_policy_negotiation_checks():
     """The three pre-vote approaches create distinct, bounded political trade-offs."""
     consensus = FakeState({"cab_opinion": 60.0, "pm_trust": 70.0})
@@ -549,6 +586,7 @@ def check(n=None, difficulty=None):
         except Exception as programme_error:
             raise AssertionError(f"Government Programme regression: {programme_error!r}") from programme_error
         cabinet_policy_negotiation_checks()
+        cabinet_portfolio_politics_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
         assessment_state = FakeState({"cabinet_ministers": {"health": "Health Secretary"}, "ministerial_loyalty": {"health": 20.0}, "ministerial_competence": {"health": 35.0}, "public_service_scores": {"NHS": 35.0}, "pm_opinion": 55.0, "cab_opinion": 55.0})
