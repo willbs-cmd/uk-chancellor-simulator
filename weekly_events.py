@@ -316,7 +316,6 @@ EVENTS = [
             ("Keep the existing just-in-time model", {"headroom": 0.1, "growth": -0.04, "market_conf": -0.3}, "There is no immediate public cost, but exposure to future disruption remains high."),
         ],
     },
-    },
 ]
 
 def _context_weight(event_id, context):
