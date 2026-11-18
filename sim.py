@@ -2443,6 +2443,74 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Phase 3: structural trends and investment stocks survive save/load,
+    # and older saves receive safe defaults rather than losing compatibility.
+    try:
+        new_run("Labour", "Normal", 74103)
+        save_state = st.session_state
+        save_state.population_millions = 70.125
+        save_state.working_age_share = 60.75
+        save_state.dependency_ratio = 60.4
+        save_state.net_migration_thousands = 185.0
+        save_state.housing_supply_gap = 245.5
+        save_state.energy_security = 71.0
+        save_state.clean_energy_share = 43.5
+        save_state.grid_capacity_index = 57.0
+        save_state.energy_import_exposure = 46.0
+        save_state.climate_resilience = 53.0
+        save_state.trade_resilience = 64.0
+        save_state.regional_inequality_index = 14.2
+        save_state.long_run_policy_stock = {
+            "housing": 42.0, "energy": 35.0, "climate": 28.0,
+            "skills": 19.0, "trade": 31.0,
+        }
+        save_state.long_run_last_year = "Term 1, Year 1"
+        save_state.long_run_history = [{
+            "Year": "Term 1, Year 1", "Population (m)": 70.125,
+            "Housing supply gap (000s)": 245.5,
+            "Energy security": 71.0, "Climate resilience": 53.0,
+        }]
+        save_state.long_run_event_history = [{
+            "term": 1, "year": 1, "event": "housing_supply_crunch",
+            "choice": 0, "investment_stock": dict(save_state.long_run_policy_stock),
+        }]
+        expected = {
+            key: save_state.get(key) for key in (
+                "population_millions", "working_age_share", "dependency_ratio",
+                "net_migration_thousands", "housing_supply_gap", "energy_security",
+                "clean_energy_share", "grid_capacity_index", "energy_import_exposure",
+                "climate_resilience", "trade_resilience", "regional_inequality_index",
+                "long_run_policy_stock", "long_run_last_year", "long_run_history",
+                "long_run_event_history",
+            )
+        }
+        payload = state.export_save()
+        if state.import_save(payload):
+            failures.append("A save containing long-term structural trends could not be reloaded.")
+        else:
+            for key, value in expected.items():
+                if st.session_state.get(key) != value:
+                    failures.append(f"Save/load did not preserve the long-term field {key}.")
+                    break
+
+        # Simulate a pre-Phase-3 save which has no structural model keys.
+        legacy_payload = json.loads(state.export_save())
+        for key in expected:
+            legacy_payload.pop(key, None)
+        legacy_payload = json.dumps(legacy_payload)
+        if state.import_save(legacy_payload):
+            failures.append("An older pre-Phase-3 save could not be loaded.")
+        else:
+            long_run_simulation.ensure(st.session_state)
+            if (float(st.session_state.population_millions) != 68.5
+                    or float(st.session_state.energy_security) != 62.0
+                    or set(st.session_state.long_run_policy_stock) != set(long_run_simulation.POLICY_STOCK_KEYS)):
+                failures.append("An older save did not initialise safe Phase 3 structural defaults.")
+    except Exception as exc:
+        failures.append(f"Phase 3 structural save/load regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
