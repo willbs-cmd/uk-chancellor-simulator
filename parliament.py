@@ -114,7 +114,7 @@ def _policy_pressure(option):
     return ideology, austerity, homes
 
 
-def _simulate_party_vote(option, bonus=0):
+def _simulate_party_vote(option, bonus=0, cabinet_support=None):
     """Simulate government, coalition-partner and opposition support by party."""
     s = st.session_state
     seats = _party_seats(s)
@@ -135,6 +135,8 @@ def _simulate_party_vote(option, bonus=0):
             if not aligned:
                 support -= 0.08
             support += min(0.08, max(-0.08, bonus / max(1, strength)))
+            if cabinet_support is not None:
+                support += max(-0.06, min(0.06, (float(cabinet_support) - 50.0) * 0.0012))
         elif party in coalition_partners:
             # Coalition MPs are part of the governing bloc, but their support
             # depends on policy alignment and the health of the agreement.
@@ -149,6 +151,8 @@ def _simulate_party_vote(option, bonus=0):
             if austerity and party in {"Conservative", "Reform UK"}:
                 support += 0.05
             support += min(0.04, max(-0.04, bonus / max(1, strength) * 0.5))
+            if cabinet_support is not None:
+                support += max(-0.03, min(0.03, (float(cabinet_support) - 50.0) * 0.0006))
         else:
             # Opposition MPs mostly oppose the government, but cross-party votes
             # and ideological sympathy allow a minority to break ranks.
@@ -171,12 +175,12 @@ def _simulate_party_vote(option, bonus=0):
     return total_ayes, result
 
 
-def review_bill(decision, option):
+def review_bill(decision, option, cabinet_support=None):
     """Vote on the selected policy, modelling every party's MPs and internal rebellions."""
     s = st.session_state
     bonus = int(s.get("parliament_next_bonus", 0))
     s.parliament_next_bonus = 0
-    base_votes, base_party_votes = _simulate_party_vote(option, bonus)
+    base_votes, base_party_votes = _simulate_party_vote(option, bonus, cabinet_support=cabinet_support)
     votes, party_votes, mp_summary = mp_politics.simulate_vote(option, base_party_votes, s)
     if votes >= CLEAR_PASS:
         status, factor = "Passed", 1.0
@@ -195,6 +199,7 @@ def review_bill(decision, option):
         "ideology": option.get("ideology", "Centric"), "ayes": int(votes),
         "noes": int(650 - votes), "status": status, "factor": factor,
         "bonus": bonus, "rebels": rebels, "party_votes": party_votes,
+        "cabinet_support": None if cabinet_support is None else round(float(cabinet_support), 1),
         "base_ayes": int(base_votes), "mp_summary": mp_summary,
         "explanation": explanation,
     }

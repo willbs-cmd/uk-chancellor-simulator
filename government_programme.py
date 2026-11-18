@@ -61,6 +61,123 @@ MISSION_DEFAULTS = {
     "balanced_renewal": ["growth", "public_services", "fiscal_credibility"],
 }
 
+
+PORTFOLIO_RULES = {
+    "health": {
+        "keywords": ("nhs", "health", "hospital", "waiting list", "clinical", "care"),
+        "effects": {"health": 1, "nhs_morale": 1, "social_care": 1, "nhs_waiting": -1},
+    },
+    "social_care": {
+        "keywords": ("social care", "care home", "unpaid carer", "adult care", "care workforce"),
+        "effects": {"social_care": 1, "nhs_waiting": -1},
+    },
+    "education": {
+        "keywords": ("school", "education", "teacher", "college", "classroom", "pupil"),
+        "effects": {"education": 1, "schools": 1, "teacher_retention": 1},
+    },
+    "skills": {
+        "keywords": ("skills", "apprenticeship", "training", "productivity", "technical education"),
+        "effects": {"skills": 1, "productivity": 1, "employment": 1, "unemployment": -1},
+    },
+    "housing": {
+        "keywords": ("housing", "housebuilding", "homes", "planning", "rent", "homeless"),
+        "effects": {"homes_built": 1, "housing": 1, "affordable_homes": 1, "rent_pressure": -1},
+    },
+    "transport": {
+        "keywords": ("rail", "transport", "road", "bus", "connectivity", "infrastructure"),
+        "effects": {"rail": 1, "transport": 1, "infrastructure": 1},
+    },
+    "local_government": {
+        "keywords": ("council", "local government", "local services", "devolution", "regional"),
+        "effects": {"local_grant": 1, "local_service_delivery": 1, "local_government": 1},
+    },
+    "climate": {
+        "keywords": ("climate", "carbon", "net zero", "renewable", "clean energy", "grid"),
+        "effects": {"climate": 1, "netzero": 1, "clean_energy": 1, "energy_security": 1},
+    },
+    "defence": {
+        "keywords": ("defence", "military", "armed forces", "nato", "security"),
+        "effects": {"defence": 1, "military": 1, "security": 1},
+    },
+    "welfare": {
+        "keywords": ("welfare", "benefit", "poverty", "universal credit", "social security"),
+        "effects": {"welfare": 1, "child_poverty": -1, "poverty": -1},
+    },
+    "justice": {
+        "keywords": ("prison", "justice", "court", "police", "offender"),
+        "effects": {"prisons": -1, "justice": 1, "court_backlog": -1, "crime": -1},
+    },
+    "public_sector_pay": {
+        "keywords": ("public sector pay", "pay settlement", "nurse pay", "teacher pay", "workforce pay"),
+        "effects": {"real_wages": 1, "nhs_morale": 1, "strikes": -1},
+    },
+    "science": {
+        "keywords": ("science", "research", "innovation", "r&d", "technology"),
+        "effects": {"science": 1, "research": 1, "productivity": 1},
+    },
+    "aid": {
+        "keywords": ("aid", "development", "humanitarian", "foreign assistance", "international"),
+        "effects": {"aid": 1, "international_development": 1},
+    },
+}
+
+
+def _portfolio_interest(department, decision, option):
+    """Return a small, transparent ministerial stake in a proposal."""
+    rule = PORTFOLIO_RULES.get(department)
+    if not rule:
+        return 0.0, "No direct portfolio impact identified"
+    effect = option.get("effect", option.get("fx", {})) or {}
+    text = " ".join(str(value or "") for value in (
+        decision.get("title"), decision.get("text"), option.get("label"),
+        option.get("description"), effect.get("message")
+    )).lower()
+    mentioned = any(word in text for word in rule["keywords"])
+    signal = 0.0
+    measured = False
+    for key, direction in rule["effects"].items():
+        try:
+            value = float(effect.get(key, 0.0))
+        except (TypeError, ValueError):
+            continue
+        if abs(value) > 0.0001:
+            measured = True
+            signal += value * direction
+    if measured:
+        # Scale actual effects gently; large numeric units cannot dominate a Cabinet vote.
+        impact = max(-7.0, min(7.0, signal * 2.5))
+        if impact > 0.3:
+            reason = "Supports departmental outcomes"
+        elif impact < -0.3:
+            reason = "Undermines departmental outcomes"
+        else:
+            reason = "Mixed departmental consequences"
+        return round(impact, 1), reason
+    if mentioned:
+        return 2.0, "Directly concerns this department"
+    return 0.0, "No direct portfolio impact identified"
+
+
+def _rivalry_penalty(s, department):
+    """Unresolved overlapping-portfolio rivalry makes ministers less willing to endorse a common line."""
+    import cabinet_management
+    penalty = 0.0
+    reasons = []
+    for left, right, label in cabinet_management.RIVALRY_PAIRS:
+        if department not in (left, right):
+            continue
+        tension = float(s.get("ministerial_rivalries", {}).get(f"{left}|{right}", 0.0))
+        if tension > 45.0:
+            loss = min(6.0, (tension - 45.0) * 0.11)
+            penalty += loss
+            reasons.append(f"{label} rivalry ({tension:.0f}/100)")
+    issue = s.get("ministerial_relationship_issue") or {}
+    if issue.get("kind") == "briefing" and department in (issue.get("department"), issue.get("rival_department")):
+        penalty += 2.0
+        reasons.append("Active ministerial briefing dispute")
+    return round(min(8.0, penalty), 1), "; ".join(reasons)
+
+
 _STANCE_EFFECTS = {
     "consensus": {"cab_opinion": 0.8, "pm_trust": 0.4},
     "compromise": {"cab_opinion": 1.4, "backbench_opinion": 0.8, "party_opinion": 0.3},
@@ -290,11 +407,13 @@ def cabinet_review(s, decision, option, stance="consensus"):
         faction = profile.get("faction", "Government Mainstream")
         compatible = cabinet_management.FACTION_IDEOLOGIES.get(faction, ["Centric"])
         faction_effect = 10.0 if ideology in compatible else (-7.0 if ideology != "Centric" else 0.0)
+        portfolio_effect, portfolio_reason = _portfolio_interest(department, decision, option)
+        rivalry_penalty, rivalry_reason = _rivalry_penalty(s, department)
         score = (
             52.0
             + (float(loyalty.get(department, 60.0)) - 60.0) * 0.28
             + (float(competence.get(department, 60.0)) - 60.0) * 0.10
-            + faction_effect + stance_bonus
+            + faction_effect + stance_bonus + portfolio_effect - rivalry_penalty
             + (float(s.get("cab_opinion", 60.0)) - 60.0) * 0.10
         )
         score = round(_clip(score), 1)
@@ -305,6 +424,10 @@ def cabinet_review(s, decision, option, stance="consensus"):
             "faction": faction,
             "score": score,
             "position": position,
+            "portfolio_effect": portfolio_effect,
+            "portfolio_reason": portfolio_reason,
+            "rivalry_penalty": rivalry_penalty,
+            "rivalry_reason": rivalry_reason,
         })
 
     if rows:

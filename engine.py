@@ -408,7 +408,7 @@ def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
     governance["cabinet"] = cabinet_review
     governance["prime_minister"] = pm_review
     if pm_review["factor"] > 0:
-        vote = parliament.review_bill(decision, opt)
+        vote = parliament.review_bill(decision, opt, cabinet_support=cabinet_review['support_pct'])
     else:
         vote = {"status": "Not submitted", "factor": 0.0, "ayes": 0, "noes": 0,
                 "rebels": 0, "party_votes": {}, "explanation": "The Prime Minister withheld executive approval."}
