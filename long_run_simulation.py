@@ -43,7 +43,7 @@ def ensure(s=None):
     return s
 
 
-def _clip(value, low, high):
+def _clip(value, low=0.0, high=100.0):
     return max(float(low), min(float(high), float(value)))
 
 
@@ -190,7 +190,7 @@ def advance(s=None):
     housing_demand = 210.0 + max(0.0, population_growth_pct - 0.20) * 45.0
     housing_demand += max(0.0, migration - 150.0) * 0.045
     gap_before = float(s.housing_supply_gap)
-    gap_change = _clip(housing_demand - completions, -35.0, 55.0)
+    gap_change = _clip(housing_demand - completions, -35.0, 90.0)
     s.housing_supply_gap = round(_clip(gap_before + gap_change, 0.0, 900.0), 1)
     s.housing_demand_thousands = round(housing_demand, 1)
     shortage = max(0.0, float(s.housing_supply_gap) - 150.0)
