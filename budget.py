@@ -1308,7 +1308,11 @@ def forecast(b, years=3, scenario=None):
                          gilt=v['gilt_yield'], gilt_risk_premium=v.get('gilt_risk_premium', 0.0),
                          debt_interest=round(interest_for(v['gilt_yield'], v['debt']), 1),
                          growth_receipts=round(growth_receipts, 2),
-                         investment_income=round(investment_income, 2), nhs_pressure=nhs_pressure,
+                         investment_income=round(investment_income, 2),
+                         scheme_tax_net=round(float(after_fin['tax_net']), 2),
+                         scheme_spend_cost=round(float(after_fin['spend_cost']), 2),
+                         scheme_net_balance=round(float(after_fin['tax_net']) - float(after_fin['spend_cost']), 2),
+                         nhs_pressure=nhs_pressure,
                          public_pay_pressure=public_pay_pressure, pension_cost=pension_cost,
                          recurring_costs=recurring_costs, net_fiscal_change=net_fiscal_change))
     return rows
@@ -1577,10 +1581,14 @@ def render_forecast(cur):
     df = pd.DataFrame([{
         'Year': r['year'], 'Growth': f"{r['growth']:.1f}%", 'Inflation': f"{r['inflation']:.1f}%",
         'Net growth dividend': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
+        'Scheme tax receipts': f"£{r['scheme_tax_net']:.1f}B",
+        'Scheme spending cost': f"£{r['scheme_spend_cost']:.1f}B",
+        'Net scheme balance': f"£{r['scheme_net_balance']:+.1f}B",
         'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
         'Gilts': f"{r['gilt']:.1f}%", 'Risk premium': f"+{r['gilt_risk_premium']:.2f}pp",
         'Debt interest': f"£{r['debt_interest']:.1f}B", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
+    st.caption('Scheme receipts and costs reflect each selected programme’s phased delivery stage in that forecast year. They are included in headroom and deficit; figures are annual flows, not cumulative totals.')
     st.caption('Illustrative sensitivity range, not an official OBR confidence interval. It shows how weaker growth and higher borrowing costs could alter the central forecast.')
     risk_rows = []
     for i, row in enumerate(rows):
