@@ -308,6 +308,7 @@ def cabinet_amendment_negotiation_checks():
     )
     assert fake["ministerial_loyalty"]["health"] > 60.0, "Accepting an amendment should improve loyalty."
     assert fake["ministerial_alliance_history"], "Co-signing ministers should create a recorded Cabinet alliance."
+    assert fake["ministerial_alliances"].get("health|social_care", 0.0) > 0, "Co-signatories should form a persistent ministerial alliance."
     assert committed["accepted"], "Accepted amendments should be recorded."
     assert committed_option["effect"]["health"] > before["health"]
     weak = FakeState(dict(fake))
@@ -331,7 +332,7 @@ def cabinet_portfolio_politics_checks():
               "effect": {"nhs_waiting": -0.4, "health": 0.5}}
     health_effect, health_reason = government_programme._portfolio_interest("health", decision, option)
     education_effect, _ = government_programme._portfolio_interest("education", decision, option)
-    assert health_effect > education_effect, f"Health minister should recognise a direct NHS benefit: {health_effect}, {education_effect}"
+    assert health_effect < education_effect, f"Health minister should resist a proposal that harms NHS outcomes: {health_effect}, {education_effect}"
     assert "departmental" in health_reason.lower() or health_effect > 0
     rivalry_state = FakeState({"ministerial_rivalries": {"health|social_care": 100.0},
                                "ministerial_relationship_issue": None})
