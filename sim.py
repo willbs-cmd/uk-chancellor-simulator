@@ -1269,6 +1269,14 @@ def check(n=None, difficulty=None):
             if row['scheme_net_balance'] != expected_balance:
                 failures.append("Forecast net scheme balance does not reconcile to receipts less costs.")
                 break
+            expected_pressure = round(row['nhs_pressure'] + row['public_pay_pressure'] + row['pension_cost'], 2)
+            if row['recurring_costs'] != expected_pressure:
+                failures.append("Forecast recurring spending pressures do not reconcile to NHS, pay and pensions.")
+                break
+            expected_net = round(row['growth_receipts'] + row['investment_income'] - row['recurring_costs'], 2)
+            if row['net_fiscal_change'] != expected_net:
+                failures.append("Forecast net fiscal change does not reconcile to growth receipts, investment income and recurring costs.")
+                break
 
         overloaded = dict(draft)
         overloaded['spend_pol'] = dict(draft['spend_pol'])

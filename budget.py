@@ -1589,6 +1589,17 @@ def render_forecast(cur):
         'Debt interest': f"£{r['debt_interest']:.1f}B", 'Markets': f"{r['market']:.0f}%"} for r in rows])
     st.dataframe(df, hide_index=True, use_container_width=True)
     st.caption('Scheme receipts and costs reflect each selected programme’s phased delivery stage in that forecast year. They are included in headroom and deficit; figures are annual flows, not cumulative totals.')
+    pressure_df = pd.DataFrame([{
+        'Year': r['year'],
+        'NHS & public services (£bn)': f"£{r['nhs_pressure']:.2f}",
+        'Public-sector pay (£bn)': f"£{r['public_pay_pressure']:.2f}",
+        'Pension pressure (£bn)': f"£{r['pension_cost']:.2f}",
+        'Total recurring pressure (£bn)': f"£{r['recurring_costs']:.2f}",
+        'Net fiscal change (£bn)': f"£{r['net_fiscal_change']:+.2f}",
+    } for r in rows])
+    with st.expander('What is driving future spending and headroom?', expanded=False):
+        st.dataframe(pressure_df, hide_index=True, use_container_width=True)
+        st.caption('These are additional annual pressures on the fiscal margin, not the full NHS, pay or pension budgets. Net fiscal change combines the growth dividend and investment income with these recurring costs; debt-interest repricing is shown separately in the main forecast.')
     st.caption('Illustrative sensitivity range, not an official OBR confidence interval. It shows how weaker growth and higher borrowing costs could alter the central forecast.')
     risk_rows = []
     for i, row in enumerate(rows):
