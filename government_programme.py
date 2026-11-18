@@ -1016,6 +1016,9 @@ def render(s=None):
             "Proposal": item["title"],
             "Programme priority": item["priority_label"],
             "Cabinet": item["cabinet_status"],
+            "Accepted amendments": sum(1 for row in item.get("cabinet_amendments", []) if row.get("accepted")),
+            "Rejected demands": sum(1 for row in item.get("cabinet_amendments", []) if not row.get("accepted")),
+            "Concession cost": f"£{float(item.get('cabinet_amendment_cost', 0.0)):.2f}bn",
             "Prime Minister": item["prime_minister_status"],
             "Commons": item["commons_status"],
             "Outcome": item["outcome"],
@@ -1035,6 +1038,9 @@ def render(s=None):
                         "Faction": row.get("faction", ""),
                         "Position": row.get("position", ""),
                         "Assessment": row.get("score", 0),
+                        "Portfolio impact": row.get("portfolio_reason", ""),
+                        "Amendment": row.get("amendment_status", "No demand"),
+                        "Alliance bonus": row.get("alliance_bonus", 0),
                     } for row in item["cabinet_positions"]], hide_index=True, use_container_width=True)
                 else:
                     st.caption("Cabinet support was estimated from overall Cabinet confidence.")
