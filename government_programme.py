@@ -424,7 +424,7 @@ def prepare_cabinet_amendments(s, decision, option):
     # Ministers in the same faction can coordinate one joint amendment.
     unassigned = set(impact_rows)
     while unassigned and len(demands) < 3:
-        department = max(unassigned, key=lambda key: (
+        department = max(sorted(unassigned), key=lambda key: (
             max(0.0, -impact_rows[key]["impact"])
             + max(0.0, impact_rows[key]["penalty"] * 0.5)
             + max(0.0, 45.0 - impact_rows[key]["loyalty"]) * 0.08
@@ -572,13 +572,15 @@ def apply_cabinet_amendments(s, decision, option, accepted_amendments=None, comm
                             resignation_candidate = (department, minister)
 
                 for ally in outcome["departments"]:
-                    if ally == department:
+                    if ally == department or department > ally:
                         continue
-                    pair = "|".join(sorted((department, ally)))
+                    pair = "|".join((department, ally))
                     change = 8.0 if outcome["accepted"] else 5.0
                     alliances[pair] = round(_clip(float(alliances.get(pair, 0.0)) + change), 1)
 
                 for rival in outcome["rival_departments"]:
+                    if department > rival:
+                        continue
                     import cabinet_management
                     pair_key = next((
                         f"{left}|{right}" for left, right, _label in cabinet_management.RIVALRY_PAIRS

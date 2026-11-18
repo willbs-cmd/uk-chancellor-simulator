@@ -201,6 +201,23 @@ def render(on_restart):
                     st.markdown("**Overlapping portfolio tensions**")
                     st.dataframe(rivalry_rows, hide_index=True, use_container_width=True)
                     st.caption("Tension rises when overlapping ministers diverge in competence, loyalty or repeated Treasury disputes. Serious rivalries can weaken Cabinet unity.")
+                alliances = dict(s.get("ministerial_alliances", {}))
+                if alliances:
+                    alliance_rows = []
+                    for pair, strength in sorted(alliances.items(), key=lambda item: float(item[1]), reverse=True):
+                        departments = str(pair).split("|")
+                        if len(departments) != 2:
+                            continue
+                        left_name = str(ministers.get(departments[0], departments[0].replace("_", " ").title()))
+                        right_name = str(ministers.get(departments[1], departments[1].replace("_", " ").title()))
+                        alliance_rows.append({
+                            "Cabinet alliance": f"{left_name} + {right_name}",
+                            "Strength": f"{float(strength):.0f}/100",
+                        })
+                    if alliance_rows:
+                        st.markdown("**Ministerial alliances and co-signatories**")
+                        st.dataframe(alliance_rows, hide_index=True, use_container_width=True)
+                        st.caption("Alliances formed through joint amendment campaigns provide a small continuing support bonus in future Cabinet policy reviews.")
                 pressure_issue = s.get("political_pressure_issue")
                 if pressure_issue:
                     st.markdown("**Political pressure · Response required**")
