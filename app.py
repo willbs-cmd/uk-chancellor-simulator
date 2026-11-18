@@ -23,6 +23,7 @@ import performance_report
 import economic_management
 import household
 import regional_economy
+import long_run_simulation
 import public_services
 import chancellors_desk
 import political_pressure
@@ -164,6 +165,17 @@ def scorecard_block(show_share=True):
     c1.metric("Policies & crises", data.get('actions', 0))
     c2.metric("Commons votes", data.get('commons_votes', 0))
     c3.metric("Bills rejected", data.get('bills_rejected', 0))
+    long_run = data.get("long_run", {})
+    if long_run:
+        st.markdown("#### Long-term national legacy")
+        l1, l2, l3 = st.columns(3)
+        l1.metric("Structural resilience", f"{long_run.get('overall', 0)}/100")
+        l2.metric("Housing", f"{long_run.get('housing', 0)}/100")
+        l3.metric("Demographic resilience", f"{long_run.get('demographic', 0)}/100")
+        l4, l5, l6 = st.columns(3)
+        l4.metric("Energy security", f"{long_run.get('energy', 0)}/100")
+        l5.metric("Climate resilience", f"{long_run.get('climate', 0)}/100")
+        l6.metric("Regional balance", f"{long_run.get('regional', 0)}/100")
     if data.get('chapters'):
         with st.expander("Read the key moments of your term"):
             for item in data['chapters']:
@@ -1159,6 +1171,7 @@ def economy():
     country.render()
     import living_economy
     living_economy.render()
+    long_run_simulation.render(s)
 
 
 # ==================== MAIN NAVIGATION ====================

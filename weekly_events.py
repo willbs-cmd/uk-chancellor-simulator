@@ -276,6 +276,47 @@ EVENTS = [
             ("Take no action unless evidence of collusion emerges", {"market_conf": 0.2, "approval": -0.5, "household_confidence": -0.4}, "The Government avoids political intervention, but consumers want faster relief."),
         ],
     },
+    {
+        "id": "housing_supply_crunch", "category": "Housing and long-term growth",
+        "title": "Housing shortage begins to constrain the economy",
+        "text": "Household formation is outpacing new construction in several high-demand areas. Employers say workers cannot afford to move to where jobs are available, while councils warn that temporary accommodation costs are rising.",
+        "options": [
+            ("Launch a five-year social and affordable housebuilding partnership", {"headroom": -2.0, "deficit": 2.0, "homes_built": 14, "growth": 0.05, "approval": 0.5}, "The Treasury commits capital funding and local authorities agree delivery milestones. New supply will take time to ease rents."),
+            ("Agree a planning and infrastructure compact", {"homes_built": 8, "growth": 0.08, "market_conf": 0.3, "approval": 0.3}, "Councils and developers receive clearer infrastructure and planning commitments, with less immediate public spending."),
+            ("Expand temporary accommodation and rent support", {"headroom": -0.9, "deficit": 0.9, "homeless": -2, "approval": 0.5}, "The immediate pressure on families is eased, but the shortage of homes is not resolved."),
+        ],
+    },
+    {
+        "id": "climate_resilience_warning", "category": "Climate and national resilience",
+        "title": "Flood and coastal risks expose gaps in national resilience",
+        "text": "A review of flood defences, drainage and coastal protection finds that several communities and transport links remain exposed to more frequent extreme-weather disruption. Insurers warn that recovery costs could rise without a long-term adaptation plan.",
+        "options": [
+            ("Fund a national flood and coastal resilience programme", {"headroom": -1.5, "deficit": 1.5, "growth": 0.03, "approval": 0.4}, "The programme prioritises communities with the greatest exposure and protects critical infrastructure over several years."),
+            ("Work with councils on nature-based flood protection", {"headroom": -0.8, "deficit": 0.8, "netzero": 1.0, "approval": 0.3}, "Wetlands, drainage and natural barriers are restored, although some projects take longer to deliver."),
+            ("Rely on emergency response and existing defences", {"headroom": 0.1, "approval": -0.5, "market_conf": -0.2}, "The Treasury avoids a new capital programme, but future disruption could be more expensive."),
+        ],
+    },
+    {
+        "id": "ageing_workforce_gap", "category": "Demographics and skills",
+        "title": "Employers warn of a growing workforce and skills gap",
+        "text": "Employers in health, engineering, construction and social care report persistent vacancies. An ageing workforce is increasing demand for care while reducing the supply of experienced workers in some sectors.",
+        "options": [
+            ("Expand retraining and later-career employment", {"headroom": -1.0, "deficit": 1.0, "growth": 0.06, "unemployment": -0.03}, "Colleges and employers receive support for retraining, flexible work and retaining experienced staff."),
+            ("Create targeted skilled-worker routes", {"headroom": -0.4, "deficit": 0.4, "growth": 0.08, "business_confidence": 0.5}, "Recruitment is focused on documented shortages and linked to regional workforce plans."),
+            ("Leave recruitment to employers", {"headroom": 0.1, "growth": -0.05, "approval": -0.3}, "The Treasury avoids a new programme, but shortages may constrain services and investment."),
+        ],
+    },
+    {
+        "id": "supply_chain_realign", "category": "International trade and resilience",
+        "title": "A critical supply chain becomes vulnerable to overseas disruption",
+        "text": "A review finds that several important industrial inputs are sourced from a narrow group of overseas suppliers. Businesses warn that geopolitical tensions or shipping disruption could interrupt production and raise prices.",
+        "options": [
+            ("Build diversified trade and strategic supplier partnerships", {"headroom": -0.7, "deficit": 0.7, "market_conf": 0.5, "growth": 0.04}, "The Government works with allies and firms to broaden supply routes and reduce exposure to single suppliers."),
+            ("Back domestic capacity for critical components", {"headroom": -1.3, "deficit": 1.3, "growth": 0.08, "business_confidence": 0.5}, "Targeted investment helps build domestic capability, although it is more expensive in the short term."),
+            ("Keep the existing just-in-time model", {"headroom": 0.1, "growth": -0.04, "market_conf": -0.3}, "There is no immediate public cost, but exposure to future disruption remains high."),
+        ],
+    },
+    },
 ]
 
 def _context_weight(event_id, context):
@@ -301,6 +342,16 @@ def _context_weight(event_id, context):
     ):
         weight += 1.2
     if event_id == "global_credit_crunch" and float(c.get("world_cycle", 0.0)) < -1:
+        weight += 1.5
+    if event_id == "housing_supply_crunch" and float(c.get("housing_supply_gap", 170.0)) > 210:
+        weight += 1.8
+    if event_id == "climate_resilience_warning" and float(c.get("climate_resilience", 45.0)) < 42:
+        weight += 1.7
+    if event_id == "ageing_workforce_gap" and float(c.get("dependency_ratio", 58.0)) > 60:
+        weight += 1.5
+    if event_id == "supply_chain_realign" and (
+        float(c.get("world_cycle", 0.0)) < -0.5 or float(c.get("trade_resilience", 50.0)) < 45
+    ):
         weight += 1.5
     if event_id == "water_company_failure" and float(c.get("local_finance_pressure", 40.0)) > 65:
         weight += 0.7
@@ -337,6 +388,10 @@ def context_from_state(s):
         "schools": float(country.get("schools", 60.0)),
         "business_confidence": float(s.get("business_confidence", 55.0)),
         "world_cycle": float(s.get("world_cycle", 0.0)),
+        "housing_supply_gap": float(s.get("housing_supply_gap", 170.0)),
+        "climate_resilience": float(s.get("climate_resilience", 45.0)),
+        "dependency_ratio": float(s.get("dependency_ratio", 58.0)),
+        "trade_resilience": float(s.get("trade_resilience", 50.0)),
         "mission": str(s.get("government_mission", "balanced_renewal")),
     }
 

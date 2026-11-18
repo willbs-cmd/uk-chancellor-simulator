@@ -642,6 +642,8 @@ def resolve_weekly_event(choice_index):
     label, fx, note = options[choice_index]
     _schedule_ongoing_issue(event.get('id'), choice_index)
     apply_effect(fx)
+    import long_run_simulation
+    long_run_simulation.apply_event_choice(s, event.get("id"), choice_index)
     # A real tax miss is a revenue loss, not just a political headline.
     if event.get('id') in ('tax_shortfall', 'retail_tax_warning'):
         s.deficit = round(float(s.get('deficit', 0)) + max(0.0, -float(fx.get('headroom', 0))), 1)
@@ -1551,6 +1553,8 @@ def proceed_to_spring():
     # Trading partners evolve each year; their cycle spills into UK exports and confidence.
     world_economy.ensure(s)
     world_economy.advance(s)
+    import long_run_simulation
+    long_run_simulation.advance(s)
     # Let household and business demand feed into real growth before the
     # macro debt calculation uses that year's growth rate.
     import living_economy
@@ -2087,6 +2091,13 @@ def scorecard():
     for label, key, fmt in (('NHS waiting list', 'nhs_waiting', '{:.1f}m'), ('Child poverty', 'child_poverty', '{:.1f}%'),
                             ('New homes / yr', 'homes_built', '{:.0f}k'), ('Unemployment', 'unemployment', '{:.1f}%')):
         rows.append(dict(label=label, start=fmt.format(start['country'][key]), end=fmt.format(now['country'][key])))
+    import long_run_simulation
+    long_run = long_run_simulation.legacy_assessment(s)
+    rows.extend([
+        dict(label="Housing supply gap", start="—", end=f"{float(s.get('housing_supply_gap', 0)):.0f}k homes"),
+        dict(label="Energy security", start="—", end=f"{float(s.get('energy_security', 0)):.0f}/100"),
+        dict(label="Climate resilience", start="—", end=f"{float(s.get('climate_resilience', 0)):.0f}/100"),
+    ])
     moves = [h for h in s.history if h['term'] == s.term and h['kind'] in ('decision', 'crisis')]
     best = max(moves, key=lambda h: h['score'], default=None)
     worst = min(moves, key=lambda h: h['score'], default=None)
@@ -2118,6 +2129,7 @@ def scorecard():
     else:
         fiscal_verdict = 'Your fiscal room is broadly similar to where you started.'
     legacy = f"{public_verdict} {fiscal_verdict} Your term receives a {grade(overall)} for the state of the nation ({overall:.0f}/100)."
+    legacy += " " + long_run_simulation.legacy_summary(s)
     if r and r.get('win'):
         legacy += ' You also secured another term at the ballot box.'
     elif r:
@@ -2129,7 +2141,7 @@ def scorecard():
         grade=grade(overall), grade_colour=colour,
         badges=[ach[a][0] for a in s.achievements if a in ach],
         new_badges=[ach[a][0] for a in s.new_achievements if a in ach],
-        legacy=legacy, actions=len(decisions_made), commons_votes=len(votes), bills_rejected=len(rejected),
+        legacy=legacy, long_run=long_run, actions=len(decisions_made), commons_votes=len(votes), bills_rejected=len(rejected),
         chapters=chapters,
         share=_share_text(title, seats, overall, start, now),
     )
