@@ -309,6 +309,16 @@ def cabinet_amendment_negotiation_checks():
     assert fake["ministerial_loyalty"]["health"] > 60.0, "Accepting an amendment should improve loyalty."
     assert fake["ministerial_alliance_history"], "Co-signing ministers should create a recorded Cabinet alliance."
     assert fake["ministerial_alliances"].get("health|social_care", 0.0) > 0, "Co-signatories should form a persistent ministerial alliance."
+    preview_authorisation = government_programme.preflight(fake, decision, option, "consensus", [health_demand["id"]])
+    live = FakeState(dict(fake))
+    live_option, live_negotiation = government_programme.apply_cabinet_amendments(
+        live, decision, option, accepted_amendments=[health_demand["id"]], commit=True
+    )
+    engine.apply_cabinet_stance(live, "consensus")
+    live_cabinet = government_programme.cabinet_review(
+        live, decision, live_option, "consensus", amendment_outcomes=live_negotiation["outcomes"]
+    )
+    assert preview_authorisation["cabinet"]["support_pct"] == live_cabinet["support_pct"], "Preview Cabinet support must match the live result after the same negotiation choices."
     assert committed["accepted"], "Accepted amendments should be recorded."
     assert committed_option["effect"]["health"] > before["health"]
     weak = FakeState(dict(fake))

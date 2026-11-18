@@ -759,6 +759,36 @@ def preflight(s, decision, option, stance="consensus", accepted_amendments=None)
         s, decision, option, accepted_amendments=accepted_amendments, commit=False
     )
     preview = _apply_stance_to_copy(s, stance)
+    # Mirror the loyalty, alliance and rivalry changes that commit=True will apply
+    # after the Chancellor confirms the same selection.
+    loyalty = dict(preview.get("ministerial_loyalty", {}))
+    tensions = dict(preview.get("ministerial_rivalries", {}))
+    alliances = dict(preview.get("ministerial_alliances", {}))
+    import cabinet_management
+    for outcome in negotiation["outcomes"]:
+        members = list(outcome.get("departments", []))
+        for department in members:
+            current_loyalty = float(loyalty.get(department, 60.0))
+            loyalty[department] = round(_clip(current_loyalty + (4.0 if outcome["accepted"] else -3.5)), 1)
+            for ally in members:
+                if ally == department or department > ally:
+                    continue
+                pair = f"{department}|{ally}"
+                change = 8.0 if outcome["accepted"] else 5.0
+                alliances[pair] = round(_clip(float(alliances.get(pair, 0.0)) + change), 1)
+            for rival in outcome.get("rival_departments", []):
+                if department > rival:
+                    continue
+                pair_key = next((
+                    f"{left}|{right}" for left, right, _label in cabinet_management.RIVALRY_PAIRS
+                    if {left, right} == {department, rival}
+                ), None)
+                if pair_key:
+                    change = -4.0 if outcome["accepted"] else 6.0
+                    tensions[pair_key] = round(_clip(float(tensions.get(pair_key, 24.0)) + change), 1)
+    preview["ministerial_loyalty"] = loyalty
+    preview["ministerial_rivalries"] = tensions
+    preview["ministerial_alliances"] = alliances
     fiscal = costing(preview, decision, adjusted_option)
     cabinet = cabinet_review(preview, decision, adjusted_option, stance, amendment_outcomes=negotiation["outcomes"])
     prime_minister = prime_minister_review(preview, adjusted_option, cabinet, fiscal)
