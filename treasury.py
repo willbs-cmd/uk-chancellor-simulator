@@ -181,12 +181,6 @@ def fiscal_outlook(years=3):
     }
     rows = []
     country = s.get("country") or {}
-    unemployment = float(country.get("unemployment", 4.5))
-    real_wage_growth = float(country.get("real_wages", 0.0))
-    productivity_index = float(s.get("productivity_index", 100.0))
-    productivity_growth = float(s.get("productivity_growth", 0.0))
-    business_confidence = float(s.get("business_confidence", 52.0))
-    business_investment = float(s.get("business_investment", 100.0))
     for label, shock in scenarios.items():
         unemployment = float(country.get("unemployment", 4.5))
         real_wage_growth = float(country.get("real_wages", 0.0))
@@ -194,23 +188,7 @@ def fiscal_outlook(years=3):
         productivity_growth = float(s.get("productivity_growth", 0.0))
         business_confidence = float(s.get("business_confidence", 52.0))
         business_investment = float(s.get("business_investment", 100.0))
-        for _forecast_year in range(1, years + 1):
-            # A simple labour-market/productivity projection follows the same
-            # directional feedbacks used in the live living-economy update.
-            growth_gap = base_growth - 1.2
-            unemployment = max(2.0, min(15.0, unemployment - growth_gap * 0.07))
-            productivity_growth = max(-0.12, min(0.16,
-                (business_investment - 100.0) * 0.0015
-                + (business_confidence - 52.0) * 0.0008))
-            productivity_index = max(85.0, min(125.0,
-                productivity_index * (1.0 + productivity_growth / 100.0)))
-            real_wage_growth = max(-5.0, min(8.0,
-                real_wage_growth + (base_growth - 1.2) * 0.035
-                - max(0.0, base_inflation - 2.0) * 0.025))
-            business_confidence = max(5.0, min(95.0,
-                business_confidence + (base_growth - 1.0) * 0.12))
-            business_investment = max(55.0, min(150.0,
-                business_investment + (business_confidence - 52.0) * 0.025))
+        consumer_spending = float(s.get("consumer_spending", 100.0))
         v = {
             "inflation": base_inflation, "interest_rate": float(s.get("interest_rate", 4.5)),
             "gilt_yield": float(s.get("gilt_yield", 4.5)), "growth": base_growth,
@@ -225,6 +203,57 @@ def fiscal_outlook(years=3):
             v["inflation"] = round(max(0.0, v["inflation"] + shock["inflation"]), 2)
             v["gilt_yield"] = max(0.5, v["gilt_yield"] + shock["gilt"])
             v["market_conf"] = max(0.0, min(100.0, v["market_conf"] + shock["market"]))
+
+            # Forecast demand, business investment, productive capacity, wages
+            # and jobs using the same bounded feedbacks as the live economy.
+            confidence_change = (
+                (v["market_conf"] - 55.0) * 0.035
+                + (v["growth"] - 1.0) * 0.22
+                - max(0.0, v["interest_rate"] - 4.0) * 0.16
+                - max(0.0, v["inflation"] - 3.0) * 0.12
+            )
+            business_confidence = max(5.0, min(95.0, business_confidence + confidence_change))
+            investment_change = (
+                (business_confidence - 52.0) * 0.035
+                + (v["growth"] - 1.0) * 0.12
+                - max(0.0, v["interest_rate"] - 4.0) * 0.10
+            )
+            business_investment = max(55.0, min(150.0, business_investment + investment_change))
+            spending_change = (
+                real_wage_growth * 0.42
+                - max(0.0, v["inflation"] - 2.0) * 0.20
+                - max(0.0, v["interest_rate"] - 4.0) * 0.10
+                + (v["approval"] - 50.0) * 0.012
+            )
+            consumer_spending = max(65.0, min(140.0, consumer_spending + spending_change))
+            demand_signal = (
+                (consumer_spending - 100.0) * 0.018
+                + (business_investment - 100.0) * 0.014
+                + (business_confidence - 52.0) * 0.006
+            )
+            growth_impulse = max(-0.35, min(0.45, demand_signal))
+            productivity_growth = max(-0.12, min(0.16,
+                (business_investment - 100.0) * 0.0015
+                + (business_confidence - 52.0) * 0.0008))
+            productivity_index = max(85.0, min(125.0,
+                productivity_index * (1.0 + productivity_growth / 100.0)))
+            v["growth"] = round(max(-8.0, min(8.0,
+                v["growth"] + growth_impulse + productivity_growth)), 2)
+            job_change = (
+                growth_impulse * 0.20
+                + (business_investment - 100.0) * 0.004
+                - (unemployment - 4.5) * 0.025
+            )
+            unemployment = max(2.0, min(15.0, unemployment - job_change))
+            wage_impulse = max(-0.12, min(0.16,
+                growth_impulse * 0.22 + (4.5 - unemployment) * 0.035))
+            real_wage_growth = max(-5.0, min(8.0, real_wage_growth + wage_impulse))
+            wage_price_pressure = max(-0.10, min(0.10,
+                (real_wage_growth - productivity_growth) * 0.035
+                + (4.5 - unemployment) * 0.012))
+            v["inflation"] = round(max(0.0, min(12.0,
+                v["inflation"] + wage_price_pressure)), 2)
+
             v = econ.step(v, None)
             nominal_growth = ((1.0 + v["growth"] / 100.0) * (1.0 + v["inflation"] / 100.0) - 1.0) * 100.0
             next_index = max(0.55, tax_index * (1.0 + max(-8.0, min(12.0, nominal_growth * 0.85)) / 100.0))
@@ -236,6 +265,11 @@ def fiscal_outlook(years=3):
             pay_pressure = 0.40 + 0.12 * inflation_pressure + 0.015 * max(0.0, 2.0 - v["growth"])
             annual_costs = max(0.0, recurring) + max(0.0, nhs_pressure + pay_pressure - 0.85)
             net_change = growth_receipts - annual_costs
+            demand_receipts = max(-1.5, min(2.5,
+                (consumer_spending - 100.0) * 0.025
+                + (business_investment - 100.0) * 0.018
+                + (4.5 - unemployment) * 0.16))
+            net_change += demand_receipts
             v["headroom"] = round(v["headroom"] + net_change, 1)
             v["deficit"] = round(max(0.0, v["deficit"] - net_change), 1)
             v["gdp_trillion"] = round(float(v["gdp_trillion"]) * (1.0 + nominal_growth / 100.0), 5)

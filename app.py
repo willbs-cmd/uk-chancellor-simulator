@@ -567,6 +567,109 @@ def budget_day_scorecard(draft, heading="Budget impact & announcements"):
             st.dataframe(pd.DataFrame(announcements), hide_index=True, use_container_width=True)
     else:
         st.info("No tax rates, departmental settlements or new schemes have changed from the previous Budget.")
+
+    # Translate cash changes into plain-English groups that are likely to
+    # benefit or bear costs. These are indicative, not official costings.
+    beneficiaries, cost_bearers = [], []
+    old_receipts, new_receipts = budget.revenues(old), budget.revenues(draft)
+    tax_groups = {
+        "income": "Basic-rate income taxpayers and workers",
+        "income_higher": "Higher-rate income taxpayers",
+        "income_additional": "Additional-rate income taxpayers",
+        "ni": "Employees and employers through National Insurance",
+        "vat": "Consumers through prices",
+        "fuel": "Drivers and fuel users",
+        "sin": "Consumers of alcohol and tobacco",
+        "corp": "Companies and their shareholders",
+        "property": "Property and wealth owners",
+        "cgt": "People realising taxable capital gains",
+        "iht": "Estates and inheritors above the relevant threshold",
+        "council_tax": "Households paying council tax",
+        "land_value": "Owners of land with taxable site value",
+        "financial_transaction": "Financial-market participants",
+        "carbon_levy": "Carbon-intensive businesses and energy users",
+        "sugar_duty": "Sugary-drinks producers and consumers",
+        "business_rates": "High-street and other rate-paying businesses",
+        "stamp_duty": "Property buyers and sellers",
+        "vehicle_excise": "Vehicle owners",
+        "air_passenger": "Air passengers",
+    }
+    for key, group in tax_groups.items():
+        change = float(new_receipts.get(key, 0.0)) - float(old_receipts.get(key, 0.0))
+        if abs(change) >= 0.05:
+            note = f"{group}: modelled annual tax contribution changes by £{abs(change):.2f}bn."
+            (cost_bearers if change > 0 else beneficiaries).append(note)
+
+    threshold_before = old.get("thresholds", {})
+    threshold_after = draft.get("thresholds", {})
+    allowance_keys = ("personal_allowance", "higher_rate_threshold", "additional_rate_threshold")
+    threshold_delta = sum(
+        float(threshold_after.get(key, threshold_before.get(key, 0.0)))
+        - float(threshold_before.get(key, 0.0))
+        for key in allowance_keys
+    )
+    if abs(threshold_delta) >= 1.0:
+        note = "Income-tax payers"
+        detail = "Higher thresholds reduce tax bills for affected workers." if threshold_delta > 0 else "Lower thresholds or frozen allowances increase tax paid through fiscal drag."
+        (beneficiaries if threshold_delta > 0 else cost_bearers).append(f"{note}: {detail}")
+
+    spending_groups = {
+        "health": "Patients and NHS staff",
+        "education": "Pupils, students, teachers and colleges",
+        "welfare": "Benefit recipients and pensioners",
+        "justice": "Court users, victims, prison services and staff",
+        "defence": "Armed Forces personnel and defence suppliers",
+        "transport": "Rail passengers, road users and regional transport projects",
+        "housing": "Renters, prospective homebuyers and housing providers",
+        "science": "Researchers, universities and innovative businesses",
+        "climate": "Clean-energy projects and communities affected by pollution",
+        "aid": "Overseas aid recipients and delivery organisations",
+        "culture": "Arts organisations, museums and heritage visitors",
+        "other": "Public services funded through the cross-government budget",
+        "social_care": "Care users, unpaid carers and care workers",
+        "local_government": "Council-taxpayers and users of local services",
+        "public_sector_pay": "Public-sector employees",
+        "skills": "Apprentices, learners and employers",
+    }
+    for key, spec in budget.SPEND_DEFAULTS.items():
+        old_rate = float(old.get("spend", {}).get(key, spec.get("default", 0.0)))
+        new_rate = float(draft.get("spend", {}).get(key, old_rate))
+        annual_change = float(s.dept_spend.get(key, 0.0)) * (new_rate - old_rate) / 100.0
+        if abs(annual_change) >= 0.05:
+            group = spending_groups.get(key, spec.get("label", key))
+            note = f"{group}: annual departmental funding changes by £{abs(annual_change):.2f}bn."
+            (beneficiaries if annual_change > 0 else cost_bearers).append(note)
+
+    for key, selected in draft.get("tax_pol", {}).items():
+        if selected and not old.get("tax_pol", {}).get(key, False) and key in budget.TAX_POLICIES:
+            policy = budget.TAX_POLICIES[key]
+            yield_bn = float(policy.get("yield_bn", 0.0))
+            group = "Businesses, investors or taxpayers targeted by the measure"
+            note = f"{group}: {policy.get('label', key)}."
+            (cost_bearers if yield_bn > 0 else beneficiaries).append(note)
+    for key, selected in draft.get("spend_pol", {}).items():
+        if selected and not old.get("spend_pol", {}).get(key, False) and key in budget.SPEND_POLICIES:
+            policy = budget.SPEND_POLICIES[key]
+            label = policy.get("label", key)
+            beneficiaries.append(f"Target groups for {label.lower()} receive the programme's intended support.")
+
+    with st.expander("Who gains and who pays?", expanded=True):
+        st.caption("Indicative distributional explanation based on the Budget settings and modelled cash effects. It is not a household-by-household OBR distributional analysis.")
+        gain_col, cost_col = st.columns(2)
+        with gain_col:
+            st.markdown("**Likely beneficiaries**")
+            if beneficiaries:
+                for item in beneficiaries:
+                    st.write("• " + item)
+            else:
+                st.caption("No material direct winners are identified from the changes in this draft.")
+        with cost_col:
+            st.markdown("**Likely cost-bearers**")
+            if cost_bearers:
+                for item in cost_bearers:
+                    st.write("• " + item)
+            else:
+                st.caption("No material direct cost-bearers are identified from the changes in this draft.")
     return impact
 
 

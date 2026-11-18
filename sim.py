@@ -2088,6 +2088,75 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Phase 1: annual Treasury forecast vintages compare the published central
+    # case with realised outcomes and require a response to a material miss.
+    try:
+        import forecast_accuracy
+        review_state = FakeState({
+            "term": 1, "year": 1, "seed": 2468, "gdp_trillion": 3.0,
+            "growth": 1.2, "inflation": 2.4, "interest_rate": 4.5,
+            "gilt_yield": 4.6, "debt": 96.0, "deficit": 65.0,
+            "headroom": 8.0, "debt_interest_bill": 11.2, "market_conf": 58.0,
+            "approval": 50.0, "macro_cycle": "Stagnation",
+            "tax_base_index": 1.0,
+            "treasury_last_cost_pressures": {"Total recurring pressures (£bn)": 0.9},
+            "demographic_pressure": 2.0, "budget_applied": budget.defaults(),
+            "country": {"unemployment": 4.5, "real_wages": 0.5},
+            "business_confidence": 58.0, "business_investment": 105.0,
+            "consumer_spending": 102.0, "productivity_index": 100.0,
+            "productivity_growth": 0.03, "political_capital_points": 2,
+            "officials_confidence": 70.0, "pm_trust": 65.0, "pm_opinion": 60.0,
+            "event_cards": [], "officials_log": [],
+            "forecast_accuracy_vintages": [], "forecast_accuracy_history": [],
+            "forecast_accuracy_latest": None, "active_forecast_review": None,
+            "forecast_accuracy_last_settled": "", "forecast_reliability": 70.0,
+        })
+        st.session_state = review_state
+        budget.ensure()
+        vintage = forecast_accuracy.record_vintage(review_state)
+        if not vintage or vintage.get("key") != "1-2":
+            failures.append("Treasury did not capture a one-year-ahead forecast vintage for the incoming fiscal year.")
+        if vintage and not all(key in vintage["forecast"] for key in forecast_accuracy.TOLERANCES):
+            failures.append("Treasury forecast vintage omitted one or more macro-fiscal measures.")
+        review_state.update({
+            "growth": -0.4, "inflation": 4.3, "interest_rate": 5.8,
+            "gilt_yield": 6.1, "debt": 103.0, "deficit": 77.0,
+            "headroom": -3.0, "debt_interest_bill": 16.0,
+            "productivity_growth": -0.08,
+        })
+        review_state.country["unemployment"] = 6.8
+        review_state.country["real_wages"] = -0.8
+        settled = forecast_accuracy.settle_vintage(review_state)
+        if not settled or not settled.get("review_required"):
+            failures.append("A material growth, inflation and fiscal forecast miss did not require a Treasury review.")
+        if not review_state.get("active_forecast_review"):
+            failures.append("A material Treasury forecast miss did not create an actionable Chancellor review.")
+        if len(review_state.get("forecast_accuracy_history", [])) != 1:
+            failures.append("Treasury forecast comparison was not recorded in the annual history.")
+        if float(review_state.get("forecast_reliability", 70.0)) >= 70.0:
+            failures.append("A major forecast error did not reduce Treasury forecast reliability.")
+        headroom_before = float(review_state.headroom)
+        deficit_before = float(review_state.deficit)
+        capital_before = int(review_state.political_capital_points)
+        ok, _ = forecast_accuracy.resolve_review("commission", review_state)
+        if not ok:
+            failures.append("The Chancellor could not commission an independent review of the forecast miss.")
+        if (review_state.get("active_forecast_review") is not None
+                or review_state.political_capital_points != capital_before - 1
+                or review_state.headroom != round(headroom_before - 0.35, 1)
+                or review_state.deficit != round(deficit_before + 0.35, 1)):
+            failures.append("Commissioning an independent forecast review did not apply its stated cost and clear the issue.")
+        history_count = len(review_state.forecast_accuracy_history)
+        forecast_accuracy.settle_vintage(review_state)
+        if len(review_state.forecast_accuracy_history) != history_count:
+            failures.append("The same annual Treasury forecast vintage was settled more than once.")
+        if review_state.get("budget_applied") != budget.defaults():
+            failures.append("Forecast review unexpectedly changed the approved Budget ledger.")
+    except Exception as exc:
+        failures.append(f"Phase 1 forecast accuracy/review regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
