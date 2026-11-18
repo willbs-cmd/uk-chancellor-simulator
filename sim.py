@@ -275,6 +275,55 @@ def government_programme_checks():
     assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries, f"PM rejection should not enter delivery: {rejected}"
     return True
 
+def cabinet_amendment_negotiation_checks():
+    """Amendments cost money, soften portfolio harm, form alliances and can trigger resignations."""
+    decision = {"title": "NHS and social care efficiency reform",
+                "text": "Reduce hospital and social care spending to improve efficiency."}
+    option = {"label": "Reduce health and care spending", "ideology": "Fiscal Austerity",
+              "effect": {"health": -2.0, "social_care": -1.0, "headroom": 1.0, "deficit": -1.0}}
+    fake = FakeState({
+        "term": 1, "year": 2, "block": 1, "seed": 88, "party": "Labour",
+        "cabinet_ministers": {"health": "Health Secretary", "social_care": "Care Secretary"},
+        "ministerial_loyalty": {"health": 60.0, "social_care": 60.0},
+        "ministerial_competence": {"health": 60.0, "social_care": 60.0},
+        "ministerial_profiles": {}, "ministerial_rivalries": {"health|social_care": 70.0},
+        "ministerial_alliances": {}, "ministerial_alliance_history": [],
+        "ministerial_refusals": {}, "ministerial_relationship_issue": None,
+        "ministerial_relationship_issue_year": "",
+    })
+    demands = government_programme.prepare_cabinet_amendments(fake, decision, option)
+    assert demands, "Austerity measures that harm health and care should trigger Cabinet amendment requests."
+    health_demand = next((item for item in demands if "health" in item["departments"]), None)
+    assert health_demand is not None, f"Health portfolio did not table an amendment: {demands}"
+    before = dict(option["effect"])
+    preview_option, preview = government_programme.apply_cabinet_amendments(
+        fake, decision, option, accepted_amendments=[health_demand["id"]], commit=False
+    )
+    assert preview_option["effect"]["health"] > before["health"], "Accepted amendment should soften harm to the health portfolio."
+    assert preview_option["effect"]["headroom"] < before["headroom"], "Accepted amendment must have a fiscal cost."
+    assert preview_option["effect"]["deficit"] > before["deficit"], "Accepted amendment must raise modelled borrowing."
+    assert fake["ministerial_loyalty"]["health"] == 60.0, "A preview must not mutate the live save."
+    committed_option, committed = government_programme.apply_cabinet_amendments(
+        fake, decision, option, accepted_amendments=[health_demand["id"]], commit=True
+    )
+    assert fake["ministerial_loyalty"]["health"] > 60.0, "Accepting an amendment should improve loyalty."
+    assert fake["ministerial_alliance_history"], "Co-signing ministers should create a recorded Cabinet alliance."
+    assert committed["accepted"], "Accepted amendments should be recorded."
+    assert committed_option["effect"]["health"] > before["health"]
+    weak = FakeState(dict(fake))
+    weak["ministerial_loyalty"] = {"health": 25.0, "social_care": 25.0}
+    weak["ministerial_alliances"] = {}
+    weak["ministerial_alliance_history"] = []
+    weak["ministerial_relationship_issue"] = None
+    weak["ministerial_relationship_issue_year"] = ""
+    _, rejected = government_programme.apply_cabinet_amendments(
+        weak, decision, option, accepted_amendments=[], commit=True
+    )
+    assert rejected["rejected"], "Unaccepted demands should be recorded."
+    assert weak.get("ministerial_relationship_issue", {}).get("kind") == "resignation", "A minister with very low loyalty should threaten resignation after rejection."
+    return True
+
+
 def cabinet_portfolio_politics_checks():
     """Portfolio interests and rivalry pressures must alter ministerial votes and Commons arithmetic."""
     decision = {"title": "NHS hospital capacity reform", "text": "Reduce NHS waiting lists and support hospital staff."}
@@ -587,6 +636,7 @@ def check(n=None, difficulty=None):
             raise AssertionError(f"Government Programme regression: {programme_error!r}") from programme_error
         cabinet_policy_negotiation_checks()
         cabinet_portfolio_politics_checks()
+        cabinet_amendment_negotiation_checks()
         cabinet_rivalry_checks()
         cabinet_relationship_checks()
         assessment_state = FakeState({"cabinet_ministers": {"health": "Health Secretary"}, "ministerial_loyalty": {"health": 20.0}, "ministerial_competence": {"health": 35.0}, "public_service_scores": {"NHS": 35.0}, "pm_opinion": 55.0, "cab_opinion": 55.0})

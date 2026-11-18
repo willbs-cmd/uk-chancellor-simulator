@@ -378,7 +378,7 @@ def assess_decision(opt, cabinet_stance="consensus", cabinet_support=None):
     }
 
 
-def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
+def execute_decision(opt, cabinet_stance='consensus', programme_priority=None, cabinet_amendments=None):
     """Run one policy decision. ``opt`` is an option dict from ``current_options()``."""
     s = st.session_state
     # Migrate older in-progress saves created before the branching decision system.
@@ -399,15 +399,17 @@ def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
     s.event_cards = []
     before = state.values()
     state.snapshot()
-    ideology, effect = opt['ideology'], opt['effect']
     decision = current_decision()
-
-    cabinet_stance = apply_cabinet_stance(s, cabinet_stance)
-    assessment = assess_decision(opt, cabinet_stance)
     import government_programme
     government_programme.ensure(s)
+    opt, negotiation = government_programme.apply_cabinet_amendments(
+        s, decision, opt, accepted_amendments=cabinet_amendments, commit=True
+    )
+    ideology, effect = opt['ideology'], opt['effect']
+    cabinet_stance = apply_cabinet_stance(s, cabinet_stance)
+    assessment = assess_decision(opt, cabinet_stance)
     governance = {"fiscal": government_programme.costing(s, decision, opt)}
-    cabinet_review = government_programme.cabinet_review(s, decision, opt, cabinet_stance)
+    cabinet_review = government_programme.cabinet_review(s, decision, opt, cabinet_stance, amendment_outcomes=negotiation['outcomes'])
     pm_review = government_programme.prime_minister_review(s, opt, cabinet_review, governance["fiscal"])
     governance["cabinet"] = cabinet_review
     governance["prime_minister"] = pm_review
@@ -467,7 +469,7 @@ def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
     s.message = (s.message + " " + governance_note + " " + parliament_note).strip()
     proposal_record = government_programme.record_proposal(
         s, decision, opt, programme_priority, cabinet_review, pm_review, vote,
-        combined_factor, fiscal=governance["fiscal"]
+        combined_factor, fiscal=governance["fiscal"], negotiation=negotiation
     )
     if s.policy_history:
         s.policy_history[-1].update({
@@ -475,9 +477,16 @@ def execute_decision(opt, cabinet_stance='consensus', programme_priority=None):
             "cabinet_status": cabinet_review["status"],
             "prime_minister_status": pm_review["status"],
             "authorisation_outcome": proposal_record["outcome"],
+            "cabinet_amendments": [item["amendment"] for item in negotiation["accepted"]],
         })
     if pressure_issue:
         s.event_cards.append({'title': 'Political pressure · Cabinet dissent' if pressure_issue.get('kind') == 'ministerial_dissent' else ('Political pressure · Parliamentary faction' if pressure_issue.get('kind') == 'parliamentary_bloc' else 'Political pressure · Backbench rebellion'), 'text': pressure_issue.get('text', ''), 'summary': 'A response is required on the Chancellor’s Desk.'})
+    if negotiation['outcomes']:
+        s.event_cards.append({
+            'title': 'Cabinet negotiations · ' + str(len(negotiation['accepted'])) + ' amendments accepted',
+            'text': ' '.join(item['description'] for item in negotiation['outcomes']),
+            'summary': f"Accepted {len(negotiation['accepted'])} · Rejected {len(negotiation['rejected'])} · Additional cost £{negotiation['cost']:.2f}bn"
+        })
     s.event_cards.append({
         'title': 'Cabinet review · ' + cabinet_review['status'],
         'text': f"{cabinet_review['support_pct']:.0f}% of the simulated ministerial team supports the proposal.",

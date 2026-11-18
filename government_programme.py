@@ -387,7 +387,248 @@ def costing(s, decision, option):
     }
 
 
-def cabinet_review(s, decision, option, stance="consensus"):
+
+def prepare_cabinet_amendments(s, decision, option):
+    """Generate deterministic amendment demands from ministers' portfolio interests and rivalries."""
+    import cabinet_management
+    cabinet_management.ensure_profiles(s)
+    ministers = s.get("cabinet_ministers", {}) or {}
+    profiles = s.get("ministerial_profiles", {}) or {}
+    loyalty = s.get("ministerial_loyalty", {}) or {}
+    impact_rows = {}
+    demands = []
+
+    for department, minister in ministers.items():
+        minister = str(minister or "")
+        if not minister or minister.startswith(("Vacant", "New appointment")):
+            continue
+        impact, reason = _portfolio_interest(department, decision, option)
+        penalty, rivalry_reason = _rivalry_penalty(s, department)
+        rule = PORTFOLIO_RULES.get(department, {})
+        effects = option.get("effect", option.get("fx", {})) or {}
+        adverse_keys = []
+        for key, direction in rule.get("effects", {}).items():
+            try:
+                value = float(effects.get(key, 0.0))
+            except (TypeError, ValueError):
+                continue
+            if abs(value) > 0.0001 and value * float(direction) < 0:
+                adverse_keys.append(key)
+        impact_rows[department] = {
+            "minister": minister, "impact": impact, "reason": reason,
+            "penalty": penalty, "rivalry_reason": rivalry_reason,
+            "amendment_status": amendment_status,
+            "alliance_bonus": round(alliance_bonus, 1),
+            "keys": adverse_keys, "profile": profiles.get(department, {}),
+            "loyalty": float(loyalty.get(department, 60.0)),
+        }
+
+    # Ministers in the same faction can coordinate one joint amendment.
+    unassigned = set(impact_rows)
+    while unassigned and len(demands) < 3:
+        department = max(unassigned, key=lambda key: (
+            max(0.0, -impact_rows[key]["impact"])
+            + max(0.0, impact_rows[key]["penalty"] * 0.5)
+            + max(0.0, 45.0 - impact_rows[key]["loyalty"]) * 0.08
+        ))
+        row = impact_rows[department]
+        material_harm = row["impact"] <= -0.5 and bool(row["keys"])
+        loyalty_concern = row["loyalty"] <= 32.0 and row["impact"] < 0
+        rivalry_concern = row["penalty"] >= 5.0 and row["impact"] < 0
+        if not (material_harm or loyalty_concern or rivalry_concern):
+            unassigned.remove(department)
+            continue
+
+        faction = row["profile"].get("faction", "Government Mainstream")
+        group = [department]
+        for other in list(unassigned - {department}):
+            other_row = impact_rows[other]
+            other_faction = other_row["profile"].get("faction", "Government Mainstream")
+            if other_faction == faction and other_row["impact"] <= -0.5 and other_row["keys"]:
+                group.append(other)
+        group.sort()
+        for item in group:
+            unassigned.discard(item)
+
+        names = [impact_rows[item]["minister"] for item in group]
+        keys_by_department = {item: list(impact_rows[item]["keys"]) for item in group}
+        all_keys = sorted({key for values in keys_by_department.values() for key in values})
+        loyalty_min = min(impact_rows[item]["loyalty"] for item in group)
+        rival_departments = []
+        import cabinet_management
+        for left, right, _label in cabinet_management.RIVALRY_PAIRS:
+            for member in group:
+                if member not in (left, right):
+                    continue
+                rival = right if member == left else left
+                rival_row = impact_rows.get(rival)
+                if rival_row and rival_row["impact"] > 0.5:
+                    rival_departments.append(rival)
+
+        if all_keys:
+            amendment = "Protect " + " / ".join(
+                str(item).replace("_", " ").title() for item in group
+            ) + " outcomes"
+            description = (
+                f"{', '.join(names)} request changes to reduce the harm to their portfolios. "
+                f"The proposal currently works against {', '.join(all_keys)}."
+            )
+        else:
+            amendment = "Add a departmental delivery safeguard"
+            description = (
+                f"{', '.join(names)} want a formal delivery safeguard before backing the proposal."
+            )
+        if rival_departments:
+            rival_names = [impact_rows[item]["minister"] for item in rival_departments]
+            description += (
+                f" They also warn that the proposal favours rival portfolio(s): "
+                f"{', '.join(rival_names)}."
+            )
+        if loyalty_min <= 32.0:
+            description += f" {names[0]} warns that rejecting the request could trigger a resignation."
+        supporters = []
+        for other in impact_rows:
+            if other in group:
+                continue
+            other_row = impact_rows[other]
+            if other_row["profile"].get("faction") == faction and other_row["impact"] <= -0.5:
+                supporters.append({"department": other, "minister": other_row["minister"]})
+        demand_id = "+".join(group)
+        demands.append({
+            "id": demand_id,
+            "departments": group,
+            "ministers": names,
+            "faction": faction,
+            "amendment": amendment,
+            "description": description,
+            "effect_keys": keys_by_department,
+            "rival_departments": sorted(set(rival_departments)),
+            "allies": supporters,
+            "loyalty_min": loyalty_min,
+            "estimated_cost": 0.25,
+            "kind": "portfolio" if all_keys else "safeguard",
+        })
+
+    return demands
+
+
+def apply_cabinet_amendments(s, decision, option, accepted_amendments=None, commit=False):
+    """Apply selected concessions to a copy of the option; commit ministerial reactions only at authorisation."""
+    demands = prepare_cabinet_amendments(s, decision, option)
+    accepted_ids = set(accepted_amendments or [])
+    adjusted = dict(option)
+    adjusted_effect = dict(option.get("effect", option.get("fx", {})) or {})
+    outcomes = []
+    accepted_cost = 0.0
+
+    for demand in demands:
+        accepted = demand["id"] in accepted_ids
+        if accepted:
+            for department, keys in demand["effect_keys"].items():
+                for key in keys:
+                    try:
+                        adjusted_effect[key] = round(float(adjusted_effect.get(key, 0.0)) * 0.5, 4)
+                    except (TypeError, ValueError):
+                        pass
+            accepted_cost += float(demand["estimated_cost"])
+        outcomes.append({
+            "id": demand["id"],
+            "amendment": demand["amendment"],
+            "ministers": list(demand["ministers"]),
+            "departments": list(demand["departments"]),
+            "accepted": accepted,
+            "faction": demand["faction"],
+            "rival_departments": list(demand["rival_departments"]),
+            "allies": list(demand["allies"]),
+            "description": demand["description"],
+            "cost": float(demand["estimated_cost"]) if accepted else 0.0,
+        })
+
+    if accepted_cost > 0:
+        adjusted_effect["headroom"] = round(float(adjusted_effect.get("headroom", 0.0)) - accepted_cost, 4)
+        adjusted_effect["deficit"] = round(float(adjusted_effect.get("deficit", 0.0)) + accepted_cost, 4)
+        old_message = str(adjusted_effect.get("message", ""))
+        concession_note = f" Cabinet amendments add £{accepted_cost:.2f}bn to the policy's modelled cost."
+        adjusted_effect["message"] = (old_message + concession_note).strip()
+
+    adjusted["effect"] = adjusted_effect
+    adjusted["_cabinet_amendments"] = outcomes
+
+    if commit and outcomes:
+        loyalty = dict(s.get("ministerial_loyalty", {}))
+        refusals = dict(s.get("ministerial_refusals", {}))
+        tensions = dict(s.get("ministerial_rivalries", {}))
+        alliances = dict(s.get("ministerial_alliances", {}))
+        resignation_candidate = None
+        for outcome in outcomes:
+            for department in outcome["departments"]:
+                minister = str(s.get("cabinet_ministers", {}).get(department, ""))
+                before_loyalty = float(loyalty.get(department, 60.0))
+                if outcome["accepted"]:
+                    loyalty[department] = round(_clip(before_loyalty + 4.0), 1)
+                else:
+                    loyalty[department] = round(_clip(before_loyalty - 3.5), 1)
+                    refusals[minister] = int(refusals.get(minister, 0)) + 1
+                    if before_loyalty <= 32.0 or (before_loyalty < 42.0 and refusals[minister] >= 2):
+                        if resignation_candidate is None:
+                            resignation_candidate = (department, minister)
+
+                for ally in outcome["departments"]:
+                    if ally == department:
+                        continue
+                    pair = "|".join(sorted((department, ally)))
+                    change = 8.0 if outcome["accepted"] else 5.0
+                    alliances[pair] = round(_clip(float(alliances.get(pair, 0.0)) + change), 1)
+
+                for rival in outcome["rival_departments"]:
+                    import cabinet_management
+                    pair_key = next((
+                        f"{left}|{right}" for left, right, _label in cabinet_management.RIVALRY_PAIRS
+                        if {left, right} == {department, rival}
+                    ), None)
+                    if pair_key:
+                        tension_change = -4.0 if outcome["accepted"] else 6.0
+                        tensions[pair_key] = round(_clip(float(tensions.get(pair_key, 24.0)) + tension_change), 1)
+
+        s.ministerial_loyalty = loyalty
+        s.ministerial_refusals = refusals
+        s.ministerial_rivalries = tensions
+        s.ministerial_alliances = alliances
+        history = list(s.get("ministerial_alliance_history", []))
+        tick = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}:{int(s.get('block', 1))}"
+        history.append({
+            "tick": tick,
+            "amendments": outcomes,
+            "alliances": dict(alliances),
+        })
+        s.ministerial_alliance_history = history[-30:]
+
+        if resignation_candidate and not s.get("ministerial_relationship_issue"):
+            department, minister = resignation_candidate
+            s.ministerial_relationship_issue = {
+                "kind": "resignation",
+                "department": department,
+                "minister": minister,
+                "text": (
+                    f"{minister} has threatened to resign after you rejected their Cabinet amendment. "
+                    "Number 10 is concerned that the dispute could destabilise the Government."
+                ),
+                "year": int(s.get("year", 1)),
+                "term": int(s.get("term", 1)),
+                "tick": tick,
+            }
+            s.ministerial_relationship_issue_year = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+
+    return adjusted, {
+        "demands": demands,
+        "outcomes": outcomes,
+        "accepted": [item for item in outcomes if item["accepted"]],
+        "rejected": [item for item in outcomes if not item["accepted"]],
+        "cost": round(accepted_cost, 2),
+    }
+
+
+def cabinet_review(s, decision, option, stance="consensus", amendment_outcomes=None):
     """Collect simulated individual ministerial positions on the proposal."""
     import cabinet_management
     ideology = str(option.get("ideology", "Centric"))
@@ -409,11 +650,25 @@ def cabinet_review(s, decision, option, stance="consensus"):
         faction_effect = 10.0 if ideology in compatible else (-7.0 if ideology != "Centric" else 0.0)
         portfolio_effect, portfolio_reason = _portfolio_interest(department, decision, option)
         rivalry_penalty, rivalry_reason = _rivalry_penalty(s, department)
+        amendment_effect = 0.0
+        amendment_status = "No demand"
+        for outcome in amendment_outcomes or []:
+            if department not in outcome.get("departments", []):
+                continue
+            amendment_status = "Accepted" if outcome.get("accepted") else "Rejected"
+            amendment_effect = 7.0 if outcome.get("accepted") else -7.0
+        alliance_bonus = 0.0
+        for pair, strength in (s.get("ministerial_alliances", {}) or {}).items():
+            members = str(pair).split("|")
+            if department in members:
+                alliance_bonus += min(1.5, float(strength) * 0.015)
+        alliance_bonus = min(3.0, alliance_bonus)
         score = (
             52.0
             + (float(loyalty.get(department, 60.0)) - 60.0) * 0.28
             + (float(competence.get(department, 60.0)) - 60.0) * 0.10
             + faction_effect + stance_bonus + portfolio_effect - rivalry_penalty
+            + amendment_effect + alliance_bonus
             + (float(s.get("cab_opinion", 60.0)) - 60.0) * 0.10
         )
         score = round(_clip(score), 1)
@@ -496,13 +751,19 @@ def _apply_stance_to_copy(s, stance):
     return preview
 
 
-def preflight(s, decision, option, stance="consensus"):
-    """Non-mutating Treasury, Cabinet and Number 10 preview for the selected option."""
+def preflight(s, decision, option, stance="consensus", accepted_amendments=None):
+    """Non-mutating Treasury, Cabinet and Number 10 forecast including selected concessions."""
+    adjusted_option, negotiation = apply_cabinet_amendments(
+        s, decision, option, accepted_amendments=accepted_amendments, commit=False
+    )
     preview = _apply_stance_to_copy(s, stance)
-    fiscal = costing(preview, decision, option)
-    cabinet = cabinet_review(preview, decision, option, stance)
-    prime_minister = prime_minister_review(preview, option, cabinet, fiscal)
-    return {"fiscal": fiscal, "cabinet": cabinet, "prime_minister": prime_minister}
+    fiscal = costing(preview, decision, adjusted_option)
+    cabinet = cabinet_review(s, decision, adjusted_option, stance, amendment_outcomes=negotiation["outcomes"])
+    prime_minister = prime_minister_review(preview, adjusted_option, cabinet, fiscal)
+    return {
+        "fiscal": fiscal, "cabinet": cabinet, "prime_minister": prime_minister,
+        "option": adjusted_option, "negotiation": negotiation,
+    }
 
 
 def _department_for_policy(priority, decision):
@@ -518,7 +779,7 @@ def _department_for_policy(priority, decision):
     return PRIORITIES.get(priority, {}).get("department", "other")
 
 
-def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote, quality, fiscal=None):
+def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote, quality, fiscal=None, negotiation=None):
     """Log the complete authorisation journey and queue any approved delivery."""
     ensure(s)
     programme = s["annual_government_programme"]
@@ -557,6 +818,8 @@ def record_proposal(s, decision, option, priority, cabinet, prime_minister, vote
         "cabinet_status": cabinet_status,
         "cabinet_support": float(cabinet.get("support_pct", 0.0)),
         "cabinet_positions": list(cabinet.get("positions", [])),
+        "cabinet_amendments": list((negotiation or {}).get("outcomes", [])),
+        "cabinet_amendment_cost": float((negotiation or {}).get("cost", 0.0)),
         "prime_minister_status": pm_status,
         "prime_minister_score": float(prime_minister.get("score", 0.0)),
         "commons_status": vote_status,

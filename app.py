@@ -1088,8 +1088,25 @@ def decision_screen():
             key=f"proposal_priority_{s.term}_{s.year}_{s.block}",
             help="Link this proposal to one of the Government's adopted annual priorities, or leave it as general business."
         )
-        governance_preview = government_programme.preflight(s, decision, selected, stance)
-        fiscal_preview = governance_preview["fiscal"]
+        cabinet_demands = government_programme.prepare_cabinet_amendments(s, decision, selected)
+        demand_labels = {item['id']: f"{', '.join(item['ministers'])} · {item['amendment']}" for item in cabinet_demands}
+        if cabinet_demands:
+            with st.expander(f"Cabinet amendment requests · {len(cabinet_demands)} tabled", expanded=True):
+                for demand in cabinet_demands:
+                    st.markdown(f"**{demand['amendment']}** — {', '.join(demand['ministers'])}")
+                    st.caption(demand['description'])
+                    if demand['allies']:
+                        st.caption('Co-signatories: ' + ', '.join(item['minister'] for item in demand['allies']))
+            accepted_amendments = st.multiselect(
+                "Accept ministerial amendments", options=[item['id'] for item in cabinet_demands],
+                default=[], format_func=lambda key: demand_labels[key],
+                key=f"cabinet_amendments_{s.term}_{s.year}_{s.block}",
+                help="Accepted amendments soften the adverse effect on the requesting departments and cost £0.25bn each. Rejected demands can damage loyalty, intensify rivalries or prompt resignation threats."
+            )
+        else:
+            accepted_amendments = []
+            st.caption("No minister has tabled a specific amendment to this proposal.")
+        governance_preview = government_programme.preflight(s, decision, selected, stance, accepted_amendments)        fiscal_preview = governance_preview["fiscal"]
         cabinet_preview = governance_preview["cabinet"]
         pm_preview = governance_preview["prime_minister"]
         assessment = engine.assess_decision(selected, stance, cabinet_support=cabinet_preview["support_pct"])
@@ -1125,6 +1142,8 @@ def decision_screen():
                     "Portfolio impact": row.get("portfolio_reason", ""),
                     "Rivalry penalty": row.get("rivalry_penalty", 0),
                     "Rivalry pressure": row.get("rivalry_reason", ""),
+                    "Amendment position": row.get("amendment_status", "No demand"),
+                    "Alliance support": row.get("alliance_bonus", 0),
                 } for row in cabinet_preview.get("positions", [])]
                 if roll_call:
                     st.dataframe(pd.DataFrame(roll_call), hide_index=True, use_container_width=True)
@@ -1144,7 +1163,7 @@ def decision_screen():
         st.markdown("<div class='decision-authority'>DECISION PENDING · Your selection has no effect until authorised.</div>", unsafe_allow_html=True)
     with st.container(key='decision_authorise'):
         if st.button('Take this decision to Cabinet & Commons', type='primary', disabled=choice is None, use_container_width=True):
-            engine.execute_decision(options[labels.index(choice)], cabinet_stance=stance, programme_priority=programme_priority)
+            engine.execute_decision(options[labels.index(choice)], cabinet_stance=stance, programme_priority=programme_priority, cabinet_amendments=accepted_amendments)
             st.rerun()
 
 
