@@ -68,6 +68,17 @@ _STANCE_EFFECTS = {
 }
 
 
+class _PreviewState(dict):
+    """Mapping with Streamlit-session-style attribute access for read-only previews."""
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError as exc:
+            raise AttributeError(key) from exc
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
 def _clip(value, low=0.0, high=100.0):
     return max(low, min(high, float(value)))
 
