@@ -1256,7 +1256,6 @@ def check(n=None, difficulty=None):
             failures.append("Scheme productivity effects did not improve as the programmes matured.")
         if first_fin['rows'][('tax', 'hmrc_enforcement')]['admin'] <= 0:
             failures.append("Revenue schemes are missing their administration cost.")
-        st.session_state = st.session_state
         projected = budget.forecast(draft, years=3)
         if len(projected) != 3:
             failures.append("Multi-year scheme forecast did not return three years.")

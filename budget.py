@@ -1311,7 +1311,7 @@ def forecast(b, years=3, scenario=None):
                          investment_income=round(investment_income, 2),
                          scheme_tax_net=round(float(after_fin['tax_net']), 2),
                          scheme_spend_cost=round(float(after_fin['spend_cost']), 2),
-                         scheme_net_balance=round(float(after_fin['tax_net']) - float(after_fin['spend_cost']), 2),
+                         scheme_net_balance=round(round(float(after_fin['tax_net']), 2) - round(float(after_fin['spend_cost']), 2), 2),
                          nhs_pressure=nhs_pressure,
                          public_pay_pressure=public_pay_pressure, pension_cost=pension_cost,
                          recurring_costs=recurring_costs, net_fiscal_change=net_fiscal_change))
