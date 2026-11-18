@@ -2443,6 +2443,26 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Legacy scoring always passes explicit bounds to its clipping helper. This
+    # catches the Streamlit Cloud failure where an older module copy had a strict
+    # two-bound helper signature.
+    try:
+        new_run("Labour", "Normal", 74104)
+        legacy_state = st.session_state
+        strict_clip_original = long_run_simulation._clip
+        long_run_simulation._clip = lambda value, low, high: max(low, min(high, float(value)))
+        assessment = long_run_simulation.legacy_assessment(legacy_state)
+        if any(not 0 <= float(value) <= 100 for key, value in assessment.items()):
+            failures.append("Structural legacy scoring exceeded its explicit 0–100 bounds.")
+    except Exception as exc:
+        failures.append(f"Phase 3 strict-bound legacy scoring regression failed: {exc}")
+    finally:
+        try:
+            long_run_simulation._clip = strict_clip_original
+        except Exception:
+            pass
+        st.session_state = FakeState()
+
     # Phase 3: structural trends and investment stocks survive save/load,
     # and older saves receive safe defaults rather than losing compatibility.
     try:

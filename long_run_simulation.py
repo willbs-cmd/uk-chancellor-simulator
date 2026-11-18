@@ -336,14 +336,16 @@ def legacy_assessment(s=None):
     demographic = _clip(
         100.0 - max(0.0, float(s.dependency_ratio) - 58.0) * 1.8
         + (float(s.working_age_share) - 61.0) * 1.2
-        + (float(s.labour_supply_index) - 100.0) * 0.7
+        + (float(s.labour_supply_index) - 100.0) * 0.7,
+        0.0, 100.0
     )
     energy = _clip(
-        float(s.energy_security) * 0.52 + float(s.clean_energy_share) * 0.48
+        float(s.energy_security) * 0.52 + float(s.clean_energy_share) * 0.48,
+        0.0, 100.0
     )
-    climate = _clip(float(s.climate_resilience))
-    regional = _clip(100.0 - max(0.0, float(s.regional_inequality_index) - 12.0) * 3.0)
-    trade = _clip(float(s.trade_resilience))
+    climate = _clip(float(s.climate_resilience), 0.0, 100.0)
+    regional = _clip(100.0 - max(0.0, float(s.regional_inequality_index) - 12.0) * 3.0, 0.0, 100.0)
+    trade = _clip(float(s.trade_resilience), 0.0, 100.0)
     overall = round(
         housing * 0.22 + demographic * 0.18 + energy * 0.18
         + climate * 0.14 + regional * 0.14 + trade * 0.14
