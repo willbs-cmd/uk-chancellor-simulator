@@ -851,6 +851,68 @@ def impact(old, new, annual_settlement=None):
 
 
 
+# ---------------------------------------------------------------- Treasury policy costing sandbox
+TREASURY_POLICY_OPTIONS = {
+    "nhs_capacity": {"label":"NHS capacity & diagnostics", "department":"health", "capital":8.0, "annual":3.2, "productivity":0.025, "jobs":42000, "risk":"Workforce shortages, planning delays and limited clinical capacity could slow the benefits."},
+    "school_rebuilding": {"label":"School rebuilding programme", "department":"education", "capital":12.0, "annual":1.4, "productivity":0.035, "jobs":28000, "risk":"Construction inflation, contractor capacity and disruption to pupils."},
+    "affordable_homes": {"label":"Affordable homes accelerator", "department":"housing", "capital":10.0, "annual":1.0, "productivity":0.045, "jobs":36000, "risk":"Planning permissions, land availability and local infrastructure constraints."},
+    "rail_upgrade": {"label":"Rail & regional transport upgrades", "department":"transport", "capital":15.0, "annual":1.8, "productivity":0.055, "jobs":51000, "risk":"Long delivery times, cost overruns and disruption during construction."},
+    "clean_power": {"label":"Clean power & grid investment", "department":"climate", "capital":13.0, "annual":1.5, "productivity":0.050, "jobs":39000, "risk":"Grid connections, supply-chain dependence and planning delays."},
+    "technical_skills": {"label":"Technical skills & apprenticeships", "department":"skills", "capital":2.0, "annual":2.4, "productivity":0.065, "jobs":30000, "risk":"Employer take-up, training quality and a delay before workers gain qualifications."},
+    "defence_industry": {"label":"Defence industrial capacity", "department":"defence", "capital":7.0, "annual":2.6, "productivity":0.020, "jobs":24000, "risk":"Procurement delays, specialist labour shortages and imported component costs."},
+    "council_resilience": {"label":"Local government resilience fund", "department":"local_government", "capital":1.5, "annual":3.0, "productivity":0.015, "jobs":16000, "risk":"Uneven council capacity, legacy liabilities and weak project pipelines."},
+}
+TREASURY_FUNDING_OPTIONS = ("Use fiscal headroom", "Borrow to fund", "Raise tax receipts", "Reprioritise existing spending")
+
+
+def policy_costing_analysis(policy_key, funding="Use fiscal headroom", scale=1.0, years=5):
+    """Read-only five-year policy appraisal; no approved Budget or live-state mutation."""
+    if policy_key not in TREASURY_POLICY_OPTIONS:
+        raise KeyError(policy_key)
+    item = TREASURY_POLICY_OPTIONS[policy_key]
+    scale = max(0.25, min(2.0, float(scale)))
+    years = max(3, min(5, int(years)))
+    offset_share = 0.75 if funding == "Raise tax receipts" else 0.0
+    capital = float(item["capital"]) * scale
+    recurring = float(item["annual"]) * scale
+    rows = []
+    cumulative_cost = cumulative_borrowing = cumulative_interest = 0.0
+    base_headroom = float(st.session_state.get("headroom", 0.0))
+    base_debt = float(st.session_state.get("debt", 0.0))
+    for year in range(1, years + 1):
+        gross_cost = (capital if year == 1 else 0.0) + recurring
+        cumulative_cost += gross_cost
+        net_cost = gross_cost - recurring * offset_share
+        if funding == "Borrow to fund":
+            cumulative_borrowing += net_cost
+        annual_interest = cumulative_borrowing * 0.04 if funding == "Borrow to fund" else 0.0
+        cumulative_interest += annual_interest
+        if funding == "Use fiscal headroom":
+            headroom_change = -cumulative_cost
+        elif funding == "Raise tax receipts":
+            headroom_change = -(cumulative_cost - recurring * offset_share * year)
+        else:
+            headroom_change = 0.0
+        rows.append({
+            "Year": year,
+            "Gross policy cost (£bn)": round(gross_cost, 2),
+            "Cumulative cost (£bn)": round(cumulative_cost, 2),
+            "Annual interest (£bn)": round(annual_interest, 2),
+            "Cumulative interest (£bn)": round(cumulative_interest, 2),
+            "Additional borrowing (£bn)": round(cumulative_borrowing, 2),
+            "Illustrative headroom (£bn)": round(base_headroom + headroom_change - cumulative_interest, 2),
+            "Illustrative debt (£bn)": round(base_debt + cumulative_borrowing + cumulative_interest, 2),
+            "Productivity effect (pp)": round(float(item["productivity"]) * min(1.0, year / 3.0), 3),
+        })
+    return {
+        "policy": item["label"], "department": item["department"],
+        "capital_cost": round(capital, 2), "annual_cost": round(recurring, 2),
+        "five_year_gross_cost": round(cumulative_cost, 2), "funding": funding,
+        "rows": rows, "risk": item["risk"], "jobs": int(float(item["jobs"]) * scale),
+        "caveat": "Illustrative in-game costing assumptions, not an official OBR policy costing. Excludes behavioural responses, detailed procurement profiles and second-round macroeconomic effects.",
+    }
+
+
 # ---------------------------------------------------------------- distributional Budget analysis
 _INCOME_DECILES = [
     ("Bottom 10%", 0.02), ("2nd decile", 0.03), ("3rd decile", 0.05),
@@ -2060,6 +2122,59 @@ def render(submit=None, after_summary=None):
             st.markdown("**Regions · changed departmental spending**")
             st.dataframe(pd.DataFrame(distribution["regions"]), hide_index=True, use_container_width=True)
         st.caption(distribution["caveat"])
+
+    with st.expander("Treasury Policy Costing Centre · appraise before approval", expanded=False):
+        st.caption("A separate policy sandbox for estimating the cost, funding route, delivery risks and five-year fiscal consequences of a major programme. It does not change the live economy or either approved Budget ledger.")
+        policy_keys = list(TREASURY_POLICY_OPTIONS)
+        policy_labels = {key: TREASURY_POLICY_OPTIONS[key]["label"] for key in policy_keys}
+        selected_policy = st.selectbox("Policy to appraise", policy_keys,
+                                       format_func=lambda key: policy_labels[key],
+                                       key="treasury_costing_policy")
+        funding = st.selectbox("Proposed funding route", TREASURY_FUNDING_OPTIONS,
+                               key="treasury_costing_funding")
+        scale = st.slider("Programme scale", min_value=0.25, max_value=2.0, value=1.0,
+                          step=0.25, key="treasury_costing_scale",
+                          help="Scale the modelled capital and recurring costs together.")
+        appraisal = policy_costing_analysis(selected_policy, funding, scale, years=5)
+        meta = TREASURY_POLICY_OPTIONS[selected_policy]
+        costing_cols = st.columns(4, gap="small")
+        costing_cols[0].metric("Initial capital", f"£{appraisal['capital_cost']:.1f}bn")
+        costing_cols[1].metric("Annual running cost", f"£{appraisal['annual_cost']:.1f}bn")
+        costing_cols[2].metric("Five-year gross cost", f"£{appraisal['five_year_gross_cost']:.1f}bn")
+        costing_cols[3].metric("Indicative jobs supported", f"{appraisal['jobs']:,}")
+        st.markdown("**Five-year fiscal profile**")
+        st.dataframe(pd.DataFrame(appraisal["rows"]), hide_index=True, use_container_width=True)
+        final_row = appraisal["rows"][-1]
+        department = meta["department"]
+        department_label = SPEND_DEFAULTS.get(department, {}).get("label", department.replace("_", " ").title())
+        current_department_cash = float(s.dept_spend.get(department, 0.0))
+        st.markdown("**Departmental and delivery assessment**")
+        st.write(f"Lead department: **{department_label}** · Current annual cash allocation: **£{current_department_cash:.1f}bn**.")
+        st.write(f"Delivery risk: {appraisal['risk']}")
+        if funding == "Reprioritise existing spending":
+            st.warning("This is fiscally neutral only if existing programmes are cut or displaced. The opportunity cost to those services is not included in the headline policy cost.")
+        elif funding == "Raise tax receipts":
+            st.info("The model assumes tax receipts cover 75% of recurring costs. This is a scenario assumption, not a specified tax measure or guaranteed revenue.")
+        elif funding == "Borrow to fund":
+            st.warning("Borrowing protects near-term headroom in this sandbox but increases debt and annual interest costs.")
+        else:
+            st.info("The full gross programme cost is charged against fiscal headroom as it is delivered.")
+        st.metric("Year-five illustrative debt", f"£{float(final_row['Illustrative debt (£bn)']):,.1f}bn",
+                  delta=f"£{float(final_row['Illustrative debt (£bn)']) - float(s.debt):+.1f}bn vs current")
+        st.caption(appraisal["caveat"])
+        compare_policy = st.selectbox("Compare with another policy", policy_keys,
+                                      index=(policy_keys.index(selected_policy) + 1) % len(policy_keys),
+                                      format_func=lambda key: policy_labels[key],
+                                      key="treasury_costing_compare")
+        comparison = policy_costing_analysis(compare_policy, funding, scale, years=5)
+        st.markdown("**Side-by-side programme comparison**")
+        st.dataframe([
+            {"Measure": "Five-year gross cost (£bn)", "Selected policy": appraisal["five_year_gross_cost"], "Comparator": comparison["five_year_gross_cost"]},
+            {"Measure": "Initial capital (£bn)", "Selected policy": appraisal["capital_cost"], "Comparator": comparison["capital_cost"]},
+            {"Measure": "Annual running cost (£bn)", "Selected policy": appraisal["annual_cost"], "Comparator": comparison["annual_cost"]},
+            {"Measure": "Year-five borrowing (£bn)", "Selected policy": final_row["Additional borrowing (£bn)"], "Comparator": comparison["rows"][-1]["Additional borrowing (£bn)"]},
+            {"Measure": "Year-five productivity effect (pp)", "Selected policy": final_row["Productivity effect (pp)"], "Comparator": comparison["rows"][-1]["Productivity effect (pp)"]},
+        ], hide_index=True, use_container_width=True)
 
     with st.expander('Compare alternative Budgets', expanded=False):
         st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")

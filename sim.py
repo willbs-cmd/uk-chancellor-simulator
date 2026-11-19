@@ -2867,6 +2867,36 @@ def check(n=None, difficulty=None):
         if term_strategy.set_targets(ts,{"growth":4},"Changed") is not False:failures.append("Strategy targets could be changed after Year 1.")
     except Exception as exc:failures.append(f"Five-year strategy regression failed: {exc}")
 
+    # Treasury Policy Costing Centre is read-only and returns finite five-year scenarios.
+    try:
+        state.new_game("Labour", "Normal", 74131, False)
+        budget.ensure()
+        costing_state = st.session_state
+        approved_tax = dict(costing_state.budget_applied["tax"])
+        approved_spend = dict(costing_state.budget_applied["spend"])
+        department_ledger = dict(costing_state.dept_spend)
+        baseline = {key: costing_state.get(key) for key in ("headroom", "debt", "growth", "inflation", "market_conf")}
+        appraisal = budget.policy_costing_analysis("rail_upgrade", "Borrow to fund", 1.0, 5)
+        if len(appraisal["rows"]) != 5 or not math.isfinite(appraisal["five_year_gross_cost"]):
+            failures.append("Treasury Policy Costing Centre returned an invalid five-year profile.")
+        if appraisal["capital_cost"] <= 0 or appraisal["annual_cost"] <= 0:
+            failures.append("Treasury Policy Costing Centre omitted capital or recurring costs.")
+        if not all(math.isfinite(float(value)) for row in appraisal["rows"] for value in row.values() if isinstance(value, (int, float))):
+            failures.append("Treasury Policy Costing Centre produced non-finite fiscal or productivity figures.")
+        if appraisal["rows"][-1]["Additional borrowing (£bn)"] <= appraisal["rows"][0]["Additional borrowing (£bn)"]:
+            failures.append("Borrow-funded policy did not accumulate borrowing over five years.")
+        if costing_state.budget_applied["tax"] != approved_tax or costing_state.budget_applied["spend"] != approved_spend:
+            failures.append("Treasury Policy Costing Centre mutated the approved Budget ledger.")
+        if costing_state.dept_spend != department_ledger or any(costing_state.get(key) != value for key, value in baseline.items()):
+            failures.append("Treasury Policy Costing Centre mutated live departmental or macroeconomic state.")
+        neutral = budget.policy_costing_analysis("nhs_capacity", "Reprioritise existing spending", 1.0, 5)
+        if any(float(row["Illustrative headroom (£bn)"]) != float(baseline["headroom"]) for row in neutral["rows"]):
+            failures.append("Reprioritisation scenario unexpectedly changed fiscal headroom.")
+    except Exception as exc:
+        failures.append(f"Treasury Policy Costing Centre regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Tax reform preview stays finite and does not mutate the approved ledger.
     try:
         reform_state = {"budget_applied": budget.defaults(), "headroom": 10.0,
