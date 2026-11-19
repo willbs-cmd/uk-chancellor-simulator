@@ -211,6 +211,7 @@ def _defaults():
         step='setup', party='Labour', year=1, block=1, term=1, steps=0,
         game_mode='chancellor', career_profile=None,
         active_crisis=None, active_weekly_event=None, active_pm_ultimatum=None, active_gilt_emergency=None, gilt_auction_history=[], gilt_auction_latest=None, last_weekly_event=None, weekly_event_history=[], crisis_event_history=[], ongoing_issues=[], last_ideology=None, last_crisis=None, crisis_reason='', headlines=None,
+        budget_contingency_reserve=0.0, budget_contingency_target=0.0, budget_reserve_history=[],
         budget_passed=False, budget_vote_result={}, budget_aftermath_pending=[], budget_aftermath_history=[], budget_aftermath_latest=None, budget_aftermath_created=[], budget_aftermath_applied=[], budget_day_stage=0, budget_editor_period='', budget_editor_restore_draft=False, budget_settlement_applied_period='', budget_pm_priorities=[], budget_pm_assessment=[], budget_pm_met_count=0, budget_pm_choice='Compromise with the Prime Minister', budget_day_negotiation='', budget_day_forecast=[], budget_day_speech=None, budget_strategy='balanced', budget_message='', sacked=False, sacked_reason='', game_over=None, election_result=None,
         message='', humphrey_note='', last_humphrey_quote='', fallout_done=[],
         difficulty='Hardcore', seed=random.randint(1000, 99999), show_tags=False,
@@ -383,6 +384,7 @@ def undo():
 
 # ---------------------------------------------------------------- save / load
 SAVE_KEYS = [
+    'budget_contingency_reserve', 'budget_contingency_target', 'budget_reserve_history',
     'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile', 'active_crisis', 'active_gilt_emergency', 'gilt_auction_history', 'gilt_auction_latest', 'last_ideology', 'last_crisis',
     'crisis_reason', 'active_weekly_event', 'active_pm_ultimatum', 'last_weekly_event', 'weekly_event_history', 'crisis_event_history', 'ongoing_issues', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
     'budget_vote_result', 'budget_aftermath_pending', 'budget_aftermath_history', 'budget_aftermath_latest', 'budget_aftermath_created', 'budget_aftermath_applied', 'budget_day_stage', 'budget_day_draft', 'budget_editor_period', 'budget_editor_restore_draft', 'budget_settlement_applied_period', 'budget_pm_priorities', 'budget_pm_assessment',

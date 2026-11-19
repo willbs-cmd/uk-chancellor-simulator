@@ -847,7 +847,10 @@ def _apply(draft=None, annual_settlement=None):
     new, old = (read() if draft is None else draft), s.budget_applied
     annual_settlement = _annual_settlement_active(annual_settlement)
     period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
-    if new == old and not annual_settlement:
+    reserve_before = max(0.0, float(s.get('budget_contingency_reserve', 0.0)))
+    reserve_target = max(0.0, min(30.0, float(s.get('budget_contingency_target', reserve_before))))
+    reserve_change = round(reserve_target - reserve_before, 1)
+    if new == old and not annual_settlement and abs(reserve_change) < 0.05:
         s.message = 'Budget unchanged.'
         return
     imp = impact(old, new, annual_settlement=annual_settlement)
@@ -855,6 +858,15 @@ def _apply(draft=None, annual_settlement=None):
     state.snapshot()
 
     s.headroom = round(s.headroom + imp['headroom'], 1)
+    # Ring-fence (or release) contingency funding only when the Budget is delivered.
+    # A larger reserve reduces unallocated fiscal headroom pound-for-pound.
+    s.headroom = round(float(s.headroom) - reserve_change, 1)
+    if abs(reserve_change) >= 0.05:
+        s.budget_contingency_reserve = reserve_target
+        history = list(s.get('budget_reserve_history', []))
+        history.append({'term': int(s.get('term', 1)), 'year': int(s.get('year', 1)),
+                        'change': reserve_change, 'balance': reserve_target})
+        s.budget_reserve_history = history[-30:]
     s.deficit = round(s.deficit + imp['deficit'], 1)
     s.approval = round(_clip(s.approval + imp['approval']), 1)
     s.market_conf = round(_clip(s.market_conf + imp['market']), 1)
@@ -1726,6 +1738,48 @@ def render(submit=None, after_summary=None):
              delta=delta(imp['growth'], 'pp'), num=imp['growth'] if changed else 0,
              desc='Projected annual real GDP growth after this draft Budget.'),
         ])
+
+    # Contingency reserve is a Budget allocation, not free additional headroom.
+    reserve_balance = max(0.0, float(s.get('budget_contingency_reserve', 0.0)))
+    reserve_target = max(0.0, min(30.0, float(s.get('budget_contingency_target', reserve_balance))))
+    st.markdown("### Contingency reserve")
+    st.caption("Ring-fence funding for emergencies such as energy support, natural disasters or financial instability. It is funded from fiscal headroom, so setting money aside reduces the unallocated margin against your fiscal rule.")
+    reserve_cols = st.columns(3, gap="medium")
+    reserve_cols[0].metric("Current reserve", f"£{reserve_balance:.1f}bn")
+    reserve_cols[1].metric("Proposed reserve", f"£{reserve_target:.1f}bn",
+                           delta=f"£{reserve_target - reserve_balance:+.1f}bn to ring-fence",
+                           delta_color="inverse")
+    available_before_reserve = float(s.headroom) + float(imp.get("headroom", 0.0))
+    projected_unallocated = available_before_reserve - (reserve_target - reserve_balance)
+    reserve_cols[2].metric("Headroom after reserve", f"£{projected_unallocated:.1f}bn",
+                           delta=f"£{projected_unallocated - available_before_reserve:+.1f}bn",
+                           delta_color="inverse")
+    if "budget_contingency_target" not in s:
+        s["budget_contingency_target"] = reserve_balance
+    else:
+        s["budget_contingency_target"] = max(0.0, min(30.0, float(s["budget_contingency_target"])))
+    st.slider("Set aside for the contingency reserve (£bn)", min_value=0.0, max_value=30.0,
+              step=0.5, key="budget_contingency_target",
+              help="This is a proposed allocation. It only changes the live reserve when the Budget is authorised.")
+    proposed = float(s.get("budget_contingency_target", reserve_balance))
+    proposed_headroom = available_before_reserve - (proposed - reserve_balance)
+    if proposed_headroom < 0:
+        st.error(f"This reserve would take projected fiscal headroom below zero (£{proposed_headroom:.1f}bn). Reduce the allocation or improve the Budget.")
+    elif proposed > reserve_balance:
+        st.info(f"£{proposed - reserve_balance:.1f}bn will be ring-fenced when this Budget is authorised. It will no longer count as unallocated fiscal headroom.")
+    elif proposed < reserve_balance:
+        st.info(f"£{reserve_balance - proposed:.1f}bn will be released back into fiscal headroom when this Budget is authorised.")
+    else:
+        st.caption("No change to the approved contingency reserve.")
+    with st.expander("Reserve history", expanded=False):
+        history = list(s.get("budget_reserve_history", []))
+        if history:
+            st.dataframe([{"Term": row.get("term"), "Year": row.get("year"),
+                           "Change (£bn)": f"{float(row.get('change', 0)):+.1f}",
+                           "Reserve balance (£bn)": f"{float(row.get('balance', 0)):.1f}"}
+                          for row in reversed(history[-10:])], hide_index=True, use_container_width=True)
+        else:
+            st.caption("No contingency reserve allocations have been made yet.")
 
     with st.expander('Treasury briefing · three-year outlook', expanded=False):
         briefing_rows = forecast(cur, years=3)
