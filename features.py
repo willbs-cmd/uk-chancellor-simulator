@@ -236,6 +236,18 @@ def render():
     s.setdefault("threshold_freeze_scope", "Personal allowance and all bands")
     s.setdefault("gilt_maturity_years", 10)
     s.setdefault("index_linked_share", 25)
+    # Older saves or manually edited state can contain a maturity no longer
+    # offered by the auction selector. Streamlit requires an exact option.
+    gilt_options = [2, 5, 10, 20, 30]
+    try:
+        saved_maturity = int(s.gilt_maturity_years)
+    except (TypeError, ValueError):
+        saved_maturity = 10
+    s.gilt_maturity_years = min(gilt_options, key=lambda option: abs(option - saved_maturity))
+    try:
+        s.index_linked_share = max(0, min(100, int(s.index_linked_share)))
+    except (TypeError, ValueError):
+        s.index_linked_share = 25
     s.setdefault("pay_settlement", "unsettled")
     st.markdown("### Treasury institutions & interventions")
     st.caption("Manage ongoing relationships with the Bank of England, public-sector pay and devolved governments. The Autumn Statement, Spending Review and full Budgets are handled as separate fiscal events in Decisions.")
