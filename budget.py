@@ -48,9 +48,11 @@ def negotiate_spending_offer(current_pct, requested_pct, round_number=1):
     """Move a Chancellor's offer halfway towards a minister's bid, at most twice."""
     current = float(current_pct)
     requested = float(requested_pct)
-    rounds = max(0, min(2, int(round_number)))
+    rounds = int(round_number)
     if rounds <= 0:
         return round((current + requested) / 2.0, 1)
+    if rounds > 2:
+        return round(current, 1)
     return round((current + requested) / 2.0, 1)
 
 
