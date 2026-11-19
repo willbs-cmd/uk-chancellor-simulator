@@ -34,7 +34,7 @@ DECISION_LINKS = {
 BUDGET_LINKS = [
     ('nhs_walkout', 'spend', 'health', '<=', -2.0, 0.35), ('school_crisis', 'spend', 'education', '<=', -2.0, 0.35),
     ('defence_scare', 'spend', 'defence', '<=', -2.0, 0.35), ('corp_exodus', 'tax', 'corp', '>=', 30, 0.35),
-    ('fuel_protest', 'tax', 'fuel', '>=', 20, 0.35), ('brain_drain', 'spend', 'science', '<=', -10.0, 0.35),
+    ('fuel_protest', 'tax', 'fuel', '>=', 1.0, 0.35), ('brain_drain', 'spend', 'science', '<=', -10.0, 0.35),
 ]
 
 def get(crisis_id):
@@ -62,6 +62,16 @@ def recent_crisis_pool(recent=None, lookback=6, previous=None):
     blocked = set(history[-count:]) if count else set()
     pool = [crisis_id for crisis_id in RANDOM_POOL if crisis_id not in blocked]
     return pool or list(RANDOM_POOL)
+
+
+def _budget_link_value(s, applied, section, item):
+    """Measure tax triggers against the right baseline, not the displayed tax rate."""
+    value = float(applied.get(section, {}).get(item, budget.TAXES[item]['default']))
+    if section == 'tax' and item == 'fuel':
+        # Fuel duty is stored in pence per litre (52.95 by default), not as a
+        # percentage. Only an actual increase from the standard baseline counts.
+        return value - float(budget.TAXES[item]['default'])
+    return value
 
 
 def _crisis_weight(crisis_id, s):
@@ -141,7 +151,7 @@ def pick_next(year, block, ideology):
                 base = budget.SPEND_DEFAULTS[item]['default']
                 value = (s.dept_spend.get(item, base) / base - 1) * 100
             else:
-                value = applied[section].get(item, budget.TAXES[item]['default'])
+                value = _budget_link_value(s, applied, section, item)
             hit = value <= limit if op == '<=' else value >= limit
             if hit and random.random() < chance:
                 done.append(cid)

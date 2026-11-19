@@ -2790,6 +2790,18 @@ def check(n=None, difficulty=None):
         if term_strategy.set_targets(ts,{"growth":4},"Changed") is not False:failures.append("Strategy targets could be changed after Year 1.")
     except Exception as exc:failures.append(f"Five-year strategy regression failed: {exc}")
 
+    # Fuel-duty fallout must require an actual rise above the standard duty baseline.
+    try:
+        fuel_default = float(budget.TAXES['fuel']['default'])
+        fuel_state = {'budget_applied': {'tax': {'fuel': fuel_default}}, 'dept_spend': {}}
+        if scenarios._budget_link_value(fuel_state, fuel_state['budget_applied'], 'tax', 'fuel') != 0:
+            failures.append("Fuel-duty crisis trigger treated the default duty as an increase.")
+        raised = {'tax': {'fuel': fuel_default + 1.5}}
+        if scenarios._budget_link_value(fuel_state, raised, 'tax', 'fuel') < 1.0:
+            failures.append("A genuine fuel-duty increase was not recognised by the crisis trigger.")
+    except Exception as exc:
+        failures.append(f"Fuel-duty trigger regression failed: {exc}")
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:
