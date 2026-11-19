@@ -1756,6 +1756,8 @@ def proceed_to_spring():
         term_strategy.finalise(s)
     import government_programme
     government_programme.close_annual_programme(s)
+    import delivery_centre
+    delivery_centre.close_year(s)
     performance_report.create_report()
     # Compare the vintage with the fully realised annual outcome exactly once.
     forecast_accuracy.settle_vintage(s)

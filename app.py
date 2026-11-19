@@ -18,6 +18,7 @@ import state
 import treasury
 import forecast_accuracy
 import chancellor_office
+import delivery_centre
 import devolution
 import performance_report
 import economic_management
@@ -1433,6 +1434,7 @@ elif active_workspace == 'cabinet':
     cabinet_tabs = st.tabs([
         'Overview •' if cabinet_attention else 'Overview',
         'Number 10 •' if number10_attention else 'Number 10',
+        'National Delivery',
         'Department delivery',
         'Annual reports',
         'Government Programme'
@@ -1507,10 +1509,12 @@ elif active_workspace == 'cabinet':
                 st.rerun()
 
     with cabinet_tabs[2]:
-        chancellor_office.render()
+        delivery_centre.render(s)
     with cabinet_tabs[3]:
-        performance_report.render()
+        chancellor_office.render()
     with cabinet_tabs[4]:
+        performance_report.render()
+    with cabinet_tabs[5]:
         government_programme.render(s)
 
 elif active_workspace == 'parliament':

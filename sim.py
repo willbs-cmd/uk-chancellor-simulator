@@ -63,6 +63,7 @@ import scenarios as scen  # noqa: E402
 import state  # noqa: E402
 import government_missions  # noqa: E402
 import government_programme  # noqa: E402
+import delivery_centre  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
 import number10  # noqa: E402
@@ -276,6 +277,65 @@ def government_programme_checks():
     rejected = government_programme.record_proposal(stopped, proposal, option, "public_services", cabinet_stop, pm_stop, rejected_vote, 0.0)
     assert rejected["outcome"] == "Stopped by Number 10" and not stopped.policy_deliveries, f"PM rejection should not enter delivery: {rejected}"
     return True
+
+def delivery_centre_checks():
+    """Departmental contracts and one-off funding must be auditable and ledger-safe."""
+    fake = FakeState({
+        "term": 1, "year": 1, "block": 1, "headroom": 4.0, "deficit": 12.0,
+        "dept_spend": {"health": 100.0, "education": 70.0},
+        "public_service_scores": {"NHS": 62.0},
+        "ministerial_competence": {"health": 60.0, "education": 58.0},
+        "ministerial_loyalty": {"health": 65.0, "education": 62.0},
+        "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
+        "budget_applied": {"tax": {"income": 20.0}, "spend": {"health": 0.0, "education": 0.0}},
+        "budget_history": [{"year": 1}], "budget_contingency_reserve": 1.5,
+        "delivery_contract_history": [], "delivery_funding_requests": [],
+    })
+    delivery_centre.ensure(fake)
+    assert "health" in fake.department_delivery_contracts and "education" in fake.department_delivery_contracts
+    assert len(fake.department_delivery_contracts) >= 10, "The board should cover the full departmental roster."
+    assert delivery_centre.set_contract(fake, "health", "stretch"), "Could not agree a stretch contract."
+    health_contract = fake.department_delivery_contracts["health"]
+    assert health_contract["target_score"] == 67.0, f"Unexpected stretch target: {health_contract}"
+    approved_budget_before = json.loads(json.dumps(fake.budget_applied))
+    department_spend_before = dict(fake.dept_spend)
+    request_id, error = delivery_centre.create_funding_request(
+        fake, "health", "Extra ward capacity", "Recruit temporary clinical teams to expand winter ward capacity.", 1.2
+    )
+    assert request_id and error is None, f"Valid funding request was rejected: {error}"
+    ok, error = delivery_centre.decide_funding_request(fake, request_id, "approve", 0.8)
+    assert ok and error is None, f"Affordable partial award failed: {error}"
+    assert fake.headroom == 3.2 and fake.deficit == 12.8, f"Funding fiscal effect was not recorded: {fake.headroom}, {fake.deficit}"
+    assert fake.delivery_funding_spent == 0.8 and fake.department_delivery_contracts["health"]["funding_support_bn"] == 0.8
+    assert fake.budget_applied == approved_budget_before and fake.dept_spend == department_spend_before, "Exceptional funding must not rewrite the approved Budget ledger or departmental allocation."
+    assert fake.budget_history == [{"year": 1}], "Funding approval must not rewrite Budget history."
+    duplicate_id, duplicate_error = delivery_centre.create_funding_request(
+        fake, "health", "Second request", "A second request in the same year should be blocked.", 0.5
+    )
+    assert duplicate_id is None and duplicate_error, "One pending request per department and year should be enforced."
+    fake.public_service_scores["NHS"] = 70.0
+    review = delivery_centre.close_year(fake)
+    health_review = next(row for row in review["reviews"] if row["department"] == "health")
+    assert health_review["outcome"] == "Met", f"Supported performance should meet the contract: {health_review}"
+    assert review["met"] >= 1 and fake.department_delivery_contracts["health"]["period"] == "1:2"
+    review_count = len(fake.delivery_contract_history)
+    delivery_centre.close_year(fake)
+    assert len(fake.delivery_contract_history) == review_count, "Annual contract reviews must be idempotent."
+    fake.year = 2
+    rejected_id, rejected_error = delivery_centre.create_funding_request(
+        fake, "education", "Digital attendance pilot", "Fund a one-off pilot to improve attendance monitoring.", 0.4
+    )
+    assert rejected_id and rejected_error is None
+    before_headroom = fake.headroom
+    assert delivery_centre.decide_funding_request(fake, rejected_id, "reject")[0]
+    assert fake.headroom == before_headroom, "Rejecting a request must have no fiscal effect."
+    assert all(key in state.SAVE_KEYS for key in (
+        "department_delivery_contracts", "delivery_contract_history", "delivery_last_review_period",
+        "delivery_funding_requests", "delivery_funding_sequence", "delivery_funding_spent"
+    )), "Phase 1 state must be included in save files."
+    return True
+
+
 
 def cabinet_amendment_negotiation_checks():
     """Amendments cost money, soften portfolio harm, form alliances and can trigger resignations."""
@@ -697,6 +757,10 @@ def check(n=None, difficulty=None):
             government_programme_checks()
         except Exception as programme_error:
             raise AssertionError(f"Government Programme regression: {programme_error!r}") from programme_error
+        try:
+            delivery_centre_checks()
+        except Exception as delivery_error:
+            raise AssertionError(f"National Delivery regression: {delivery_error!r}") from delivery_error
         cabinet_policy_negotiation_checks()
         cabinet_portfolio_politics_checks()
         cabinet_amendment_negotiation_checks()

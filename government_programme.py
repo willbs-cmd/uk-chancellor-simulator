@@ -229,6 +229,8 @@ def ensure(s=None):
     s["ministerial_loyalty"] = loyalty
     import cabinet_management
     cabinet_management.ensure(s)
+    import delivery_centre
+    delivery_centre.ensure(s)
 
     current = s.get("annual_government_programme")
     if not isinstance(current, dict) or current.get("period") != _period(s):
