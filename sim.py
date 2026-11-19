@@ -2794,7 +2794,7 @@ def check(n=None, difficulty=None):
     try:
         fuel_default = float(budget.TAXES['fuel']['default'])
         fuel_state = {'budget_applied': {'tax': {'fuel': fuel_default}}, 'dept_spend': {}}
-        if scenarios._budget_link_value(fuel_state, fuel_state['budget_applied'], 'tax', 'fuel') != 0:
+        if scen._budget_link_value(fuel_state, fuel_state['budget_applied'], 'tax', 'fuel') != 0:
             failures.append("Fuel-duty crisis trigger treated the default duty as an increase.")
         raised = {'tax': {'fuel': fuel_default + 1.5}}
         if scenarios._budget_link_value(fuel_state, raised, 'tax', 'fuel') < 1.0:
