@@ -2292,7 +2292,7 @@ def render(submit=None, after_summary=None):
             else:
                 st.caption("No contingency reserve allocations have been made yet.")
     
-        with st.expander('Treasury briefing · three-year outlook', expanded=False):
+    with st.expander('Treasury briefing · three-year outlook', expanded=False):
         briefing_rows = forecast(cur, years=3)
         downside_rows = forecast(cur, years=3, scenario={'growth': -0.75, 'inflation': 0.50, 'gilt': 0.35})
         lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
