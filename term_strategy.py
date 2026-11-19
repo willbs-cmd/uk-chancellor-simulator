@@ -64,7 +64,8 @@ def finalise(s=None):
 def render(s=None):
  s=ensure(s);left,done=countdown(s);t=s.economic_strategy["targets"];st.markdown("#### Five-year economic strategy");st.caption("Set targets for growth, debt, productivity, wages and public services. Delivery is reviewed every year.")
  a,b,c=st.columns(3);a.metric("Election countdown",f"{left} years");b.metric("Years completed",f"{done}/5");c.metric("Strategy",s.economic_strategy["title"])
- if int(s.get("year",1))==1 and not s.economic_strategy_reviews:
+ current_term_rows=[r for r in s.economic_strategy_reviews if int(r.get("term",-1))==int(s.get("term",1))]
+ if int(s.get("year",1))==1 and not current_term_rows:
   with st.expander("Set five-year targets",expanded=True):
    title=st.text_input("Strategy title",s.economic_strategy["title"],key="fiveyear_title");x,y=st.columns(2)
    g=x.slider("GDP growth target (%)",0.,5.,float(t["growth"]),.1,key="fiveyear_growth");d=y.slider("Debt target (% GDP)",50.,120.,float(t["debt"]),1.,key="fiveyear_debt")

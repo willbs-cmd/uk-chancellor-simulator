@@ -98,14 +98,6 @@ def create_report():
 def render():
     s = st.session_state
     st.markdown('### Annual performance reports')
-    final = s.get('term_final_assessment')
-    if final and int(final.get('term', -1)) == int(s.get('term', 1)):
-        st.markdown('#### Five-year Chancellor assessment')
-        st.metric('Overall term record', f"{final.get('grade', '—')} · {final.get('overall', 0)}/100")
-        cols = st.columns(4)
-        for col, (label, key) in zip(cols, [('Economic strategy', 'strategy_score'), ('Fiscal record', 'fiscal_record'), ('Political influence', 'political_influence'), ('Structural legacy', 'structural_legacy')]):
-            col.metric(label, f"{final.get(key, 0)}/100")
-        st.caption(f"Strategy: {final.get('strategy_title', 'Economic strategy')} · Economic shocks recorded: {final.get('shocks_managed', 0)}")
     st.caption("An annual assessment of your record as Chancellor. Long-term structural resilience carries 12% of the overall score, reflecting the future consequences of today's decisions.")
     reports = list(s.get("annual_reports", []))
     if not reports:
