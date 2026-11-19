@@ -269,8 +269,14 @@ def resolve(choice, s=None):
 
 
 def render(s=None):
-    """Render the latest opposition line and the Chancellor's four response options."""
+    """Render the latest opposition line and the Chancellor's four response options.
+
+    A render-instance namespace prevents collisions if this panel is mounted in
+    more than one workspace during the same Streamlit script run.
+    """
     s = ensure(s)
+    render_slot = int(s.get("_opposition_render_slot", 0)) + 1
+    s["_opposition_render_slot"] = render_slot
     issue = s.get("active_opposition_attack")
     if issue:
         st.markdown("### Opposition campaign · response available")
@@ -282,16 +288,16 @@ def render(s=None):
             st.caption("Choose how to handle the criticism. Your response changes media sentiment, polling and political confidence.")
             c1, c2 = st.columns(2)
             c3, c4 = st.columns(2)
-            if c1.button("Publish the figures", key="opposition_response_facts", use_container_width=True):
+            if c1.button("Publish the figures", key=f"opposition_{render_slot}_{action}_{str(issue.get('period', 'current')).replace(':', '_')}", use_container_width=True):
                 resolve("facts", s)
                 st.rerun()
-            if c2.button("Announce a corrective plan", key="opposition_response_plan", use_container_width=True):
+            if c2.button("Announce a corrective plan", key=f"opposition_{render_slot}_{action}_{str(issue.get('period', 'current')).replace(':', '_')}", use_container_width=True):
                 resolve("plan", s)
                 st.rerun()
-            if c3.button("Counterattack", key="opposition_response_counter", use_container_width=True):
+            if c3.button("Counterattack", key=f"opposition_{render_slot}_{action}_{str(issue.get('period', 'current')).replace(':', '_')}", use_container_width=True):
                 resolve("counter", s)
                 st.rerun()
-            if c4.button("Ignore the criticism", key="opposition_response_ignore", use_container_width=True):
+            if c4.button("Ignore the criticism", key=f"opposition_{render_slot}_{action}_{str(issue.get('period', 'current')).replace(':', '_')}", use_container_width=True):
                 resolve("ignore", s)
                 st.rerun()
     else:
