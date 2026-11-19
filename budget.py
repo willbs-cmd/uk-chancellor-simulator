@@ -1617,6 +1617,43 @@ def render_forecast(cur):
     else:
         st.warning(f"⚠️ Debt is not falling: {s.debt:.1f}% of GDP now, {rows[-1]['debt']:.1f}% by {rows[-1]['year']}.")
 
+    # Interactive OBR-style scenario lab. Each shock is a one-off change to
+    # the forecast starting point, not a repeated annual shock.
+    stress_cases = {
+        "Central forecast": {"growth": 0.0, "inflation": 0.0, "gilt": 0.0},
+        "Recession": {"growth": -1.75, "inflation": 0.4, "gilt": 0.8},
+        "Energy & inflation shock": {"growth": -0.55, "inflation": 1.8, "gilt": 0.65},
+        "Gilt market sell-off": {"growth": -0.25, "inflation": 0.35, "gilt": 1.5},
+        "Productivity breakthrough": {"growth": 0.9, "inflation": -0.2, "gilt": -0.15},
+    }
+    st.markdown("### 🧪 Budget stress-testing")
+    st.caption("Test how the same Budget performs under a different economic climate. Shocks alter the forecast assumptions only; they do not change the live economy or enact policy.")
+    selected_case = st.selectbox("Economic scenario", list(stress_cases), key="budget_stress_scenario")
+    stress_rows = forecast(cur, years=3, scenario=stress_cases[selected_case])
+    central_rows = rows
+    stress_table = []
+    for central_row, stress_row in zip(central_rows, stress_rows):
+        stress_table.append({
+            "Year": stress_row["year"],
+            "Real growth": f"{stress_row['growth']:.1f}%",
+            "Inflation": f"{stress_row['inflation']:.1f}%",
+            "Fiscal headroom": f"£{stress_row['headroom']:.1f}bn",
+            "Headroom vs central": f"£{stress_row['headroom'] - central_row['headroom']:+.1f}bn",
+            "Debt": f"{stress_row['debt']:.1f}% GDP",
+            "Debt interest": f"£{stress_row['debt_interest']:.1f}bn",
+            "Markets": f"{stress_row['market']:.0f}/100",
+        })
+    st.dataframe(pd.DataFrame(stress_table), hide_index=True, use_container_width=True)
+    final_stress = stress_rows[-1]
+    final_central = central_rows[-1]
+    if final_stress["headroom"] < 0:
+        st.error(f"Stress result: the Budget breaches the fiscal headroom rule by Year 3 (projected headroom £{final_stress['headroom']:.1f}bn).")
+    elif final_stress["headroom"] < 3:
+        st.warning(f"Stress result: only £{final_stress['headroom']:.1f}bn of headroom remains by Year 3.")
+    else:
+        st.success(f"Stress result: £{final_stress['headroom']:.1f}bn of headroom remains by Year 3.")
+    st.caption(f"Compared with the central case, Year 3 headroom changes by £{final_stress['headroom'] - final_central['headroom']:+.1f}bn and debt interest by £{final_stress['debt_interest'] - final_central['debt_interest']:+.1f}bn.")
+
 
 def render_red_book(cur):
     s = st.session_state

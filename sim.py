@@ -2332,6 +2332,24 @@ def check(n=None, difficulty=None):
             failures.append("OBR-style downside stress did not reduce headroom and increase debt interest.")
         if dict(forecast_state) != previous:
             failures.append("OBR-style downside stress mutated the live game state.")
+        # Every interactive Budget stress preset must return finite forecasts
+        # and remain a read-only calculation.
+        stress_presets = {
+            "recession": {"growth": -1.75, "inflation": 0.4, "gilt": 0.8},
+            "energy": {"growth": -0.55, "inflation": 1.8, "gilt": 0.65},
+            "gilt": {"growth": -0.25, "inflation": 0.35, "gilt": 1.5},
+            "productivity": {"growth": 0.9, "inflation": -0.2, "gilt": -0.15},
+        }
+        for label, shock in stress_presets.items():
+            scenario_rows = budget.forecast(budget.defaults(), years=3, scenario=shock)
+            if len(scenario_rows) != 3 or any(
+                not math.isfinite(float(row[key]))
+                for row in scenario_rows for key in ("growth", "inflation", "headroom", "debt", "debt_interest", "market")
+            ):
+                failures.append(f"Budget stress scenario '{label}' produced invalid forecast values.")
+                break
+        if dict(forecast_state) != previous:
+            failures.append("Budget stress scenario library mutated the live game state.")
 
         for row in outlook:
             for key in ("GDP (£tn)", "Bank Rate (%)", "Unemployment (%)", "Real wage growth (%)",
