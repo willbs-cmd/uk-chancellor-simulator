@@ -37,20 +37,21 @@ def _priority_items(s):
     """Compact inbox of decisions that are live in the current game state."""
     items = []
     checks = (
+        # This ordering mirrors the live decision order used by the main office.
+        ("local_election_due", "NOW", "Local elections · review the results and political consequences", "urgent"),
         ("active_pm_ultimatum", "NOW", "Prime Minister's ultimatum · respond before your position collapses", "urgent"),
         ("active_pm_intervention", "NOW", "Number 10 intervention · decide how to handle the economic strategy committee", "urgent"),
+        ("active_pm_meeting", "ACTION", "Private meeting with the Prime Minister", "caution"),
         ("active_gilt_emergency", "NOW", "Gilt-market emergency · stabilise market confidence", "urgent"),
         ("active_forecast_review", "NOW", "Treasury forecast review · respond to the revised outlook", "urgent"),
         ("active_financial_crisis", "NOW", "Financial stability crisis · decide the Government response", "urgent"),
         ("active_crisis", "NOW", "Emergency decision · resolve the active crisis", "urgent"),
+        ("active_dispute", "ACTION", "Cabinet dispute · settle the ministerial disagreement", "caution"),
+        ("active_weekly_event", "ACTION", "Treasury briefing · respond to this week's event", "caution"),
+        ("active_request", "ACTION", "Ministerial request · decide whether to support the proposal", "caution"),
         ("active_emergency_budget", "NOW", "Emergency Budget · complete the fiscal response", "urgent"),
         ("spending_review_due", "NOW", "Spending Review · agree departmental settlements", "urgent"),
         ("autumn_statement_due", "NOW", "Autumn Statement · publish the fiscal update or proceed without one", "urgent"),
-        ("active_weekly_event", "ACTION", "Treasury briefing · respond to this week's event", "caution"),
-        ("local_election_due", "ACTION", "Local elections · review the results and political consequences", "caution"),
-        ("active_dispute", "ACTION", "Cabinet dispute · settle the ministerial disagreement", "caution"),
-        ("active_request", "ACTION", "Ministerial request · decide whether to support the proposal", "caution"),
-        ("active_pm_meeting", "PENDING", "Private meeting with the Prime Minister", "neutral"),
         ("active_opposition_attack", "PENDING", "Opposition economic attack · a response is available", "neutral"),
     )
     for key, tag, label, tone in checks:
@@ -80,16 +81,17 @@ def _warnings(s):
         items.append(("urgent", "Gilt markets are fragile"))
     if float(s.get("inflation", 2)) >= 4.5:
         items.append(("caution", "Inflation is above 4.5%"))
-    if float(s.get("backbench_opinion", 60)) < 40:
-        items.append(("urgent", "Backbench rebellion risk"))
+    backbench = float(s.get("backbench_opinion", 60))
+    if backbench < 30:
+        items.append(("urgent", "Backbench rebellion risk is acute"))
+    elif backbench < 40:
+        items.append(("caution", "Backbench rebellion risk is rising"))
     if float(s.get("pm_opinion", 50)) < 35:
         items.append(("caution", "Prime Minister's confidence is low"))
     if float(s.get("cab_opinion", 50)) < 35:
         items.append(("caution", "Cabinet support is critically low"))
     if float(s.get("party_opinion", 50)) < 35:
         items.append(("caution", "Party unity is critically low"))
-    if float(s.get("backbench_opinion", 60)) < 30:
-        items.append(("urgent", "Backbench rebellion risk is acute"))
     if s.get("active_crisis"):
         items.append(("urgent", "An immediate crisis needs a decision"))
     if s.get("active_dispute"):
@@ -202,6 +204,20 @@ def render(on_restart):
             else:
                 st.markdown(
                     "<div class='desk-clear'><span>✓</span> No immediate decisions are waiting.</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # Keep the live risk register directly beneath the decision inbox.
+        with st.expander(f"Watchlist · {len(warnings)} alerts", expanded=bool(warnings)):
+            if warnings:
+                for kind, message in warnings:
+                    st.markdown(
+                        f"<div class='desk-warning {kind}'><span></span>{_safe(message)}</div>",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.markdown(
+                    "<div class='desk-clear'><span>✓</span> No immediate warnings</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -513,21 +529,6 @@ def render(on_restart):
                 st.caption("No special adviser appointed. Your private office is handling political preparation.")
             if s.get("officials_last_advice"):
                 st.caption(f"Last political briefing: {s.officials_last_advice}")
-
-        # Live risks and events.
-        warnings = _warnings(s)
-        with st.expander(f"Watchlist · {len(warnings)} alerts", expanded=bool(warnings)):
-            if warnings:
-                for kind, message in warnings:
-                    st.markdown(
-                        f"<div class='desk-warning {kind}'><span></span>{_safe(message)}</div>",
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.markdown(
-                    "<div class='desk-clear'><span>✓</span> No immediate warnings</div>",
-                    unsafe_allow_html=True,
-                )
 
         # The diary reflects queued decisions and the revised fiscal-event calendar.
         diary = []
