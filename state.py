@@ -458,11 +458,18 @@ def import_save(text):
     """Load a save file. Returns an error string, or None on success."""
     try:
         data = json.loads(text)
-        if 'party' not in data or 'format' not in data:
+        if not isinstance(data, dict):
             return 'That does not look like a Chancellor Simulator save file.'
-        if data.get('format') != SAVE_FORMAT:
-            return 'That save was made by an older version of the game and cannot be loaded.'
-    except (ValueError, AttributeError):
+        if not isinstance(data.get('party'), str) or data.get('party') not in PARTIES or 'format' not in data:
+            return 'That does not look like a Chancellor Simulator save file.'
+        save_format = data.get('format')
+        if not isinstance(save_format, int) or isinstance(save_format, bool):
+            return 'This save file has an invalid version number.'
+        if save_format != SAVE_FORMAT:
+            return 'That save was made by an incompatible version of the game.'
+        if 'widgets' in data and not isinstance(data['widgets'], dict):
+            return 'This save file contains invalid interface settings.'
+    except (ValueError, TypeError, AttributeError):
         return 'Could not read that file.'
     s = st.session_state
     s.clear()

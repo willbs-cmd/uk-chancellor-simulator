@@ -2777,6 +2777,25 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Malformed but syntactically valid JSON saves must fail safely before
+    # touching the active game session.
+    try:
+        new_run("Labour", "Normal", 74110)
+        before_party = st.session_state.get("party")
+        for bad_payload in ("null", "[]", '"not a save"', '{"format": 2, "party": "Unknown"}',
+                            '{"format": 2, "party": "Labour", "widgets": []}'):
+            error = state.import_save(bad_payload)
+            if not error:
+                failures.append(f"Malformed save was unexpectedly accepted: {bad_payload}")
+                break
+            if st.session_state.get("party") != before_party:
+                failures.append("A rejected malformed save altered the active game session.")
+                break
+    except Exception as exc:
+        failures.append(f"Malformed save validation regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Five-year strategy lifecycle regression.
     try:
         ts=FakeState(term=1,year=1,economic_strategy={"title":"Test","targets":dict(term_strategy.TARGETS)},economic_strategy_reviews=[],economic_strategy_last_review="",term_final_assessment=None,term_legacy_archive=[],growth=2.4,debt=82.,productivity_growth=1.8,country={"real_wages":2.2,"nhs_waiting":6.,"nhs_morale":65.},approval=58.,pm_opinion=62.,party_opinion=60.,cab_opinion=64.,headroom=12.,deficit=55.,market_conf=60.,public_service_strikes=[],long_run_policy_stock={"housing":0,"energy":0,"climate":0,"skills":0,"trade":0})
