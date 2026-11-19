@@ -1432,6 +1432,55 @@ button:active, [role='button']:active { transform:translateY(0) scale(.985); }
   .sc-value { font-size: 1.25rem !important; }
 }
 
+
+/* FINAL RESPONSIVE POLISH — predictable wrapping for every Streamlit column group.
+   Keep desktop dashboards side-by-side; let narrow screens reflow without clipping. */
+@media (max-width: 760px) {
+  [data-testid="stMainBlockContainer"] {
+    padding-left: .7rem !important;
+    padding-right: .7rem !important;
+  }
+  [data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: stretch !important;
+    gap: .6rem !important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex: 1 1 260px !important;
+    width: auto !important;
+    min-width: min(100%, 260px) !important;
+    max-width: 100% !important;
+  }
+  [data-testid="stMetric"] {
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+  [data-testid="stDataFrame"], [data-testid="stTable"] {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+  }
+  h1, h2, h3, [data-testid="stMarkdownContainer"] {
+    overflow-wrap: anywhere;
+  }
+  [data-testid="stButton"] button,
+  [data-testid="stDownloadButton"] button {
+    min-height: 2.8rem !important;
+    white-space: normal !important;
+  }
+}
+@media (max-width: 420px) {
+  [data-testid="stMainBlockContainer"] {
+    padding-left: .5rem !important;
+    padding-right: .5rem !important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex-basis: 100% !important;
+    min-width: 100% !important;
+  }
+  [data-testid="stMetric"] label { font-size: .72rem !important; }
+}
+
 </style>
 """
 
