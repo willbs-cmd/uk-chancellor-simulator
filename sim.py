@@ -2797,7 +2797,7 @@ def check(n=None, difficulty=None):
         if scen._budget_link_value(fuel_state, fuel_state['budget_applied'], 'tax', 'fuel') != 0:
             failures.append("Fuel-duty crisis trigger treated the default duty as an increase.")
         raised = {'tax': {'fuel': fuel_default + 1.5}}
-        if scenarios._budget_link_value(fuel_state, raised, 'tax', 'fuel') < 1.0:
+        if scen._budget_link_value(fuel_state, raised, 'tax', 'fuel') < 1.0:
             failures.append("A genuine fuel-duty increase was not recognised by the crisis trigger.")
     except Exception as exc:
         failures.append(f"Fuel-duty trigger regression failed: {exc}")
