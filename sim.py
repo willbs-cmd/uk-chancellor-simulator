@@ -2833,6 +2833,22 @@ def check(n=None, difficulty=None):
         if term_strategy.set_targets(ts,{"growth":4},"Changed") is not False:failures.append("Strategy targets could be changed after Year 1.")
     except Exception as exc:failures.append(f"Five-year strategy regression failed: {exc}")
 
+    # Tax reform preview stays finite and does not mutate the approved ledger.
+    try:
+        reform_state = {"budget_applied": budget.defaults(), "headroom": 10.0,
+                        "debt": 80.0, "gdp": 100.0, "growth": 1.0,
+                        "inflation": 2.0, "market_conf": 60.0}
+        original_tax = dict(reform_state["budget_applied"]["tax"])
+        reform_draft = budget.defaults()
+        reform_draft["tax"]["corp"] = min(float(budget.TAXES["corp"]["hi"]),
+                                           float(reform_draft["tax"]["corp"]) + 2.0)
+        reform_impact = budget.impact(reform_state["budget_applied"], reform_draft)
+        if not math.isfinite(float(reform_impact.get("revenue", 0.0))):
+            failures.append("Tax Reform Centre produced a non-finite revenue estimate.")
+        if reform_state["budget_applied"]["tax"] != original_tax:
+            failures.append("Tax Reform Centre mutated the approved tax ledger during preview.")
+    except Exception as exc:
+        failures.append(f"Tax reform preview regression failed: {exc}")
     # Contingency reserve is ring-fenced from headroom on delivery and can
     # be released for emergency funding without changing departmental ledgers.
     try:

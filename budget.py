@@ -1885,6 +1885,56 @@ def render(submit=None, after_summary=None):
         st.caption("Election outlook is an indicative national approval signal, not a seat forecast. It excludes constituency swings, opposition performance, campaign events and coalition arithmetic.")
 
 
+    with st.expander("Tax Reform Centre · build a package", expanded=False):
+        st.caption("Model individual tax reforms before delivering the Budget. Changes here update the working Budget draft only; they do not take effect until you authorise it.")
+        tax_keys = list(TAXES)
+        tax_key = st.selectbox("Choose a tax instrument", tax_keys,
+                               format_func=lambda key: TAXES[key]["label"],
+                               key="tax_reform_instrument")
+        tax_meta = TAXES[tax_key]
+        current_tax_rate = float(cur.get("tax", {}).get(tax_key, tax_meta["default"]))
+        unit = str(tax_meta.get("unit", "%"))
+        proposed_tax_rate = st.slider(
+            f"Proposed rate ({unit})",
+            min_value=float(tax_meta["lo"]), max_value=float(tax_meta["hi"]),
+            value=max(float(tax_meta["lo"]), min(float(tax_meta["hi"]), current_tax_rate)),
+            step=float(tax_meta.get("step", 1)), key=f"tax_reform_rate_{tax_key}",
+            help=tax_meta.get("help", "Change this rate in the working Budget draft."),
+        )
+        cur.setdefault("tax", {})[tax_key] = float(proposed_tax_rate)
+        delta_rate = float(proposed_tax_rate) - current_tax_rate
+        if abs(delta_rate) < 0.0001:
+            st.info("No change proposed for this tax instrument.")
+        elif delta_rate > 0:
+            st.warning(f"This proposal raises {tax_meta['short']} by {delta_rate:+.2f} {unit}.")
+        else:
+            st.info(f"This proposal cuts {tax_meta['short']} by {delta_rate:+.2f} {unit}.")
+        reform_impact = impact(s.budget_applied, cur)
+        reform_cols = st.columns(3, gap="medium")
+        reform_cols[0].metric("Estimated annual receipts change", f"£{float(reform_impact.get('revenue', 0.0)):+.1f}bn")
+        reform_cols[1].metric("Projected fiscal headroom change", f"£{float(reform_impact.get('headroom', 0.0)):+.1f}bn")
+        reform_cols[2].metric("Modelled growth effect", f"{float(reform_impact.get('growth', 0.0)):+.2f}pp")
+        st.caption("Simplified in-game estimates, not official OBR costings.")
+        st.markdown("**Reform package currently in the working draft**")
+        changed_tax_rows = []
+        for key, meta in TAXES.items():
+            old_rate = float(s.budget_applied.get("tax", {}).get(key, meta["default"]))
+            new_rate = float(cur.get("tax", {}).get(key, old_rate))
+            if abs(new_rate - old_rate) > 0.0001:
+                changed_tax_rows.append({"Tax": meta["short"],
+                    "Previous": f"{old_rate:g} {meta.get('unit', '%')}",
+                    "Proposed": f"{new_rate:g} {meta.get('unit', '%')}",
+                    "Change": f"{new_rate-old_rate:+g} {meta.get('unit', '%')}"})
+        if changed_tax_rows:
+            st.dataframe(changed_tax_rows, hide_index=True, use_container_width=True)
+        else:
+            st.caption("No tax changes have been added to this draft yet.")
+        if st.button("Reset tax reforms to approved rates", key="reset_tax_reform_package"):
+            for key in TAXES:
+                cur["tax"][key] = float(s.budget_applied.get("tax", {}).get(key, TAXES[key]["default"]))
+                st.session_state[f"bt_{key}"] = cur["tax"][key]
+            st.rerun()
+
     with st.expander('Compare alternative Budgets', expanded=False):
         st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
         slots = dict(s.get('budget_alternatives', {}))
