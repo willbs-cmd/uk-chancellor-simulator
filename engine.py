@@ -1752,6 +1752,8 @@ def proceed_to_spring():
     government_missions.record_year(s)
     import term_strategy
     term_strategy.annual_review(s)
+    if int(s.get('year', 1)) >= 5:
+        term_strategy.finalise(s)
     import government_programme
     government_programme.close_annual_programme(s)
     performance_report.create_report()
