@@ -1393,13 +1393,12 @@ with area_budget:
     elif _is_budget_phase:
         budget_screen()
     else:
-        budget_tabs = st.tabs(['Budget & fiscal events', 'Treasury position', 'Gilts & investment', 'OBR & markets', 'Local government'])
+        budget_tabs = st.tabs(['Fiscal Events Centre', 'Treasury position', 'Gilts & investment', 'OBR & markets', 'Local government'])
         with budget_tabs[0]:
-            fiscal_events.render_treasury_overview()
+            fiscal_events.render_fiscal_events_centre()
             st.divider()
             budget_screen()
         with budget_tabs[1]:
-            fiscal_events.render_treasury_overview()
             forecast_accuracy.render_dashboard(s)
         with budget_tabs[2]:
             treasury.render()

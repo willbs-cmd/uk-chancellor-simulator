@@ -1262,6 +1262,40 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Fiscal event calendar regression check failed: {exc}")
 
+
+    # The Fiscal Events Centre snapshot must reconcile the annual calendar and
+    # approved multi-year cash path without changing live state.
+    try:
+        state.new_game("Labour", "Normal", 74129, False)
+        fiscal_state = st.session_state
+        fiscal_events.ensure_state(fiscal_state)
+        fiscal_state.term = 1
+        fiscal_state.year = 1
+        fiscal_state.spending_review_due = True
+        fiscal_state.autumn_statement_due = True
+        fiscal_state.budget_passed = False
+        fiscal_state.block = 1
+        fiscal_state.spending_review_history = []
+        fiscal_state.autumn_statement_history = []
+        fiscal_state.budget_history = []
+        fiscal_state.emergency_budget_history = []
+        fiscal_state.spending_review_plan = {
+            "term": 1, "approved_year": 1, "year2_uplift": 2.0,
+            "year3_uplift": 3.0, "allocations": {"health": 100.0, "education": 50.0},
+        }
+        before_headroom = float(fiscal_state.headroom)
+        snapshot = fiscal_events.fiscal_calendar_snapshot(fiscal_state)
+        if snapshot["calendar"][0]["Spending Review"] != "Due now" or snapshot["calendar"][0]["Autumn Statement"] != "Due now":
+            failures.append("Fiscal Events Centre did not identify the opening-year fiscal events.")
+        if snapshot["spending_plan"]["year1"] != 150.0 or snapshot["spending_plan"]["year2"] != 153.0 or snapshot["spending_plan"]["year3"] != 157.6:
+            failures.append("Fiscal Events Centre did not correctly compound the approved three-year spending path.")
+        if snapshot["emergency_budgets"] != 0 or float(fiscal_state.headroom) != before_headroom:
+            failures.append("Fiscal Events Centre returned incorrect event totals or mutated live fiscal state.")
+    except Exception as exc:
+        failures.append(f"Fiscal Events Centre regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Approved Spending Review paths must roll forward once, without compounding twice.
     try:
         new_run('Labour', 'Normal', 44105)

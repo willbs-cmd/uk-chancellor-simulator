@@ -184,6 +184,134 @@ def release_contingency_reserve(amount, purpose="Emergency intervention"):
     return released
 
 
+
+def fiscal_calendar_snapshot(s=None):
+    """Return a read-only five-year fiscal calendar and multi-year settlement summary."""
+    s = s or st.session_state
+    ensure_state(s)
+    term = int(s.get("term", 1))
+    current_year = int(s.get("year", 1))
+    autumn = {str(row.get("period", "")) for row in s.get("autumn_statement_history", [])}
+    reviews = {str(row.get("period", "")) for row in s.get("spending_review_history", [])}
+    budgets = {
+        f"{int(row.get('term', 1))}-{int(row.get('year', 1))}": row
+        for row in s.get("budget_history", [])
+        if str(row.get("event_type", "Spring Budget")).lower() not in ("emergency budget", "emergency")
+    }
+    emergency_count = len(s.get("emergency_budget_history", []))
+    rows = []
+    for year in range(1, 6):
+        period = f"{term}-{year}"
+        is_current = year == current_year
+        autumn_status = ("Delivered" if period in autumn else
+                         "Due now" if is_current and s.get("autumn_statement_due") else
+                         "Scheduled" if year >= current_year else "No record")
+        budget_status = ("Passed" if period in budgets else
+                         "Passed" if is_current and s.get("budget_passed") else
+                         "Due now" if is_current and int(s.get("block", 1)) >= 3 else
+                         "Scheduled" if year >= current_year else "No record")
+        review_due_year = (year - 1) % REVIEW_INTERVAL == 0
+        if review_due_year:
+            review_status = ("Approved" if period in reviews else
+                             "Due now" if is_current and s.get("spending_review_due") else
+                             "Scheduled" if year >= current_year else "Not held")
+        else:
+            review_status = "Not scheduled"
+        rows.append({
+            "Government year": year,
+            "Autumn Statement": autumn_status,
+            "Spring Budget": budget_status,
+            "Spending Review": review_status,
+        })
+    plan = s.get("spending_review_plan") or {}
+    allocations = plan.get("allocations", {}) if isinstance(plan, dict) else {}
+    baseline = sum(float(value) for value in allocations.values()) if allocations else sum(
+        float(value) for value in s.get("dept_spend", {}).values()
+    )
+    year2 = float(plan.get("year2_uplift", 0.0)) if plan else 0.0
+    year3 = float(plan.get("year3_uplift", 0.0)) if plan else 0.0
+    has_plan = bool(allocations)
+    return {
+        "calendar": rows,
+        "emergency_budgets": emergency_count,
+        "spending_plan": {
+            "approved": has_plan,
+            "year1": round(baseline, 1),
+            "year2": round(baseline * (1 + year2 / 100.0), 1),
+            "year3": round(baseline * (1 + year2 / 100.0) * (1 + year3 / 100.0), 1),
+            "year2_uplift": year2,
+            "year3_uplift": year3,
+            "approved_year": int(plan.get("approved_year", 0)) if plan else 0,
+        },
+        "next_review_year": next((year for year in range(current_year, 6)
+                                  if (year - 1) % REVIEW_INTERVAL == 0 and f"{term}-{year}" not in reviews), None),
+    }
+
+
+def render_fiscal_events_centre():
+    """Central command view for the fiscal calendar, Spending Review and past events."""
+    s = st.session_state
+    snapshot = fiscal_calendar_snapshot(s)
+    render_treasury_overview()
+    st.markdown("### Five-year fiscal programme")
+    st.caption("A single view of the Government's annual fiscal statements, formal Budgets and multi-year spending settlements.")
+    rows = snapshot["calendar"]
+    st.dataframe(rows, hide_index=True, use_container_width=True)
+    due_items = []
+    if s.get("active_emergency_budget"):
+        due_items.append("Emergency Budget")
+    if s.get("spending_review_due"):
+        due_items.append("Spending Review")
+    if s.get("autumn_statement_due"):
+        due_items.append("Autumn Statement")
+    if int(s.get("block", 1)) >= 3 and not s.get("budget_passed"):
+        due_items.append("Spring Budget")
+    if due_items:
+        st.warning("Awaiting action: " + " · ".join(due_items) + ". Open the current fiscal event from the Budget workspace.")
+    else:
+        st.caption("No formal fiscal event is currently awaiting approval. The next event will open automatically when the in-game calendar reaches it.")
+    plan = snapshot["spending_plan"]
+    st.markdown("### Multi-year spending settlement")
+    if plan["approved"]:
+        cols = st.columns(3, gap="medium")
+        cols[0].metric(f"Year {plan['approved_year']} approved baseline", f"£{plan['year1']:,.1f}bn")
+        cols[1].metric("Following year", f"£{plan['year2']:,.1f}bn", f"{plan['year2_uplift']:+.1f}%")
+        cols[2].metric("Third year", f"£{plan['year3']:,.1f}bn", f"{plan['year3_uplift']:+.1f}%")
+        st.caption("The approved departmental cash path is applied once at each annual Spring transition. It does not overwrite the Budget's approved tax rates or departmental percentage settings.")
+    else:
+        st.info("No multi-year Spending Review settlement has been approved in this term. The first review is scheduled for Government Year 1.")
+    st.markdown("### Fiscal event record")
+    records = []
+    for row in s.get("budget_history", [])[-8:]:
+        records.append({
+            "Period": f"Year {row.get('year', '?')}",
+            "Event": row.get("event_type", "Spring Budget"),
+            "Commons Ayes": int(row.get("ayes", 0)),
+            "Headroom after": f"£{float(row.get('headroom_after', 0.0)):.1f}bn",
+            "Outcome": "Delivered",
+        })
+    for row in s.get("autumn_statement_history", [])[-8:]:
+        records.append({
+            "Period": row.get("period", ""),
+            "Event": "Autumn Statement",
+            "Commons Ayes": "—",
+            "Headroom after": f"£{float(row.get('headroom_after', 0.0)):.1f}bn",
+            "Outcome": str(row.get("choice", "Published")),
+        })
+    for row in s.get("emergency_budget_history", [])[-8:]:
+        records.append({
+            "Period": row.get("period", ""),
+            "Event": "Emergency Budget",
+            "Commons Ayes": int(row.get("ayes", 0)),
+            "Headroom after": f"£{float(row.get('headroom_after', 0.0)):.1f}bn",
+            "Outcome": str(row.get("reason", "Delivered")),
+        })
+    if records:
+        st.dataframe(list(reversed(records[-15:])), hide_index=True, use_container_width=True)
+    else:
+        st.caption("Formal fiscal decisions will be recorded here as your Government progresses.")
+
+
 def render_treasury_overview():
     """Read-only Treasury dashboard; major fiscal events are launched from the game calendar."""
     s = st.session_state
