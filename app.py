@@ -1342,7 +1342,8 @@ with area_office:
         list(s.get('pending', [])),
         key=lambda item: item.get('due', 0)
     )
-    with st.expander('Recent decisions & consequences', expanded=bool(pending_consequences)):
+    decision_history_title = 'Recent decisions & consequences' + (f' · {len(pending_consequences)} pending' if pending_consequences else '')
+    with st.expander(decision_history_title, expanded=False):
         if pending_consequences:
             st.markdown('**Consequences still to come**')
             render_timeline([], pending_consequences)
@@ -1364,19 +1365,28 @@ with area_budget:
     elif _is_budget_phase:
         budget_screen()
     else:
-        budget_tabs = st.tabs(['Fiscal Events Centre', 'Treasury position', 'Gilts & investment', 'OBR & markets', 'Local government'])
+        # Separate the fiscal calendar from the live Budget editor. This keeps
+        # the two substantial screens focused and avoids a very long first tab.
+        budget_tabs = st.tabs([
+            'Fiscal events',
+            'Build Budget',
+            'Treasury position',
+            'Gilts & investment',
+            'OBR & markets',
+            'Local government'
+        ])
         with budget_tabs[0]:
             fiscal_events.render_fiscal_events_centre()
-            st.divider()
-            budget_screen()
         with budget_tabs[1]:
-            forecast_accuracy.render_dashboard(s)
+            budget_screen()
         with budget_tabs[2]:
+            forecast_accuracy.render_dashboard(s)
+        with budget_tabs[3]:
             treasury.render()
             features.render()
-        with budget_tabs[3]:
-            economic_management.render()
         with budget_tabs[4]:
+            economic_management.render()
+        with budget_tabs[5]:
             devolution.render()
 
 with area_economy:
@@ -1400,78 +1410,93 @@ with area_cabinet:
     st.caption('Ministerial performance, departmental delivery, relationships and Number 10.')
     cabinet_management.ensure(s)
     cabinet_health = cabinet_management.cabinet_health(s)
-    c1, c2, c3 = st.columns(3)
-    c1.metric('Serving ministers', cabinet_health['count'])
-    c2.metric('Average competence', f"{cabinet_health['competence']:.0f}/100")
-    c3.metric('Average loyalty', f"{cabinet_health['loyalty']:.0f}/100")
-    minister_rows = []
-    for department, minister in s.get('cabinet_ministers', {}).items():
-        profile = cabinet_management.profile_for(s, department)
-        competence = float(s.get('ministerial_competence', {}).get(department, 60.0))
-        loyalty = float(s.get('ministerial_loyalty', {}).get(department, 60.0))
-        minister_rows.append({
-            'Department': str(department).replace('_', ' ').title(),
-            'Minister': minister or 'Vacant',
-            'Competence': round(competence),
-            'Loyalty': round(loyalty),
-            'Faction': profile.get('faction', '—'),
-            'Personality': profile.get('personality', '—')
-        })
-    if minister_rows:
-        st.dataframe(pd.DataFrame(minister_rows), hide_index=True, use_container_width=True,
-                     column_config={
-                         'Competence': st.column_config.ProgressColumn('Competence', min_value=0, max_value=100),
-                         'Loyalty': st.column_config.ProgressColumn('Loyalty', min_value=0, max_value=100)
-                     })
-    else:
-        st.info('Ministerial appointments will appear here once the Cabinet is formed.')
-    if cabinet_health['weak_ministers']:
-        st.warning('Ministers with weak delivery records: ' + ', '.join(
-            item['minister'] for item in cabinet_health['weak_ministers']
-        ))
-    if s.get('ministerial_latest_appraisals'):
-        with st.expander('Latest ministerial appraisals'):
-            st.dataframe(s.get('ministerial_latest_appraisals', []), hide_index=True, use_container_width=True)
-    if s.get('ministerial_relationship_issue'):
-        st.warning('A ministerial relationship issue is active. Resolve it through the Chancellor’s Office.')
-    st.divider()
-    st.markdown('#### Number 10 relationship')
     tension = float(s.get('pm_treasury_tension', 12.0))
-    pmc = st.columns(4)
-    pmc[0].metric('PM confidence', f"{float(s.pm_opinion):.0f}/100")
-    pmc[1].metric('Personal trust', f"{float(s.get('pm_trust', 70)):.0f}/100")
-    pmc[2].metric('Cabinet support', f"{float(s.cab_opinion):.0f}/100")
-    pmc[3].metric('Treasury–PM tension', f"{tension:.0f}/100")
-    st.caption('Tension status: ' + number10.tension_status(tension))
-    st.metric('Relationship status', s.get('pm_relationship_status', 'Workable'))
-    if number10.committee_active(s):
-        st.warning(f"A Number 10-led Economic Strategy Committee is active through Year {int(s.get('pm_committee_until_year', 0))}. Major Government Programme proposals face additional fiscal scrutiny.")
-    if s.get('pm_treasury_tension_history'):
-        with st.expander('Treasury–Number 10 dispute history'):
-            st.dataframe(list(reversed(s.pm_treasury_tension_history[-10:])), hide_index=True, use_container_width=True)
-    latest_review = s.get('pm_relationship_latest') or {}
-    if latest_review:
-        st.caption(
-            f"Latest annual review · Trust {latest_review.get('trust_before', 0):.0f} → "
-            f"{latest_review.get('trust_after', 0):.0f} ({latest_review.get('change', 0):+.1f})"
-        )
-        st.caption('Assessment: ' + ', '.join(latest_review.get('reasons', [])))
-    if s.get('pm_meeting_history'):
-        with st.expander('Previous Number 10 meetings'):
-            st.dataframe(list(reversed(s.pm_meeting_history)), hide_index=True, use_container_width=True)
-    if s.get('active_pm_meeting'):
-        st.info('A private meeting with the PM is waiting in the Chancellor’s Office.')
-    elif int(s.get('pm_meeting_year', 0)) < int(s.year):
-        if st.button('Request private meeting with the PM', key='cabinet_request_pm_meeting', type='primary'):
-            engine.open_pm_meeting()
-            st.rerun()
-    st.divider()
-    cabinet_tabs = st.tabs(['Departmental delivery', 'Annual reports', 'Government Programme'])
+    cabinet_attention = bool(cabinet_health['weak_ministers'] or s.get('ministerial_relationship_issue'))
+    number10_attention = bool(s.get('active_pm_meeting') or tension >= 65 or s.get('active_pm_ultimatum'))
+
+    # Separate the Cabinet register, the PM relationship and delivery records
+    # into dedicated screens rather than stacking them into one long page.
+    cabinet_tabs = st.tabs([
+        'Overview •' if cabinet_attention else 'Overview',
+        'Number 10 •' if number10_attention else 'Number 10',
+        'Department delivery',
+        'Annual reports',
+        'Government Programme'
+    ])
+
     with cabinet_tabs[0]:
-        chancellor_office.render()
+        c1, c2, c3 = st.columns(3)
+        c1.metric('Serving ministers', cabinet_health['count'])
+        c2.metric('Average competence', f"{cabinet_health['competence']:.0f}/100")
+        c3.metric('Average loyalty', f"{cabinet_health['loyalty']:.0f}/100")
+        minister_rows = []
+        for department, minister in s.get('cabinet_ministers', {}).items():
+            profile = cabinet_management.profile_for(s, department)
+            competence = float(s.get('ministerial_competence', {}).get(department, 60.0))
+            loyalty = float(s.get('ministerial_loyalty', {}).get(department, 60.0))
+            minister_rows.append({
+                'Department': str(department).replace('_', ' ').title(),
+                'Minister': minister or 'Vacant',
+                'Competence': round(competence),
+                'Loyalty': round(loyalty),
+                'Faction': profile.get('faction', '—'),
+                'Personality': profile.get('personality', '—')
+            })
+        if minister_rows:
+            st.dataframe(pd.DataFrame(minister_rows), hide_index=True, use_container_width=True,
+                         column_config={
+                             'Competence': st.column_config.ProgressColumn('Competence', min_value=0, max_value=100),
+                             'Loyalty': st.column_config.ProgressColumn('Loyalty', min_value=0, max_value=100)
+                         })
+        else:
+            st.info('Ministerial appointments will appear here once the Cabinet is formed.')
+        if cabinet_health['weak_ministers']:
+            st.warning('Ministers with weak delivery records: ' + ', '.join(
+                item['minister'] for item in cabinet_health['weak_ministers']
+            ))
+        if s.get('ministerial_relationship_issue'):
+            st.warning('A ministerial relationship issue is active. Resolve it through the Chancellor’s Office.')
+        if s.get('ministerial_latest_appraisals'):
+            with st.expander('Latest ministerial appraisals', expanded=False):
+                st.dataframe(s.get('ministerial_latest_appraisals', []), hide_index=True, use_container_width=True)
+
     with cabinet_tabs[1]:
-        performance_report.render()
+        st.markdown('#### The Prime Minister and the Treasury')
+        pmc = st.columns(4)
+        pmc[0].metric('PM confidence', f"{float(s.pm_opinion):.0f}/100")
+        pmc[1].metric('Personal trust', f"{float(s.get('pm_trust', 70)):.0f}/100")
+        pmc[2].metric('Cabinet support', f"{float(s.cab_opinion):.0f}/100")
+        pmc[3].metric('Treasury–PM tension', f"{tension:.0f}/100")
+        st.caption(f"Relationship status: {s.get('pm_relationship_status', 'Workable')} · {number10.tension_status(tension)}")
+        if number10.committee_active(s):
+            st.warning(f"A Number 10-led Economic Strategy Committee is active through Year {int(s.get('pm_committee_until_year', 0))}. Major Government Programme proposals face additional fiscal scrutiny.")
+        latest_review = s.get('pm_relationship_latest') or {}
+        if latest_review:
+            with st.expander('Latest annual relationship review', expanded=False):
+                st.caption(
+                    f"Trust {latest_review.get('trust_before', 0):.0f} → "
+                    f"{latest_review.get('trust_after', 0):.0f} "
+                    f"({latest_review.get('change', 0):+.1f})"
+                )
+                st.caption('Assessment: ' + ', '.join(latest_review.get('reasons', [])))
+        if s.get('pm_treasury_tension_history'):
+            with st.expander('Treasury–Number 10 dispute history', expanded=False):
+                st.dataframe(list(reversed(s.pm_treasury_tension_history[-10:])), hide_index=True, use_container_width=True)
+        if s.get('pm_meeting_history'):
+            with st.expander('Previous Number 10 meetings', expanded=False):
+                st.dataframe(list(reversed(s.pm_meeting_history)), hide_index=True, use_container_width=True)
+        if s.get('active_pm_meeting'):
+            st.info('A private meeting with the PM is waiting in the Chancellor’s Office.')
+        elif int(s.get('pm_meeting_year', 0)) < int(s.year):
+            if st.button('Request private meeting with the PM', key='cabinet_request_pm_meeting', type='primary'):
+                engine.open_pm_meeting()
+                st.rerun()
+
     with cabinet_tabs[2]:
+        chancellor_office.render()
+    with cabinet_tabs[3]:
+        performance_report.render()
+    with cabinet_tabs[4]:
         government_programme.render(s)
 
 with area_parliament:
