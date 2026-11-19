@@ -1216,70 +1216,84 @@ def briefing():
 
 
 def economy():
-    """State of the nation and the IMF baseline."""
-    gdp = float(s.get('gdp_trillion', 3.0))
-    nominal_growth = ((1 + float(s.growth) / 100.0) * (1 + float(s.inflation) / 100.0) - 1) * 100
-    g1, g2, g3 = st.columns(3)
-    g1.metric('Estimated GDP', f'£{gdp:.3f} trillion',
-              help='A simulated starting estimate, updated each in-game spring using real growth and inflation. Not a live official statistic.')
-    g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
-    g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
-              help='Approximate growth in the money value of output, including inflation. GDP figures are gameplay estimates, not live forecasts.')
-    shock = s.get('temporary_shock') or {}
-    if shock:
-        st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
-
-    st.markdown('#### Global economy')
-    st.caption('Cumulative real growth since you took office. Output index starts at 100; GDP values are illustrative game estimates.')
-    world_economy.ensure(s)
-    uk_index = 100.0
-    for item in s.get('gdp_history', []):
-        try:
-            uk_index *= 1 + float(item.get('Real GDP growth (%)', 0)) / 100.0
-        except (TypeError, ValueError):
-            pass
-    league_rows = [{
-        '#': 0, 'Economy': '🇬🇧  United Kingdom  🟠 You',
-        'Output idx': round(uk_index, 1), 'Growth': f'{float(s.growth):+.1f}%',
-        'GDP ($tn)': round(float(s.get('gdp_trillion', 3.0)) * 1.27, 2), '_sort': uk_index
-    }]
-    for row in world_economy.rows(s):
-        league_rows.append({
-            '#': 0, 'Economy': row['Flag'] + '  ' + row['Economy'],
-            'Output idx': row['Output index'], 'Growth': row['Growth'],
-            'GDP ($tn)': row['GDP ($tn)'], '_sort': row['Output index']
-        })
-    league_rows.sort(key=lambda row: row['_sort'], reverse=True)
-    for rank, row in enumerate(league_rows, 1):
-        row['#'] = rank
-    league = pd.DataFrame(league_rows).drop(columns=['_sort'])
-    st.dataframe(league, hide_index=True, use_container_width=True,
-                 column_config={
-                     '#': st.column_config.NumberColumn('#', format='%d'),
-                     'Output idx': st.column_config.NumberColumn('OUTPUT IDX', format='%.1f'),
-                     'Growth': st.column_config.TextColumn('GROWTH'),
-                     'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
-                 })
-    with st.expander('Economic history'):
-        if s.get('gdp_history'):
-            st.caption('Your GDP over time')
-            st.dataframe(pd.DataFrame(s.gdp_history), hide_index=True, use_container_width=True)
-        if s.get('world_history'):
-            st.caption('World economy history')
-            st.dataframe(pd.DataFrame(s.world_history), hide_index=True, use_container_width=True)
-        if not (s.get('gdp_history') or s.get('world_history')):
-            st.caption('History builds up as the years pass.')
-    with st.expander('IMF baseline and assumptions'):
-        st.markdown(
-            f"[{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · vintage published {imf_outlook.IMF_PUBLISHED}. "
-            "A fixed data-file vintage: the annual tick nudges growth and inflation towards it, but it does not forecast your playthrough."
-        )
-        st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
-        st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
-    country.render()
-    import living_economy
-    living_economy.render()
-    long_run_simulation.render(s)
+    """A grouped State of the Nation workspace with one subject per screen."""
+    economy_tabs = st.tabs([
+        'UK economy', 'Global & regional', 'Households',
+        'Public services', 'Five-year strategy', 'Long-term resilience'
+    ])
+    with economy_tabs[0]:
+        gdp = float(s.get('gdp_trillion', 3.0))
+        nominal_growth = ((1 + float(s.growth) / 100.0) * (1 + float(s.inflation) / 100.0) - 1) * 100
+        g1, g2, g3 = st.columns(3)
+        g1.metric('Estimated GDP', f'£{gdp:.3f} trillion',
+                  help='A simulated starting estimate, updated each in-game spring using real growth and inflation. Not a live official statistic.')
+        g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
+        g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
+                  help='Approximate growth in the money value of output, including inflation. GDP figures are gameplay estimates, not live forecasts.')
+        shock = s.get('temporary_shock') or {}
+        if shock:
+            st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
+        with st.expander('Economic history', expanded=False):
+            if s.get('gdp_history'):
+                st.caption('Your GDP over time')
+                st.dataframe(pd.DataFrame(s.gdp_history), hide_index=True, use_container_width=True)
+            else:
+                st.caption('Your GDP history builds up as the years pass.')
+        with st.expander('IMF baseline and assumptions', expanded=False):
+            st.markdown(
+                f"[{imf_outlook.IMF_SOURCE}]({imf_outlook.IMF_SOURCE_URL}) · vintage published {imf_outlook.IMF_PUBLISHED}. "
+                "A fixed data-file vintage: the annual tick nudges growth and inflation towards it, but it does not forecast your playthrough."
+            )
+            st.caption("Debt here means general government gross debt (% of GDP), not PSNFL and not the simulator's National Debt stat.")
+            st.dataframe(pd.DataFrame(imf_outlook.rows()), hide_index=True, use_container_width=True)
+    with economy_tabs[1]:
+        st.markdown('#### International comparison')
+        st.caption('Cumulative real growth since you took office. Output index starts at 100; GDP values are illustrative game estimates.')
+        world_economy.ensure(s)
+        uk_index = 100.0
+        for item in s.get('gdp_history', []):
+            try:
+                uk_index *= 1 + float(item.get('Real GDP growth (%)', 0)) / 100.0
+            except (TypeError, ValueError):
+                pass
+        league_rows = [{
+            '#': 0, 'Economy': '🇬🇧  United Kingdom  🟠 You',
+            'Output idx': round(uk_index, 1), 'Growth': f'{float(s.growth):+.1f}%',
+            'GDP ($tn)': round(float(s.get('gdp_trillion', 3.0)) * 1.27, 2), '_sort': uk_index
+        }]
+        for row in world_economy.rows(s):
+            league_rows.append({
+                '#': 0, 'Economy': row['Flag'] + '  ' + row['Economy'],
+                'Output idx': row['Output index'], 'Growth': row['Growth'],
+                'GDP ($tn)': row['GDP ($tn)'], '_sort': row['Output index']
+            })
+        league_rows.sort(key=lambda row: row['_sort'], reverse=True)
+        for rank, row in enumerate(league_rows, 1):
+            row['#'] = rank
+        league = pd.DataFrame(league_rows).drop(columns=['_sort'])
+        st.dataframe(league, hide_index=True, use_container_width=True,
+                     column_config={
+                         '#': st.column_config.NumberColumn('#', format='%d'),
+                         'Output idx': st.column_config.NumberColumn('OUTPUT IDX', format='%.1f'),
+                         'Growth': st.column_config.TextColumn('GROWTH'),
+                         'GDP ($tn)': st.column_config.NumberColumn('GDP ($TN)', format='%.2f')
+                     })
+        with st.expander('International outlook and country comparisons', expanded=False):
+            country.render()
+        with st.expander('Regional economic performance', expanded=False):
+            regional_economy.render()
+    with economy_tabs[2]:
+        household.render()
+        st.divider()
+        import living_economy
+        living_economy.render()
+    with economy_tabs[3]:
+        public_services.render()
+    with economy_tabs[4]:
+        import term_strategy
+        term_strategy.render(s)
+    with economy_tabs[5]:
+        long_run_simulation.render(s)
 
 
 # ==================== SIX-AREA GAME NAVIGATION ====================
@@ -1291,17 +1305,28 @@ _is_budget_phase = (
     or bool(s.get('spending_review_due')) or bool(s.get('autumn_statement_due')) or bool(s.get('active_emergency_budget'))
 )
 
-# Six workspaces begin immediately below the Chancellor's dashboard indicators.
-area_office, area_budget, area_economy, area_cabinet, area_parliament, area_news = st.tabs([
-    'Chancellor’s Office',
-    'The Budget' + (' •' if _is_budget_phase else ''),
-    'The Economy',
-    'Cabinet',
-    'Parliament',
-    'The News' + (' •' if _has_briefing else '')
-])
+# A compact workspace switcher replaces the six-tab wall. Only the selected
+# workspace is rendered, keeping the page lighter and easier to navigate.
+_WORKSPACE_LABELS = {
+    'office': '🏛️ Office',
+    'budget': '💷 Budget' + ('  •' if _is_budget_phase else ''),
+    'economy': '📈 Economy',
+    'cabinet': '👥 Cabinet',
+    'parliament': '🏛 Parliament',
+    'news': '📰 News' + ('  •' if _has_briefing else ''),
+}
+if s.get('primary_workspace') not in _WORKSPACE_LABELS:
+    s['primary_workspace'] = 'office'
+active_workspace = st.radio(
+    'Government workspace',
+    list(_WORKSPACE_LABELS),
+    format_func=lambda key: _WORKSPACE_LABELS[key],
+    horizontal=True,
+    key='primary_workspace',
+    label_visibility='collapsed'
+)
 
-with area_office:
+if active_workspace == 'office':
     st.markdown('### Chancellor’s Office')
     st.caption('Your working dashboard: decisions, immediate priorities and the next move in government.')
     if _is_budget_phase:
@@ -1353,7 +1378,7 @@ with area_office:
         if not pending_consequences and not recent_history:
             st.caption('Your decision record will appear here as the government takes action.')
 
-with area_budget:
+elif active_workspace == 'budget':
     st.markdown('### The Budget')
     st.caption('Taxation, departmental spending, borrowing, fiscal rules and formal fiscal events.')
     if s.get('active_emergency_budget'):
@@ -1389,23 +1414,12 @@ with area_budget:
         with budget_tabs[5]:
             devolution.render()
 
-with area_economy:
+elif active_workspace == 'economy':
     st.markdown('### The Economy')
-    st.caption('Growth, inflation, employment, productivity, households, regions and public services.')
-    economy_tabs = st.tabs(['Economic outlook', 'Five-year strategy', 'Households', 'Regions', 'Public services'])
-    with economy_tabs[0]:
-        economy()
-    with economy_tabs[1]:
-        import term_strategy
-        term_strategy.render(s)
-    with economy_tabs[2]:
-        household.render()
-    with economy_tabs[3]:
-        regional_economy.render()
-    with economy_tabs[4]:
-        public_services.render()
+    st.caption('National performance, international comparisons, household living standards and long-term resilience.')
+    economy()
 
-with area_cabinet:
+elif active_workspace == 'cabinet':
     st.markdown('### Cabinet')
     st.caption('Ministerial performance, departmental delivery, relationships and Number 10.')
     cabinet_management.ensure(s)
@@ -1499,7 +1513,7 @@ with area_cabinet:
     with cabinet_tabs[4]:
         government_programme.render(s)
 
-with area_parliament:
+elif active_workspace == 'parliament':
     st.markdown('### Parliament')
     st.caption('Commons votes, constituency MPs, rebellions, local elections and party management.')
     parliament_tabs = st.tabs(['House of Commons', 'Local elections', 'Government mandate'])
@@ -1510,7 +1524,7 @@ with area_parliament:
     with parliament_tabs[2]:
         government_missions.render(s)
 
-with area_news:
+elif active_workspace == 'news':
     st.markdown('### The News')
     st.caption('Your daily briefing, opposition attacks, polling, headlines and public reaction.')
     news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition'])

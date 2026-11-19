@@ -3626,6 +3626,42 @@ button:hover,
   }
 }
 
+/* Main workspace switcher: clear, evenly spaced navigation. */
+.st-key-primary_workspace { margin: .18rem 0 .58rem !important; }
+.st-key-primary_workspace div[role="radiogroup"] {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: .42rem !important;
+  width: 100% !important;
+}
+.st-key-primary_workspace div[role="radiogroup"] > label {
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  min-width: 0 !important; min-height: 2.75rem !important; margin: 0 !important;
+  padding: .48rem .38rem !important; border: 1px solid var(--co-border) !important;
+  border-radius: 9px !important; background: var(--co-surface) !important;
+  color: var(--co-ink) !important; text-align: center !important;
+  transition: background .15s ease, border-color .15s ease !important;
+}
+.st-key-primary_workspace div[role="radiogroup"] > label:has(input:checked) {
+  border-color: #8eb9b3 !important; background: #e8f2f1 !important;
+  color: var(--co-navy) !important; font-weight: 750 !important;
+}
+.st-key-primary_workspace div[role="radiogroup"] > label p {
+  font-size: .84rem !important; line-height: 1.18 !important;
+  margin: 0 !important; overflow-wrap: anywhere !important;
+}
+.st-key-primary_workspace div[role="radiogroup"] input {
+  position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important;
+}
+@media (max-width: 760px) {
+  .st-key-primary_workspace div[role="radiogroup"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: .35rem !important; }
+  .st-key-primary_workspace div[role="radiogroup"] > label { min-height: 2.55rem !important; padding: .42rem .28rem !important; }
+  .st-key-primary_workspace div[role="radiogroup"] > label p { font-size: .77rem !important; }
+}
+@media (max-width: 390px) {
+  .st-key-primary_workspace div[role="radiogroup"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
 /* Respect accessibility preferences even where older effects are still declared. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
