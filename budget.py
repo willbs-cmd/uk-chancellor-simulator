@@ -170,6 +170,7 @@ def defaults():
         'spend': {k: 0.0 for k in SPEND_DEFAULTS},
         'tax_pol': {k: False for k in TAX_POLICIES},
         'spend_pol': {k: False for k in SPEND_POLICIES},
+        'projects': [],
         'thresholds': {
             'personal_allowance': 12570.0, 'higher_rate_threshold': 50270.0,
             'additional_rate_threshold': 125140.0, 'inheritance_nil_rate_band': 325000.0,
@@ -273,6 +274,10 @@ def ensure():
         s.budget_applied = defaults()
         s.budget_applied['_tax_units_version'] = 2
 
+    # Draft capital projects are kept alongside the tax, departmental and policy
+    # controls. Older saves start with the projects already in their approved ledger.
+    s.setdefault('budget_project_draft', [dict(row) for row in s.budget_applied.get('projects', [])])
+
     # If an older save has the approved Budget but not the separate department
     # ledger, reconstruct the actual £bn allocations from the approved changes.
     # This avoids silently reverting departments to their opening-year budgets.
@@ -368,6 +373,7 @@ def read():
         'spend': {k: float(s[f'bs_{k}']) for k in SPEND_DEFAULTS},
         'tax_pol': {k: s[f'btp_{k}'] for k in TAX_POLICIES},
         'spend_pol': {k: s[f'bsp_{k}'] for k in SPEND_POLICIES},
+        'projects': [dict(row) for row in s.get('budget_project_draft', s.budget_applied.get('projects', []))],
         'thresholds': {
             'personal_allowance': float(s['bt_threshold_personal_allowance']),
             'higher_rate_threshold': float(s['bt_threshold_higher_rate_threshold']),
@@ -387,8 +393,10 @@ def save_budget_alternative(name, draft=None):
     s = st.session_state
     draft = draft or read()
     slots = dict(s.get('budget_alternatives', {}))
+    draft_copy = {k: (dict(v) if isinstance(v, dict) else v) for k, v in draft.items()}
+    draft_copy['projects'] = [dict(row) for row in draft.get('projects', [])]
     slots[name] = {
-        'draft': {k: (dict(v) if isinstance(v, dict) else v) for k, v in draft.items()},
+        'draft': draft_copy,
         'saved_at': f"Term {int(s.get('term', 1))}, Year {int(s.get('year', 1))}",
     }
     s.budget_alternatives = slots
@@ -698,6 +706,8 @@ def spending_pie(b, annual_settlement=None):
     scheme_data = scheme_financials(b)
     pol_spend = float(scheme_data['spend_cost'])
     if pol_spend > 0.05: data['Policy programmes · including delivery overhead'] = round(pol_spend, 1)
+    project_spend = float(project_financials(b)['total_cost'])
+    if project_spend > 0.05: data['Capital projects'] = round(project_spend, 1)
     return data
 
 
@@ -714,6 +724,58 @@ def threshold_budget_balance(thresholds):
     return -cost + (0.5 if t.get('council_tax_revaluation') else 0.0)
 
 
+def _revenue_ledger(b):
+    """Line items whose sum is exactly the receipts figure shown in the Budget."""
+    rows = {}
+    for key, value in revenues(b).items():
+        rows[f"Tax · {TAXES[key]['short']}"] = float(value)
+    schemes = scheme_financials(b)
+    for (kind, key), item in schemes['rows'].items():
+        if kind == 'tax':
+            rows[f"Policy revenue · {TAX_POLICIES[key]['label']}"] = float(item['current_net'])
+    thresholds = b.get('thresholds', {}) or {}
+    rows["Threshold and council-tax measures"] = float(threshold_budget_balance(thresholds))
+    if thresholds.get('thresholds_frozen', False):
+        drag_rate = 0.35 if thresholds.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
+        rows["Fiscal drag from frozen thresholds"] = min(1.5, drag_rate * float(st.session_state.get('threshold_freeze_years', 0)))
+    rows["Other receipts"] = float(OTHER_RECEIPTS)
+    return rows
+
+
+def _spending_ledger(b, annual_settlement=None):
+    """Line items whose sum is exactly the spending figure shown in the Budget."""
+    s = st.session_state
+    applied_spend = s.budget_applied.get('spend', {})
+    rows = {}
+    for key, spec in SPEND_DEFAULTS.items():
+        cash = float(s.dept_spend[key]) * (1.0 + _spend_rate_change(
+            applied_spend.get(key, 0.0), b.get('spend', {}).get(key, 0.0), annual_settlement
+        ) / 100.0)
+        rows[f"Department · {spec['label']}"] = cash
+    schemes = scheme_financials(b)
+    for (kind, key), item in schemes['rows'].items():
+        if kind == 'spend':
+            rows[f"Policy programme · {SPEND_POLICIES[key]['label']}"] = float(item['current_cost'])
+    if schemes['coordination_cost'] > 0.001:
+        rows["Policy programme · delivery coordination"] = float(schemes['coordination_cost'])
+    for project in project_financials(b)['rows']:
+        rows[f"Capital project · {project['label']}"] = float(project['total_cost'])
+    rows["Debt interest"] = float(interest())
+    return rows
+
+
+def _ledger_comparison(approved, proposed, ledger_builder, annual_settlement=None):
+    old_rows = ledger_builder(approved)
+    new_rows = ledger_builder(proposed) if ledger_builder is _revenue_ledger else ledger_builder(proposed, annual_settlement)
+    keys = list(dict.fromkeys(list(old_rows) + list(new_rows)))
+    return [{
+        "Budget line": key,
+        "Approved (£bn)": round(float(old_rows.get(key, 0.0)), 2),
+        "Proposed (£bn)": round(float(new_rows.get(key, 0.0)), 2),
+        "Change (£bn)": round(float(new_rows.get(key, 0.0)) - float(old_rows.get(key, 0.0)), 2),
+    } for key in keys]
+
+
 def totals(b, annual_settlement=None):
     """(receipts, spending) in £bn for a Budget draft, at today's debt interest."""
     s = st.session_state
@@ -727,10 +789,11 @@ def totals(b, annual_settlement=None):
         drag_rate = 0.35 if thresholds.get('threshold_freeze_scope', 'Personal allowance and all bands') == 'Personal allowance and all bands' else 0.25
         rev += min(1.5, drag_rate * float(s.get('threshold_freeze_years', 0)))
     applied_spend = s.budget_applied.get('spend', {})
+    projects = project_financials(b)
     spend = (sum(s.dept_spend[k] * (1.0 + _spend_rate_change(
                  applied_spend.get(k, 0.0), b['spend'][k], annual_settlement
              ) / 100.0) for k in SPEND_DEFAULTS) + interest()
-             + float(scheme_data['spend_cost']))
+             + float(scheme_data['spend_cost']) + float(projects['total_cost']))
     return rev, spend
 
 
@@ -800,7 +863,9 @@ def impact(old, new, annual_settlement=None):
     tax_pol_diff = float(new_schemes['tax_net']) - float(old_schemes['tax_net'])
     spend_pol_diff = float(new_schemes['spend_cost']) - float(old_schemes['spend_cost'])
     threshold_delta = threshold_budget_balance(new.get('thresholds', {})) - threshold_budget_balance(old.get('thresholds', {}))
-    bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff + threshold_delta
+    project_delta = float(project_financials(new)['total_cost']) - float(project_financials(old)['total_cost'])
+    project_growth_delta = project_growth_effect(new) - project_growth_effect(old)
+    bal = sum(d.values()) - sum(ds.values()) + tax_pol_diff - spend_pol_diff + threshold_delta - project_delta
     old_st = FISCAL_STRATEGIES.get(old.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
     new_st = FISCAL_STRATEGIES.get(new.get('strategy', 'balanced'), FISCAL_STRATEGIES['balanced'])
     sd = {k: new_st[k] - old_st[k] for k in ('headroom','approval','market','growth')}
@@ -839,13 +904,14 @@ def impact(old, new, annual_settlement=None):
     new_scheme_effects = scheme_effect_totals(new)
     approval += new_scheme_effects['approval'] - old_scheme_effects['approval']
     market += new_scheme_effects['market'] - old_scheme_effects['market']
-    growth += new_scheme_effects['growth'] - old_scheme_effects['growth']
+    growth += new_scheme_effects['growth'] - old_scheme_effects['growth'] + project_growth_delta
 
     inflation = (0.12 * vat_pts + 0.003 * sum(ds.values()) + 0.015 * d['fuel'] + 0.005 * d['sin']
                  + 0.004 * d['carbon_levy'] + 0.002 * d['sugar_duty'])
 
     return dict(headroom=bal, deficit=-bal, approval=approval + sd['approval'], market=market + sd['market'],
-                growth=growth + sd['growth'], inflation=inflation,
+                growth=growth + sd['growth'], inflation=inflation, project_cost=project_delta,
+                project_growth=project_growth_delta,
                 real_wages=-0.010 * d['income'] - 0.006 * d['ni'] - 0.004 * d['fuel'] - 0.002 * d['council_tax'] - 0.001 * d['sugar_duty'],
                 unemployment=0.010 * d['ni'] + 0.004 * d['corp'] + 0.001 * d['financial_transaction'])
 
@@ -863,6 +929,151 @@ TREASURY_POLICY_OPTIONS = {
     "council_resilience": {"label":"Local government resilience fund", "department":"local_government", "capital":1.5, "annual":3.0, "productivity":0.015, "jobs":16000, "risk":"Uneven council capacity, legacy liabilities and weak project pipelines."},
 }
 TREASURY_FUNDING_OPTIONS = ("Use fiscal headroom", "Borrow to fund", "Raise tax receipts", "Reprioritise existing spending")
+
+
+def _project_period_index(term, year):
+    return (max(1, int(term)) - 1) * 5 + (max(1, min(5, int(year))) - 1)
+
+
+def project_financials(draft, year_offset=0):
+    """Current annual cost of projects in the draft, with capital charged only at launch."""
+    s = st.session_state
+    current_index = _project_period_index(s.get('term', 1), s.get('year', 1))
+    target_index = current_index + max(0, int(year_offset))
+    rows = []
+    capital_total = annual_total = 0.0
+    for project in draft.get('projects', []) or []:
+        start_index = _project_period_index(project.get('start_term', s.get('term', 1)),
+                                            project.get('start_year', s.get('year', 1)))
+        age = target_index - start_index
+        duration = max(1, min(5, int(project.get('duration_years', 5))))
+        if age < 0 or age >= duration:
+            continue
+        capital = max(0.0, float(project.get('capital_cost_bn', 0.0))) if age == 0 else 0.0
+        annual = max(0.0, float(project.get('annual_cost_bn', 0.0)))
+        capital_total += capital
+        annual_total += annual
+        rows.append({
+            'id': project.get('id', ''),
+            'key': project.get('policy_key', ''),
+            'label': project.get('label', 'Capital project'),
+            'department': project.get('department', 'other'),
+            'age': age,
+            'duration': duration,
+            'capital_cost': capital,
+            'annual_cost': annual,
+            'total_cost': capital + annual,
+            'productivity_contribution': round(
+                max(0.0, float(project.get('productivity_effect', 0.0))) * min(1.0, (age + 1) / 3.0), 4
+            ),
+            'status': project.get('status', 'Draft'),
+        })
+    return {
+        'capital_cost': round(capital_total, 2),
+        'annual_cost': round(annual_total, 2),
+        'total_cost': round(capital_total + annual_total, 2),
+        'rows': rows,
+    }
+
+
+def project_growth_effect(draft, year_offset=0):
+    """Cumulative productivity contribution from active projects, in growth percentage points."""
+    s = st.session_state
+    target_index = _project_period_index(s.get('term', 1), s.get('year', 1)) + max(0, int(year_offset))
+    total = 0.0
+    for project in draft.get('projects', []) or []:
+        start_index = _project_period_index(project.get('start_term', s.get('term', 1)),
+                                            project.get('start_year', s.get('year', 1)))
+        age = target_index - start_index
+        duration = max(1, min(5, int(project.get('duration_years', 5))))
+        if 0 <= age < duration:
+            total += max(0.0, float(project.get('productivity_effect', 0.0))) * min(1.0, (age + 1) / 3.0)
+    return round(total, 4)
+
+
+def make_policy_project(policy_key, scale=1.0, years=5):
+    """Turn a Treasury appraisal into a draft project entry without changing live finances."""
+    if policy_key not in TREASURY_POLICY_OPTIONS:
+        raise KeyError(policy_key)
+    item = TREASURY_POLICY_OPTIONS[policy_key]
+    scale = max(0.25, min(2.0, float(scale)))
+    years = max(3, min(5, int(years)))
+    s = st.session_state
+    term, year = int(s.get('term', 1)), int(s.get('year', 1))
+    existing = list(s.get('budget_project_draft', s.get('budget_applied', {}).get('projects', [])))
+    start_index = _project_period_index(term, year)
+    for project in existing:
+        if project.get('policy_key') != policy_key:
+            continue
+        project_start = _project_period_index(project.get('start_term', term), project.get('start_year', year))
+        age = start_index - project_start
+        if 0 <= age < max(1, min(5, int(project.get('duration_years', 5)))):
+            return None, f"{item['label']} is already in the project ledger for this term."
+    sequence = 1 + sum(1 for project in existing if project.get('policy_key') == policy_key)
+    return {
+        'id': f"{policy_key}-{term}-{year}-{sequence}",
+        'policy_key': policy_key,
+        'label': item['label'],
+        'department': item['department'],
+        'start_term': term,
+        'start_year': year,
+        'duration_years': years,
+        'capital_cost_bn': round(float(item['capital']) * scale, 2),
+        'annual_cost_bn': round(float(item['annual']) * scale, 2),
+        'productivity_effect': round(float(item['productivity']), 3),
+        'jobs': int(float(item['jobs']) * scale),
+        'risk': item['risk'],
+        'approved': False,
+        'approved_period': '',
+        'last_charged_period': '',
+        'status': 'Draft',
+    }, None
+
+
+def _next_fiscal_period(s):
+    term, year = int(s.get('term', 1)), int(s.get('year', 1))
+    return (term + 1, 1) if year >= 5 else (term, year + 1)
+
+
+def _charge_project_rollforward(s):
+    """Charge active projects' next-year running costs exactly once at Spring."""
+    projects = [dict(row) for row in s.get('budget_applied', {}).get('projects', [])]
+    next_term, next_year = _next_fiscal_period(s)
+    next_period = f"{next_term}:{next_year}"
+    next_index = _project_period_index(next_term, next_year)
+    next_growth_period = next_period
+    total = 0.0
+    growth_delta = 0.0
+    for project in projects:
+        if not project.get('approved'):
+            continue
+        start_index = _project_period_index(project.get('start_term', 1), project.get('start_year', 1))
+        age = next_index - start_index
+        duration = max(1, min(5, int(project.get('duration_years', 5))))
+        if age >= duration:
+            project['status'] = 'Complete'
+            continue
+        if age <= 0 or project.get('last_charged_period') == next_period:
+            continue
+        annual = max(0.0, float(project.get('annual_cost_bn', 0.0)))
+        total += annual
+        project['last_charged_period'] = next_period
+        project['status'] = 'In delivery'
+        if project.get('last_growth_period') != next_growth_period:
+            previous_share = min(1.0, max(0.0, age / 3.0))
+            next_share = min(1.0, (age + 1) / 3.0)
+            growth_delta += max(0.0, float(project.get('productivity_effect', 0.0))) * (next_share - previous_share)
+            project['last_growth_period'] = next_growth_period
+    if total > 0.0001:
+        s.headroom = round(float(s.get('headroom', 0.0)) - total, 1)
+        s.deficit = round(float(s.get('deficit', 0.0)) + total, 1)
+        s.message = str(s.get('message', '')) + f" Capital-project running costs add £{total:.2f}bn in the new financial year."
+    if abs(growth_delta) > 0.0001:
+        s.growth = round(float(s.get('growth', 0.0)) + growth_delta, 2)
+        s.message = str(s.get('message', '')) + f" Capital projects add {growth_delta:+.2f} percentage points to growth as productivity benefits build."
+    s.budget_applied['projects'] = projects
+    s['budget_project_draft'] = [dict(row) for row in projects]
+    return round(total, 2)
 
 
 def policy_costing_analysis(policy_key, funding="Use fiscal headroom", scale=1.0, years=5):
@@ -980,10 +1191,64 @@ def distributional_analysis(old, new):
         )
         for key in SPEND_DEFAULTS
     }
+
+    # Targeted tax schemes, policy spending and Treasury-costed capital projects
+    # must appear in the same incidence analysis as the core tax/spending levers.
+    old_schemes, new_schemes = scheme_financials(old), scheme_financials(new)
+    tax_policy_delta = {}
+    for key in TAX_POLICIES:
+        before = old_schemes["rows"].get(("tax", key), {}).get("current_net", 0.0)
+        after = new_schemes["rows"].get(("tax", key), {}).get("current_net", 0.0)
+        tax_policy_delta[key] = float(after) - float(before)
+
+    def policy_department(key):
+        item = SPEND_POLICIES.get(key, {})
+        declared = item.get("department")
+        if declared in SPEND_DEFAULTS:
+            return declared
+        sector = scheme_profile("spend", key, item)["sector"]
+        return {
+            "education": "education", "family": "welfare", "health": "health",
+            "housing": "housing", "transport": "transport", "energy": "climate",
+            "security": "defence", "skills": "skills", "business": "other",
+        }.get(sector, "other")
+
+    spend_policy_delta = {}
+    for key in SPEND_POLICIES:
+        before = old_schemes["rows"].get(("spend", key), {}).get("current_cost", 0.0)
+        after = new_schemes["rows"].get(("spend", key), {}).get("current_cost", 0.0)
+        delta = float(after) - float(before)
+        spend_policy_delta[key] = delta
+        spending_delta[policy_department(key)] += delta
+
+    old_projects = {row["id"]: row for row in project_financials(old)["rows"]}
+    new_projects = {row["id"]: row for row in project_financials(new)["rows"]}
+    project_delta_by_department = {}
+    for project_id in set(old_projects) | set(new_projects):
+        before = old_projects.get(project_id, {})
+        after = new_projects.get(project_id, {})
+        department = after.get("department", before.get("department", "other"))
+        delta = float(after.get("total_cost", 0.0)) - float(before.get("total_cost", 0.0))
+        project_delta_by_department[department] = project_delta_by_department.get(department, 0.0) + delta
+        spending_delta[department if department in SPEND_DEFAULTS else "other"] += delta
+
     household_costs = [0.0] * 10
     for key, delta in tax_delta.items():
         for index, share in enumerate(_HOUSEHOLD_TAX_PROFILES.get(key, [])):
             household_costs[index] += delta * share
+    tax_policy_profile_by_sector = {
+        "compliance": "income", "consumption": "vat", "wealth": "iht",
+        "property": "property", "business": "corp", "environment": "carbon_levy",
+        "transport": "air_passenger",
+    }
+    for key, delta in tax_policy_delta.items():
+        if abs(delta) < 0.0001:
+            continue
+        sector = scheme_profile("tax", key, TAX_POLICIES[key])["sector"]
+        profile_key = tax_policy_profile_by_sector.get(sector, "income")
+        for index, share in enumerate(_HOUSEHOLD_TAX_PROFILES.get(profile_key, _HOUSEHOLD_TAX_PROFILES["income"])):
+            household_costs[index] += delta * share
+
     household_benefits = [0.0] * 10
     for key, delta in spending_delta.items():
         for index, share in enumerate(_SPEND_DECILE_PROFILES.get(key, [])):
@@ -998,9 +1263,21 @@ def distributional_analysis(old, new):
             "Indicative net effect (£/household/year)": round((benefit-cost) * 1e9 / 2_800_000, 0),
         })
     business_rows = []
+    policy_sector_exposure = {
+        "business": [0.15, 0.15, 0.20, 0.20, 0.20, 0.10],
+        "compliance": [0.20, 0.15, 0.15, 0.15, 0.15, 0.20],
+        "wealth": [0.05, 0.05, 0.05, 0.15, 0.60, 0.10],
+        "property": [0.10, 0.15, 0.10, 0.20, 0.30, 0.15],
+        "environment": [0.05, 0.05, 0.30, 0.05, 0.05, 0.50],
+        "transport": [0.15, 0.15, 0.15, 0.15, 0.10, 0.30],
+        "consumption": [0.17, 0.17, 0.17, 0.17, 0.16, 0.16],
+    }
     for index, sector in enumerate(_BUSINESS_SECTORS):
         exposure = sum(delta * _BUSINESS_TAX_EXPOSURE.get(key, [0]*6)[index]
                        for key, delta in tax_delta.items())
+        for key, delta in tax_policy_delta.items():
+            scheme_sector = scheme_profile("tax", key, TAX_POLICIES[key])["sector"]
+            exposure += delta * policy_sector_exposure.get(scheme_sector, [1/6]*6)[index]
         business_rows.append({"Business sector": sector, "Estimated tax exposure (£bn/year)": round(exposure, 2)})
     regional_total = sum(spending_delta.values())
     regions = [
@@ -1014,8 +1291,17 @@ def distributional_analysis(old, new):
     return {
         "households": rows, "businesses": business_rows, "regions": regional_rows,
         "tax_change_bn": round(sum(tax_delta.values()), 2),
-        "department_spending_change_bn": round(regional_total, 2),
-        "caveat": "Stylised in-game incidence assumptions. Excludes policy-scheme delivery, behavioural responses, supply-chain effects and second-round macroeconomic changes.",
+        "policy_tax_change_bn": round(sum(tax_policy_delta.values()), 2),
+        "policy_spending_change_bn": round(sum(spend_policy_delta.values()), 2),
+        "capital_project_change_bn": round(sum(project_delta_by_department.values()), 2),
+        "department_spending_change_bn": round(sum(
+            float(st.session_state.dept_spend[key]) * (
+                _spend_rate_change(old.get("spend", {}).get(key, 0.0),
+                                   new.get("spend", {}).get(key, 0.0)) / 100.0
+            ) for key in SPEND_DEFAULTS
+        ), 2),
+        "total_spending_change_bn": round(regional_total, 2),
+        "caveat": "Stylised in-game incidence assumptions. Targeted tax schemes, spending programmes and capital projects are included using modelled sector and household incidence; behavioural responses, procurement spillovers and second-round macroeconomic effects are excluded.",
     }
 
 
@@ -1066,7 +1352,18 @@ def _apply(draft=None, annual_settlement=None):
             s.dept_spend[key] = round(float(s.dept_spend[key]) * (1.0 + rate_change / 100.0), 1)
     if annual_settlement:
         s.budget_settlement_applied_period = period
+    # Mark newly authorised projects as approved and record the period whose
+    # capital and first-year running costs are charged by this Budget.
+    old_project_ids = {str(row.get('id')) for row in old.get('projects', [])}
+    for project in new.get('projects', []):
+        if str(project.get('id')) not in old_project_ids and not project.get('approved'):
+            project['approved'] = True
+            project['approved_period'] = period
+            project['last_charged_period'] = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+            project['last_growth_period'] = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+            project['status'] = 'In delivery'
     s.budget_applied = new
+    s['budget_project_draft'] = [dict(row) for row in new.get('projects', [])]
     # Enact tax thresholds only as part of the delivered Budget package.
     approved_thresholds = new.get('thresholds', {})
     for key in ('personal_allowance', 'higher_rate_threshold', 'additional_rate_threshold',
@@ -1109,6 +1406,7 @@ def _sync_editor_controls(source=None):
     tax_pol = source.get('tax_pol', {}) or {}
     spend_pol = source.get('spend_pol', {}) or {}
     thresholds = source.get('thresholds', {}) or {}
+    s['budget_project_draft'] = [dict(row) for row in source.get('projects', [])]
     threshold_defaults = defaults()['thresholds']
 
     s['budget_strategy'] = source.get('strategy', 'balanced')
@@ -1154,6 +1452,7 @@ def _reset():
     for k, v in s.budget_applied['spend_pol'].items(): s[f'bsp_{k}'] = v
     for key, value in s.budget_applied.get('thresholds', {}).items():
         s[f'bt_threshold_{key}'] = value
+    s['budget_project_draft'] = [dict(row) for row in s.budget_applied.get('projects', [])]
 
 
 
@@ -1350,6 +1649,14 @@ def commit_budget(ayes, event_type='Spring Budget'):
         'thresholds': dict(delivered.get('thresholds', {})),
         'spend': dict(delivered.get('spend', {})), 'spend_names': spending_names,
         'revenue_schemes': revenue_schemes, 'spending_schemes': spending_schemes,
+        'projects': [{
+            'label': row.get('label', 'Capital project'),
+            'department': row.get('department', ''),
+            'capital_cost_bn': float(row.get('capital_cost_bn', 0.0)),
+            'annual_cost_bn': float(row.get('annual_cost_bn', 0.0)),
+            'duration_years': int(row.get('duration_years', 5)),
+        } for row in delivered.get('projects', [])],
+        'project_delivery_cost': round(float(project_financials(delivered)['total_cost']), 2),
         'scheme_delivery': {
             'current_net_receipts': round(float(scheme_financials(delivered)['tax_net']), 2),
             'current_programme_cost': round(float(scheme_financials(delivered)['spend_cost']), 2),
@@ -1426,6 +1733,12 @@ def forecast(b, years=3, scenario=None):
         # Year 1 includes the current Budget settlement. Repeat that same rate in
         # Years 2 and 3 against each already-adjusted cash baseline.
         if i > 1:
+            recurring_project_cost = float(project_financials(b, year_offset=i - 1)['annual_cost'])
+            if recurring_project_cost > 0.001:
+                v['headroom'] = round(v['headroom'] - recurring_project_cost, 1)
+                v['deficit'] = round(max(0.0, v['deficit'] + recurring_project_cost), 1)
+            project_growth_change = project_growth_effect(b, year_offset=i - 1) - project_growth_effect(b, year_offset=i - 2)
+            v['growth'] = round(float(v['growth']) + project_growth_change, 2)
             departmental_cash_change = 0.0
             for key in SPEND_DEFAULTS:
                 old_cash = forecast_department_spend[key]
@@ -1504,6 +1817,8 @@ def forecast(b, years=3, scenario=None):
                          investment_income=round(investment_income, 2),
                          scheme_tax_net=round(float(after_fin['tax_net']), 2),
                          scheme_spend_cost=round(float(after_fin['spend_cost']), 2),
+                         project_cost=round(float(project_financials(b, year_offset=i - 1)['total_cost']), 2),
+                         project_productivity=round(project_growth_effect(b, year_offset=i - 1), 4),
                          scheme_net_balance=round(round(float(after_fin['tax_net']), 2) - round(float(after_fin['spend_cost']), 2), 2),
                          nhs_pressure=nhs_pressure,
                          public_pay_pressure=public_pay_pressure, pension_cost=pension_cost,
@@ -1550,6 +1865,7 @@ def apply_ongoing():
     s.market_conf = round(_clip(float(s.market_conf) + next_effects['market'] - previous_effects['market']), 1)
     s.growth = round(float(s.growth) + next_effects['growth'] - previous_effects['growth'], 2)
     s.budget_scheme_delivery = next_status
+    _charge_project_rollforward(s)
     if newly_maturing:
         s.message = str(s.get('message', '')) + f" Scheme delivery advanced this year: {', '.join(newly_maturing[:3])}{' and other programmes' if len(newly_maturing) > 3 else ''}."
     # Approved departmental percentages remain as the starting setting for the
@@ -1776,6 +2092,8 @@ def render_forecast(cur):
         'Net growth dividend': f"£{r['growth_receipts']:.1f}B", 'Investment income': f"£{r['investment_income']:.1f}B",
         'Scheme tax receipts': f"£{r['scheme_tax_net']:.1f}B",
         'Scheme spending cost': f"£{r['scheme_spend_cost']:.1f}B",
+        'Capital projects': f"£{r.get('project_cost', 0.0):.1f}B",
+        'Project productivity contribution': f"{r.get('project_productivity', 0.0):.3f}pp",
         'Net scheme balance': f"£{r['scheme_net_balance']:+.1f}B",
         'Headroom': f"£{r['headroom']:.1f}B", 'Deficit': f"£{r['deficit']:.0f}B", 'Debt': f"{r['debt']:.1f}%",
         'Gilts': f"{r['gilt']:.1f}%", 'Risk premium': f"+{r['gilt_risk_premium']:.2f}pp",
@@ -1869,6 +2187,17 @@ def render_red_book(cur):
                           'Change': f'{now - was:+g}', 'Revenue (£bn)': round(revenues(cur)[k], 1)})
         st.markdown('**Taxes: last Budget vs this draft**')
         st.dataframe(pd.DataFrame(trows), hide_index=True, use_container_width=True)
+        projects = project_financials(cur)
+        if projects['rows']:
+            st.markdown('**Capital projects and five-year commitments**')
+            st.dataframe([{
+                'Project': row['label'],
+                'Department': SPEND_DEFAULTS.get(row['department'], {}).get('label', row['department']),
+                'Capital this year (£bn)': round(row['capital_cost'], 2),
+                'Annual running cost (£bn)': round(row['annual_cost'], 2),
+                'Duration': f"{row['duration']} years",
+                'Status': row['status'],
+            } for row in projects['rows']], hide_index=True, use_container_width=True)
 
 
 def render(submit=None, after_summary=None):
@@ -1923,46 +2252,47 @@ def render(submit=None, after_summary=None):
     # Contingency reserve is a Budget allocation, not free additional headroom.
     reserve_balance = max(0.0, float(s.get('budget_contingency_reserve', 0.0)))
     reserve_target = max(0.0, min(30.0, float(s.get('budget_contingency_target', reserve_balance))))
-    st.markdown("### Contingency reserve")
-    st.caption("Ring-fence funding for emergencies such as energy support, natural disasters or financial instability. It is funded from fiscal headroom, so setting money aside reduces the unallocated margin against your fiscal rule.")
-    reserve_cols = st.columns(3, gap="medium")
-    reserve_cols[0].metric("Current reserve", f"£{reserve_balance:.1f}bn")
-    reserve_cols[1].metric("Proposed reserve", f"£{reserve_target:.1f}bn",
-                           delta=f"£{reserve_target - reserve_balance:+.1f}bn to ring-fence",
-                           delta_color="inverse")
-    available_before_reserve = float(s.headroom) + float(imp.get("headroom", 0.0))
-    projected_unallocated = available_before_reserve - (reserve_target - reserve_balance)
-    reserve_cols[2].metric("Headroom after reserve", f"£{projected_unallocated:.1f}bn",
-                           delta=f"£{projected_unallocated - available_before_reserve:+.1f}bn",
-                           delta_color="inverse")
-    if "budget_contingency_target" not in s:
-        s["budget_contingency_target"] = reserve_balance
-    else:
-        s["budget_contingency_target"] = max(0.0, min(30.0, float(s["budget_contingency_target"])))
-    st.slider("Set aside for the contingency reserve (£bn)", min_value=0.0, max_value=30.0,
-              step=0.5, key="budget_contingency_target",
-              help="This is a proposed allocation. It only changes the live reserve when the Budget is authorised.")
-    proposed = float(s.get("budget_contingency_target", reserve_balance))
-    proposed_headroom = available_before_reserve - (proposed - reserve_balance)
-    if proposed_headroom < 0:
-        st.error(f"This reserve would take projected fiscal headroom below zero (£{proposed_headroom:.1f}bn). Reduce the allocation or improve the Budget.")
-    elif proposed > reserve_balance:
-        st.info(f"£{proposed - reserve_balance:.1f}bn will be ring-fenced when this Budget is authorised. It will no longer count as unallocated fiscal headroom.")
-    elif proposed < reserve_balance:
-        st.info(f"£{reserve_balance - proposed:.1f}bn will be released back into fiscal headroom when this Budget is authorised.")
-    else:
-        st.caption("No change to the approved contingency reserve.")
-    with st.expander("Reserve history", expanded=False):
-        history = list(s.get("budget_reserve_history", []))
-        if history:
-            st.dataframe([{"Term": row.get("term"), "Year": row.get("year"),
-                           "Change (£bn)": f"{float(row.get('change', 0)):+.1f}",
-                           "Reserve balance (£bn)": f"{float(row.get('balance', 0)):.1f}"}
-                          for row in reversed(history[-10:])], hide_index=True, use_container_width=True)
+    with st.expander(f"Contingency reserve · £{reserve_balance:.1f}bn currently ring-fenced", expanded=False):
+        st.markdown("### Contingency reserve")
+        st.caption("Ring-fence funding for emergencies such as energy support, natural disasters or financial instability. It is funded from fiscal headroom, so setting money aside reduces the unallocated margin against your fiscal rule.")
+        reserve_cols = st.columns(3, gap="medium")
+        reserve_cols[0].metric("Current reserve", f"£{reserve_balance:.1f}bn")
+        reserve_cols[1].metric("Proposed reserve", f"£{reserve_target:.1f}bn",
+                               delta=f"£{reserve_target - reserve_balance:+.1f}bn to ring-fence",
+                               delta_color="inverse")
+        available_before_reserve = float(s.headroom) + float(imp.get("headroom", 0.0))
+        projected_unallocated = available_before_reserve - (reserve_target - reserve_balance)
+        reserve_cols[2].metric("Headroom after reserve", f"£{projected_unallocated:.1f}bn",
+                               delta=f"£{projected_unallocated - available_before_reserve:+.1f}bn",
+                               delta_color="inverse")
+        if "budget_contingency_target" not in s:
+            s["budget_contingency_target"] = reserve_balance
         else:
-            st.caption("No contingency reserve allocations have been made yet.")
-
-    with st.expander('Treasury briefing · three-year outlook', expanded=False):
+            s["budget_contingency_target"] = max(0.0, min(30.0, float(s["budget_contingency_target"])))
+        st.slider("Set aside for the contingency reserve (£bn)", min_value=0.0, max_value=30.0,
+                  step=0.5, key="budget_contingency_target",
+                  help="This is a proposed allocation. It only changes the live reserve when the Budget is authorised.")
+        proposed = float(s.get("budget_contingency_target", reserve_balance))
+        proposed_headroom = available_before_reserve - (proposed - reserve_balance)
+        if proposed_headroom < 0:
+            st.error(f"This reserve would take projected fiscal headroom below zero (£{proposed_headroom:.1f}bn). Reduce the allocation or improve the Budget.")
+        elif proposed > reserve_balance:
+            st.info(f"£{proposed - reserve_balance:.1f}bn will be ring-fenced when this Budget is authorised. It will no longer count as unallocated fiscal headroom.")
+        elif proposed < reserve_balance:
+            st.info(f"£{reserve_balance - proposed:.1f}bn will be released back into fiscal headroom when this Budget is authorised.")
+        else:
+            st.caption("No change to the approved contingency reserve.")
+        with st.expander("Reserve history", expanded=False):
+            history = list(s.get("budget_reserve_history", []))
+            if history:
+                st.dataframe([{"Term": row.get("term"), "Year": row.get("year"),
+                               "Change (£bn)": f"{float(row.get('change', 0)):+.1f}",
+                               "Reserve balance (£bn)": f"{float(row.get('balance', 0)):.1f}"}
+                              for row in reversed(history[-10:])], hide_index=True, use_container_width=True)
+            else:
+                st.caption("No contingency reserve allocations have been made yet.")
+    
+        with st.expander('Treasury briefing · three-year outlook', expanded=False):
         briefing_rows = forecast(cur, years=3)
         downside_rows = forecast(cur, years=3, scenario={'growth': -0.75, 'inflation': 0.50, 'gilt': 0.35})
         lowest_headroom = min(float(row['headroom']) for row in briefing_rows)
@@ -2054,187 +2384,6 @@ def render(submit=None, after_summary=None):
         st.caption("Election outlook is an indicative national approval signal, not a seat forecast. It excludes constituency swings, opposition performance, campaign events and coalition arithmetic.")
 
 
-    with st.expander("Tax Reform Centre · build a package", expanded=False):
-        st.caption("Model individual tax reforms before delivering the Budget. Changes here update the working Budget draft only; they do not take effect until you authorise it.")
-        tax_keys = list(TAXES)
-        tax_key = st.selectbox("Choose a tax instrument", tax_keys,
-                               format_func=lambda key: TAXES[key]["label"],
-                               key="tax_reform_instrument")
-        tax_meta = TAXES[tax_key]
-        current_tax_rate = float(cur.get("tax", {}).get(tax_key, tax_meta["default"]))
-        unit = str(tax_meta.get("unit", "%"))
-        proposed_tax_rate = st.slider(
-            f"Proposed rate ({unit})",
-            min_value=float(tax_meta["lo"]), max_value=float(tax_meta["hi"]),
-            value=max(float(tax_meta["lo"]), min(float(tax_meta["hi"]), current_tax_rate)),
-            step=float(tax_meta.get("step", 1)), key=f"tax_reform_rate_{tax_key}",
-            help=tax_meta.get("help", "Change this rate in the working Budget draft."),
-        )
-        cur.setdefault("tax", {})[tax_key] = float(proposed_tax_rate)
-        delta_rate = float(proposed_tax_rate) - current_tax_rate
-        if abs(delta_rate) < 0.0001:
-            st.info("No change proposed for this tax instrument.")
-        elif delta_rate > 0:
-            st.warning(f"This proposal raises {tax_meta['short']} by {delta_rate:+.2f} {unit}.")
-        else:
-            st.info(f"This proposal cuts {tax_meta['short']} by {delta_rate:+.2f} {unit}.")
-        reform_impact = impact(s.budget_applied, cur)
-        reform_cols = st.columns(3, gap="medium")
-        reform_cols[0].metric("Estimated annual receipts change", f"£{float(reform_impact.get('revenue', 0.0)):+.1f}bn")
-        reform_cols[1].metric("Projected fiscal headroom change", f"£{float(reform_impact.get('headroom', 0.0)):+.1f}bn")
-        reform_cols[2].metric("Modelled growth effect", f"{float(reform_impact.get('growth', 0.0)):+.2f}pp")
-        st.caption("Simplified in-game estimates, not official OBR costings.")
-        st.markdown("**Reform package currently in the working draft**")
-        changed_tax_rows = []
-        for key, meta in TAXES.items():
-            old_rate = float(s.budget_applied.get("tax", {}).get(key, meta["default"]))
-            new_rate = float(cur.get("tax", {}).get(key, old_rate))
-            if abs(new_rate - old_rate) > 0.0001:
-                changed_tax_rows.append({"Tax": meta["short"],
-                    "Previous": f"{old_rate:g} {meta.get('unit', '%')}",
-                    "Proposed": f"{new_rate:g} {meta.get('unit', '%')}",
-                    "Change": f"{new_rate-old_rate:+g} {meta.get('unit', '%')}"})
-        if changed_tax_rows:
-            st.dataframe(changed_tax_rows, hide_index=True, use_container_width=True)
-        else:
-            st.caption("No tax changes have been added to this draft yet.")
-        if st.button("Reset tax reforms to approved rates", key="reset_tax_reform_package"):
-            for key in TAXES:
-                cur["tax"][key] = float(s.budget_applied.get("tax", {}).get(key, TAXES[key]["default"]))
-                st.session_state[f"bt_{key}"] = cur["tax"][key]
-            st.rerun()
-
-
-    with st.expander("Distributional Analysis Centre · who gains and loses?", expanded=False):
-        st.caption("Compare the working Budget draft with the approved package. Estimates are indicative first-round effects; opening this analysis does not enact anything.")
-        distribution = distributional_analysis(s.budget_applied, cur)
-        st.markdown("**Households · estimated annual effect per household**")
-        st.dataframe(pd.DataFrame(distribution["households"]), hide_index=True, use_container_width=True)
-        ranked_groups = sorted(distribution["households"], key=lambda row: row["Indicative net effect (£/household/year)"], reverse=True)
-        if ranked_groups:
-            best, worst = ranked_groups[0], ranked_groups[-1]
-            st.caption(f"Most favourable modelled group: {best['Income group']} ({best['Indicative net effect (£/household/year)']:+,.0f} per household). Most exposed: {worst['Income group']} ({worst['Indicative net effect (£/household/year)']:+,.0f} per household).")
-        left_dist, right_dist = st.columns(2, gap="medium")
-        with left_dist:
-            st.markdown("**Business sectors · tax exposure**")
-            st.dataframe(pd.DataFrame(distribution["businesses"]), hide_index=True, use_container_width=True)
-        with right_dist:
-            st.markdown("**Regions · changed departmental spending**")
-            st.dataframe(pd.DataFrame(distribution["regions"]), hide_index=True, use_container_width=True)
-        st.caption(distribution["caveat"])
-
-    with st.expander("Treasury Policy Costing Centre · appraise before approval", expanded=False):
-        st.caption("A separate policy sandbox for estimating the cost, funding route, delivery risks and five-year fiscal consequences of a major programme. It does not change the live economy or either approved Budget ledger.")
-        policy_keys = list(TREASURY_POLICY_OPTIONS)
-        policy_labels = {key: TREASURY_POLICY_OPTIONS[key]["label"] for key in policy_keys}
-        selected_policy = st.selectbox("Policy to appraise", policy_keys,
-                                       format_func=lambda key: policy_labels[key],
-                                       key="treasury_costing_policy")
-        funding = st.selectbox("Proposed funding route", TREASURY_FUNDING_OPTIONS,
-                               key="treasury_costing_funding")
-        scale = st.slider("Programme scale", min_value=0.25, max_value=2.0, value=1.0,
-                          step=0.25, key="treasury_costing_scale",
-                          help="Scale the modelled capital and recurring costs together.")
-        appraisal = policy_costing_analysis(selected_policy, funding, scale, years=5)
-        meta = TREASURY_POLICY_OPTIONS[selected_policy]
-        costing_cols = st.columns(4, gap="small")
-        costing_cols[0].metric("Initial capital", f"£{appraisal['capital_cost']:.1f}bn")
-        costing_cols[1].metric("Annual running cost", f"£{appraisal['annual_cost']:.1f}bn")
-        costing_cols[2].metric("Five-year gross cost", f"£{appraisal['five_year_gross_cost']:.1f}bn")
-        costing_cols[3].metric("Indicative jobs supported", f"{appraisal['jobs']:,}")
-        st.markdown("**Five-year fiscal profile**")
-        st.dataframe(pd.DataFrame(appraisal["rows"]), hide_index=True, use_container_width=True)
-        final_row = appraisal["rows"][-1]
-        department = meta["department"]
-        department_label = SPEND_DEFAULTS.get(department, {}).get("label", department.replace("_", " ").title())
-        current_department_cash = float(s.dept_spend.get(department, 0.0))
-        st.markdown("**Departmental and delivery assessment**")
-        st.write(f"Lead department: **{department_label}** · Current annual cash allocation: **£{current_department_cash:.1f}bn**.")
-        st.write(f"Delivery risk: {appraisal['risk']}")
-        if funding == "Reprioritise existing spending":
-            st.warning("This is fiscally neutral only if existing programmes are cut or displaced. The opportunity cost to those services is not included in the headline policy cost.")
-        elif funding == "Raise tax receipts":
-            st.info("The model assumes tax receipts cover 75% of recurring costs. This is a scenario assumption, not a specified tax measure or guaranteed revenue.")
-        elif funding == "Borrow to fund":
-            st.warning("Borrowing protects near-term headroom in this sandbox but increases debt and annual interest costs.")
-        else:
-            st.info("The full gross programme cost is charged against fiscal headroom as it is delivered.")
-        st.metric("Year-five illustrative debt", f"£{float(final_row['Illustrative debt (£bn)']):,.1f}bn",
-                  delta=f"£{float(final_row['Illustrative debt (£bn)']) - float(s.debt):+.1f}bn vs current")
-        st.caption(appraisal["caveat"])
-        compare_policy = st.selectbox("Compare with another policy", policy_keys,
-                                      index=(policy_keys.index(selected_policy) + 1) % len(policy_keys),
-                                      format_func=lambda key: policy_labels[key],
-                                      key="treasury_costing_compare")
-        comparison = policy_costing_analysis(compare_policy, funding, scale, years=5)
-        st.markdown("**Side-by-side programme comparison**")
-        st.dataframe([
-            {"Measure": "Five-year gross cost (£bn)", "Selected policy": appraisal["five_year_gross_cost"], "Comparator": comparison["five_year_gross_cost"]},
-            {"Measure": "Initial capital (£bn)", "Selected policy": appraisal["capital_cost"], "Comparator": comparison["capital_cost"]},
-            {"Measure": "Annual running cost (£bn)", "Selected policy": appraisal["annual_cost"], "Comparator": comparison["annual_cost"]},
-            {"Measure": "Year-five borrowing (£bn)", "Selected policy": final_row["Additional borrowing (£bn)"], "Comparator": comparison["rows"][-1]["Additional borrowing (£bn)"]},
-            {"Measure": "Year-five productivity effect (pp)", "Selected policy": final_row["Productivity effect (pp)"], "Comparator": comparison["rows"][-1]["Productivity effect (pp)"]},
-        ], hide_index=True, use_container_width=True)
-
-    with st.expander('Compare alternative Budgets', expanded=False):
-        st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
-        slots = dict(s.get('budget_alternatives', {}))
-        alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
-        save_col, clear_col = st.columns([1, 1])
-        if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
-            if alt_name not in slots and len(slots) >= 3:
-                st.warning("You can keep three alternatives. Replace or delete one before saving another.")
-            else:
-                save_budget_alternative(alt_name, cur)
-                st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
-                st.rerun()
-        if slots:
-            if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
-                slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
-            comparison = []
-            for name, item in slots.items():
-                package = item.get('draft', {})
-                totals_rev, totals_spend = totals(package)
-                package_impact = impact(s.budget_applied, package)
-                package_ayes = projected_ayes(package)
-                comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
-                    "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
-                    "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
-            st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
-            if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
-                selected = slots.get(alt_name)
-                if selected:
-                    _reset()
-                    for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
-                    for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
-                    for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
-                    for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
-                    s.budget_strategy = selected['draft'].get('strategy', 'balanced')
-                    st.success(f"{alt_name} loaded into the live draft.")
-                    st.rerun()
-        st.divider()
-
-
-    st.markdown('### Choose your fiscal strategy')
-    strategy_keys = list(FISCAL_STRATEGIES)
-    st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
-    st.caption(FISCAL_STRATEGIES[s.budget_strategy]['description'] + ' Its effects feed into the draft and forecast.')
-    st.text_input("Chancellor's message to the country (optional)", key='budget_message', max_chars=180, placeholder='e.g. A fair deal for working people and a stronger economy')
-    with st.expander('ℹ️ Budget glossary: what the figures mean', expanded=False):
-        g1, g2, g3 = st.columns(3, gap='medium')
-        with g1:
-            st.markdown('**Income** — money government expects to collect. **Spending** — money paid across services, benefits, pensions and debt interest.')
-            st.markdown('**Deficit / surplus** — deficit means spending is higher than income; surplus means income is higher.')
-            st.markdown('**Fiscal headroom** — the safety margin against the fiscal rule. Below £0B means the forecast breaks that rule.')
-        with g2:
-            st.markdown('**Public approval** — a simplified measure of voters’ support; it feeds into polls and political stability.')
-            st.markdown('**Market confidence** — a simplified investor-confidence score. Falling confidence can make government borrowing more expensive.')
-            st.markdown('**Growth** — change in real economic output. **Inflation** — the rate prices rise; high inflation reduces purchasing power.')
-        with g3:
-            st.markdown('**Projected ayes** — estimated MPs voting for the Budget. The model uses 326 as the majority threshold.')
-            st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
-            st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
-
     thresholds_for_validation = cur.get('thresholds', {})
     thresholds_valid = (
         float(thresholds_for_validation.get('personal_allowance', 12570)) < float(thresholds_for_validation.get('higher_rate_threshold', 50270))
@@ -2263,6 +2412,16 @@ def render(submit=None, after_summary=None):
         last = history[-1]
         with st.expander(f"📜 Last delivered Budget · {last.get('label', 'Previous Budget')}", expanded=False):
             st.caption(f"Strategy: {FISCAL_STRATEGIES.get(last.get('strategy'), FISCAL_STRATEGIES['balanced'])['label']} · Commons: {last.get('ayes', 0)} ayes · Headroom after delivery: £{last.get('headroom_after', 0):.1f}bn")
+            recorded_projects = last.get('projects', [])
+            if recorded_projects:
+                st.markdown("**Capital projects authorised**")
+                st.dataframe([{
+                    "Project": row.get("label", "Capital project"),
+                    "Department": SPEND_DEFAULTS.get(row.get("department"), {}).get("label", row.get("department", "")),
+                    "Capital (£bn)": row.get("capital_cost_bn", 0.0),
+                    "Annual running (£bn)": row.get("annual_cost_bn", 0.0),
+                    "Duration": f"{row.get('duration_years', 5)} years",
+                } for row in recorded_projects], hide_index=True, use_container_width=True)
             scheme_record = last.get('scheme_delivery', {})
             if scheme_record:
                 st.caption(
@@ -2295,11 +2454,16 @@ def render(submit=None, after_summary=None):
     else:
         st.info("Your previous Budget decisions will be recorded here after your first Budget passes the Commons.")
 
-    t_tax, t_spend, t_schemes, t_whips, t_charts = st.tabs(
-        ['Tax & revenue', 'Departmental spending', 'Policy programmes', 'Parliament & forecast', 'Red Book & charts'])
+    t_tax, t_spend, t_schemes, t_impact, t_whips, t_charts = st.tabs(
+        ['Tax & revenue', 'Departmental spending', 'Policy programmes', 'Impact & projects', 'Parliament & forecast', 'Red Book'])
 
     with t_tax:
-        st.caption('Set tax rates, thresholds and revenue measures for this Budget. Nothing is enacted until the Budget passes the Commons.')
+        st.caption('Tax reform is made directly in the tax controls below. Rate changes, threshold measures and targeted revenue schemes are all included in the same receipts ledger and fiscal forecast.')
+        with st.expander('Detailed receipts ledger · approved vs proposed', expanded=False):
+            ledger = _ledger_comparison(applied, cur, _revenue_ledger)
+            st.dataframe(pd.DataFrame(ledger), hide_index=True, use_container_width=True)
+            ledger_total = sum(row['Proposed (£bn)'] for row in ledger)
+            st.caption(f"Proposed receipts ledger: £{ledger_total:.2f}bn · Budget summary: £{rev_now:.2f}bn.")
         with st.expander('Income-tax thresholds & fiscal drag', expanded=True):
             st.caption('Threshold changes affect how much income is taxed at each rate. Freezing thresholds can raise receipts over time through fiscal drag.')
             tc1, tc2, tc3 = st.columns(3)
@@ -2329,6 +2493,12 @@ def render(submit=None, after_summary=None):
         st.caption(f'Tax take {rev_now / GDP_BN * 100:.1f}% of GDP. The Laffer effect is a simplified game rule: very high rates may raise less extra revenue than expected.')
 
     with t_spend:
+        st.caption('Departmental settlements, policy programmes, capital projects and debt interest all feed into this spending ledger.')
+        with st.expander('Detailed spending ledger · approved vs proposed', expanded=False):
+            ledger = _ledger_comparison(applied, cur, _spending_ledger, annual_settlement=annual_settlement)
+            st.dataframe(pd.DataFrame(ledger), hide_index=True, use_container_width=True)
+            ledger_total = sum(row['Proposed (£bn)'] for row in ledger)
+            st.caption(f"Proposed spending ledger: £{ledger_total:.2f}bn · Budget summary: £{spend_now:.2f}bn.")
         spend_values = {k: float(cur['spend'].get(k, 0.0)) for k in SPEND_DEFAULTS}
         cut_count = sum(1 for v in spend_values.values() if v < -0.05)
         rise_count = sum(1 for v in spend_values.values() if v > 0.05)
@@ -2473,6 +2643,186 @@ def render(submit=None, after_summary=None):
             render_forecast(cur)
         with right:
             render_whips(cur)
+        st.divider()
+        st.markdown('### Choose your fiscal strategy')
+        strategy_keys = list(FISCAL_STRATEGIES)
+        st.selectbox('Overall approach', strategy_keys, format_func=lambda k: FISCAL_STRATEGIES[k]['label'], index=strategy_keys.index(s.budget_strategy), key='budget_strategy')
+        st.caption(FISCAL_STRATEGIES[s.budget_strategy]['description'] + ' Its effects feed into the draft and forecast.')
+        st.text_input("Chancellor's message to the country (optional)", key='budget_message', max_chars=180, placeholder='e.g. A fair deal for working people and a stronger economy')
+        with st.expander('ℹ️ Budget glossary: what the figures mean', expanded=False):
+            g1, g2, g3 = st.columns(3, gap='medium')
+            with g1:
+                st.markdown('**Income** — money government expects to collect. **Spending** — money paid across services, benefits, pensions and debt interest.')
+                st.markdown('**Deficit / surplus** — deficit means spending is higher than income; surplus means income is higher.')
+                st.markdown('**Fiscal headroom** — the safety margin against the fiscal rule. Below £0B means the forecast breaks that rule.')
+            with g2:
+                st.markdown('**Public approval** — a simplified measure of voters’ support; it feeds into polls and political stability.')
+                st.markdown('**Market confidence** — a simplified investor-confidence score. Falling confidence can make government borrowing more expensive.')
+                st.markdown('**Growth** — change in real economic output. **Inflation** — the rate prices rise; high inflation reduces purchasing power.')
+            with g3:
+                st.markdown('**Projected ayes** — estimated MPs voting for the Budget. The model uses 326 as the majority threshold.')
+                st.markdown('**OBR forecast** — a central-case projection, not a guarantee; it assumes no new crisis or surprise.')
+                st.markdown('**Laffer effect** — raising a tax rate can eventually reduce extra revenue if behaviour changes or activity falls.')
+
+
+    with t_impact:
+        with st.expander("Distributional Analysis Centre · who gains and loses?", expanded=False):
+            st.caption("Compare the working Budget draft with the approved package. Estimates are indicative first-round effects; opening this analysis does not enact anything.")
+            distribution = distributional_analysis(s.budget_applied, cur)
+            dist_cols = st.columns(3, gap="small")
+            dist_cols[0].metric("Tax-policy measures", f"£{distribution['policy_tax_change_bn']:+.2f}bn")
+            dist_cols[1].metric("Policy spending", f"£{distribution['policy_spending_change_bn']:+.2f}bn")
+            dist_cols[2].metric("Capital projects", f"£{distribution['capital_project_change_bn']:+.2f}bn")
+            st.markdown("**Households · estimated annual effect per household**")
+            st.dataframe(pd.DataFrame(distribution["households"]), hide_index=True, use_container_width=True)
+            ranked_groups = sorted(distribution["households"], key=lambda row: row["Indicative net effect (£/household/year)"], reverse=True)
+            if ranked_groups:
+                best, worst = ranked_groups[0], ranked_groups[-1]
+                st.caption(f"Most favourable modelled group: {best['Income group']} ({best['Indicative net effect (£/household/year)']:+,.0f} per household). Most exposed: {worst['Income group']} ({worst['Indicative net effect (£/household/year)']:+,.0f} per household).")
+            left_dist, right_dist = st.columns(2, gap="medium")
+            with left_dist:
+                st.markdown("**Business sectors · tax exposure**")
+                st.dataframe(pd.DataFrame(distribution["businesses"]), hide_index=True, use_container_width=True)
+            with right_dist:
+                st.markdown("**Regions · changed departmental spending**")
+                st.dataframe(pd.DataFrame(distribution["regions"]), hide_index=True, use_container_width=True)
+            st.caption(distribution["caveat"])
+
+        with st.expander("Treasury Policy Costing Centre · appraise before approval", expanded=False):
+            st.caption("Appraise a major programme, then add it to the working Budget. It remains a draft until the Budget passes the Commons; its first-year capital and annual running costs are charged to the spending ledger, while productivity benefits phase in over time.")
+            policy_keys = list(TREASURY_POLICY_OPTIONS)
+            policy_labels = {key: TREASURY_POLICY_OPTIONS[key]["label"] for key in policy_keys}
+            selected_policy = st.selectbox("Policy to appraise", policy_keys,
+                                           format_func=lambda key: policy_labels[key],
+                                           key="treasury_costing_policy")
+            funding = st.selectbox("Proposed funding route", TREASURY_FUNDING_OPTIONS,
+                                   key="treasury_costing_funding")
+            scale = st.slider("Programme scale", min_value=0.25, max_value=2.0, value=1.0,
+                              step=0.25, key="treasury_costing_scale",
+                              help="Scale the modelled capital and recurring costs together.")
+            appraisal = policy_costing_analysis(selected_policy, funding, scale, years=5)
+            meta = TREASURY_POLICY_OPTIONS[selected_policy]
+            costing_cols = st.columns(4, gap="small")
+            costing_cols[0].metric("Initial capital", f"£{appraisal['capital_cost']:.1f}bn")
+            costing_cols[1].metric("Annual running cost", f"£{appraisal['annual_cost']:.1f}bn")
+            costing_cols[2].metric("Five-year gross cost", f"£{appraisal['five_year_gross_cost']:.1f}bn")
+            costing_cols[3].metric("Indicative jobs supported", f"{appraisal['jobs']:,}")
+            st.markdown("**Five-year fiscal profile**")
+            st.dataframe(pd.DataFrame(appraisal["rows"]), hide_index=True, use_container_width=True)
+            final_row = appraisal["rows"][-1]
+            department = meta["department"]
+            department_label = SPEND_DEFAULTS.get(department, {}).get("label", department.replace("_", " ").title())
+            current_department_cash = float(s.dept_spend.get(department, 0.0))
+            st.markdown("**Departmental and delivery assessment**")
+            st.write(f"Lead department: **{department_label}** · Current annual cash allocation: **£{current_department_cash:.1f}bn**.")
+            st.write(f"Delivery risk: {appraisal['risk']}")
+            if funding == "Reprioritise existing spending":
+                st.warning("This is fiscally neutral only if existing programmes are cut or displaced. The opportunity cost to those services is not included in the headline policy cost.")
+            elif funding == "Raise tax receipts":
+                st.info("The model assumes tax receipts cover 75% of recurring costs. This is a scenario assumption, not a specified tax measure or guaranteed revenue.")
+            elif funding == "Borrow to fund":
+                st.warning("Borrowing protects near-term headroom in this sandbox but increases debt and annual interest costs.")
+            else:
+                st.info("The full gross programme cost is charged against fiscal headroom as it is delivered.")
+            st.metric("Year-five illustrative debt", f"£{float(final_row['Illustrative debt (£bn)']):,.1f}bn",
+                      delta=f"£{float(final_row['Illustrative debt (£bn)']) - float(s.debt):+.1f}bn vs current")
+            st.caption(appraisal["caveat"])
+            compare_policy = st.selectbox("Compare with another policy", policy_keys,
+                                          index=(policy_keys.index(selected_policy) + 1) % len(policy_keys),
+                                          format_func=lambda key: policy_labels[key],
+                                          key="treasury_costing_compare")
+            comparison = policy_costing_analysis(compare_policy, funding, scale, years=5)
+            st.markdown("**Side-by-side programme comparison**")
+            st.dataframe([
+                {"Measure": "Five-year gross cost (£bn)", "Selected policy": appraisal["five_year_gross_cost"], "Comparator": comparison["five_year_gross_cost"]},
+                {"Measure": "Initial capital (£bn)", "Selected policy": appraisal["capital_cost"], "Comparator": comparison["capital_cost"]},
+                {"Measure": "Annual running cost (£bn)", "Selected policy": appraisal["annual_cost"], "Comparator": comparison["annual_cost"]},
+                {"Measure": "Year-five borrowing (£bn)", "Selected policy": final_row["Additional borrowing (£bn)"], "Comparator": comparison["rows"][-1]["Additional borrowing (£bn)"]},
+                {"Measure": "Year-five productivity effect (pp)", "Selected policy": final_row["Productivity effect (pp)"], "Comparator": comparison["rows"][-1]["Productivity effect (pp)"]},
+            ], hide_index=True, use_container_width=True)
+
+            st.divider()
+            st.markdown("**Add this appraisal to the Budget spending ledger**")
+            st.caption("Adding a project books its full first-year capital and running costs, then its annual running cost for the chosen duration. The funding selector above is appraisal-only: no assumed tax receipt or spending cut is invented. The complete Budget package must cover the gross cost.")
+            current_projects = list(cur.get("projects", []))
+            project_fin = project_financials(cur)
+            if project_fin["rows"]:
+                st.dataframe([{
+                    "Project": row["label"],
+                    "Department": SPEND_DEFAULTS.get(row["department"], {}).get("label", row["department"]),
+                    "Capital this year (£bn)": round(row["capital_cost"], 2),
+                    "Annual running cost (£bn)": round(row["annual_cost"], 2),
+                    "Duration": f"{row['duration']} years",
+                    "Status": row["status"],
+                } for row in project_fin["rows"]], hide_index=True, use_container_width=True)
+            existing_active = any(
+                row.get("policy_key") == selected_policy
+                and 0 <= _project_period_index(s.get("term", 1), s.get("year", 1))
+                       - _project_period_index(row.get("start_term", 1), row.get("start_year", 1))
+                       < int(row.get("duration_years", 5))
+                for row in current_projects
+            )
+            if st.button("Add appraised project to Budget draft", key="add_costed_project_to_budget",
+                         type="primary", use_container_width=True, disabled=existing_active):
+                project, project_error = make_policy_project(selected_policy, scale, years=5)
+                if project_error:
+                    st.warning(project_error)
+                else:
+                    s["budget_project_draft"] = current_projects + [project]
+                    st.success(f"{project['label']} added to the draft spending ledger. Review its costs in Spending and the Budget summary.")
+                    st.rerun()
+            if existing_active:
+                st.caption("This project already has an active entry in the current Budget ledger.")
+            draft_only = [row for row in current_projects if not row.get("approved")]
+            for project in draft_only:
+                remove_col, label_col = st.columns([1, 4])
+                label_col.caption(f"Draft addition · {project.get('label', 'Capital project')}")
+                if remove_col.button("Remove", key=f"remove_costed_project_{project.get('id')}", use_container_width=True):
+                    s["budget_project_draft"] = [row for row in current_projects if row.get("id") != project.get("id")]
+                    st.rerun()
+
+
+
+        with st.expander('Compare alternative Budgets', expanded=False):
+            st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")
+            slots = dict(s.get('budget_alternatives', {}))
+            alt_name = st.selectbox("Save this draft as", ["Growth Budget", "Investment Budget", "Fiscal consolidation", "Alternative 1", "Alternative 2"], key="budget_alt_name")
+            save_col, clear_col = st.columns([1, 1])
+            if save_col.button("Save current package", key="save_budget_alternative", use_container_width=True):
+                if alt_name not in slots and len(slots) >= 3:
+                    st.warning("You can keep three alternatives. Replace or delete one before saving another.")
+                else:
+                    save_budget_alternative(alt_name, cur)
+                    st.success(f"{alt_name} saved. It is a separate snapshot; later slider changes will not overwrite it.")
+                    st.rerun()
+            if slots:
+                if clear_col.button("Delete selected package", key="delete_budget_alternative", use_container_width=True):
+                    slots.pop(alt_name, None); s.budget_alternatives = slots; st.rerun()
+                comparison = []
+                for name, item in slots.items():
+                    package = item.get('draft', {})
+                    totals_rev, totals_spend = totals(package)
+                    package_impact = impact(s.budget_applied, package)
+                    package_ayes = projected_ayes(package)
+                    comparison.append({"Package": name, "Income (£bn)": round(totals_rev,1), "Spending (£bn)": round(totals_spend,1),
+                        "Net balance (£bn)": round(totals_rev-totals_spend,1), "Projected headroom (£bn)": round(float(s.headroom)+package_impact.get('headroom',0),1),
+                        "Approval impact": round(package_impact.get('approval',0),1), "Projected Ayes": package_ayes})
+                st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
+                if st.button("Load selected package into live draft", key="load_budget_alternative", use_container_width=True):
+                    selected = slots.get(alt_name)
+                    if selected:
+                        _reset()
+                        for key, value in selected['draft'].get('tax', {}).items(): st.session_state[f'bt_{key}'] = value
+                        for key, value in selected['draft'].get('spend', {}).items(): st.session_state[f'bs_{key}'] = value
+                        for key, value in selected['draft'].get('tax_pol', {}).items(): st.session_state[f'btp_{key}'] = value
+                        for key, value in selected['draft'].get('spend_pol', {}).items(): st.session_state[f'bsp_{key}'] = value
+                        s['budget_project_draft'] = [dict(row) for row in selected['draft'].get('projects', [])]
+                        s.budget_strategy = selected['draft'].get('strategy', 'balanced')
+                        st.success(f"{alt_name} loaded into the live draft.")
+                        st.rerun()
+            st.divider()
+
+
 
     with t_charts:
         p1, p2 = st.columns(2)

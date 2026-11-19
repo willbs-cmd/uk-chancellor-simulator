@@ -2961,6 +2961,99 @@ def check(n=None, difficulty=None):
     finally:
         st.session_state = FakeState()
 
+    # Capital projects added from the Treasury Policy Costing Centre feed the
+    # same receipts/spending comparison, fiscal forecast and annual roll-forward.
+    try:
+        state.new_game("Labour", "Normal", 74132, False)
+        budget.ensure()
+        project_state = st.session_state
+        approved = {key: (dict(value) if isinstance(value, dict) else value)
+                    for key, value in project_state.budget_applied.items()}
+        start_headroom = float(project_state.headroom)
+        start_deficit = float(project_state.deficit)
+        project, project_error = budget.make_policy_project("rail_upgrade", 1.0, 5)
+        if project_error or not project:
+            failures.append(f"Could not create a Treasury-appraised capital project: {project_error}")
+        else:
+            if float(project_state.headroom) != start_headroom or float(project_state.deficit) != start_deficit:
+                failures.append("Adding an appraised project mutated the live fiscal position before Budget approval.")
+            project_state["budget_project_draft"] = [project]
+            draft = budget.read()
+            profile = budget.project_financials(draft)
+            if abs(profile["capital_cost"] - 15.0) > 0.001 or abs(profile["annual_cost"] - 1.8) > 0.001:
+                failures.append(f"Capital project did not expose first-year capital plus annual running costs: {profile}")
+            future = budget.project_financials(draft, year_offset=1)
+            if abs(future["total_cost"] - 1.8) > 0.001:
+                failures.append(f"Future project years should carry the running cost only: {future}")
+            old_income, old_spend = budget.totals(approved)
+            new_income, new_spend = budget.totals(draft)
+            if abs(new_income - old_income) > 0.001:
+                failures.append("A capital project incorrectly changed Budget receipts.")
+            if abs((new_spend - old_spend) - 16.8) > 0.02:
+                failures.append(f"First-year capital and running costs did not reach total Budget spending: {new_spend - old_spend:.2f}")
+            project_impact = budget.impact(approved, draft)
+            if abs(float(project_impact["headroom"]) + 16.8) > 0.02 or abs(float(project_impact["deficit"]) - 16.8) > 0.02:
+                failures.append(f"Capital project did not feed into headroom and deficit: {project_impact}")
+            expected_growth = round(float(project["productivity_effect"]) / 3.0, 4)
+            if abs(float(project_impact.get("project_growth", 0.0)) - expected_growth) > 0.001:
+                failures.append(f"First-year productivity benefit was not included in Budget impact: {project_impact}")
+            receipt_lines = budget._revenue_ledger(draft)
+            spending_lines = budget._spending_ledger(draft)
+            if abs(sum(receipt_lines.values()) - new_income) > 0.02:
+                failures.append(f"Detailed receipts ledger does not reconcile to Budget income: {sum(receipt_lines.values())} vs {new_income}")
+            if abs(sum(spending_lines.values()) - new_spend) > 0.02:
+                failures.append(f"Detailed spending ledger does not reconcile to Budget spending: {sum(spending_lines.values())} vs {new_spend}")
+            forecast_rows = budget.forecast(draft, years=3)
+            if abs(float(forecast_rows[0].get("project_cost", 0.0)) - 16.8) > 0.02:
+                failures.append("Year-one project cost is missing from the Budget forecast.")
+            if abs(float(forecast_rows[1].get("project_cost", 0.0)) - 1.8) > 0.02:
+                failures.append("Future-year running cost is missing from the Budget forecast.")
+            if float(forecast_rows[1].get("project_productivity", 0.0)) <= float(forecast_rows[0].get("project_productivity", 0.0)):
+                failures.append("Project productivity benefits should build over the first three years.")
+
+            policy_draft = {key: (dict(value) if isinstance(value, dict) else value)
+                            for key, value in draft.items()}
+            policy_draft["tax_pol"] = dict(policy_draft["tax_pol"])
+            policy_draft["spend_pol"] = dict(policy_draft["spend_pol"])
+            policy_draft["tax_pol"]["vat_private"] = True
+            policy_draft["spend_pol"]["nhs_workforce"] = True
+            incidence = budget.distributional_analysis(approved, policy_draft)
+            if float(incidence["policy_tax_change_bn"]) <= 0:
+                failures.append("Distributional analysis omitted the targeted tax-scheme effect.")
+            if float(incidence["policy_spending_change_bn"]) <= 0:
+                failures.append("Distributional analysis omitted the targeted spending-scheme effect.")
+            if float(incidence["capital_project_change_bn"]) <= 0:
+                failures.append("Distributional analysis omitted the capital-project effect.")
+            if project_state.budget_applied != approved:
+                failures.append("A draft capital project or distributional preview mutated the approved Budget ledger.")
+        rollforward_project = dict(project or {})
+        rollforward_project.update({
+            "approved": True, "start_term": 1, "start_year": 1,
+            "duration_years": 5, "annual_cost_bn": 1.8,
+            "last_charged_period": "1:1", "last_growth_period": "1:1", "status": "In delivery",
+        })
+        roll_state = FakeState({
+            "term": 1, "year": 1, "headroom": 5.0, "deficit": 20.0, "growth": 2.0,
+            "budget_applied": {"projects": [rollforward_project]},
+            "budget_project_draft": [dict(rollforward_project)], "message": "",
+        })
+        charged = budget._charge_project_rollforward(roll_state)
+        headroom_after = float(roll_state.headroom)
+        second_charge = budget._charge_project_rollforward(roll_state)
+        if abs(charged - 1.8) > 0.001 or abs(headroom_after - 3.2) > 0.02:
+            failures.append(f"Next-year project running cost was not charged correctly: {charged}, {headroom_after}")
+        if abs(float(roll_state.growth) - 2.02) > 0.02:
+            failures.append(f"Annual project productivity benefit did not reach real GDP growth: {roll_state.growth}")
+        growth_after = float(roll_state.growth)
+        if abs(second_charge) > 0.001 or abs(float(roll_state.headroom) - headroom_after) > 0.001 or abs(float(roll_state.growth) - growth_after) > 0.001:
+            failures.append("Project running costs were charged more than once in the same fiscal year.")
+        if "budget_project_draft" not in state.SAVE_KEYS:
+            failures.append("The appraised project draft is not preserved in save files.")
+    except Exception as exc:
+        failures.append(f"Capital project Budget-ledger regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Tax reform preview stays finite and does not mutate the approved ledger.
     try:
         reform_state = {"budget_applied": budget.defaults(), "headroom": 10.0,
