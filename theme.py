@@ -3677,7 +3677,42 @@ button:hover,
 def apply_theme():
     # Apply this last so the responsive spacing rules cannot be overridden by
     # the broader redesign stylesheet above.
-    st.markdown(CSS + REDESIGN_CSS + SIDEBAR_FLOW_FIX + WORKSPACE_POLISH_CSS, unsafe_allow_html=True)
+SIDEBAR_INFORMATION_CSS = """
+<style>
+section[data-testid="stSidebar"] .desk-command-card { padding:10px 11px; border:1px solid #d6e2ea; border-left:4px solid #7b9aa8; border-radius:10px; background:#f6f9fb; color:#20364f; margin:2px 0 4px; }
+section[data-testid="stSidebar"] .desk-command-card.urgent { border-color:#e9c9c5; border-left-color:#b65d53; background:#fff7f6; }
+section[data-testid="stSidebar"] .desk-command-card.caution { border-color:#e8dbbb; border-left-color:#b58a3d; background:#fffaf0; }
+section[data-testid="stSidebar"] .desk-command-card.good { border-color:#d2e5d8; border-left-color:#548d6b; background:#f4faf5; }
+section[data-testid="stSidebar"] .desk-command-top { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#718397; font-size:.56rem; font-weight:850; letter-spacing:.11em; }
+section[data-testid="stSidebar"] .desk-command-top strong { color:#496176; font-size:.58rem; letter-spacing:.07em; }
+section[data-testid="stSidebar"] .desk-command-card.urgent .desk-command-top strong { color:#a24f48; }
+section[data-testid="stSidebar"] .desk-command-card.caution .desk-command-top strong { color:#8c6a2e; }
+section[data-testid="stSidebar"] .desk-command-card.good .desk-command-top strong { color:#4f7b5b; }
+section[data-testid="stSidebar"] .desk-command-main { margin-top:6px; color:#203b59; font-size:.77rem; font-weight:750; line-height:1.35; }
+section[data-testid="stSidebar"] .desk-command-foot { margin-top:6px; color:#7b8b9a; font-size:.6rem; line-height:1.3; }
+section[data-testid="stSidebar"] .desk-action-item { display:flex; align-items:flex-start; gap:7px; padding:6px 0; border-bottom:1px solid #edf0f3; font-size:.66rem; line-height:1.35; }
+section[data-testid="stSidebar"] .desk-action-item:last-child { border-bottom:0; }
+section[data-testid="stSidebar"] .desk-action-item span { flex:0 0 auto; min-width:43px; padding:2px 4px; border-radius:4px; background:#edf2f6; color:#5f7488; text-align:center; font-size:.53rem; font-weight:850; letter-spacing:.05em; }
+section[data-testid="stSidebar"] .desk-action-item.urgent span { background:#fbe8e6; color:#a34f49; }
+section[data-testid="stSidebar"] .desk-action-item.caution span { background:#fbf1d9; color:#8c6a2e; }
+section[data-testid="stSidebar"] .desk-action-item strong { color:#40566b; font-weight:650; }
+section[data-testid="stSidebar"] .desk-tile { position:relative; gap:3px; min-height:67px; }
+section[data-testid="stSidebar"] .desk-tile small { min-height:1.15em; }
+section[data-testid="stSidebar"] .desk-tile.urgent { background:#fff8f7; border-color:#efd8d5; }
+section[data-testid="stSidebar"] .desk-tile.caution { background:#fffaf1; border-color:#eee1c3; }
+section[data-testid="stSidebar"] .desk-tile.good { background:#f7fbf8; border-color:#dbe9df; }
+section[data-testid="stSidebar"] .desk-meter { width:100%; height:4px; margin-top:4px; border-radius:5px; background:#e9eef2; overflow:hidden; }
+section[data-testid="stSidebar"] .desk-meter span { display:block; height:100%; border-radius:5px; background:#7596a8; }
+section[data-testid="stSidebar"] .desk-tile.urgent .desk-meter span { background:#b65d53; }
+section[data-testid="stSidebar"] .desk-tile.caution .desk-meter span { background:#b58a3d; }
+section[data-testid="stSidebar"] .desk-tile.good .desk-meter span { background:#548d6b; }
+@media(max-width:760px) { section[data-testid="stSidebar"] .desk-command-main { font-size:.74rem; } section[data-testid="stSidebar"] .desk-tile { min-height:63px; } }
+</style>
+"""
+
+def apply_theme():
+    # Sidebar-specific hierarchy is the final cascade so it stays readable.
+    st.markdown(CSS + REDESIGN_CSS + SIDEBAR_FLOW_FIX + WORKSPACE_POLISH_CSS + SIDEBAR_INFORMATION_CSS, unsafe_allow_html=True)
 
 PHASES = {
     1: dict(name='Autumn agenda', title='Autumn · Set the agenda',

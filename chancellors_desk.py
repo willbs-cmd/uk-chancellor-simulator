@@ -15,14 +15,59 @@ def _safe(value):
     return html.escape(str(value))
 
 
-def _tile(label, value, detail=""):
+def _tile(label, value, detail="", tone="neutral", progress=None):
+    meter = ""
+    if progress is not None:
+        amount = max(0.0, min(100.0, float(progress)))
+        meter = (
+            "<div class='desk-meter' role='img' "
+            f"aria-label='{amount:.0f} out of 100'>"
+            f"<span style='width:{amount:.1f}%'></span></div>"
+        )
     return (
-        "<div class='desk-tile'>"
+        f"<div class='desk-tile {tone}'>"
         f"<span class='desk-tile-label'>{_safe(label)}</span>"
         f"<strong>{_safe(value)}</strong>"
         f"<small>{_safe(detail)}</small>"
-        "</div>"
+        f"{meter}</div>"
     )
+
+
+def _priority_items(s):
+    """Compact inbox of decisions that are live in the current game state."""
+    items = []
+    checks = (
+        ("active_pm_ultimatum", "NOW", "Prime Minister's ultimatum · respond before your position collapses", "urgent"),
+        ("active_pm_intervention", "NOW", "Number 10 intervention · decide how to handle the economic strategy committee", "urgent"),
+        ("active_gilt_emergency", "NOW", "Gilt-market emergency · stabilise market confidence", "urgent"),
+        ("active_forecast_review", "NOW", "Treasury forecast review · respond to the revised outlook", "urgent"),
+        ("active_financial_crisis", "NOW", "Financial stability crisis · decide the Government response", "urgent"),
+        ("active_crisis", "NOW", "Emergency decision · resolve the active crisis", "urgent"),
+        ("active_emergency_budget", "NOW", "Emergency Budget · complete the fiscal response", "urgent"),
+        ("spending_review_due", "NOW", "Spending Review · agree departmental settlements", "urgent"),
+        ("autumn_statement_due", "NOW", "Autumn Statement · publish the fiscal update or proceed without one", "urgent"),
+        ("active_weekly_event", "ACTION", "Treasury briefing · respond to this week's event", "caution"),
+        ("local_election_due", "ACTION", "Local elections · review the results and political consequences", "caution"),
+        ("active_dispute", "ACTION", "Cabinet dispute · settle the ministerial disagreement", "caution"),
+        ("active_request", "ACTION", "Ministerial request · decide whether to support the proposal", "caution"),
+        ("active_pm_meeting", "PENDING", "Private meeting with the Prime Minister", "neutral"),
+        ("active_opposition_attack", "PENDING", "Opposition economic attack · a response is available", "neutral"),
+    )
+    for key, tag, label, tone in checks:
+        if s.get(key):
+            items.append((tag, label, tone))
+    if not items and int(s.get("block", 1)) == 3 and not s.get("budget_passed"):
+        items.append(("CURRENT", "Spring Budget · prepare the package and secure the Commons vote", "caution"))
+    return items
+
+
+def _score_tone(value, urgent_below=30, caution_below=45):
+    value = float(value)
+    if value < urgent_below:
+        return "urgent", "Critical"
+    if value < caution_below:
+        return "caution", "Under pressure"
+    return "good", "Holding up"
 
 
 def _warnings(s):
@@ -39,6 +84,12 @@ def _warnings(s):
         items.append(("urgent", "Backbench rebellion risk"))
     if float(s.get("pm_opinion", 50)) < 35:
         items.append(("caution", "Prime Minister's confidence is low"))
+    if float(s.get("cab_opinion", 50)) < 35:
+        items.append(("caution", "Cabinet support is critically low"))
+    if float(s.get("party_opinion", 50)) < 35:
+        items.append(("caution", "Party unity is critically low"))
+    if float(s.get("backbench_opinion", 60)) < 30:
+        items.append(("urgent", "Backbench rebellion risk is acute"))
     if s.get("active_crisis"):
         items.append(("urgent", "An immediate crisis needs a decision"))
     if s.get("active_dispute"):
@@ -102,44 +153,10 @@ def render(on_restart):
             unsafe_allow_html=True,
         )
 
-        # Political standing: the four relationships a Chancellor must monitor.
-        st.markdown("<div class='desk-section-title'>POLITICAL STANDING</div>", unsafe_allow_html=True)
-        political = [
-            ("Public approval", f"{float(s.get('approval', 0)):.0f}%"),
-            ("PM confidence", f"{float(s.get('pm_opinion', 0)):.0f}/100"),
-            ("Cabinet support", f"{float(s.get('cab_opinion', 0)):.0f}/100"),
-            ("Party unity", f"{float(s.get('party_opinion', 0)):.0f}/100"),
-        ]
-        st.markdown(
-            "<div class='desk-grid'>" + "".join(_tile(k, v) for k, v in political) + "</div>",
-            unsafe_allow_html=True,
-        )
-
-        # Economic watch: keep the values compact and always visible.
-        st.markdown("<div class='desk-section-title'>TREASURY WATCH</div>", unsafe_allow_html=True)
-        economic = [
-            ("Fiscal headroom", f"£{float(s.get('headroom', 0)):.1f}bn"),
-            ("GDP growth", f"{float(s.get('growth', 0)):+.1f}%"),
-            ("Inflation", f"{float(s.get('inflation', 0)):.1f}%"),
-            ("Bank Rate", f"{float(s.get('interest_rate', 0)):.2f}%"),
-        ]
-        st.markdown(
-            "<div class='desk-grid'>" + "".join(_tile(k, v) for k, v in economic) + "</div>",
-            unsafe_allow_html=True,
-        )
-        with st.expander("More fiscal indicators", expanded=False):
-            a, b = st.columns(2)
-            a.metric("Deficit", f"£{float(s.get('deficit', 0)):.1f}bn")
-            b.metric("Debt", f"{float(s.get('debt', 0)):.1f}% GDP")
-            a, b = st.columns(2)
-            a.metric("Market confidence", f"{float(s.get('market_conf', 0)):.0f}/100")
-            b.metric("Political capital", f"{int(s.get('political_capital_points', 0))}/5")
-
-        # Ensure the Cabinet roster is available on every phase, not only after opening the Budget screen.
+        # Resolve registries before assembling the at-a-glance Cabinet briefing.
         budget.ensure()
         cabinet_management.ensure(s)
-
-        # Cabinet management: keep the live desk compact; open this only when making a recommendation.
+        cabinet_health = cabinet_management.cabinet_health(s)
         ministers = s.get("cabinet_ministers", {})
         active_posts = [
             (key, name) for key, name in ministers.items()
@@ -147,7 +164,124 @@ def render(on_restart):
             and name
             and not str(name).startswith(("Vacant", "New appointment"))
         ]
+
+        priorities = _priority_items(s)
+        warnings = _warnings(s)
+        if priorities:
+            first_tag, first_label, first_tone = priorities[0]
+            brief_status = "ACTION REQUIRED" if first_tag == "NOW" else "ATTENTION"
+            brief_detail = first_label
+            brief_class = first_tone
+        elif warnings:
+            brief_status = "WATCH"
+            brief_detail = warnings[0][1]
+            brief_class = "caution"
+        else:
+            brief_status = "STABLE"
+            brief_detail = f"No immediate decision is waiting. Current phase: {phase_name}."
+            brief_class = "good"
+        st.markdown(
+            "<div class='desk-command-card " + brief_class + "'>"
+            "<div class='desk-command-top'><span>PRIVATE OFFICE BRIEFING</span>"
+            f"<strong>{_safe(brief_status)}</strong></div>"
+            f"<div class='desk-command-main'>{_safe(brief_detail)}</div>"
+            f"<div class='desk-command-foot'>{len(priorities)} live task(s) · {len(warnings)} watch item(s)</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander(f"Priority inbox · {len(priorities)}", expanded=bool(priorities and priorities[0][0] == "NOW")):
+            if priorities:
+                for tag, label, tone in priorities[:7]:
+                    st.markdown(
+                        f"<div class='desk-action-item {tone}'>"
+                        f"<span>{_safe(tag)}</span><strong>{_safe(label)}</strong></div>",
+                        unsafe_allow_html=True,
+                    )
+                if len(priorities) > 7:
+                    st.caption(f"{len(priorities) - 7} more item(s) are waiting in the main workspace.")
+            else:
+                st.markdown(
+                    "<div class='desk-clear'><span>✓</span> No immediate decisions are waiting.</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # Political standing: the four relationships a Chancellor must monitor.
+        st.markdown("<div class='desk-section-title'>POLITICAL STANDING</div>", unsafe_allow_html=True)
+        approval = float(s.get("approval", 0))
+        pm_confidence = float(s.get("pm_opinion", 0))
+        cabinet_support = float(s.get("cab_opinion", 0))
+        party_unity = float(s.get("party_opinion", 0))
+        political_tiles = []
+        for label, value, thresholds in (
+            ("Public approval", approval, (30, 45)),
+            ("PM confidence", pm_confidence, (35, 50)),
+            ("Cabinet support", cabinet_support, (35, 50)),
+            ("Party unity", party_unity, (35, 50)),
+        ):
+            tone, status = _score_tone(value, *thresholds)
+            shown = f"{value:.0f}%" if label == "Public approval" else f"{value:.0f}/100"
+            political_tiles.append(_tile(label, shown, status, tone, progress=value))
+        st.markdown("<div class='desk-grid'>" + "".join(political_tiles) + "</div>", unsafe_allow_html=True)
+        with st.expander("Political and parliamentary position", expanded=False):
+            p1, p2 = st.columns(2)
+            p1.metric("Personal PM trust", f"{float(s.get('pm_trust', 0)):.0f}/100")
+            p2.metric("Backbench support", f"{float(s.get('backbench_opinion', 0)):.0f}/100")
+            p1, p2 = st.columns(2)
+            p1.metric("Political capital", f"{int(s.get('political_capital_points', 0))}/5")
+            p2.metric("Active ministerial posts", f"{len(active_posts)}")
+
+        # Economic watch: keep the values compact and always visible.
+        st.markdown("<div class='desk-section-title'>TREASURY WATCH</div>", unsafe_allow_html=True)
+        headroom = float(s.get("headroom", 0))
+        growth = float(s.get("growth", 0))
+        inflation = float(s.get("inflation", 0))
+        bank_rate = float(s.get("interest_rate", 0))
+        headroom_tone = "urgent" if headroom < 0 else ("caution" if headroom < 3 else "good")
+        headroom_label = "Fiscal gap" if headroom < 0 else ("Thin buffer" if headroom < 3 else "Buffer available")
+        growth_tone = "urgent" if growth < 0 else ("caution" if growth < 1 else "good")
+        growth_label = "Contracting" if growth < 0 else ("Subdued" if growth < 1 else "Expanding")
+        inflation_tone = "urgent" if inflation >= 4.5 else ("caution" if inflation >= 3 else "good")
+        inflation_label = "High pressure" if inflation >= 4.5 else ("Above preferred range" if inflation >= 3 else "Contained")
+        economic_tiles = [
+            _tile("Fiscal headroom", f"£{headroom:.1f}bn", headroom_label, headroom_tone),
+            _tile("GDP growth", f"{growth:+.1f}%", growth_label, growth_tone),
+            _tile("Inflation", f"{inflation:.1f}%", inflation_label, inflation_tone),
+            _tile("Bank Rate", f"{bank_rate:.2f}%", "Central-bank policy rate", "neutral"),
+        ]
+        st.markdown("<div class='desk-grid'>" + "".join(economic_tiles) + "</div>", unsafe_allow_html=True)
+        with st.expander("Fiscal and market detail", expanded=False):
+            a, b = st.columns(2)
+            a.metric("Annual deficit", f"£{float(s.get('deficit', 0)):.1f}bn")
+            b.metric("Debt / GDP", f"{float(s.get('debt', 0)):.1f}%")
+            a, b = st.columns(2)
+            market_conf = float(s.get("market_conf", 0))
+            a.metric("Market confidence", f"{market_conf:.0f}/100")
+            b.metric("10-year gilt yield", f"{float(s.get('gilt_yield', 0)):.2f}%")
+            a, b = st.columns(2)
+            a.metric("Political capital", f"{int(s.get('political_capital_points', 0))}/5")
+            b.metric("Contingency reserve", f"£{float(s.get('contingency_reserve', 0)):.1f}bn")
+            forecast = s.get("obr_latest") or {}
+            if forecast:
+                st.markdown("**Latest forecast revision**")
+                f1, f2 = st.columns(2)
+                f1.metric("Forecast growth", f"{float(forecast.get('growth', growth)):+.2f}%")
+                f2.metric("Forecast headroom", f"£{float(forecast.get('headroom', headroom)):.1f}bn")
+
+
+        # Detailed Cabinet controls remain available on demand.
         reshuffle_used = int(s.get("term", 1)) in s.get("cabinet_reshuffle_terms", [])
+        weak_count = len(cabinet_health.get("weak_ministers", [])) + int(cabinet_health.get("low_loyalty", 0))
+        with st.expander(f"Cabinet at a glance · {len(active_posts)} ministers · {weak_count} at risk", expanded=False):
+            c1, c2 = st.columns(2)
+            c1.metric("Average competence", f"{float(cabinet_health.get('competence', 0)):.0f}/100")
+            c2.metric("Average loyalty", f"{float(cabinet_health.get('loyalty', 0)):.0f}/100")
+            if cabinet_health.get("weak_ministers"):
+                names_at_risk = ", ".join(item.get("minister", "Minister") for item in cabinet_health["weak_ministers"][:4])
+                st.warning("Performance concerns: " + names_at_risk)
+            elif weak_count:
+                st.warning("Some ministerial relationships are at risk. Open Cabinet management for the detail.")
+            else:
+                st.caption("No ministers currently meet the low-performance or low-loyalty warning thresholds.")
         cabinet_label = f"Cabinet management · {len(active_posts)} ministers"
         with st.expander(cabinet_label, expanded=bool(s.get("active_dispute"))):
             if active_posts:
@@ -409,8 +543,6 @@ def render(on_restart):
             diary.append(("NOW", "Gilt-market emergency"))
         if s.get("active_forecast_review"):
             diary.append(("NOW", "Treasury forecast review · response required"))
-        if s.get("active_opposition_attack"):
-            diary.append(("PENDING", "Opposition economic attack · response available"))
         if s.get("active_opposition_attack"):
             diary.append(("PENDING", "Opposition economic attack · response available"))
         if s.get("active_financial_crisis"):
