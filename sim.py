@@ -2828,28 +2828,29 @@ def check(n=None, difficulty=None):
     except Exception as exc:failures.append(f"Five-year strategy regression failed: {exc}")
 
     # Contingency reserve is ring-fenced from headroom on delivery and can
-    # be released back into headroom without changing departmental ledgers.
+    # be released for emergency funding without changing departmental ledgers.
     try:
-        reserve_state = FakeState(
-            headroom=10.0, deficit=50.0, approval=50.0, market_conf=60.0,
-            growth=1.0, inflation=2.0, budget_applied=budget.defaults(),
-            budget_contingency_reserve=0.0, budget_contingency_target=3.0,
-            budget_reserve_history=[], dept_spend={k: 100.0 for k in budget.SPEND_DEFAULTS},
-            budget_settlement_applied_period="1-1", term=1, year=1
-        )
-        st.session_state = reserve_state
+        state.new_game("Labour", "Normal", 74110, False)
+        reserve_state = st.session_state
+        reserve_state.headroom = 10.0
+        reserve_state.budget_contingency_reserve = 0.0
+        reserve_state.budget_contingency_target = 3.0
+        reserve_state.budget_reserve_history = []
         before_dept = dict(reserve_state.dept_spend)
         budget._apply(draft=reserve_state.budget_applied, annual_settlement=False)
         if reserve_state.budget_contingency_reserve != 3.0 or reserve_state.headroom != 7.0:
             failures.append("Budget delivery did not ring-fence the contingency reserve against headroom.")
         if reserve_state.dept_spend != before_dept:
             failures.append("Contingency reserve altered departmental spending ledgers.")
-        reserve_state.budget_contingency_target = 1.0
-        budget._apply(draft=reserve_state.budget_applied, annual_settlement=False)
-        if reserve_state.budget_contingency_reserve != 1.0 or reserve_state.headroom != 9.0:
-            failures.append("Reducing the contingency reserve did not release headroom correctly.")
+        released = fiscal_events.release_contingency_reserve(1.5, "Regression emergency")
+        if released != 1.5 or reserve_state.budget_contingency_reserve != 1.5 or reserve_state.headroom != 8.5:
+            failures.append("Emergency reserve release did not restore headroom and reduce the reserve correctly.")
+        if reserve_state.dept_spend != before_dept:
+            failures.append("Emergency reserve release altered departmental spending ledgers.")
         if len(reserve_state.budget_reserve_history) != 2:
-            failures.append("Contingency reserve allocation history was not recorded.")
+            failures.append("Contingency reserve allocation and emergency release history were not recorded.")
+        if fiscal_events.release_contingency_reserve(99.0, "Overdraw attempt") != 1.5:
+            failures.append("Emergency reserve release allowed an overdraft.")
     except Exception as exc:
         failures.append(f"Contingency reserve regression failed: {exc}")
     finally:

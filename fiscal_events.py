@@ -160,6 +160,30 @@ def close_emergency_budget():
     return advance_to_spring
 
 
+def release_contingency_reserve(amount, purpose="Emergency intervention"):
+    """Release previously ring-fenced funds to meet an authorised emergency cost.
+
+    This restores the reserve allocation to fiscal headroom; it does not create
+    new resources or change the departmental spending settlement.
+    """
+    s = st.session_state
+    ensure_state(s)
+    balance = max(0.0, float(s.get("budget_contingency_reserve", 0.0)))
+    requested = max(0.0, float(amount))
+    released = round(min(balance, requested), 1)
+    if released <= 0:
+        return 0.0
+    s.budget_contingency_reserve = round(balance - released, 1)
+    s.headroom = round(float(s.get("headroom", 0.0)) + released, 1)
+    history = list(s.get("budget_reserve_history", []))
+    history.append({"term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
+                    "change": -released, "balance": s.budget_contingency_reserve,
+                    "purpose": str(purpose)[:100]})
+    s.budget_reserve_history = history[-30:]
+    s.message = f"£{released:.1f}bn released from the contingency reserve for {purpose.lower()}."
+    return released
+
+
 def render_treasury_overview():
     """Read-only Treasury dashboard; major fiscal events are launched from the game calendar."""
     s = st.session_state
@@ -198,6 +222,19 @@ def render_treasury_overview():
     if s.get("active_emergency_budget"):
         emergency = s.get("active_emergency_budget") or {}
         st.error(f"**Emergency Budget awaiting delivery.** {emergency.get('reason', 'A severe fiscal event has been called.')}")
+        reserve_balance = max(0.0, float(s.get("budget_contingency_reserve", 0.0)))
+        if reserve_balance > 0:
+            st.markdown("##### Emergency funding from the contingency reserve")
+            st.caption("Release money previously ring-fenced in the Budget to help fund this intervention. Released funds return to fiscal headroom and reduce the reserve balance pound-for-pound.")
+            st.metric("Available reserve", f"£{reserve_balance:.1f}bn")
+            release = st.slider("Release for this emergency (£bn)", 0.0, float(reserve_balance),
+                                min(0.0, float(reserve_balance)), step=0.5,
+                                key="emergency_reserve_release_amount")
+            if st.button("Release reserve into emergency funding", key="release_emergency_contingency"):
+                released = release_contingency_reserve(release, "Emergency Budget")
+                if released > 0:
+                    st.success(f"£{released:.1f}bn released. The reserve is now £{float(s.get('budget_contingency_reserve', 0.0)):.1f}bn.")
+                    st.rerun()
     elif s.get("spending_review_due"):
         st.warning("**Spending Review due now.** Agree departmental cash baselines and the local-government settlement before normal policy decisions.")
     elif s.get("autumn_statement_due"):
