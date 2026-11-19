@@ -850,6 +850,113 @@ def impact(old, new, annual_settlement=None):
                 unemployment=0.010 * d['ni'] + 0.004 * d['corp'] + 0.001 * d['financial_transaction'])
 
 
+
+# ---------------------------------------------------------------- distributional Budget analysis
+_INCOME_DECILES = [
+    ("Bottom 10%", 0.02), ("2nd decile", 0.03), ("3rd decile", 0.05),
+    ("4th decile", 0.07), ("5th decile", 0.10), ("6th decile", 0.13),
+    ("7th decile", 0.16), ("8th decile", 0.18), ("9th decile", 0.13), ("Top 10%", 0.13),
+]
+# Stylised shares of each tax base by income decile, from lower to higher income.
+_HOUSEHOLD_TAX_PROFILES = {
+    "income": [0.002,0.006,0.018,0.035,0.065,0.105,0.15,0.19,0.20,0.229],
+    "income_higher": [0,0,0,0.005,0.02,0.06,0.12,0.20,0.26,0.335],
+    "income_additional": [0,0,0,0,0,0.005,0.025,0.10,0.25,0.62],
+    "ni": [0.035,0.045,0.06,0.075,0.09,0.11,0.13,0.15,0.15,0.155],
+    "vat": [0.14,0.13,0.12,0.11,0.10,0.10,0.09,0.08,0.07,0.06],
+    "fuel": [0.13,0.13,0.12,0.11,0.10,0.10,0.09,0.08,0.07,0.07],
+    "sin": [0.14,0.13,0.12,0.11,0.10,0.10,0.09,0.08,0.07,0.06],
+    "council_tax": [0.13,0.13,0.12,0.11,0.10,0.10,0.09,0.08,0.07,0.07],
+    "sugar_duty": [0.15,0.14,0.12,0.11,0.10,0.09,0.08,0.07,0.07,0.07],
+    "vehicle_excise": [0.08,0.09,0.10,0.11,0.11,0.11,0.11,0.11,0.09,0.09],
+    "air_passenger": [0.025,0.035,0.045,0.055,0.07,0.09,0.12,0.15,0.18,0.23],
+    "property": [0.005,0.01,0.02,0.03,0.05,0.08,0.12,0.17,0.22,0.295],
+    "cgt": [0,0,0.005,0.01,0.02,0.04,0.08,0.15,0.25,0.445],
+    "iht": [0,0,0,0.005,0.01,0.025,0.06,0.12,0.25,0.535],
+    "land_value": [0.01,0.015,0.025,0.04,0.06,0.08,0.12,0.16,0.20,0.29],
+    "stamp_duty": [0.02,0.035,0.055,0.075,0.10,0.12,0.14,0.15,0.14,0.165],
+}
+_BUSINESS_TAX_EXPOSURE = {
+    "corp": [0.18,0.12,0.18,0.18,0.22,0.12],
+    "business_rates": [0.22,0.38,0.16,0.08,0.08,0.08],
+    "financial_transaction": [0.01,0.01,0.03,0.10,0.82,0.03],
+    "carbon_levy": [0.08,0.08,0.32,0.05,0.05,0.42],
+    "ni": [0.25,0.20,0.20,0.17,0.10,0.13],
+}
+_BUSINESS_SECTORS = ("Small firms","Retail & hospitality","Manufacturing","Professional services","Finance","Energy & utilities")
+_SPEND_DECILE_PROFILES = {
+    "welfare": [0.24,0.18,0.14,0.11,0.09,0.07,0.06,0.045,0.035,0.03],
+    "health": [0.12,0.115,0.11,0.105,0.10,0.10,0.095,0.09,0.085,0.08],
+    "education": [0.15,0.14,0.13,0.12,0.11,0.10,0.08,0.07,0.055,0.045],
+    "housing": [0.18,0.16,0.13,0.11,0.10,0.09,0.075,0.06,0.05,0.045],
+    "social_care": [0.13,0.12,0.11,0.10,0.10,0.10,0.09,0.09,0.08,0.08],
+    "local_government": [0.14,0.13,0.12,0.11,0.10,0.10,0.09,0.08,0.07,0.06],
+    "public_sector_pay": [0.12,0.12,0.12,0.11,0.11,0.10,0.09,0.09,0.07,0.07],
+    "skills": [0.16,0.15,0.14,0.12,0.11,0.10,0.08,0.06,0.045,0.035],
+}
+_UK_REGIONS = [
+    ("North East",0.045),("North West",0.105),("Yorkshire & Humber",0.082),
+    ("East Midlands",0.075),("West Midlands",0.087),("East of England",0.095),
+    ("London",0.135),("South East",0.145),("South West",0.09),
+    ("Wales",0.048),("Scotland",0.078),("Northern Ireland",0.015),
+]
+
+
+def distributional_analysis(old, new):
+    """Estimate first-round household, business and regional Budget effects.
+
+    These transparent incidence assumptions are for gameplay, not official
+    OBR/ONS estimates. The function reads the working draft and never applies it.
+    """
+    old_revenue, new_revenue = revenues(old), revenues(new)
+    tax_delta = {key: float(new_revenue.get(key, 0.0) - old_revenue.get(key, 0.0))
+                 for key in TAXES}
+    spending_delta = {
+        key: float(st.session_state.dept_spend[key]) * (
+            _spend_rate_change(old.get("spend", {}).get(key, 0.0),
+                               new.get("spend", {}).get(key, 0.0)) / 100.0
+        )
+        for key in SPEND_DEFAULTS
+    }
+    household_costs = [0.0] * 10
+    for key, delta in tax_delta.items():
+        for index, share in enumerate(_HOUSEHOLD_TAX_PROFILES.get(key, [])):
+            household_costs[index] += delta * share
+    household_benefits = [0.0] * 10
+    for key, delta in spending_delta.items():
+        for index, share in enumerate(_SPEND_DECILE_PROFILES.get(key, [])):
+            household_benefits[index] += delta * share
+    rows = []
+    for index, (label, _share) in enumerate(_INCOME_DECILES):
+        cost, benefit = household_costs[index], household_benefits[index]
+        rows.append({
+            "Income group": label,
+            "Estimated tax change (£/household/year)": round(cost * 1e9 / 2_800_000, 0),
+            "Estimated service value change (£/household/year)": round(benefit * 1e9 / 2_800_000, 0),
+            "Indicative net effect (£/household/year)": round((benefit-cost) * 1e9 / 2_800_000, 0),
+        })
+    business_rows = []
+    for index, sector in enumerate(_BUSINESS_SECTORS):
+        exposure = sum(delta * _BUSINESS_TAX_EXPOSURE.get(key, [0]*6)[index]
+                       for key, delta in tax_delta.items())
+        business_rows.append({"Business sector": sector, "Estimated tax exposure (£bn/year)": round(exposure, 2)})
+    regional_total = sum(spending_delta.values())
+    regions = [
+        ("North East",0.045),("North West",0.105),("Yorkshire & Humber",0.082),
+        ("East Midlands",0.075),("West Midlands",0.087),("East of England",0.095),
+        ("London",0.135),("South East",0.145),("South West",0.09),
+        ("Wales",0.048),("Scotland",0.078),("Northern Ireland",0.015),
+    ]
+    regional_rows = [{"Region": name, "Indicative spending change (£bn/year)": round(regional_total*share, 2)}
+                     for name, share in regions]
+    return {
+        "households": rows, "businesses": business_rows, "regions": regional_rows,
+        "tax_change_bn": round(sum(tax_delta.values()), 2),
+        "department_spending_change_bn": round(regional_total, 2),
+        "caveat": "Stylised in-game incidence assumptions. Excludes policy-scheme delivery, behavioural responses, supply-chain effects and second-round macroeconomic changes.",
+    }
+
+
 def _clip(v): return max(0, min(100, v))
 
 
@@ -1934,6 +2041,25 @@ def render(submit=None, after_summary=None):
                 cur["tax"][key] = float(s.budget_applied.get("tax", {}).get(key, TAXES[key]["default"]))
                 st.session_state[f"bt_{key}"] = cur["tax"][key]
             st.rerun()
+
+
+    with st.expander("Distributional Analysis Centre · who gains and loses?", expanded=False):
+        st.caption("Compare the working Budget draft with the approved package. Estimates are indicative first-round effects; opening this analysis does not enact anything.")
+        distribution = distributional_analysis(s.budget_applied, cur)
+        st.markdown("**Households · estimated annual effect per household**")
+        st.dataframe(pd.DataFrame(distribution["households"]), hide_index=True, use_container_width=True)
+        ranked_groups = sorted(distribution["households"], key=lambda row: row["Indicative net effect (£/household/year)"], reverse=True)
+        if ranked_groups:
+            best, worst = ranked_groups[0], ranked_groups[-1]
+            st.caption(f"Most favourable modelled group: {best['Income group']} ({best['Indicative net effect (£/household/year)']:+,.0f} per household). Most exposed: {worst['Income group']} ({worst['Indicative net effect (£/household/year)']:+,.0f} per household).")
+        left_dist, right_dist = st.columns(2, gap="medium")
+        with left_dist:
+            st.markdown("**Business sectors · tax exposure**")
+            st.dataframe(pd.DataFrame(distribution["businesses"]), hide_index=True, use_container_width=True)
+        with right_dist:
+            st.markdown("**Regions · changed departmental spending**")
+            st.dataframe(pd.DataFrame(distribution["regions"]), hide_index=True, use_container_width=True)
+        st.caption(distribution["caveat"])
 
     with st.expander('Compare alternative Budgets', expanded=False):
         st.caption("Save up to three alternative packages, then compare their fiscal and political outlook before choosing which one to deliver.")

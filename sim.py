@@ -2849,6 +2849,33 @@ def check(n=None, difficulty=None):
             failures.append("Tax Reform Centre mutated the approved tax ledger during preview.")
     except Exception as exc:
         failures.append(f"Tax reform preview regression failed: {exc}")
+
+    # Distributional preview must be complete and must not mutate the approved Budget.
+    try:
+        state.new_game("Labour", "Normal", 74121, False)
+        budget.ensure()
+        distribution_state = st.session_state
+        approved_tax = dict(distribution_state.budget_applied["tax"])
+        approved_spend = dict(distribution_state.budget_applied["spend"])
+        distribution_draft = budget.defaults()
+        distribution_draft["tax"]["income"] += 1.0
+        distribution_draft["tax"]["vat"] += 1.0
+        distribution_draft["tax"]["corp"] += 1.0
+        distribution_draft["spend"]["health"] += 2.0
+        distribution_draft["spend"]["welfare"] += 2.0
+        analysis = budget.distributional_analysis(distribution_state.budget_applied, distribution_draft)
+        if len(analysis["households"]) != 10 or len(analysis["businesses"]) != 6 or len(analysis["regions"]) != 12:
+            failures.append("Distributional Analysis Centre did not return all household, business and regional groups.")
+        net_effects = [row["Indicative net effect (£/household/year)"] for row in analysis["households"]]
+        if not all(math.isfinite(float(value)) for value in net_effects) or len(set(net_effects)) < 2:
+            failures.append("Distributional analysis returned invalid or indistinguishable income-group estimates.")
+        if distribution_state.budget_applied["tax"] != approved_tax or distribution_state.budget_applied["spend"] != approved_spend:
+            failures.append("Distributional preview mutated the approved tax or spending ledger.")
+    except Exception as exc:
+        failures.append(f"Distributional analysis regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Contingency reserve is ring-fenced from headroom on delivery and can
     # be released for emergency funding without changing departmental ledgers.
     try:
