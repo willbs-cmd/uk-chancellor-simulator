@@ -3451,10 +3451,197 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
 """
 
 
+
+WORKSPACE_POLISH_CSS = """
+<style>
+/* Final workspace layout layer: neutralise conflicting legacy tab and spacing rules. */
+:root {
+  --co-canvas: #f3f6f9;
+  --co-surface: #ffffff;
+  --co-surface-alt: #edf2f6;
+  --co-border: #d5dee7;
+  --co-ink: #20364f;
+  --co-muted: #64788e;
+  --co-navy: #203b59;
+  --co-teal: #397b78;
+}
+.block-container {
+  width: 100% !important;
+  max-width: 1480px !important;
+  padding: 1rem clamp(.85rem, 2vw, 1.7rem) 1.35rem !important;
+}
+.block-container [data-testid="stVerticalBlock"] { gap: .62rem !important; }
+.block-container [data-testid="stHorizontalBlock"] { gap: .78rem !important; }
+.block-container h1 { margin: .18rem 0 .35rem !important; }
+.block-container h2 { margin: .22rem 0 .32rem !important; }
+.block-container h3 { margin: .2rem 0 .25rem !important; }
+.block-container p { line-height: 1.45; margin-top: .08rem; margin-bottom: .25rem; }
+.block-container hr { margin: .5rem 0 !important; }
+
+/* Nested panels should scroll with their content; do not pin every tab bar. */
+[data-testid="stTabs"] > div:first-child {
+  position: relative !important;
+  top: auto !important;
+  z-index: auto !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+[data-testid="stTabs"] [role="tablist"],
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: stretch !important;
+  gap: .32rem !important;
+  width: 100% !important;
+  overflow: visible !important;
+  padding: .12rem 0 .32rem !important;
+  margin: 0 0 .08rem !important;
+  border-bottom: 1px solid var(--co-border) !important;
+}
+[data-testid="stTabs"] button[role="tab"],
+[data-testid="stTabs"] button[data-baseweb="tab"] {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 2.25rem !important;
+  height: auto !important;
+  padding: .42rem .72rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 7px 7px 0 0 !important;
+  font-size: .84rem !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+  background: #e8f2f1 !important;
+  color: var(--co-navy) !important;
+  border-color: #c8dcda !important;
+  border-bottom: 2px solid var(--co-teal) !important;
+  font-weight: 750 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-panel"] {
+  min-width: 0 !important;
+  padding-top: .58rem !important;
+}
+
+/* One calm, consistent surface treatment for cards and expanders. */
+[data-testid="stMetric"],
+[data-testid="stExpander"],
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stDataFrame"],
+[data-testid="stTable"] {
+  border-color: var(--co-border) !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+}
+[data-testid="stMetric"] { padding: 9px 11px !important; }
+[data-testid="stMetricLabel"] p { font-size: .75rem !important; line-height: 1.25 !important; }
+[data-testid="stMetricValue"] { line-height: 1.12 !important; }
+[data-testid="stExpander"] { margin: .05rem 0 .18rem !important; }
+[data-testid="stExpander"] details > summary {
+  min-height: 2.55rem !important;
+  padding: .55rem .78rem !important;
+}
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  padding: .3rem .78rem .72rem !important;
+}
+[data-testid="stCaptionContainer"] p { line-height: 1.4 !important; }
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+/* Remove excessive hover lift that can make dense dashboards jump around. */
+[data-testid="stMetric"]:hover,
+.hud-row > *:hover,
+button:hover,
+[role="button"]:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Mobile: use a two-column control grid where possible and wrap long tab labels. */
+@media (max-width: 760px) {
+  .block-container {
+    padding: .68rem .68rem 1rem !important;
+  }
+  .block-container [data-testid="stVerticalBlock"] { gap: .52rem !important; }
+  .block-container [data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: stretch !important;
+    gap: .5rem !important;
+  }
+  .block-container [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex: 1 1 calc(50% - .25rem) !important;
+    width: auto !important;
+    min-width: min(100%, 145px) !important;
+    max-width: 100% !important;
+  }
+  [data-testid="stTabs"] [role="tablist"],
+  [data-testid="stTabs"] [data-baseweb="tab-list"] {
+    justify-content: stretch !important;
+    gap: .28rem !important;
+    overflow: visible !important;
+  }
+  [data-testid="stTabs"] button[role="tab"],
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    flex: 1 1 calc(50% - .3rem) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(50% - .12rem) !important;
+    min-height: 2.45rem !important;
+    padding: .42rem .48rem !important;
+    font-size: .78rem !important;
+    text-align: center !important;
+  }
+  [data-testid="stMetricValue"] {
+    font-size: clamp(1.1rem, 4.5vw, 1.45rem) !important;
+    overflow-wrap: anywhere !important;
+  }
+  [data-testid="stButton"] button,
+  [data-testid="stDownloadButton"] button {
+    min-height: 2.65rem !important;
+    white-space: normal !important;
+  }
+  .st-key-budget_financial_summary {
+    position: static !important;
+  }
+  .st-key-budget_financial_summary .chip-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 390px) {
+  .block-container { padding-left: .52rem !important; padding-right: .52rem !important; }
+  [data-testid="stTabs"] button[role="tab"],
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    font-size: .74rem !important;
+    padding-left: .36rem !important;
+    padding-right: .36rem !important;
+  }
+}
+
+/* Respect accessibility preferences even where older effects are still declared. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+"""
+
 def apply_theme():
     # Apply this last so the responsive spacing rules cannot be overridden by
     # the broader redesign stylesheet above.
-    st.markdown(CSS + REDESIGN_CSS + SIDEBAR_FLOW_FIX, unsafe_allow_html=True)
+    st.markdown(CSS + REDESIGN_CSS + SIDEBAR_FLOW_FIX + WORKSPACE_POLISH_CSS, unsafe_allow_html=True)
 
 PHASES = {
     1: dict(name='Autumn agenda', title='Autumn · Set the agenda',

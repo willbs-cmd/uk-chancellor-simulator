@@ -1291,36 +1291,7 @@ _is_budget_phase = (
     or bool(s.get('spending_review_due')) or bool(s.get('autumn_statement_due')) or bool(s.get('active_emergency_budget'))
 )
 
-# Shared command strip: keep the Chancellor's position visible in every workspace.
-st.markdown("""
-<style>
-div[data-baseweb="tab-list"] {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    scrollbar-width: thin;
-}
-div[data-baseweb="tab"] {
-    white-space: nowrap;
-    min-width: max-content;
-}
-@media (max-width: 700px) {
-    div[data-baseweb="tab-list"] { gap: 0.15rem; }
-    div[data-baseweb="tab"] { padding-left: 0.55rem; padding-right: 0.55rem; }
-}
-</style>
-""", unsafe_allow_html=True)
-st.markdown("#### Government at a glance")
-st.caption(f"Term {int(s.term)} · Year {int(s.year)} · Budget stage {int(s.block)} of 3")
-_status_top = st.columns(3)
-_status_bottom = st.columns(3)
-_status_top[0].metric("Public approval", f"{float(s.approval):.1f}%")
-_status_top[1].metric("Economic growth", f"{float(s.growth):+.1f}%")
-_status_top[2].metric("Inflation", f"{float(s.inflation):.1f}%")
-_status_bottom[0].metric("OBR headroom", f"£{float(s.headroom):+.1f}bn")
-_status_bottom[1].metric("PM confidence", f"{float(s.pm_opinion):.0f}/100")
-_status_bottom[2].metric("Market confidence", f"{float(s.market_conf):.0f}/100")
-st.divider()
-
+# Six workspaces begin immediately below the Chancellor's dashboard indicators.
 area_office, area_budget, area_economy, area_cabinet, area_parliament, area_news = st.tabs([
     'Chancellor’s Office',
     'The Budget' + (' •' if _is_budget_phase else ''),
