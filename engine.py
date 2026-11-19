@@ -1750,6 +1750,8 @@ def proceed_to_spring():
     import political_survival
     political_survival.annual_review(s)
     government_missions.record_year(s)
+    import term_strategy
+    term_strategy.annual_review(s)
     import government_programme
     government_programme.close_annual_programme(s)
     performance_report.create_report()

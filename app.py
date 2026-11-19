@@ -1412,14 +1412,17 @@ with area_budget:
 with area_economy:
     st.markdown('### The Economy')
     st.caption('Growth, inflation, employment, productivity, households, regions and public services.')
-    economy_tabs = st.tabs(['Economic outlook', 'Households', 'Regions', 'Public services'])
+    economy_tabs = st.tabs(['Economic outlook', 'Five-year strategy', 'Households', 'Regions', 'Public services'])
     with economy_tabs[0]:
         economy()
     with economy_tabs[1]:
-        household.render()
+        import term_strategy
+        term_strategy.render(s)
     with economy_tabs[2]:
-        regional_economy.render()
+        household.render()
     with economy_tabs[3]:
+        regional_economy.render()
+    with economy_tabs[4]:
         public_services.render()
 
 with area_cabinet:

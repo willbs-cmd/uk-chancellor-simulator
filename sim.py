@@ -70,6 +70,7 @@ import budget_aftermath  # noqa: E402
 import mp_politics  # noqa: E402
 import opposition_campaign  # noqa: E402
 import long_run_simulation  # noqa: E402
+import term_strategy  # noqa: E402
 import regional_economy  # noqa: E402
 from content_store import load_json  # noqa: E402
 
@@ -2775,6 +2776,19 @@ def check(n=None, difficulty=None):
         failures.append(f"Phase 3 structural save/load regression failed: {exc}")
     finally:
         st.session_state = FakeState()
+
+    # Five-year strategy lifecycle regression.
+    try:
+        ts=FakeState(term=1,year=1,economic_strategy={"title":"Test","targets":dict(term_strategy.TARGETS)},economic_strategy_reviews=[],economic_strategy_last_review="",term_final_assessment=None,term_legacy_archive=[],growth=2.4,debt=82.,productivity_growth=1.8,country={"real_wages":2.2,"nhs_waiting":6.,"nhs_morale":65.},approval=58.,pm_opinion=62.,party_opinion=60.,cab_opinion=64.,headroom=12.,deficit=55.,market_conf=60.,public_service_strikes=[],long_run_policy_stock={"housing":0,"energy":0,"climate":0,"skills":0,"trade":0})
+        term_strategy.ensure(ts);ok=term_strategy.set_targets(ts,{"growth":2.5,"debt":85,"productivity":1.5,"wages":2,"services":70},"Test strategy");one=term_strategy.annual_review(ts);two=term_strategy.annual_review(ts)
+        if not ok or not one or two is not None or len(ts.economic_strategy_reviews)!=1:failures.append("Five-year strategy adoption or annual idempotence failed.")
+        if term_strategy.countdown(ts)!=(5,0):failures.append("Election countdown did not begin at five years.")
+        ts.year=5;term_strategy.annual_review(ts);final=term_strategy.finalise(ts)
+        if not final or final["years_completed"]!=2 or not 0<=final["overall"]<=100:failures.append("Final term assessment was missing or outside score bounds.")
+        if term_strategy.finalise(ts)!=final or len(ts.term_legacy_archive)!=1:failures.append("Final term assessment was not idempotent.")
+        ts.year=2
+        if term_strategy.set_targets(ts,{"growth":4},"Changed") is not False:failures.append("Strategy targets could be changed after Year 1.")
+    except Exception as exc:failures.append(f"Five-year strategy regression failed: {exc}")
 
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
