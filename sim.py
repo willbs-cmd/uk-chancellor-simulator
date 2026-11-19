@@ -2831,6 +2831,7 @@ def check(n=None, difficulty=None):
     # be released for emergency funding without changing departmental ledgers.
     try:
         state.new_game("Labour", "Normal", 74110, False)
+        budget.ensure()
         reserve_state = st.session_state
         reserve_state.headroom = 10.0
         reserve_state.budget_contingency_reserve = 0.0
