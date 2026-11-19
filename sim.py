@@ -303,16 +303,16 @@ def delivery_centre_checks():
         fake, "health", "Extra ward capacity", "Recruit temporary clinical teams to expand winter ward capacity.", 1.2
     )
     assert request_id and error is None, f"Valid funding request was rejected: {error}"
+    duplicate_id, duplicate_error = delivery_centre.create_funding_request(
+        fake, "health", "Second request", "A second request while the first is pending should be blocked.", 0.5
+    )
+    assert duplicate_id is None and duplicate_error, "One pending request per department and year should be enforced."
     ok, error = delivery_centre.decide_funding_request(fake, request_id, "approve", 0.8)
     assert ok and error is None, f"Affordable partial award failed: {error}"
     assert fake.headroom == 3.2 and fake.deficit == 12.8, f"Funding fiscal effect was not recorded: {fake.headroom}, {fake.deficit}"
     assert fake.delivery_funding_spent == 0.8 and fake.department_delivery_contracts["health"]["funding_support_bn"] == 0.8
     assert fake.budget_applied == approved_budget_before and fake.dept_spend == department_spend_before, "Exceptional funding must not rewrite the approved Budget ledger or departmental allocation."
     assert fake.budget_history == [{"year": 1}], "Funding approval must not rewrite Budget history."
-    duplicate_id, duplicate_error = delivery_centre.create_funding_request(
-        fake, "health", "Second request", "A second request in the same year should be blocked.", 0.5
-    )
-    assert duplicate_id is None and duplicate_error, "One pending request per department and year should be enforced."
     fake.public_service_scores["NHS"] = 70.0
     review = delivery_centre.close_year(fake)
     health_review = next(row for row in review["reviews"] if row["department"] == "health")
