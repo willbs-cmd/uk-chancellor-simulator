@@ -44,6 +44,16 @@ SPENDING_REVIEW_BID_RATES = {
 }
 
 
+def negotiate_spending_offer(current_pct, requested_pct, round_number=1):
+    """Move a Chancellor's offer halfway towards a minister's bid, at most twice."""
+    current = float(current_pct)
+    requested = float(requested_pct)
+    rounds = max(0, min(2, int(round_number)))
+    if rounds <= 0:
+        return round((current + requested) / 2.0, 1)
+    return round((current + requested) / 2.0, 1)
+
+
 def spending_review_reaction(department, requested_pct, settled_pct, loyalty):
     """Return a deterministic ministerial response to a proposed spending settlement."""
     requested = float(requested_pct)
@@ -2290,6 +2300,51 @@ def render_spending_review():
             loyalty = float(s.ministerial_loyalty.get(key, 65.0))
             st.write(f"**{minister}, {SPEND_DEFAULTS[key]['label']} Secretary** · Ministerial confidence {loyalty:.0f}/100")
             st.caption(f"Priority: {DEPARTMENT_MINISTERS[key][1]}. Requests a {request:+.1f}% uplift (£{base * request / 100.0:+.1f}bn).")
+    # Negotiation desk: the Chancellor can make up to two revised offers
+    # to each Secretary before locking the annual settlement.
+    st.markdown("### 🤝 Departmental negotiation desk")
+    st.caption("Select a Secretary and make a revised offer. Each round moves your offer halfway towards the department's original bid; you retain the final decision and can still approve or reject the settlement.")
+    negotiation_department = st.selectbox(
+        "Minister to negotiate with",
+        departments,
+        format_func=lambda key: SPEND_DEFAULTS[key]["label"],
+        key=f"sr_negotiation_department_{period}",
+    )
+    negotiation_rounds = dict(s.get("spending_review_negotiation_rounds", {}).get(period, {}))
+    negotiation_log = list(s.get("spending_review_negotiation_log", {}).get(period, []))
+    requested_offer = float(bid_rates.get(negotiation_department, 3.0))
+    current_offer = float(s.get(f"sr_{period}_{negotiation_department}", requested_offer))
+    rounds_used = int(negotiation_rounds.get(negotiation_department, 0))
+    n1, n2, n3 = st.columns(3)
+    n1.metric("Minister's opening bid", f"{requested_offer:+.1f}%")
+    n2.metric("Your current offer", f"{current_offer:+.1f}%")
+    n3.metric("Negotiation rounds", f"{rounds_used}/2")
+    if not done:
+        if st.button("Make revised offer", key=f"sr_negotiate_{period}_{negotiation_department}",
+                     disabled=rounds_used >= 2, use_container_width=True):
+            revised = negotiate_spending_offer(current_offer, requested_offer, rounds_used + 1)
+            s[f"sr_{period}_{negotiation_department}"] = revised
+            negotiation_rounds[negotiation_department] = rounds_used + 1
+            negotiation_log.append({
+                "department": negotiation_department, "round": rounds_used + 1,
+                "previous_offer": current_offer, "revised_offer": revised,
+                "minister_bid": requested_offer,
+            })
+            all_rounds = dict(s.get("spending_review_negotiation_rounds", {}))
+            all_rounds[period] = negotiation_rounds
+            s.spending_review_negotiation_rounds = all_rounds
+            all_logs = dict(s.get("spending_review_negotiation_log", {}))
+            all_logs[period] = negotiation_log[-48:]
+            s.spending_review_negotiation_log = all_logs
+            st.rerun()
+    if negotiation_log:
+        recent = [row for row in negotiation_log if row.get("department") == negotiation_department]
+        if recent:
+            last = recent[-1]
+            st.caption(f"Latest offer: {float(last['previous_offer']):+.1f}% → {float(last['revised_offer']):+.1f}% against a {float(last['minister_bid']):+.1f}% bid.")
+    if done:
+        st.caption("This Spending Review is closed. Negotiation records are retained for reference.")
+
     for group, keys in groups:
         with st.expander(group, expanded=(group == groups[0][0])):
             cols = st.columns(2)

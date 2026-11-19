@@ -1402,6 +1402,12 @@ def check(n=None, difficulty=None):
 
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
+        first_offer = budget.negotiate_spending_offer(0.0, 6.0, 1)
+        second_offer = budget.negotiate_spending_offer(first_offer, 6.0, 2)
+        if first_offer != 3.0 or second_offer != 4.5:
+            failures.append("Departmental negotiation did not move offers halfway towards the ministerial bid.")
+        if budget.negotiate_spending_offer(second_offer, 6.0, 3) != second_offer:
+            failures.append("Departmental negotiation exceeded its two-round limit.")
         generous = budget.spending_review_reaction('health', 5.0, 8.0, 60.0)
         compromise = budget.spending_review_reaction('education', 4.0, 3.0, 60.0)
         threatened = budget.spending_review_reaction('defence', 6.0, -5.0, 20.0)
