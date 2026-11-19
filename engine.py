@@ -29,6 +29,7 @@ import fiscal_events
 import government_missions
 import cabinet_management
 import political_pressure
+import number10
 
 SEATS = 650
 REQUEST_CHANCE = 0.48
@@ -909,6 +910,7 @@ def pm_relationship_annual_review(s):
     s.pm_relationship_history = (list(s.get("pm_relationship_history", [])) + [review])[-15:]
     s.pm_relationship_status = status
     s.pm_relationship_latest = review
+    number10.review_relationship(s, change)
     if (trust_after <= 28 and float(s.get("pm_opinion", 50.0)) <= 40
             and not s.get("active_pm_ultimatum") and not s.get("game_over")):
         s.active_pm_ultimatum = {
@@ -989,6 +991,8 @@ def open_pm_meeting():
         topic = max(candidates, key=lambda item: item[0])[1]
     else:
         topic = random.choice(PM_MEETING_TOPICS)
+    if s.get("active_pm_intervention"):
+        return False
     s.active_pm_meeting={**topic,"year":int(s.get("year",1))}
     return True
 
@@ -1037,6 +1041,14 @@ def resolve_pm_meeting(choice):
         "decision":label,"pm_trust":float(s.pm_trust),"pm_confidence":float(s.pm_opinion),
         "cabinet_support":float(s.cab_opinion)}])[-15:]
     s.active_pm_meeting=None
+    tension_change = -14.0 if choice == "support" else (-8.0 if choice == "compromise" else 20.0)
+    if meeting.get("pressure_origin") == "political_pressure" and choice == "stand":
+        tension_change += 8.0
+    number10.adjust_tension(
+        s, tension_change,
+        f"The Chancellor chose to {label.lower()} at the private Number 10 meeting",
+        "pm_meeting",
+    )
     s.message=f"NUMBER 10 MEETING — {meeting.get('topic','Private meeting')}. {outcome}"
     if meeting.get("pressure_origin") == "political_pressure":
         if choice == "stand" and float(s.get("pm_trust", 70.0)) < 45.0:
@@ -1405,6 +1417,7 @@ def submit_budget():
         else:
             s.pm_opinion = round(_clip(s.pm_opinion + (2 if met_count >= max(1, total_count // 2) else -1)), 1)
         s.budget_pm_met_count = met_count
+        number10.review_budget(s, choice, met_count, total_count)
 
         event_name = "Emergency Budget" if s.get('budget_day_type') == 'emergency' else "Spring Budget"
         s.budget_day_negotiation = f"Your {event_name.lower()} draft meets {met_count} of {total_count} Prime Ministerial priorities. " + ("Number 10 welcomes the package." if met_count == total_count else "The PM's team has identified gaps that will need explaining.")
@@ -1743,6 +1756,7 @@ def proceed_to_spring():
     # Compare the vintage with the fully realised annual outcome exactly once.
     forecast_accuracy.settle_vintage(s)
     s.year += 1
+    number10.annual_review(s)
     government_programme.start_annual_programme(s, carry_forward=True)
     s.autumn_statement_due = s.year <= 5
     fiscal_events.schedule_spending_review(s)

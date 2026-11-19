@@ -726,6 +726,11 @@ def prime_minister_review(s, option, cabinet, fiscal):
     """Model Number 10's independent approval decision."""
     ideology_alignment = 1.0 if str(option.get("ideology", "Centric")) == "Centric" else 0.0
     headroom = float(fiscal["post_headroom"])
+    import number10
+    committee_adjustment = 0.0
+    if number10.committee_active(s):
+        # Number 10 applies tighter executive scrutiny to policies that threaten the fiscal position.
+        committee_adjustment = -8.0 if headroom < 3.0 or float(fiscal.get("deficit_delta", 0.0)) >= 1.5 else 2.0
     score = (
         55.0
         + (float(s.get("pm_opinion", 50.0)) - 50.0) * 0.30
@@ -735,6 +740,7 @@ def prime_minister_review(s, option, cabinet, fiscal):
         - (max(0.0, -headroom) * 0.80)
         - (min(5.0, max(0.0, float(fiscal["deficit_delta"])) * 0.40))
         + (2.0 if ideology_alignment else 0.0)
+        + committee_adjustment
     )
     score = round(_clip(score, -25.0, 100.0), 1)
     if score >= 57:
@@ -743,7 +749,10 @@ def prime_minister_review(s, option, cabinet, fiscal):
         status, factor, message = "Amendments required", 0.82, "Number 10 will only authorise the proposal with changes. Its impact will be reduced."
     else:
         status, factor, message = "Rejected by the Prime Minister", 0.0, "The Prime Minister refuses executive clearance. The proposal does not reach the Commons."
-    return {"status": status, "score": score, "factor": factor, "message": message}
+    if committee_adjustment:
+        message += " A Number 10-led Economic Strategy Committee is applying additional fiscal scrutiny."
+    return {"status": status, "score": score, "factor": factor, "message": message,
+            "committee_adjustment": committee_adjustment}
 
 
 def _apply_stance_to_copy(s, stance):

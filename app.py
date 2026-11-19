@@ -29,6 +29,7 @@ import chancellors_desk
 import cabinet_management
 import government_programme
 import political_pressure
+import number10
 import opposition_campaign
 import government_missions
 from state import CARDS_ECON, CARDS_POLITICAL, CARDS_TOP
@@ -41,6 +42,7 @@ apply_theme()
 state.ensure_init()
 s = st.session_state
 fiscal_events.ensure_state(s)
+number10.ensure(s)
 if s.get('step') == 'game':
     government_missions.ensure(s)
     government_programme.ensure(s)
@@ -907,6 +909,32 @@ def pm_meeting_screen():
                 st.rerun()
 
 
+def pm_intervention_screen():
+    issue = s.get('active_pm_intervention') or {}
+    tension = float(issue.get('tension', s.get('pm_treasury_tension', 0.0)))
+    st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> NUMBER 10 · FORMAL INTERVENTION</div><div class='briefing-heading'>The Economic Strategy Committee</div>", unsafe_allow_html=True)
+    st.error("The Prime Minister is establishing a Cabinet committee to direct the Government's economic strategy. This is a formal intervention in the Treasury's independence.")
+    st.metric('Treasury–Number 10 tension', f"{tension:.0f}/100")
+    st.caption('Status: ' + number10.tension_status(tension))
+    if issue.get('reason'):
+        st.caption('What brought this to a head: ' + str(issue.get('reason')))
+    humphrey_message(issue.get('pm', 'The Prime Minister is waiting for your response, Chancellor.'))
+    st.markdown('### The committee will be established either way')
+    st.write('You cannot veto the Prime Minister’s decision to establish a Cabinet committee. Your choice is whether to cooperate and influence its work, or publicly challenge Number 10 and risk your position.')
+    with st.container(border=True):
+        st.markdown('**Cooperate with the committee**')
+        st.caption('Restore some trust with the PM and Cabinet. The committee will apply tighter fiscal scrutiny to major policy proposals through the next Budget cycle.')
+        if st.button('Work with the committee', key='pm_committee_cooperate', type='primary', use_container_width=True):
+            number10.resolve_intervention(s, 'cooperate')
+            st.rerun()
+    with st.container(border=True):
+        st.markdown('**Challenge Number 10 publicly**')
+        st.caption('Win some support from your party and backbenchers, but damage your relationship with the PM. A direct ultimatum is possible.')
+        if st.button('Challenge the PM', key='pm_committee_challenge', type='secondary', use_container_width=True):
+            number10.resolve_intervention(s, 'challenge')
+            st.rerun()
+
+
 def pm_ultimatum_screen():
     ultimatum=s.get("active_pm_ultimatum") or {}
     st.markdown("<div class='briefing-kicker'><span class='briefing-alert-dot'></span> NUMBER 10 · PRIVATE MEETING</div><div class='briefing-heading'>The Prime Minister's ultimatum</div>",unsafe_allow_html=True)
@@ -1311,6 +1339,8 @@ with area_office:
         st.warning('An outstanding decision needs your attention below.')
     if s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
+    elif s.get('active_pm_intervention'):
+        pm_intervention_screen()
     elif s.get('active_pm_meeting'):
         pm_meeting_screen()
     elif s.get('active_gilt_emergency'):
@@ -1433,11 +1463,19 @@ with area_cabinet:
         st.warning('A ministerial relationship issue is active. Resolve it through the Chancellor’s Office.')
     st.divider()
     st.markdown('#### Number 10 relationship')
-    pmc = st.columns(3)
+    tension = float(s.get('pm_treasury_tension', 12.0))
+    pmc = st.columns(4)
     pmc[0].metric('PM confidence', f"{float(s.pm_opinion):.0f}/100")
     pmc[1].metric('Personal trust', f"{float(s.get('pm_trust', 70)):.0f}/100")
     pmc[2].metric('Cabinet support', f"{float(s.cab_opinion):.0f}/100")
+    pmc[3].metric('Treasury–PM tension', f"{tension:.0f}/100")
+    st.caption('Tension status: ' + number10.tension_status(tension))
     st.metric('Relationship status', s.get('pm_relationship_status', 'Workable'))
+    if number10.committee_active(s):
+        st.warning(f"A Number 10-led Economic Strategy Committee is active through Year {int(s.get('pm_committee_until_year', 0))}. Major Government Programme proposals face additional fiscal scrutiny.")
+    if s.get('pm_treasury_tension_history'):
+        with st.expander('Treasury–Number 10 dispute history'):
+            st.dataframe(list(reversed(s.pm_treasury_tension_history[-10:])), hide_index=True, use_container_width=True)
     latest_review = s.get('pm_relationship_latest') or {}
     if latest_review:
         st.caption(

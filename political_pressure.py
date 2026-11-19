@@ -3,6 +3,7 @@ import hashlib
 import streamlit as st
 
 import cabinet_management
+import number10
 
 
 def _clip(value, low=0.0, high=100.0):
@@ -301,4 +302,10 @@ def resolve_issue(choice, s=None):
             "text": "The Prime Minister has summoned the Chancellor after repeated Cabinet and parliamentary disputes.",
             "summary": "An urgent meeting is waiting in the Decisions tab."
         })
+    tension_change = -6.0 if choice == "negotiate" else (8.0 if choice == "stand_firm" else 5.0)
+    number10.adjust_tension(
+        s, tension_change,
+        "The Chancellor's response to Cabinet and parliamentary pressure",
+        "political_pressure",
+    )
     return True

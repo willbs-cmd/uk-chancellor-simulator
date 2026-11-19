@@ -65,6 +65,7 @@ import government_missions  # noqa: E402
 import government_programme  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
+import number10  # noqa: E402
 import budget_aftermath  # noqa: E402
 import mp_politics  # noqa: E402
 import opposition_campaign  # noqa: E402
@@ -500,6 +501,55 @@ def cabinet_rivalry_checks():
 
 
 
+def number10_committee_checks():
+    # Repeated disputes create a formal Number 10 intervention, with a real choice and time-limited consequences.
+    test_state = FakeState({
+        'term': 1, 'year': 2, 'pm_treasury_tension': 12.0,
+        'pm_treasury_tension_history': [], 'active_pm_intervention': None,
+        'pm_committee_until_year': 0, 'pm_committee_history': [],
+        'pm_trust': 55.0, 'pm_opinion': 48.0, 'cab_opinion': 50.0,
+        'party_opinion': 50.0, 'backbench_opinion': 50.0, 'event_cards': [],
+    })
+    number10.ensure(test_state)
+    issue = number10.adjust_tension(test_state, 62.0, 'Repeated Treasury disputes', 'test')['intervention']
+    assert issue is not None and test_state['active_pm_intervention'] is not None
+    assert test_state['pm_treasury_tension'] == 74.0
+    assert number10.resolve_intervention(test_state, 'cooperate')
+    assert test_state['active_pm_intervention'] is None
+    assert number10.committee_active(test_state) and test_state['pm_committee_until_year'] == 3
+    assert test_state['pm_trust'] == 63.0 and test_state['pm_opinion'] == 52.0
+    assert test_state['pm_treasury_tension'] == 42.0
+
+    normal = FakeState({'year': 2, 'pm_opinion': 55.0, 'pm_trust': 60.0})
+    supervised = FakeState({'year': 2, 'pm_opinion': 55.0, 'pm_trust': 60.0,
+                             'pm_committee_until_year': 3, 'pm_treasury_tension': 42.0})
+    cabinet = {'support_pct': 55.0}
+    fiscal = {'post_headroom': 1.0, 'deficit_delta': 2.0}
+    normal_review = government_programme.prime_minister_review(normal, {'ideology': 'Centric'}, cabinet, fiscal)
+    supervised_review = government_programme.prime_minister_review(supervised, {'ideology': 'Centric'}, cabinet, fiscal)
+    assert supervised_review['committee_adjustment'] == -8.0
+    assert supervised_review['score'] < normal_review['score']
+
+    supervised['year'] = 4
+    assert number10.annual_review(supervised)
+    assert not number10.committee_active(supervised)
+    assert supervised['pm_committee_until_year'] == 0
+
+    challenger = FakeState({
+        'term': 1, 'year': 1, 'pm_treasury_tension': 75.0,
+        'active_pm_intervention': {'term': 1, 'year': 1, 'tension': 75.0, 'reason': 'Repeated clashes'},
+        'pm_committee_until_year': 0, 'pm_committee_history': [],
+        'pm_trust': 40.0, 'pm_opinion': 34.0, 'cab_opinion': 50.0,
+        'party_opinion': 50.0, 'backbench_opinion': 50.0,
+        'active_pm_ultimatum': None, 'event_cards': [],
+    })
+    assert number10.resolve_intervention(challenger, 'challenge')
+    assert number10.committee_active(challenger)
+    assert challenger['pm_trust'] == 30.0 and challenger['pm_opinion'] == 27.0
+    assert challenger['active_pm_ultimatum']['source'] == 'committee_challenge'
+    return True
+
+
 def pm_cabinet_reshuffle_checks():
     import political_survival
     fake = FakeState({
@@ -640,6 +690,7 @@ def check(n=None, difficulty=None):
     try:
         import political_survival
         political_survival_checks()
+        assert number10_committee_checks()
         cabinet_checks()
         try:
             government_programme_checks()
