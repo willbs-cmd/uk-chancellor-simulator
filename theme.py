@@ -3674,9 +3674,6 @@ button:hover,
 </style>
 """
 
-def apply_theme():
-    # Apply this last so the responsive spacing rules cannot be overridden by
-    # the broader redesign stylesheet above.
 SIDEBAR_INFORMATION_CSS = """
 <style>
 section[data-testid="stSidebar"] .desk-command-card { padding:10px 11px; border:1px solid #d6e2ea; border-left:4px solid #7b9aa8; border-radius:10px; background:#f6f9fb; color:#20364f; margin:2px 0 4px; }
