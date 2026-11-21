@@ -1453,6 +1453,44 @@ if active_workspace == 'office':
             description = next_item.get('title') or next_item.get('name') or next_item.get('description') or 'A previous decision'
             st.caption(f"Next scheduled consequence: {description} · Due {due}. Consequences may change as new decisions are made.")
 
+    # Treasury intelligence: transparent warning thresholds, no automatic game-state changes.
+    intelligence = []
+    inflation_now = float(s.get('inflation', 2.0))
+    growth_now = float(s.get('growth', 0.0))
+    headroom_now = float(s.get('headroom', 0.0))
+    market_now = float(s.get('market_conf', 50.0))
+    debt_now = float(s.get('debt', 0.0))
+    unemployment_now = float(s.get('unemployment', 4.5))
+    if headroom_now < 0:
+        intelligence.append(('danger', 'Fiscal headroom is negative', 'Your current fiscal rules assessment is in deficit against the available headroom. Review the medium-term plan before adding commitments.'))
+    elif headroom_now < 5:
+        intelligence.append(('warning', 'Limited fiscal headroom', 'There is less than £5bn of room against the current fiscal rules assessment. Small shocks or policy costs could use it up.'))
+    if inflation_now >= 4.5:
+        intelligence.append(('danger' if inflation_now >= 6 else 'warning', 'Inflation remains elevated', f'Inflation is {inflation_now:.1f}%. Persistent price pressure can squeeze household incomes and complicate monetary policy.'))
+    if growth_now < 0:
+        intelligence.append(('danger', 'The economy is contracting', f'Real GDP growth is {growth_now:.2f}%. Weak activity can undermine receipts and increase pressure on public services.'))
+    elif growth_now < 0.5:
+        intelligence.append(('warning', 'Growth is subdued', f'Real GDP growth is only {growth_now:.2f}%. The recovery is vulnerable to weaker demand or confidence.'))
+    if market_now < 35:
+        intelligence.append(('danger', 'Market confidence is fragile', f'Market confidence is {market_now:.0f}/100. Borrowing costs and investor reactions deserve close attention.'))
+    elif market_now < 50:
+        intelligence.append(('warning', 'Market confidence is weakening', f'Market confidence is {market_now:.0f}/100. Reassuring fiscal plans and credible forecasts may help.'))
+    if debt_now >= 100:
+        intelligence.append(('warning', 'Debt is above 100% of GDP', f'General government gross debt is {debt_now:.1f}% of GDP, leaving the public finances exposed to interest-rate and growth shocks.'))
+    if unemployment_now >= 7:
+        intelligence.append(('warning', 'Labour market weakness', f'Unemployment is {unemployment_now:.1f}%. Consider the effect of weaker employment on households, demand and receipts.'))
+    with st.container(border=True):
+        st.markdown('#### Treasury intelligence')
+        st.caption('Early-warning indicators from the current simulation. These are diagnostic prompts, not additional penalties or automatic policy changes.')
+        if intelligence:
+            for level, title, detail in intelligence:
+                if level == 'danger':
+                    st.error(f'**{title}** — {detail}')
+                else:
+                    st.warning(f'**{title}** — {detail}')
+        else:
+            st.success('No major warning thresholds are currently breached. Continue monitoring the fiscal and economic outlook.')
+
     if s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
     elif s.get('active_pm_intervention'):
