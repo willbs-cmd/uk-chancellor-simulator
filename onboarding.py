@@ -11,11 +11,11 @@ WORKSPACES = {
 }
 
 STEP_DEFINITIONS = [
-    ("office", "Read your first Treasury briefing", "Open the Office and look through the Treasury in-tray."),
-    ("budget", "Visit the Budget", "Find the tax, spending and fiscal-event controls."),
-    ("economy", "Check the economic outlook", "Review growth, inflation and the forward forecasts."),
-    ("first_decision", "Make your first decision", "Resolve a policy, crisis or other in-game decision."),
-    ("parliament", "Explore Parliament", "See how Commons votes, MPs and political pressure work."),
+    ("office", "office", "Read your first Treasury briefing", "Open the Office and look through the Treasury in-tray."),
+    ("budget", "budget", "Visit the Budget", "Find the tax, spending and fiscal-event controls."),
+    ("economy", "economy", "Check the economic outlook", "Review growth, inflation and the forward forecasts."),
+    ("first_decision", "first_decision", "Make your first decision", "Resolve a policy, crisis or other in-game decision."),
+    ("parliament", "parliament", "Explore Parliament", "See how Commons votes, MPs and political pressure work."),
 ]
 
 
@@ -53,7 +53,7 @@ def checklist(s):
         "first_decision": first_decision,
         "parliament": "parliament" in visited,
     }
-    completed = sum(1 for _, key, _ in STEP_DEFINITIONS if done[key])
+    completed = sum(1 for _, key, _, _ in STEP_DEFINITIONS if done[key])
     return {"completed": completed, "total": len(STEP_DEFINITIONS),
             "complete": completed == len(STEP_DEFINITIONS), "steps": done}
 
@@ -78,11 +78,11 @@ def render(s=None, active_workspace="office"):
         cols[2].markdown("**Your objective**")
         cols[2].caption("Deliver your five-year mission while retaining economic credibility and political support.")
         st.progress(progress["completed"] / progress["total"], text="Your first steps")
-        for workspace, key, instruction in STEP_DEFINITIONS:
+        for workspace, key, title, instruction in STEP_DEFINITIONS:
             complete = progress["steps"][key]
             step_cols = st.columns([0.07, 0.93])
             step_cols[0].markdown("✅" if complete else "⬜")
-            step_cols[1].markdown(f"**{instruction}**" + (" · Complete" if complete else ""))
+            step_cols[1].markdown(f"**{title}**" + (" · Complete" if complete else ""))
             if not complete:
                 destination = WORKSPACES[workspace]["title"] if workspace in WORKSPACES else "Office"
                 step_cols[1].caption(
