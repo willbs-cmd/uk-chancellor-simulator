@@ -4048,3 +4048,165 @@ CSS += """
 
 </style>
 """
+
+
+CSS += """
+<style>
+/* ================= REFINEMENT PASS: NAVIGATION, DESK & RESPONSIVE RHYTHM ================= */
+
+/* The six main workspaces are the primary navigation, not an ordinary form. */
+.st-key-primary_workspace { margin: .25rem 0 .85rem !important; }
+.st-key-primary_workspace [role="radiogroup"] {
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:.45rem !important;
+  padding:.4rem !important;
+  border:1px solid rgba(215,190,158,.24) !important;
+  border-radius:10px !important;
+  background:rgba(35,13,12,.72) !important;
+}
+.st-key-primary_workspace [role="radiogroup"] > label {
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-width:0 !important;
+  min-height:2.8rem !important;
+  padding:.55rem .45rem !important;
+  margin:0 !important;
+  border:1px solid transparent !important;
+  border-radius:7px !important;
+  background:transparent !important;
+  text-align:center !important;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease !important;
+}
+.st-key-primary_workspace [role="radiogroup"] > label p {
+  margin:0 !important;
+  font-size:.88rem !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  white-space:normal !important;
+}
+.st-key-primary_workspace [role="radiogroup"] > label:hover {
+  background:rgba(199,166,106,.12) !important;
+  border-color:rgba(199,166,106,.45) !important;
+}
+.st-key-primary_workspace [role="radiogroup"] > label:has(input:checked) {
+  background:linear-gradient(145deg,#794039,#5b2924) !important;
+  border-color:#dfc28a !important;
+  box-shadow:inset 0 -3px 0 #d4b477,0 3px 10px rgba(0,0,0,.18) !important;
+}
+.st-key-primary_workspace [role="radiogroup"] > label:has(input:checked) p {
+  color:#fff4df !important;
+}
+
+/* A calmer and more legible permanent Treasury desk. */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap:.58rem !important; }
+[data-testid="stSidebar"] [data-testid="stExpander"] {
+  border-radius:8px !important;
+  border-color:rgba(215,190,158,.25) !important;
+  box-shadow:none !important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  min-height:2.5rem !important;
+  padding:.35rem .65rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {
+  font-size:.78rem !important;
+  line-height:1.4 !important;
+}
+[data-testid="stSidebar"] [data-testid="stMetric"] {
+  padding:.55rem .65rem !important;
+  border-radius:7px !important;
+}
+[data-testid="stSidebar"] hr { margin:.35rem 0 !important; }
+
+/* Consistent section hierarchy and content panels. */
+.stApp h2 { margin-top:.45rem !important; margin-bottom:.35rem !important; }
+.stApp h3 { margin-top:.35rem !important; margin-bottom:.25rem !important; }
+.stApp h4 { margin-top:.25rem !important; margin-bottom:.2rem !important; }
+[data-testid="stAlert"] {
+  border-radius:8px !important;
+  border-width:1px !important;
+  padding:.72rem .9rem !important;
+}
+[data-testid="stDataFrame"],[data-testid="stTable"] {
+  border-radius:8px !important;
+  overflow:hidden !important;
+}
+[data-testid="stMetric"] {
+  min-width:0 !important;
+  overflow-wrap:anywhere !important;
+}
+[data-testid="stMetricValue"] {
+  line-height:1.12 !important;
+  overflow-wrap:anywhere !important;
+}
+[data-testid="stTextInput"] input,[data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea,[data-baseweb="select"] > div {
+  border-radius:7px !important;
+}
+[data-testid="stButton"] button,[data-testid="stDownloadButton"] button {
+  border-radius:7px !important;
+  white-space:normal !important;
+  line-height:1.25 !important;
+  min-height:2.45rem !important;
+}
+[data-testid="stButton"] button:focus-visible,
+[data-testid="stDownloadButton"] button:focus-visible {
+  outline:2px solid #f1dfbb !important;
+  outline-offset:2px !important;
+}
+
+/* Keep nested workspace tabs readable without forcing horizontal overflow. */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  flex-wrap:wrap !important;
+  row-gap:.25rem !important;
+}
+[data-testid="stTabs"] button[data-baseweb="tab"] {
+  min-width:0 !important;
+  white-space:normal !important;
+  line-height:1.2 !important;
+}
+
+/* Small screens: navigation becomes a compact two-column switcher;
+   cards and controls use the full available width without clipping. */
+@media (max-width:900px) {
+  .st-key-primary_workspace [role="radiogroup"] {
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+@media (max-width:620px) {
+  .block-container {
+    padding-left:.7rem !important;
+    padding-right:.7rem !important;
+  }
+  .st-key-primary_workspace [role="radiogroup"] {
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:.35rem !important;
+  }
+  .st-key-primary_workspace [role="radiogroup"] > label {
+    min-height:2.55rem !important;
+    padding:.45rem .35rem !important;
+  }
+  .st-key-primary_workspace [role="radiogroup"] > label p { font-size:.82rem !important; }
+  [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; }
+  [data-testid="stMetric"] { padding:.55rem .65rem !important; }
+  [data-testid="stMetricValue"] { font-size:1.35rem !important; }
+  [data-testid="stTabs"] button[data-baseweb="tab"] {
+    flex:1 1 auto !important;
+    padding:.4rem .5rem !important;
+    font-size:.78rem !important;
+  }
+  .np-strip { grid-template-columns:minmax(0,1fr) !important; }
+  .np-card { min-height:0 !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    scroll-behavior:auto !important;
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+  }
+}
+</style>
+"""
