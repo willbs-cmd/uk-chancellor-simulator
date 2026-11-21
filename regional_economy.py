@@ -169,6 +169,12 @@ def strategy_snapshot(s=None):
     }
 
 
+def strategy_in_force(s=None):
+    """Whether the five-year target is still active and has not already been met."""
+    snapshot = strategy_snapshot(s)
+    return bool(snapshot and snapshot["remaining_years"] > 0 and not snapshot["achieved"])
+
+
 def _record_strategy_year(s, period):
     snapshot = strategy_snapshot(s)
     if not snapshot:
@@ -288,7 +294,7 @@ def render():
         st.markdown("**Active strategy** · " + ", ".join(snapshot["regions"]))
         c1, c2, c3 = st.columns(3)
         c1.metric("Productivity gap", f"{snapshot['current_gap']:.1f} points",
-                  f"{-snapshot['narrowed_points']:+.1f} vs baseline")
+                  f"{snapshot['narrowed_points']:+.1f} vs baseline")
         c2.metric("Gap narrowed", f"{snapshot['progress_percent']:.1f}%",
                   f"Target {snapshot['target_percent']:.0f}%")
         c3.metric("Time remaining", f"{snapshot['remaining_years']} years",

@@ -96,7 +96,7 @@ def _apply_regional_impact(s, project, progress_delta):
     effects = {}
     for name in targets:
         row = regions[name]
-        priority_bonus = 1.15 if name in s.get("regional_strategy_regions", []) and s.get("regional_strategy_active") else 1.0
+        priority_bonus = 1.15 if name in s.get("regional_strategy_regions", []) and regional_economy.strategy_in_force(s) else 1.0
         productivity = gain * delivered_share * 0.85 * priority_bonus / len(targets)
         investment = gain * delivered_share * 1.20 * priority_bonus / len(targets)
         jobs_index = gain * delivered_share * 0.55 * priority_bonus / len(targets)
