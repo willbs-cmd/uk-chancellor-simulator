@@ -3181,6 +3181,46 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Fuel-duty trigger regression failed: {exc}")
 
+    # Regional convergence targets must measure a genuine productivity gap,
+    # persist through saves, and give targeted national projects a bounded uplift.
+    try:
+        state.new_game("Labour", "Normal", 74133, False)
+        regional_state = st.session_state
+        regional_economy.ensure(regional_state)
+        priority = sorted(
+            regional_state.regional_economies,
+            key=lambda name: regional_state.regional_economies[name]["productivity"]
+        )[:4]
+        if not regional_economy.set_inequality_target(regional_state, priority, 0.20):
+            failures.append("A valid lower-productivity regional convergence target could not be adopted.")
+        snap = regional_economy.strategy_snapshot(regional_state)
+        if not snap or snap["baseline_gap"] <= 0 or snap["target_percent"] != 20.0:
+            failures.append("Regional convergence strategy did not capture its baseline and ambition.")
+        if regional_economy.set_inequality_target(regional_state, [], 0.20):
+            failures.append("Regional convergence strategy accepted an empty priority group.")
+        regional_state.regional_economies[priority[0]]["productivity"] += 2.0
+        improved = regional_economy.strategy_snapshot(regional_state)
+        if improved["current_gap"] >= snap["current_gap"]:
+            failures.append("Improved productivity in a priority region did not narrow the measured gap.")
+        save_error = state.import_save(state.export_save())
+        if save_error:
+            failures.append(f"Regional convergence strategy did not survive save/load: {save_error}")
+        elif not st.session_state.get("regional_strategy_active") or st.session_state.get("regional_strategy_regions") != priority:
+            failures.append("Save/load changed the adopted regional convergence strategy.")
+        target_state = st.session_state
+        before = float(target_state.regional_economies[priority[0]]["productivity"])
+        national_investment._apply_regional_impact(
+            target_state, {"region": priority[0], "regional_gain": 1.0, "jobs_supported": 100}, 20.0
+        )
+        after = float(target_state.regional_economies[priority[0]]["productivity"])
+        expected_minimum = 0.85 * 0.20 * 1.15
+        if after - before < expected_minimum - 0.001:
+            failures.append("Priority-region national investment did not receive its convergence weighting.")
+    except Exception as exc:
+        failures.append(f"Regional convergence strategy regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     print(f"Content contract: {len(decisions.DECISIONS)} decisions, {len(scen.CRISES)} crises, "
           f"{len(budget.TAXES)} tax levers, {len(budget.SPEND_DEFAULTS)} spending lines.")
     if failures:

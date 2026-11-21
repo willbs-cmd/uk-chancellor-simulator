@@ -96,10 +96,11 @@ def _apply_regional_impact(s, project, progress_delta):
     effects = {}
     for name in targets:
         row = regions[name]
-        productivity = gain * delivered_share * 0.85 / len(targets)
-        investment = gain * delivered_share * 1.20 / len(targets)
-        jobs_index = gain * delivered_share * 0.55 / len(targets)
-        growth = gain * delivered_share * 0.07 / len(targets)
+        priority_bonus = 1.15 if name in s.get("regional_strategy_regions", []) and s.get("regional_strategy_active") else 1.0
+        productivity = gain * delivered_share * 0.85 * priority_bonus / len(targets)
+        investment = gain * delivered_share * 1.20 * priority_bonus / len(targets)
+        jobs_index = gain * delivered_share * 0.55 * priority_bonus / len(targets)
+        growth = gain * delivered_share * 0.07 * priority_bonus / len(targets)
         row["productivity"] = round(max(70.0, min(145.0, float(row.get("productivity", 100.0)) + productivity)), 2)
         row["investment"] = round(max(20.0, min(100.0, float(row.get("investment", 50.0)) + investment)), 2)
         row["jobs"] = round(max(70.0, min(130.0, float(row.get("jobs", 100.0)) + jobs_index)), 2)
