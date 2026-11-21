@@ -3984,3 +3984,62 @@ def render_scorecard(data):
       <div>{new}{badges}</div>
     </div>""", unsafe_allow_html=True)
 
+/* Newspaper layout refinement: preserve readable front pages in the main workspace
+   and let the grid adapt to the actual available width (including the desk sidebar). */
+.np-strip {
+  display:grid !important;
+  width:100% !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  align-items:stretch !important;
+  gap:clamp(10px,1.2vw,18px) !important;
+  margin:14px 0 20px !important;
+  box-sizing:border-box !important;
+}
+.np-card {
+  width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  padding:clamp(12px,1.25vw,19px) !important;
+  min-height:260px;
+}
+.np-paper-meta {
+  flex-wrap:wrap;
+  font-size:clamp(.54rem,.62vw,.66rem) !important;
+  letter-spacing:.08em !important;
+}
+.np-masthead {
+  font-size:clamp(1rem,1.35vw,1.42rem) !important;
+  line-height:1.12 !important;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
+}
+.np-headline {
+  font-size:clamp(1rem,1.18vw,1.24rem) !important;
+  line-height:1.28 !important;
+  letter-spacing:-.015em !important;
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
+  hyphens:none !important;
+  text-wrap:pretty;
+}
+.np-description {
+  font-size:clamp(.76rem,.82vw,.86rem) !important;
+  line-height:1.48 !important;
+  overflow-wrap:break-word;
+}
+.np-paper-footer {
+  font-size:.57rem;
+  overflow-wrap:anywhere;
+}
+@media (max-width:1100px) {
+  .np-strip { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:700px) {
+  .np-strip { grid-template-columns:minmax(0,1fr) !important; }
+  .np-card { min-height:unset !important; }
+  .np-headline { font-size:1.12rem !important; }
+}
+@media (min-width:1500px) {
+  .np-strip { gap:20px !important; }
+  .np-card { padding:20px 22px 17px !important; }
+}
