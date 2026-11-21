@@ -110,10 +110,8 @@ def advance(s):
         public_share = float(project.get("public_share", 1.0))
         cost = float(project.get("approved_cost_bn", 0.0)) * public_share / duration
         if delay:
-            cost += float(project.get("overrun_bn", 0.0)) / max(1, int(project.get("years_elapsed", 1)))
+            cost += overrun
         annual_spend += cost
-        if project.get("finance") == "Private partnership":
-            annual_private_payments += round(float(project.get("approved_cost_bn", 0.0)) * 0.65 * 0.07, 2)
         gain = float(project.get("productivity_gain", spec.get("gain", 0.0)))
         progress_delta = max(0.0, after - before)
         productivity_delta += progress_delta * gain / 1000.0
