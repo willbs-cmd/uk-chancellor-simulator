@@ -764,6 +764,12 @@ def national_investment_checks():
     assert second and fake["national_investment_projects"][0]["progress"] > after_first, "Project progress should accumulate over successive years."
     assert len(fake["national_investment_history"]) == 2, "Each in-game year should have one investment review."
     assert fake["national_investment_productivity_stock"] > 0, "Delivered work should accumulate a productivity contribution."
+    regional = fake.get("regional_economies", {})
+    assert "North West" in regional, "Project delivery should initialise regional economic data."
+    assert regional["North West"]["project_jobs_supported"] > 0, "Delivered project work should register jobs in its selected region."
+    assert regional["North West"]["productivity"] > 94.0, "Project delivery should improve the selected region's productivity."
+    assert regional["North West"]["investment"] > 48.0, "Project delivery should improve the selected region's investment index."
+    assert regional.get("East Midlands", {}).get("project_jobs_supported", 0) == 0, "Regional benefits must not spill into unrelated areas."
     assert national_investment.cancel_project(fake, project_id), "An active project should be cancellable."
     assert fake["national_investment_projects"][0]["status"] == "Cancelled"
     return True

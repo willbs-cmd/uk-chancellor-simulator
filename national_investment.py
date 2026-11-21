@@ -71,6 +71,50 @@ def create_project(s, project_key, finance="Public capital", region="North West"
     return project_id, None
 
 
+
+REGION_ALIASES = {
+    "Yorkshire and the Humber": ["Yorkshire & Humber"],
+    "Midlands": ["East Midlands", "West Midlands"],
+}
+
+
+def _apply_regional_impact(s, project, progress_delta):
+    """Spread project benefits across the selected region as construction is delivered."""
+    if progress_delta <= 0:
+        return {}
+    import regional_economy
+    regional_economy.ensure(s)
+    regions = s.get("regional_economies", {})
+    targets = REGION_ALIASES.get(project.get("region"), [project.get("region")])
+    targets = [name for name in targets if name in regions]
+    if not targets:
+        return {}
+    gain = float(project.get("regional_gain", 1.0))
+    jobs_total = int(project.get("jobs_supported", 0))
+    delivered_share = min(1.0, progress_delta / 100.0)
+    per_region_share = delivered_share / len(targets)
+    effects = {}
+    for name in targets:
+        row = regions[name]
+        productivity = gain * delivered_share * 0.85 / len(targets)
+        investment = gain * delivered_share * 1.20 / len(targets)
+        jobs_index = gain * delivered_share * 0.55 / len(targets)
+        growth = gain * delivered_share * 0.07 / len(targets)
+        row["productivity"] = round(max(70.0, min(145.0, float(row.get("productivity", 100.0)) + productivity)), 2)
+        row["investment"] = round(max(20.0, min(100.0, float(row.get("investment", 50.0)) + investment)), 2)
+        row["jobs"] = round(max(70.0, min(130.0, float(row.get("jobs", 100.0)) + jobs_index)), 2)
+        row["growth"] = round(max(-4.0, min(5.0, float(row.get("growth", 0.8)) + growth)), 2)
+        jobs = int(jobs_total * per_region_share)
+        row["project_jobs_supported"] = int(row.get("project_jobs_supported", 0)) + jobs
+        effects[name] = {
+            "productivity": round(productivity, 3), "investment": round(investment, 3),
+            "jobs_index": round(jobs_index, 3), "growth": round(growth, 3),
+            "jobs_supported": jobs,
+        }
+    s["regional_economies"] = regions
+    return effects
+
+
 def advance(s):
     """Advance all projects once per in-game year; apply explicit costs and gradual benefits."""
     ensure(s)
@@ -116,10 +160,12 @@ def advance(s):
         progress_delta = max(0.0, after - before)
         productivity_delta += progress_delta * gain / 1000.0
         jobs += int(float(project.get("jobs_supported", 0)) * min(1.0, after / 100.0) * 0.12)
+        regional_effects = _apply_regional_impact(s, project, progress_delta)
         project["last_review"] = {
             "period": period, "progress_before": round(before, 1), "progress_after": round(after, 1),
             "delay": delay, "annual_capital_cost_bn": round(cost, 2),
             "overrun_bn": round(float(project.get("overrun_bn", 0.0)), 2),
+            "regional_effects": regional_effects,
         }
         project["history"] = (list(project.get("history", [])) + [dict(project["last_review"])])[-10:]
         records.append({"project": project["name"], **project["last_review"], "status": project["status"]})

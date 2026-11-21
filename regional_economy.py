@@ -67,6 +67,8 @@ def ensure(s=None):
     s = s or st.session_state
     if "regional_economies" not in s or not s.regional_economies:
         s.regional_economies = {name: dict(values) for name, values in REGION_START.items()}
+    for values in s.regional_economies.values():
+        values.setdefault("project_jobs_supported", 0)
     if "regional_history" not in s:
         s.regional_history = []
     if "regional_last_year" not in s:
@@ -159,9 +161,10 @@ def render():
             "Productivity": round(values["productivity"], 1),
             "Investment": round(values["investment"], 1),
             "Unemployment": f"{values['unemployment']:.1f}%",
+            "Project jobs supported": int(values.get("project_jobs_supported", 0)),
         })
     st.markdown("### Regional economies")
-    st.caption("Illustrative regional indices, not official ONS data. 100 is the approximate national starting benchmark for wages, jobs and productivity.")
+    st.caption("Illustrative regional indices, not official ONS data. 100 is the approximate national starting benchmark for wages, jobs and productivity. National projects now feed into the selected regions as work is delivered.")
     df = pd.DataFrame(rows)
     st.dataframe(df, hide_index=True, use_container_width=True)
     weakest = min(s.regional_economies.items(), key=lambda item: item[1]["productivity"])
