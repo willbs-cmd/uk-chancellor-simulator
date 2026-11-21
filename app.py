@@ -1298,6 +1298,12 @@ def economy():
         g2.metric('Real GDP growth', f'{float(s.growth):+.2f}%')
         g3.metric('Nominal GDP growth', f'{nominal_growth:+.2f}%',
                   help='Approximate growth in the money value of output, including inflation. GDP figures are gameplay estimates, not live forecasts.')
+        macro = st.columns(4, gap="small")
+        macro[0].metric("Inflation", f"{float(s.get('inflation', 2.0)):.1f}%")
+        macro[1].metric("Unemployment", f"{float(s.get('unemployment', 4.5)):.1f}%")
+        macro[2].metric("Bank Rate", f"{float(s.get('interest_rate', 4.0)):.1f}%")
+        macro[3].metric("National debt", f"{float(s.get('debt', 0.0)):.1f}% GDP")
+        st.caption("Macro indicators are simulated game values. GDP and the fiscal outlook respond to your decisions and to economic shocks.")
         shock = s.get('temporary_shock') or {}
         if shock:
             st.warning(f"Temporary shock in play: **{shock.get('label', 'Global disruption')}** — about {shock.get('years_left', 0)} annual tick(s) remaining.")
@@ -1531,11 +1537,22 @@ elif active_workspace == 'cabinet':
                 'Personality': profile.get('personality', '—')
             })
         if minister_rows:
-            st.dataframe(pd.DataFrame(minister_rows), hide_index=True, use_container_width=True,
-                         column_config={
-                             'Competence': st.column_config.ProgressColumn('Competence', min_value=0, max_value=100),
-                             'Loyalty': st.column_config.ProgressColumn('Loyalty', min_value=0, max_value=100)
-                         })
+            st.markdown("#### Ministerial register")
+            st.caption("Departmental performance, political reliability and each minister's working style. The Chancellor can assess and advise; appointments remain a matter for the Prime Minister.")
+            for start in range(0, len(minister_rows), 2):
+                pair = minister_rows[start:start + 2]
+                cols = st.columns(2, gap="medium")
+                for col, row in zip(cols, pair):
+                    with col:
+                        with st.container(border=True):
+                            status = "Needs attention" if row["Competence"] < 45 else "Strong delivery" if row["Competence"] >= 70 else "Developing"
+                            st.markdown(f"**{row['Department']}**")
+                            st.markdown(f"### {row['Minister']}")
+                            st.caption(f"{status} · {row['Faction']} · {row['Personality']}")
+                            st.progress(max(0, min(100, row["Competence"])) / 100,
+                                        text=f"Delivery competence · {row['Competence']}/100")
+                            st.progress(max(0, min(100, row["Loyalty"])) / 100,
+                                        text=f"Political loyalty · {row['Loyalty']}/100")
         else:
             st.info('Ministerial appointments will appear here once the Cabinet is formed.')
         if cabinet_health['weak_ministers']:

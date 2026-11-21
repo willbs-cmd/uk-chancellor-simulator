@@ -2248,6 +2248,21 @@ def render(submit=None, after_summary=None):
              desc='Projected annual real GDP growth after this draft Budget.'),
         ])
 
+    # A visual funding-coverage readout makes the core fiscal position easier to interpret.
+    coverage = (rev_now / spend_now * 100.0) if spend_now > 0 else 100.0
+    coverage_bar = max(0.0, min(1.0, coverage / 100.0))
+    fiscal_cols = st.columns([1.25, 1, 1], gap="medium")
+    with fiscal_cols[0]:
+        st.markdown("**Revenue covers**")
+        st.progress(coverage_bar, text=f"{coverage:.1f}% of forecast spending")
+        st.caption("How much of planned expenditure is covered by estimated receipts. The remainder is financed through borrowing or other funding.")
+    with fiscal_cols[1]:
+        st.metric("Draft balance", f"£{bal_now:+,.1f}bn",
+                  delta=f"£{bal_now - bal_app:+,.1f}bn vs approved")
+    with fiscal_cols[2]:
+        st.metric("Commons position", "Clear passage" if ayes >= 346 else "Narrow passage" if ayes >= WIN else "At risk",
+                  delta=f"{ayes}/650 projected ayes", delta_color="normal" if ayes >= WIN else "inverse")
+
     # Contingency reserve is a Budget allocation, not free additional headroom.
     reserve_balance = max(0.0, float(s.get('budget_contingency_reserve', 0.0)))
     reserve_target = max(0.0, min(30.0, float(s.get('budget_contingency_target', reserve_balance))))

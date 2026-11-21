@@ -325,6 +325,9 @@ def render():
     m3.metric("Cabinet support", f"{float(s.get('cab_opinion', 60)):.0f}/100", help="How strongly fellow ministers support your approach.")
     m4.metric("Backbench morale", f"{float(s.get('backbench_opinion', 60)):.0f}/100", help="Measures willingness among your own MPs to support government legislation.")
     m5.metric("Party unity", f"{float(s.get('party_opinion', 65)):.0f}/100", help="Measures whether the parliamentary party is staying behind the government.")
+    st.markdown("**Commons vote outlook**")
+    st.progress(max(0, min(650, votes)) / 650, text=f"{votes} projected ayes · {max(0, WIN - votes)} votes needed for a majority")
+    st.caption("326 votes pass a bill; 346 or more is treated as a clear passage in this simulation.")
     loyalty = s.get("ministerial_loyalty", {})
     if loyalty:
         least_loyal = sorted(loyalty.items(), key=lambda item: float(item[1]))[:2]
