@@ -274,7 +274,7 @@ def render(widget_namespace="government"):
             if st.button("Declare local election results", type="primary", use_container_width=True, key=f"{widget_namespace}_local_elections_hold_button"):
                 hold_election()
                 st.rerun()
-        st.stop()
+        return
     if not result:
         st.info("Your first local elections will take place after the first financial year.")
         return
