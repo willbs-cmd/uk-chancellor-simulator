@@ -19,6 +19,7 @@ import state
 import treasury
 import forecast_accuracy
 import chancellor_office
+import onboarding
 import delivery_centre
 import national_investment
 import devolution
@@ -66,6 +67,19 @@ political_survival.render(st.session_state)
 # ==================== SETUP SCREEN ====================
 def setup_screen():
     st.markdown("""<div class='setup-hero'><div class='seal'>HM TREASURY · SIMULATION</div><h1>The Chancellor's Office</h1><p>Manage the economy, make policy choices and steer your government through Parliament.</p><span class='stamp'>The Chancellor's Office</span></div>""", unsafe_allow_html=True)
+    st.info(
+        "**Your role:** You are the Chancellor of the Exchequer, not the Prime Minister. "
+        "You control the Treasury's tax, spending and borrowing decisions, manage the economic outlook "
+        "and negotiate with the PM, Cabinet and Parliament. The PM retains ministerial appointments and reshuffles."
+    )
+    with st.expander("First time playing? Start with these basics", expanded=True):
+        intro_cols = st.columns(3)
+        intro_cols[0].markdown("**Your job**")
+        intro_cols[0].caption("Keep the economy stable, choose tax and spending priorities, and defend the public finances.")
+        intro_cols[1].markdown("**Your challenge**")
+        intro_cols[1].caption("Every choice has trade-offs. A policy can help households or services while increasing costs or market pressure.")
+        intro_cols[2].markdown("**Your objective**")
+        intro_cols[2].caption("Survive the five-year term, deliver your mission and retain enough political support to remain in office.")
     st.markdown("### Step 1 · Form your government")
     party = st.selectbox("Select Governing Party:", state.PARTIES)
     mission = st.selectbox(
@@ -76,7 +90,7 @@ def setup_screen():
     )
     st.caption(government_missions.MISSIONS[mission]["description"])
     difficulty = st.radio(
-        "Difficulty", list(state.DIFFICULTY), index=2, horizontal=True,
+        "Difficulty", list(state.DIFFICULTY), index=0, horizontal=True,
         captions=[d['blurb'] for d in state.DIFFICULTY.values()],
         help='Easy is forgiving; Normal is balanced; Hardcore has frequent crises and no undo.'
     )
@@ -96,6 +110,11 @@ def setup_screen():
         format_func=lambda k: politics.PLEDGES[k]['label'], max_selections=3,
         help='Each pledge gives +2 starting approval, but it is a promise, not a free bonus: it can constrain future Budgets, and breaking one causes a U-turn scandal (approval, media and party support all fall).'
     )
+    guided = st.checkbox(
+        "Enable the New Chancellor guide", value=True,
+        help="Adds a first-year checklist, glossary and explanations of the six government workspaces. You can skip it at any time."
+    )
+    st.caption("First-time recommendation: **Easy** has fewer crises and three undos. Normal is the standard challenge; Hardcore is intended for experienced players.")
     tags = st.checkbox(
         'Show ideology tags on policy options',
         value=(difficulty == 'Easy'), key=f'tags_{difficulty}',
@@ -105,7 +124,8 @@ def setup_screen():
         state.new_game(
             party, difficulty, seed, tags,
             scenario=scenario, spad=spad, pledges=pledges,
-            game_mode='chancellor', government_mission=mission
+            game_mode='chancellor', government_mission=mission,
+            beginner_guide=guided
         )
         st.rerun()
 
@@ -1375,6 +1395,9 @@ active_workspace = st.radio(
     key='primary_workspace',
     label_visibility='collapsed'
 )
+
+onboarding.note_workspace(s, active_workspace)
+onboarding.render(s, active_workspace)
 
 if active_workspace == 'office':
     st.markdown('### Chancellor’s Office')

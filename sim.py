@@ -55,6 +55,7 @@ import career  # noqa: E402
 import decisions  # noqa: E402
 import engine  # noqa: E402
 import local_elections  # noqa: E402
+import onboarding  # noqa: E402
 import parliament  # noqa: E402
 import weekly_events  # noqa: E402
 import econ  # noqa: E402
@@ -1654,6 +1655,34 @@ def check(n=None, difficulty=None):
             failures.append("Local election campaign and council-control state did not survive save/load.")
     except Exception as exc:
         failures.append(f"Enhanced local election regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # Beginner onboarding is optional, progresses from meaningful first steps,
+    # and persists with the player's save.
+    try:
+        state.new_game("Labour", "Easy", 99901, True, beginner_guide=True)
+        guide_state = st.session_state
+        if not guide_state.get("onboarding_enabled") or guide_state.get("onboarding_completed"):
+            failures.append("The beginner guide did not initialise for a guided new game.")
+        onboarding.note_workspace(guide_state, "office")
+        onboarding.note_workspace(guide_state, "budget")
+        onboarding.note_workspace(guide_state, "economy")
+        guide_state.steps = 1
+        onboarding.note_workspace(guide_state, "parliament")
+        progress = onboarding.checklist(guide_state)
+        if progress["completed"] != 5 or not progress["complete"]:
+            failures.append("The beginner checklist did not recognise the first decision and key workspace visits.")
+        save_error = state.import_save(state.export_save())
+        if save_error:
+            failures.append(f"Beginner-guide settings did not survive save/load: {save_error}")
+        elif not st.session_state.get("onboarding_enabled") or not st.session_state.get("onboarding_completed"):
+            failures.append("Save/load omitted the beginner-guide state.")
+        state.new_game("Labour", "Normal", 99902, True, beginner_guide=False)
+        if st.session_state.get("onboarding_enabled"):
+            failures.append("The beginner guide appeared when disabled in game setup.")
+    except Exception as exc:
+        failures.append(f"Beginner onboarding regression failed: {exc}")
     finally:
         st.session_state = FakeState()
 

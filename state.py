@@ -300,6 +300,7 @@ def _defaults():
         autumn_statement_history=[], autumn_statement_due=None, emergency_budget_history=[], emergency_budget_last_period='', active_emergency_budget=None, emergency_replaces_spring_budget=False,
         budget_day_type='annual', fiscal_calendar_initialised=False,
         pay_settlement='unsettled', is_prime_minister=False, initialized=True,
+        onboarding_enabled=False, onboarding_completed=True, onboarding_visits=[],
     )
     for k, v in base.items():
         s[k] = v if not isinstance(v, (list, dict)) else json.loads(json.dumps(v))
@@ -314,7 +315,8 @@ def ensure_init():
 def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, pledges=(),
              game_mode='chancellor', career_name='Alex Morgan',
              career_constituency='Aberafan Maesteg', career_ambition='policy_specialist',
-             career_local_mandate='public_services', government_mission='balanced_renewal'):
+             career_local_mandate='public_services', government_mission='balanced_renewal',
+             beginner_guide=False):
     import budget
     import country
     import politics
@@ -351,6 +353,9 @@ def new_game(party, difficulty, seed, show_tags, scenario='fragile', spad=None, 
     s.poll_anchor = {p: float(v) for p, v in polls.items()}
     s.step = 'game'
     s.game_mode = game_mode if game_mode in ('career', 'chancellor') else 'chancellor'
+    s.onboarding_enabled = bool(beginner_guide and s.game_mode == 'chancellor')
+    s.onboarding_completed = not s.onboarding_enabled
+    s.onboarding_visits = []
     if s.game_mode == 'career':
         import career
         s.career_profile = career.new_profile(
@@ -399,7 +404,8 @@ def undo():
 # ---------------------------------------------------------------- save / load
 SAVE_KEYS = [
     'budget_contingency_reserve', 'budget_contingency_target', 'budget_reserve_history',
-    'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile', 'active_crisis', 'active_gilt_emergency', 'gilt_auction_history', 'gilt_auction_latest', 'last_ideology', 'last_crisis',
+    'step', 'party', 'year', 'block', 'term', 'steps', 'game_mode', 'career_profile',
+    'onboarding_enabled', 'onboarding_completed', 'onboarding_visits', 'active_crisis', 'active_gilt_emergency', 'gilt_auction_history', 'gilt_auction_latest', 'last_ideology', 'last_crisis',
     'crisis_reason', 'active_weekly_event', 'active_pm_ultimatum', 'last_weekly_event', 'weekly_event_history', 'crisis_event_history', 'ongoing_issues', 'headlines', 'budget_passed', 'sacked', 'sacked_reason', 'game_over', 'election_result',
     'budget_vote_result', 'budget_aftermath_pending', 'budget_aftermath_history', 'budget_aftermath_latest', 'budget_aftermath_created', 'budget_aftermath_applied', 'budget_day_stage', 'budget_day_draft', 'budget_editor_period', 'budget_editor_restore_draft', 'budget_settlement_applied_period', 'budget_project_draft', 'budget_pm_priorities', 'budget_pm_assessment',
     'budget_pm_met_count', 'budget_pm_choice', 'budget_day_negotiation', 'budget_day_forecast', 'budget_day_speech',
