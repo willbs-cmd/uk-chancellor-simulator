@@ -1412,6 +1412,47 @@ if active_workspace == 'office':
         st.info('A fiscal event or Budget decision is ready. Open **The Budget** to continue.')
     if s.get('active_crisis') or s.get('active_weekly_event') or s.get('active_request') or s.get('active_dispute'):
         st.warning('An outstanding decision needs your attention below.')
+
+    # Daily ministerial briefing: surface actionable priorities before the live decision.
+    active_items = []
+    if s.get('active_pm_ultimatum'):
+        active_items.append(("URGENT", "Prime Ministerial ultimatum", "Respond to the PM before proceeding."))
+    if s.get('active_pm_intervention') or s.get('active_pm_meeting'):
+        active_items.append(("POLITICAL", "Number 10 requires attention", "A discussion or intervention is awaiting your response."))
+    if s.get('active_gilt_emergency') or s.get('active_financial_crisis'):
+        active_items.append(("MARKETS", "Financial stability at risk", "Review the market or gilt emergency decision."))
+    if s.get('active_forecast_review'):
+        active_items.append(("FISCAL", "Forecast review due", "Treasury assumptions require your attention."))
+    if s.get('active_crisis'):
+        active_items.append(("CRISIS", "National crisis decision", "A crisis response is awaiting your decision."))
+    if s.get('active_weekly_event'):
+        active_items.append(("EVENT", "Weekly economic or political event", "Consider the available response and its trade-offs."))
+    if s.get('active_dispute'):
+        active_items.append(("CABINET", "Ministerial dispute", "Resolve the active departmental or ministerial disagreement."))
+    if s.get('active_request'):
+        active_items.append(("REQUEST", "Policy request awaiting a decision", "Review the request and decide whether to accept it."))
+    if _is_budget_phase or s.get('active_emergency_budget') or s.get('spending_review_due') or s.get('autumn_statement_due'):
+        active_items.append(("BUDGET", "Fiscal business on the agenda", "Open The Budget to complete the scheduled fiscal work."))
+    pending_items = sorted(list(s.get('pending', [])), key=lambda item: item.get('due', 0))
+    with st.container(border=True):
+        st.markdown("#### Morning briefing")
+        brief_cols = st.columns(4, gap="small")
+        brief_cols[0].metric("Government year", f"{int(s.get('year', 1))} of 5")
+        brief_cols[1].metric("Public approval", f"{float(s.get('approval', 50)):.0f}/100")
+        brief_cols[2].metric("Political capital", f"{float(s.get('political_capital_points', 0)):.0f}")
+        brief_cols[3].metric("Consequences pending", len(pending_items))
+        if active_items:
+            st.markdown("**Your immediate priorities**")
+            for level, title, detail in active_items[:5]:
+                st.markdown(f"- **{level} · {title}** — {detail}")
+        else:
+            st.success("No urgent decision is currently awaiting your response. You can review the economy, prepare policy or check upcoming consequences.")
+        if pending_items:
+            next_item = pending_items[0]
+            due = next_item.get('due', 'an upcoming turn')
+            description = next_item.get('title') or next_item.get('name') or next_item.get('description') or 'A previous decision'
+            st.caption(f"Next scheduled consequence: {description} · Due {due}. Consequences may change as new decisions are made.")
+
     if s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
     elif s.get('active_pm_intervention'):
