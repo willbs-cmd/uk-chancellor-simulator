@@ -254,10 +254,13 @@ def _defaults():
         active_opposition_attack=None, opposition_attack_history=[], opposition_attack_last_period='',
         parliament_actions={}, parliament_last_strategy=None,
         local_election_due=False, local_election_result=None, local_election_history=[], opening_parliament_seats={}, opening_mandate_pending=False,
+        local_campaign_week=0, local_campaign_actions=[], local_campaign_done=False,
+        local_campaign_target_region="North West", local_council_control_by_region={},
         parliament_seats={}, government_type='majority', government_coalition_partners=[], government_working_majority=0, coalition_stability=70.0,
         election_campaign_done=False, election_night_started=False, election_campaign_strategy='',
         election_campaign_turnout=0.0, election_campaign_approval=0.0, election_campaign_week=1,
-        election_campaign_actions=[], constituency_incumbents={}, previous_election_seats={},
+        election_campaign_actions=[], election_campaign_nation="England",
+        election_history=[], constituency_incumbents={}, previous_election_seats={},
         election_broadcast_stage=0,
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], cabinet_reshuffle_history=[], chancellor_actions=[],
@@ -460,7 +463,11 @@ SAVE_KEYS = [
     'department_delivery_contracts', 'delivery_contract_history', 'delivery_last_review_period',
     'delivery_funding_requests', 'delivery_funding_sequence', 'delivery_funding_spent', 'budget_alternatives', 'budget_risk_outcome', 'budget_scheme_delivery', 'obr_forecasts', 'obr_latest',
     'forecast_accuracy_vintages', 'forecast_accuracy_history', 'forecast_accuracy_latest',
-    'active_forecast_review', 'forecast_accuracy_last_settled', 'forecast_reliability', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history', 'council_control', 'local_government_mandate', 'general_election_mandate', 'cabinet_reshuffle_terms', 'chancellor_actions',
+    'active_forecast_review', 'forecast_accuracy_last_settled', 'forecast_reliability', 'boe_independence', 'boe_last_statement', 'boe_history', 'dmo_strategy', 'dmo_maturity', 'dmo_index_share', 'dmo_last_action', 'stress_test_result', 'local_election_due', 'local_election_result', 'local_election_history',
+    'local_campaign_week', 'local_campaign_actions', 'local_campaign_done',
+    'local_campaign_target_region', 'local_council_control_by_region', 'council_control',
+    'local_government_mandate', 'general_election_mandate', 'election_campaign_nation',
+    'election_history', 'cabinet_reshuffle_terms', 'chancellor_actions',
 ] + STAT_KEYS
 
 

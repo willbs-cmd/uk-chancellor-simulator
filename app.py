@@ -13,6 +13,7 @@ import world_economy
 import politics
 import parliament
 import local_elections
+import election_archive
 import scenarios as scen
 import state
 import treasury
@@ -228,6 +229,15 @@ if s.year > 5 and not s.get('election_campaign_done', False):
     main_rival = max(opponents, key=lambda p: current_polls[p]) if opponents else s.party
     st.markdown("# 🗳️ General Election Campaign")
     st.caption(f"Term {s.term} · Campaign week {min(week, total_weeks)} of {total_weeks} · Campaign headquarters")
+    nation_options = ["England", "Scotland", "Wales", "Northern Ireland"]
+    saved_nation = s.get("election_campaign_nation", "England")
+    nation_index = nation_options.index(saved_nation) if saved_nation in nation_options else 0
+    campaign_nation = st.selectbox(
+        "Priority campaign nation", nation_options, index=nation_index,
+        key=f"election_campaign_nation_picker_{week}",
+        help="Choose where the campaign team concentrates constituency visits. Some operations add a direct constituency-level advantage in this nation."
+    )
+    s.election_campaign_nation = campaign_nation
     st.markdown(f"""
     <div class='general-election-hero'>
       <div class='campaign-eyebrow'>THE COUNTRY GOES TO THE POLLS</div>
@@ -263,19 +273,23 @@ if s.year > 5 and not s.get('election_campaign_done', False):
             "Launch a cost-of-living tour": ("Visit towns and announce a focused household-cost package.", 0.65, 0.6, 0.2),
             "Hold a major rally": ("Energise party members and volunteers with a high-profile rally.", 0.45, 1.0, 0.1),
             "Target marginal constituencies": ("Put campaign resources into seats where small swings decide MPs.", 0.8, 1.1, 0.0),
+            "Regional constituency tour": ("Concentrate leader visits, local media and canvassing in your selected nation.", 0.55, 0.45, 0.12),
         },
         2: {
             "Prepare for the televised debate": ("A strong performance can shift undecided voters; a poor one can hand momentum to your rival.", 0.9 if s.approval >= 45 else 0.25, 0.25, 0.25 if s.approval >= 45 else -0.2),
             "Go on a regional media tour": ("Reach voters outside the Westminster bubble and explain your record.", 0.55, 0.45, 0.15),
             "Confront the opposition leader": ("Make a direct contrast with the leading rival. It is high-profile but can look negative.", 0.7, 0.1, -0.1),
+            "Defend sitting MPs in the battleground": ("Put campaign staff behind sitting MPs in your selected nation, especially vulnerable incumbents.", 0.45, 0.25, 0.12),
         },
         3: {
             "Launch a fully costed manifesto": ("Set out spending, tax and public-service commitments. Credibility matters.", 0.8 if s.headroom >= 0 else 0.25, 0.2, 0.35 if s.headroom >= 0 else -0.25),
             "Focus on the NHS and public services": ("Put service performance and waiting times at the centre of the campaign.", 0.6, 0.3, 0.25 if s.approval >= 45 else -0.05),
             "Make a major economic speech": ("Argue that your economic record offers stability and growth.", 0.65 if s.growth >= 0 else 0.3, 0.15, 0.2),
+            "Hold a regional policy summit": ("Show how the next Parliament would respond to the priorities of your selected nation.", 0.5, 0.25, 0.15),
         },
         4: {
             "Get out the vote operation": ("Mobilise supporters and concentrate on the closest seats.", 0.45, 1.8, 0.0),
+            "Targeted voter-registration push": ("Mobilise supporters and remove barriers to turnout in your selected nation.", 0.4, 1.35, 0.0),
             "Final leader's rally": ("End the campaign with a high-energy national rally.", 0.55, 1.0, 0.1),
             "Respond to a late campaign controversy": ("Take questions, publish evidence and try to stop a damaging story spreading.", 0.35 if s.approval < 50 else 0.6, 0.3, 0.25),
         },
@@ -297,7 +311,17 @@ if s.year > 5 and not s.get('election_campaign_done', False):
         total = sum(new.values()) or 100.0
         for party in state.PARTIES:
             s.poll_history[party][-1] = round(new[party] / total * 100.0, 1)
-        s.election_campaign_actions.append({"week": week, "action": chosen, "effect": round(swing, 2)})
+        campaign_item = {"week": week, "action": chosen, "effect": round(swing, 2)}
+        seat_campaign_effects = {
+            "Regional constituency tour": (1.8, "nation"),
+            "Defend sitting MPs in the battleground": (2.0, "incumbents"),
+            "Hold a regional policy summit": (1.25, "nation"),
+            "Targeted voter-registration push": (1.45, "nation"),
+        }
+        if chosen in seat_campaign_effects:
+            seat_effect, seat_mode = seat_campaign_effects[chosen]
+            campaign_item.update({"nation": campaign_nation, "seat_effect": seat_effect, "seat_effect_mode": seat_mode})
+        s.election_campaign_actions.append(campaign_item)
         s.election_campaign_turnout = float(s.get('election_campaign_turnout', 0.0)) + float(turnout)
         s.election_campaign_approval = float(s.get('election_campaign_approval', 0.0)) + float(approval_change)
         s.approval = round(engine._clip(float(s.approval) + float(approval_change)), 1)
@@ -312,7 +336,9 @@ if s.year > 5 and not s.get('election_campaign_done', False):
     if s.get('election_campaign_actions'):
         st.markdown("#### Campaign diary")
         for item in s.election_campaign_actions:
-            st.write(f"**Week {item['week']}:** {item['action']} · polling movement {item['effect']:+.2f} pts")
+            focus = f" · Focus: {item['nation']}" if item.get("nation") else ""
+            seat_note = f" · constituency edge +{float(item.get('seat_effect', 0)):.2f}" if item.get("seat_effect") else ""
+            st.write(f"**Week {item['week']}:** {item['action']} · polling movement {item['effect']:+.2f} pts{focus}{seat_note}")
     st.stop()
 
 if s.year > 5 and s.get('election_campaign_done', False) and not s.get('election_night_started', False):
@@ -408,6 +434,18 @@ if s.year > 5:
             "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get('seat_changes') and s.get('term', 1) > 1 else "—"),
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    changes = r.get("constituency_changes", {})
+    if changes:
+        st.markdown("### Constituency gains and losses")
+        swing_rows = [{
+            "Party": party, "Gains": int(changes.get(party, {}).get("gains", 0)),
+            "Losses": int(changes.get(party, {}).get("losses", 0)),
+            "Net change": f"{int(changes.get(party, {}).get('net', 0)):+d}",
+        } for party in sorted(state.PARTIES, key=lambda p: (
+            int(changes.get(p, {}).get("gains", 0)) - int(changes.get(p, {}).get("losses", 0))
+        ), reverse=True)]
+        st.dataframe(pd.DataFrame(swing_rows), hide_index=True, use_container_width=True)
+        st.caption(f"{int(r.get('defeated_incumbents', 0))} sitting MP(s) lost their seat · {int(r.get('marginal_seats', 0))} constituencies decided by five points or fewer.")
     reckoning = accountability.record_election_reckoning(s)
     st.markdown("### 🧾 National performance audit · election reckoning")
     verdict_cols = st.columns(3)
@@ -1531,7 +1569,7 @@ elif active_workspace == 'cabinet':
 elif active_workspace == 'parliament':
     st.markdown('### Parliament')
     st.caption('Commons votes, constituency MPs, rebellions, local elections and party management.')
-    parliament_tabs = st.tabs(['House of Commons', 'Accountability', 'Local elections', 'Government mandate'])
+    parliament_tabs = st.tabs(['House of Commons', 'Accountability', 'Local elections', 'Government mandate', 'Election archive'])
     with parliament_tabs[0]:
         parliament.render()
     with parliament_tabs[1]:
@@ -1540,6 +1578,8 @@ elif active_workspace == 'parliament':
         local_elections.render(widget_namespace='parliament')
     with parliament_tabs[3]:
         government_missions.render(s)
+    with parliament_tabs[4]:
+        election_archive.render(s)
 
 elif active_workspace == 'news':
     st.markdown('### The News')

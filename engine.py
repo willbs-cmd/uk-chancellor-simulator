@@ -1775,6 +1775,10 @@ def proceed_to_spring():
     budget.apply_spending_review_rollforward(s, s.year)
     # Annual local contests take place after the first full year in office.
     s.local_election_due = s.year > 1
+    s.local_campaign_week = 1 if s.local_election_due else 0
+    s.local_campaign_actions = []
+    s.local_campaign_done = False
+    s.local_campaign_target_region = "North West"
     s.block = 1
     s.budget_passed = False
     s.budget_day_stage = 0
@@ -1865,11 +1869,23 @@ def compute_seats(polls, return_details=False):
             incumbent_party = incumbents.get(code)
             incumbency = 3.5 if incumbent_party == party else 0.0
             national = max(0.1, float(polls.get(party, 0.0)))
-            scores[party] = max(0.01, national + local_lean + regional + concentration + incumbency)
+            if party == player:
+                campaign_bonus = sum(
+                    float(action.get("seat_effect", 0.0))
+                    for action in campaign_actions
+                    if action.get("nation") == nation
+                    and (action.get("seat_effect_mode", "nation") != "incumbents" or incumbent_party == player)
+                )
+            else:
+                campaign_bonus = 0.0
+            scores[party] = max(0.01, national + local_lean + regional + concentration + incumbency + campaign_bonus)
+            if party == player:
+                seat_campaign_bonus = campaign_bonus
         ranked = sorted(scores, key=scores.get, reverse=True)
         scored_seats.append({
             'seat': seat, 'code': code, 'nation': nation, 'scores': scores,
             'margin': scores[ranked[0]] - scores[ranked[1]],
+            'campaign_bonus': seat_campaign_bonus,
         })
 
     # Campaign resources have a constituency-level effect as well as the small
@@ -1898,6 +1914,8 @@ def compute_seats(polls, return_details=False):
             'runner_up': runner_up,
             'margin': round(scores[winner] - scores[runner_up], 1),
             'is_marginal': (scores[winner] - scores[runner_up]) < 5.0,
+            'previous_winner': incumbents.get(row['code']),
+            'campaign_bonus': round(float(row.get('campaign_bonus', 0.0)), 2),
         })
 
     return (seats, results) if return_details else seats
@@ -1972,9 +1990,22 @@ def compute_election():
     previous = {p: (history.get(p, [polls[p]])[-2] if len(history.get(p, [])) > 1 else polls[p]) for p in state.PARTIES}
     swings = {p: round(float(polls[p]) - float(previous[p]), 1) for p in state.PARTIES}
     turnout = round(max(55.0, min(82.0, 65.0 + random.uniform(-1.8, 1.8) + (float(s.approval) - 50) * 0.04 + float(s.get('election_campaign_turnout', 0.0)))), 1)
+    constituency_changes = {p: {"gains": 0, "losses": 0, "net": 0} for p in state.PARTIES}
+    for row in constituency_results:
+        previous_winner, winner = row.get("previous_winner"), row.get("winner")
+        if previous_winner in state.PARTIES and winner in state.PARTIES and previous_winner != winner:
+            constituency_changes[winner]["gains"] += 1
+            constituency_changes[previous_winner]["losses"] += 1
+    for tally in constituency_changes.values():
+        tally["net"] = tally["gains"] - tally["losses"]
+    defeated_incumbents = sum(item["losses"] for item in constituency_changes.values())
+    marginal_seats = sum(1 for row in constituency_results if float(row.get("margin", 99)) <= 5.0)
+
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              constituency_results=constituency_results, seat_changes=seat_changes,
+             constituency_changes=constituency_changes,
+             defeated_incumbents=defeated_incumbents, marginal_seats=marginal_seats,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
                          'election result, you have been sacked and banished to the backbenches.') if sacked else '')
 
@@ -2051,6 +2082,21 @@ def compute_election():
     if sacked:
         r['win'] = False
     s.election_result = r
+    archived = list(s.get("election_history", []))
+    archived.append({
+        "term": int(s.get("term", 1)), "year": int(s.get("year", 1)),
+        "governing_party": party, "title": r.get("title", "Election result"),
+        "kind": r.get("kind", "loss"), "win": bool(r.get("win")),
+        "player_seats": int(r.get("player_seats", 0)),
+        "seats": dict(r.get("seats", {})), "polls": dict(r.get("polls", {})),
+        "turnout": float(r.get("turnout", 0.0)),
+        "seat_changes": dict(r.get("seat_changes", {})),
+        "constituency_changes": dict(r.get("constituency_changes", {})),
+        "defeated_incumbents": int(r.get("defeated_incumbents", 0)),
+        "marginal_seats": int(r.get("marginal_seats", 0)),
+        "mandate_label": r.get("mandate_label", "No governing mandate"),
+    })
+    s.election_history = archived[-10:]
     if sacked:
         s.sacked = True
         s.sacked_reason = r['sacked_msg']
@@ -2157,6 +2203,7 @@ def continue_term():
     s.election_campaign_approval = 0.0
     s.election_campaign_week = 1
     s.election_campaign_actions = []
+    s.election_campaign_nation = "England"
     s.election_broadcast_stage = 0
     government_missions.start_mission(
         s, s.get('government_mission', 'balanced_renewal'), preserve_history=True

@@ -1626,6 +1626,37 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Local election regression check failed: {exc}")
 
+    # Regional local campaign effects stay in the selected area; council results
+    # and campaign state persist without applying political effects twice.
+    try:
+        new_run("Labour", "Normal", 24681)
+        local_state = st.session_state
+        local_state.local_campaign_actions = []
+        if not local_elections.record_campaign_action(local_state, "Canvass the closest councils", "North West"):
+            failures.append("A valid local campaign action could not be committed.")
+        targeted = local_elections.calculate()
+        north = next(row for row in targeted["regions"] if row["region"] == "North West")
+        other = [row for row in targeted["regions"] if row["region"] != "North West"]
+        if north.get("campaign_bonus", 0) <= 0 or any(row.get("campaign_bonus", 0) != 0 for row in other):
+            failures.append("A targeted local campaign did not stay within its selected region.")
+        local_elections.record_campaign_action(local_state, "Defend frontline council services", "North West")
+        local_elections.record_campaign_action(local_state, "Run a targeted get-out-the-vote operation", "North West")
+        if not local_state.local_campaign_done:
+            failures.append("The three-round local campaign did not complete.")
+        declared = local_elections.hold_election()
+        after = float(local_state.approval)
+        if local_elections.hold_election() != declared or float(local_state.approval) != after:
+            failures.append("Local election effects were applied more than once.")
+        if sum(declared.get("controlled_regions", {}).values()) + declared.get("no_overall_control", 0) != len(local_elections.REGIONS):
+            failures.append("Regional council control did not reconcile to all simulated areas.")
+        save_error = state.import_save(state.export_save())
+        if save_error or not st.session_state.get("local_council_control_by_region"):
+            failures.append("Local election campaign and council-control state did not survive save/load.")
+    except Exception as exc:
+        failures.append(f"Enhanced local election regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
     # Budget schemes must be phased, cost administration and respect delivery capacity.
     try:
         new_run('Labour', 'Normal', 13579)
@@ -1833,6 +1864,38 @@ def check(n=None, difficulty=None):
     repeated_totals, repeated_results = engine.compute_seats(sample_polls, return_details=True)
     if seat_totals != repeated_totals or local_results != repeated_results:
         failures.append("The same polling inputs must produce a repeatable constituency result.")
+
+    # Targeted national campaign operations affect the selected nation only,
+    # while a general-election result enters the archive exactly once.
+    try:
+        new_run("Labour", "Normal", 31414)
+        election_state = st.session_state
+        equal_polls = {party: 100.0 / len(state.PARTIES) for party in state.PARTIES}
+        election_state.election_campaign_actions = [{
+            "week": 1, "action": "Regional constituency tour", "nation": "Wales",
+            "seat_effect": 1.8, "seat_effect_mode": "nation",
+        }]
+        _, targeted_rows = engine.compute_seats(equal_polls, return_details=True)
+        welsh = [row.get("campaign_bonus", 0) for row in targeted_rows if row.get("nation") == "Wales"]
+        english = [row.get("campaign_bonus", 0) for row in targeted_rows if row.get("nation") == "England"]
+        if not welsh or any(abs(v - 1.8) > 0.001 for v in welsh) or any(abs(v) > 0.001 for v in english):
+            failures.append("National constituency campaign effects were not geographically targeted.")
+        new_run("Labour", "Normal", 31415)
+        election_state = st.session_state
+        election_state.year = 6
+        election_state.pm_opinion = 80.0
+        election_state.party_opinion = 80.0
+        result = engine.compute_election()
+        count = len(election_state.get("election_history", []))
+        if count != 1 or engine.compute_election() != result or len(election_state.get("election_history", [])) != count:
+            failures.append("General election result was not archived exactly once.")
+        save_error = state.import_save(state.export_save())
+        if save_error or len(st.session_state.get("election_history", [])) != count:
+            failures.append("General election archive did not survive save/load.")
+    except Exception as exc:
+        failures.append(f"Enhanced national election regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
 
     # The elected Parliament must persist between terms, and coalition partners must vote as partners.
     try:
