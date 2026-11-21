@@ -3984,6 +3984,8 @@ def render_scorecard(data):
       <div>{new}{badges}</div>
     </div>""", unsafe_allow_html=True)
 
+CSS += """
+<style>
 /* Newspaper layout refinement: preserve readable front pages in the main workspace
    and let the grid adapt to the actual available width (including the desk sidebar). */
 .np-strip {
@@ -4043,3 +4045,6 @@ def render_scorecard(data):
   .np-strip { gap:20px !important; }
   .np-card { padding:20px 22px 17px !important; }
 }
+
+</style>
+"""
