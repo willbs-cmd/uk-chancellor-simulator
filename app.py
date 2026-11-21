@@ -1491,6 +1491,44 @@ if active_workspace == 'office':
         else:
             st.success('No major warning thresholds are currently breached. Continue monitoring the fiscal and economic outlook.')
 
+    # Forward-looking Treasury risk register, using the existing non-mutating fiscal scenario engine.
+    st.markdown('#### Forward risk assessment')
+    st.caption('Three-year baseline and downturn projections. Risk ratings are transparent planning signals, not probabilities or extra game penalties.')
+    try:
+        risk_outlook = treasury.fiscal_outlook(3)
+        risk_base = next(row for row in risk_outlook if row.get('Scenario') == 'Baseline')
+        risk_down = next(row for row in risk_outlook if row.get('Scenario') == 'Downturn')
+        risk_exposure = treasury.scenario_exposure(risk_outlook)
+        risk_rows = []
+        base_headroom = float(risk_base.get('Fiscal headroom (£bn)', 0.0))
+        down_headroom = float(risk_down.get('Fiscal headroom (£bn)', 0.0))
+        if base_headroom < 0:
+            risk_rows.append({'Risk': 'Fiscal rules breach', 'Outlook': 'High', 'Evidence': f'Baseline year-three headroom £{base_headroom:.1f}bn', 'Treasury response': 'Rework the medium-term tax and spending plan'})
+        elif down_headroom < 0:
+            risk_rows.append({'Risk': 'Downturn removes fiscal buffer', 'Outlook': 'High', 'Evidence': f'Downturn headroom falls to £{down_headroom:.1f}bn', 'Treasury response': 'Build contingency and review permanent commitments'})
+        elif float(risk_exposure.get('headroom_at_risk', 0.0)) >= 10:
+            risk_rows.append({'Risk': 'Material fiscal sensitivity', 'Outlook': 'Watch', 'Evidence': f'£{float(risk_exposure["headroom_at_risk"]):.1f}bn headroom at risk in downturn', 'Treasury response': 'Stress-test receipts and protect a fiscal margin'})
+        if float(risk_base.get('Debt-to-GDP (%)', 0.0)) >= 100 or float(risk_down.get('Debt-to-GDP (%)', 0.0)) >= 105:
+            risk_rows.append({'Risk': 'Debt trajectory', 'Outlook': 'High' if float(risk_down.get('Debt-to-GDP (%)', 0.0)) >= 110 else 'Watch', 'Evidence': f'Debt reaches {float(risk_base.get("Debt-to-GDP (%)", 0.0)):.1f}% baseline / {float(risk_down.get("Debt-to-GDP (%)", 0.0)):.1f}% downturn', 'Treasury response': 'Review debt interest exposure and the maturity profile'})
+        if float(risk_down.get('Debt interest (£bn)', 0.0)) - float(risk_base.get('Debt interest (£bn)', 0.0)) >= 2:
+            risk_rows.append({'Risk': 'Higher debt-interest bill', 'Outlook': 'Watch', 'Evidence': f'Downturn adds £{float(risk_down.get("Debt interest (£bn)", 0.0)) - float(risk_base.get("Debt interest (£bn)", 0.0)):.1f}bn a year', 'Treasury response': 'Avoid relying on optimistic borrowing-cost assumptions'})
+        if float(risk_down.get('Real growth (%)', 0.0)) < 0:
+            risk_rows.append({'Risk': 'Recession exposure', 'Outlook': 'High', 'Evidence': f'Downturn growth reaches {float(risk_down.get("Real growth (%)", 0.0)):.2f}%', 'Treasury response': 'Prepare a targeted, time-limited stabilisation plan'})
+        if float(risk_down.get('Unemployment (%)', 0.0)) >= 7:
+            risk_rows.append({'Risk': 'Labour-market deterioration', 'Outlook': 'Watch', 'Evidence': f'Downturn unemployment reaches {float(risk_down.get("Unemployment (%)", 0.0)):.1f}%', 'Treasury response': 'Assess employment support and automatic stabilisers'})
+        if risk_rows:
+            st.dataframe(pd.DataFrame(risk_rows), hide_index=True, use_container_width=True)
+        else:
+            st.success('The current three-year baseline and downturn scenarios do not trigger the Treasury risk-register thresholds.')
+        risk_cols = st.columns(3)
+        risk_cols[0].metric('Year-three baseline headroom', f'£{base_headroom:.1f}bn')
+        risk_cols[1].metric('Year-three downturn headroom', f'£{down_headroom:.1f}bn')
+        risk_cols[2].metric('Headroom exposed', f'£{float(risk_exposure.get("headroom_at_risk", 0.0)):.1f}bn')
+        with st.expander('How the risk ratings work'):
+            st.write('High means the existing scenario projection crosses a major fiscal or macroeconomic threshold. Watch means the downside scenario shows a material deterioration that merits review. The model does not assign statistical probabilities and does not change your live finances.')
+    except (KeyError, TypeError, ValueError, StopIteration) as risk_error:
+        st.caption(f'Forward risk assessment is temporarily unavailable: {risk_error}')
+
     if s.get('active_pm_ultimatum'):
         pm_ultimatum_screen()
     elif s.get('active_pm_intervention'):
