@@ -16,7 +16,7 @@ def _project_summary(s):
         return {"total": 0, "completed": 0, "delayed": 0, "active": 0, "score": 60.0}
     completed = sum(1 for p in projects if p.get("status") == "Completed")
     delayed = sum(1 for p in projects if p.get("status") == "Delayed")
-    active = sum(1 for p in projects if p.get("status") in ("Active", "Delayed"))
+    active = sum(1 for p in projects if p.get("status") in ("Approved", "Under construction", "Delayed"))
     score = _clamp(65 + 18 * completed / len(projects) - 12 * delayed / len(projects))
     return {"total": len(projects), "completed": completed, "delayed": delayed,
             "active": active, "score": round(score, 1)}
