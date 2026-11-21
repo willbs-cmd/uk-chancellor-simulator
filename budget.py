@@ -119,7 +119,7 @@ OTHER_RECEIPTS = float(_POLICY_DATA['other_receipts'])
 GDP_BN = float(_POLICY_DATA['gdp_bn'])
 BASE_INTEREST = float(_POLICY_DATA['base_interest'])
 
-PALETTE = ['#c9a45c', '#6fbf8a', '#4f8fba', '#d6604f', '#9a7fc4', '#e0b0a0', '#7fb8b0', '#c4c46f', '#8aa0a0',
+PALETTE = ['#B7791F', '#238B57', '#2878A5', '#D1493F', '#8064A2', '#C47B62', '#268C85', '#9A8B20', '#647C8A', '#C04B83', '#536DB3', '#8A6D3B', '#3D8C9D', '#A64B2A', '#657A36', '#7357A5', '#9C5B7A', '#4C6B78']
            '#d98cb3', '#5f7f5f', '#b07a3c', '#6c8fd1', '#c97a7a', '#a0a0a0', '#e6d9a8']
 
 # ---------------------------------------------------------------- the Whips' Office
@@ -1932,9 +1932,9 @@ def _pie(data):
         chart = alt.Chart(df).mark_arc(innerRadius=55, outerRadius=105, stroke='#0d1f17', strokeWidth=2).encode(
             theta=alt.Theta(field="Value", type="quantitative"),
             color=alt.Color(field="Category", type="nominal", scale=alt.Scale(range=PALETTE),
-                            legend=alt.Legend(title=None, orient='right', labelColor='#efe9da', labelFontSize=11, symbolType='square')),
+                            legend=alt.Legend(title=None, orient='right', labelColor='#243447', labelFontSize=12, labelFontWeight=600, labelLimit=260, symbolType='square', symbolStrokeColor='#243447', symbolStrokeWidth=0.8)),
             tooltip=[alt.Tooltip('Category:N', title='Item'), alt.Tooltip('Value:Q', title='Amount (£bn)', format=',.1f')]
-        ).properties(height=240, background='transparent').configure_view(strokeWidth=0)
+        ).properties(height=260, background='transparent').configure_view(strokeWidth=0).configure_legend(labelFont='IBM Plex Sans', labelColor='#243447', labelFontSize=12, labelFontWeight=600, symbolSize=105, padding=8)
         st.altair_chart(chart, use_container_width=True)
 
 
