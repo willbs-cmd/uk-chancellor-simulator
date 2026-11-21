@@ -331,6 +331,39 @@ def ensure():
 
     s.setdefault('budget_history', [])
 
+    # The delivered Budget history is also a recovery journal. If an older save,
+    # interrupted transition or stale session has replaced the live ledger with
+    # opening defaults, restore the complete last Commons-approved package.
+    if s.budget_history:
+        latest_budget = s.budget_history[-1]
+        latest_period = (int(latest_budget.get('term', 1)), int(latest_budget.get('year', 1)))
+        current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
+        archived_ledger = latest_budget.get('approved_ledger')
+        if latest_period < current_period and isinstance(archived_ledger, dict):
+            live = s.get('budget_applied')
+            live = live if isinstance(live, dict) else {}
+            live_spend = live.get('spend', {}) if isinstance(live.get('spend'), dict) else {}
+            archived_spend = archived_ledger.get('spend', {}) if isinstance(archived_ledger.get('spend'), dict) else {}
+            live_tax = live.get('tax', {}) if isinstance(live.get('tax'), dict) else {}
+            archived_tax = archived_ledger.get('tax', {}) if isinstance(archived_ledger.get('tax'), dict) else {}
+            looks_reset = (
+                not live_tax or not live_spend
+                or (all(abs(float(live_spend.get(k, 0.0))) < 0.0001 for k in SPEND_DEFAULTS)
+                    and any(abs(float(archived_spend.get(k, 0.0))) >= 0.0001 for k in SPEND_DEFAULTS))
+                or (all(abs(float(live_tax.get(k, TAXES[k]['default'])) - float(TAXES[k]['default'])) < 0.0001 for k in TAXES)
+                    and any(abs(float(archived_tax.get(k, TAXES[k]['default'])) - float(TAXES[k]['default'])) >= 0.0001 for k in TAXES))
+            )
+            if looks_reset:
+                restored = defaults()
+                for section, value in archived_ledger.items():
+                    if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
+                        restored[section].update(value)
+                    else:
+                        restored[section] = value
+                s.budget_applied = restored
+                _migrate_applied(s.budget_applied)
+                _sync_editor_controls(s.budget_applied)
+
     # Repair saves affected by the old Spending Review carry-forward bug. That
     # code zeroed departmental Budget percentages while applying a multi-year
     # cash uplift. The most recent delivered Budget is the authoritative source
@@ -1644,6 +1677,7 @@ def commit_budget(ayes, event_type='Spring Budget'):
         'label': f"Term {int(s.get('term', 1))} · Year {int(s.get('year', 1))}",
         'event_type': str(event_type),
         'strategy': delivered.get('strategy', 'balanced'),
+        'approved_ledger': json.loads(json.dumps(delivered)),
         'tax': dict(delivered.get('tax', {})), 'tax_names': tax_names,
         'thresholds': dict(delivered.get('thresholds', {})),
         'spend': dict(delivered.get('spend', {})), 'spend_names': spending_names,
