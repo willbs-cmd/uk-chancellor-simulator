@@ -19,6 +19,7 @@ import treasury
 import forecast_accuracy
 import chancellor_office
 import delivery_centre
+import national_investment
 import devolution
 import performance_report
 import economic_management
@@ -1220,7 +1221,7 @@ def economy():
     """A grouped State of the Nation workspace with one subject per screen."""
     economy_tabs = st.tabs([
         'UK economy', 'Global & regional', 'Households',
-        'Public services', 'Five-year strategy', 'Long-term resilience'
+        'Public services', 'Five-year strategy', 'Long-term resilience', 'National investment'
     ])
     with economy_tabs[0]:
         gdp = float(s.get('gdp_trillion', 3.0))
@@ -1295,6 +1296,8 @@ def economy():
         term_strategy.render(s)
     with economy_tabs[5]:
         long_run_simulation.render(s)
+    with economy_tabs[6]:
+        national_investment.render(s)
 
 
 # ==================== SIX-AREA GAME NAVIGATION ====================

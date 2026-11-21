@@ -64,6 +64,7 @@ import state  # noqa: E402
 import government_missions  # noqa: E402
 import government_programme  # noqa: E402
 import delivery_centre  # noqa: E402
+import national_investment  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
 import number10  # noqa: E402
@@ -737,6 +738,37 @@ def political_survival_checks():
     return True
 
 
+def national_investment_checks():
+    """National projects have multi-year delivery, transparent fiscal costs and idempotent annual updates."""
+    fake = FakeState({
+        "term": 1, "year": 1, "seed": 17, "headroom": 20.0, "deficit": 10.0, "growth": 1.0,
+        "budget_applied": {"tax": {"income": 20.0}, "spend": {"health": 0.0}},
+        "dept_spend": {"health": 100.0}, "budget_history": [{"year": 1}],
+        "national_investment_projects": [], "national_investment_history": [],
+    })
+    project_id, error = national_investment.create_project(fake, "rail", "Public capital", "North West")
+    assert project_id and error is None, f"Valid national project was rejected: {error}"
+    before_budget = json.loads(json.dumps(fake["budget_applied"]))
+    before_dept = dict(fake["dept_spend"])
+    first = national_investment.advance(fake)
+    assert first and first["projects_reviewed"] == 1, "Annual review should advance the active project."
+    assert first["fiscal_cost_bn"] > 0 and fake["headroom"] < 20.0 and fake["deficit"] > 10.0, "Capital costs must enter the live fiscal position."
+    assert fake["budget_applied"] == before_budget and fake["dept_spend"] == before_dept, "Investment must not rewrite approved tax or departmental ledgers."
+    assert fake["budget_history"] == [{"year": 1}], "Investment must not rewrite Budget history."
+    after_first = fake["national_investment_projects"][0]["progress"]
+    headroom_after_first = fake["headroom"]
+    assert national_investment.advance(fake) is None, "An annual project review must be idempotent."
+    assert fake["headroom"] == headroom_after_first and len(fake["national_investment_history"]) == 1, "Repeated rendering must not duplicate annual costs."
+    fake["year"] = 2
+    second = national_investment.advance(fake)
+    assert second and fake["national_investment_projects"][0]["progress"] > after_first, "Project progress should accumulate over successive years."
+    assert len(fake["national_investment_history"]) == 2, "Each in-game year should have one investment review."
+    assert fake["national_investment_productivity_stock"] > 0, "Delivered work should accumulate a productivity contribution."
+    assert national_investment.cancel_project(fake, project_id), "An active project should be cancellable."
+    assert fake["national_investment_projects"][0]["status"] == "Cancelled"
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -757,6 +789,10 @@ def check(n=None, difficulty=None):
             government_programme_checks()
         except Exception as programme_error:
             raise AssertionError(f"Government Programme regression: {programme_error!r}") from programme_error
+        try:
+            national_investment_checks()
+        except Exception as investment_error:
+            raise AssertionError(f"National Investment regression: {investment_error!r}") from investment_error
         try:
             delivery_centre_checks()
         except Exception as delivery_error:

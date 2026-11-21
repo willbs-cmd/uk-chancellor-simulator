@@ -1652,6 +1652,10 @@ def proceed_to_spring():
     # macro debt calculation uses that year's growth rate.
     import living_economy
     living_economy.advance(s)
+    # National capital projects book annual costs and gradual supply-side benefits
+    # before the macroeconomic and tax-base calculations for the new year.
+    import national_investment
+    national_investment.advance(s)
     economy_tick()
     economic_management.annual_update()
     economic_management.run_gilt_auction()
