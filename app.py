@@ -1628,9 +1628,51 @@ elif active_workspace == 'news':
     with news_tabs[0]:
         briefing()
     with news_tabs[1]:
-        if s.get('poll_history'):
-            render_polls(pd.DataFrame(s.poll_history).set_index('Period'), chart_in_expander=True)
+        poll_data = s.get('poll_history') or {}
+        periods = list(poll_data.get('Period', []))
+        party_series = {party: list(poll_data.get(party, [])) for party in state.PARTIES}
+        valid_latest = {}
+        valid_previous = {}
+        if periods:
+            for party, values in party_series.items():
+                try:
+                    valid_latest[party] = float(values[-1]) if values else 0.0
+                    valid_previous[party] = float(values[-2]) if len(values) > 1 else valid_latest[party]
+                except (TypeError, ValueError, IndexError):
+                    valid_latest[party] = 0.0
+                    valid_previous[party] = 0.0
+
+        st.markdown('#### The national political picture')
+        if periods and valid_latest:
+            leader = max(valid_latest, key=valid_latest.get)
+            leader_value = valid_latest[leader]
+            lead = leader_value - max((value for party, value in valid_latest.items() if party != leader), default=0.0)
+            top = st.columns(3, gap='medium')
+            top[0].metric('Polling leader', leader, f'{leader_value:.1f}%')
+            top[1].metric('Lead over second place', f'{lead:+.1f} pts')
+            top[2].metric('Latest update', str(periods[-1]))
+            ranked = sorted(valid_latest.items(), key=lambda item: item[1], reverse=True)
+            poll_rows = []
+            for rank, (party, value) in enumerate(ranked, 1):
+                poll_rows.append({
+                    'Position': rank,
+                    'Party': party,
+                    'Voting intention': f'{value:.1f}%',
+                    'Change': f'{value - valid_previous.get(party, value):+.1f} pts'
+                })
+            st.dataframe(pd.DataFrame(poll_rows), hide_index=True, use_container_width=True)
+            st.caption('Changes compare the latest recorded game poll with the preceding recorded poll. These are simulated polling figures, not real-world polling.')
+            render_polls(pd.DataFrame(poll_data).set_index('Period'), chart_in_expander=False)
         else:
             st.info('Polling history will appear after the first update.')
+
+        st.divider()
+        st.markdown('#### Political mood')
+        mood = st.columns(4, gap='small')
+        mood[0].metric('Public approval', f"{float(s.get('approval', 50)):.0f}/100")
+        mood[1].metric('Media opinion', f"{float(s.get('media_opinion', 50)):.0f}/100")
+        mood[2].metric('Party unity', f"{float(s.get('party_opinion', 50)):.0f}/100")
+        mood[3].metric('Backbench morale', f"{float(s.get('backbench_opinion', 50)):.0f}/100")
+        st.caption('These indicators describe different pressures: public approval is not the same as voting intention, and party unity measures internal cohesion rather than popularity.')
     with news_tabs[2]:
         opposition_campaign.render(s)
