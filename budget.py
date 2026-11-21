@@ -120,7 +120,6 @@ GDP_BN = float(_POLICY_DATA['gdp_bn'])
 BASE_INTEREST = float(_POLICY_DATA['base_interest'])
 
 PALETTE = ['#B7791F', '#238B57', '#2878A5', '#D1493F', '#8064A2', '#C47B62', '#268C85', '#9A8B20', '#647C8A', '#C04B83', '#536DB3', '#8A6D3B', '#3D8C9D', '#A64B2A', '#657A36', '#7357A5', '#9C5B7A', '#4C6B78']
-           '#d98cb3', '#5f7f5f', '#b07a3c', '#6c8fd1', '#c97a7a', '#a0a0a0', '#e6d9a8']
 
 # ---------------------------------------------------------------- the Whips' Office
 WIN = 326   # a majority of the Commons
