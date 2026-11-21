@@ -74,6 +74,7 @@ import opposition_campaign  # noqa: E402
 import long_run_simulation  # noqa: E402
 import term_strategy  # noqa: E402
 import regional_economy  # noqa: E402
+import accountability  # noqa: E402
 from content_store import load_json  # noqa: E402
 
 # How much one point of each stat is worth to a player (rough, for auditing options)
@@ -3218,6 +3219,43 @@ def check(n=None, difficulty=None):
             failures.append("Priority-region national investment did not receive its convergence weighting.")
     except Exception as exc:
         failures.append(f"Regional convergence strategy regression failed: {exc}")
+    finally:
+        st.session_state = FakeState()
+
+    # National performance audit, investigations, election reckoning and save persistence.
+    try:
+        state.new_game("Labour", "Normal", 85241, False)
+        audit_state = st.session_state
+        audit_state.latest_annual_report = {
+            "term": 1, "year": 1, "economic": 62, "services": 38, "fiscal": 35,
+            "headroom": -1.0, "mission": {"score": 42}
+        }
+        audit = accountability.create_annual_audit(audit_state, audit_state.latest_annual_report)
+        if audit["overall"] < 0 or len(audit["findings"]) < 2:
+            failures.append("National Performance Audit failed to flag weak services and fiscal credibility.")
+        first_count = len(audit_state.national_audits)
+        accountability.create_annual_audit(audit_state, audit_state.latest_annual_report)
+        if len(audit_state.national_audits) != first_count:
+            failures.append("Annual National Performance Audit was not idempotent.")
+        open_items = [item for item in audit_state.accountability_investigations if item["status"] == "Open"]
+        if not open_items:
+            failures.append("Audit findings did not generate parliamentary investigations.")
+        elif not accountability.resolve_investigation(audit_state, open_items[0]["id"], "Accept recommendations"):
+            failures.append("A formal response to an audit investigation could not be recorded.")
+        verdict = accountability.election_verdict(audit_state)
+        if verdict["audits"] != 1 or verdict["score"] != audit["overall"]:
+            failures.append("Election reckoning did not aggregate the term's audit record.")
+        recorded = accountability.record_election_reckoning(audit_state)
+        if accountability.record_election_reckoning(audit_state)["term"] != recorded["term"]:
+            failures.append("Election reckoning archive was not idempotent.")
+        payload = state.export_save()
+        save_error = state.import_save(payload)
+        if save_error:
+            failures.append(f"Accountability records did not survive save/load: {save_error}")
+        elif not st.session_state.get("national_audits") or not st.session_state.get("accountability_election_archive"):
+            failures.append("Save/load omitted National Performance Audit or election reckoning records.")
+    except Exception as exc:
+        failures.append(f"Accountability phase regression failed: {exc}")
     finally:
         st.session_state = FakeState()
 

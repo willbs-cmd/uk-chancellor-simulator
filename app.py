@@ -22,6 +22,7 @@ import delivery_centre
 import national_investment
 import devolution
 import performance_report
+import accountability
 import economic_management
 import household
 import regional_economy
@@ -407,6 +408,13 @@ if s.year > 5:
             "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get('seat_changes') and s.get('term', 1) > 1 else "—"),
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    reckoning = accountability.record_election_reckoning(s)
+    st.markdown("### 🧾 National performance audit · election reckoning")
+    verdict_cols = st.columns(3)
+    verdict_cols[0].metric("Term audit average", f"{reckoning.get('grade', '—')} · {reckoning.get('score', 0)}/100")
+    verdict_cols[1].metric("Audit findings", str(reckoning.get("findings", 0)))
+    verdict_cols[2].metric("Unresolved investigations", str(reckoning.get("open_investigations", 0)))
+    st.write(reckoning.get("summary", "The Government's record has been assessed."))
     vote_total = sum(r['polls'].values())
     st.caption(f"Vote shares are normalised to {vote_total:.1f}%. The UK uses first-past-the-post: seats depend on constituency-level pluralities, not national vote share alone.")
     # Constituency-level result: every seat is decided independently by the
@@ -1523,12 +1531,14 @@ elif active_workspace == 'cabinet':
 elif active_workspace == 'parliament':
     st.markdown('### Parliament')
     st.caption('Commons votes, constituency MPs, rebellions, local elections and party management.')
-    parliament_tabs = st.tabs(['House of Commons', 'Local elections', 'Government mandate'])
+    parliament_tabs = st.tabs(['House of Commons', 'Accountability', 'Local elections', 'Government mandate'])
     with parliament_tabs[0]:
         parliament.render()
     with parliament_tabs[1]:
-        local_elections.render(widget_namespace='parliament')
+        accountability.render(s)
     with parliament_tabs[2]:
+        local_elections.render(widget_namespace='parliament')
+    with parliament_tabs[3]:
         government_missions.render(s)
 
 elif active_workspace == 'news':

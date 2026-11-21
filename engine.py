@@ -20,6 +20,7 @@ import world_economy
 import weekly_events
 import treasury_officials
 import performance_report
+import accountability
 import economic_management
 import household
 import regional_economy
@@ -1763,6 +1764,7 @@ def proceed_to_spring():
     import delivery_centre
     delivery_centre.close_year(s)
     performance_report.create_report()
+    accountability.create_annual_audit(s, s.get('latest_annual_report'))
     # Compare the vintage with the fully realised annual outcome exactly once.
     forecast_accuracy.settle_vintage(s)
     s.year += 1
