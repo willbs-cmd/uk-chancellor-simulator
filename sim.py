@@ -1722,6 +1722,57 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Delivered Budget carry-forward recovery regression failed: {exc}")
 
+    # Older save files have Budget history snapshots but no approved_ledger.
+    # The recovery path must reconstruct the retained figures and named schemes.
+    try:
+        new_run('Labour', 'Normal', 97535)
+        s = st.session_state
+        tax_policy = next(iter(budget.TAX_POLICIES))
+        spend_policy = next(iter(budget.SPEND_POLICIES))
+        tax_label = budget.TAX_POLICIES[tax_policy]['label']
+        spend_label = budget.SPEND_POLICIES[spend_policy]['label']
+        legacy_history = {
+            'term': 1, 'year': 1, 'strategy': 'investment',
+            'tax': dict(budget.defaults()['tax'], income=19.0, vat=19.5),
+            'spend': dict(budget.defaults()['spend'], health=-4.0, education=2.5),
+            'thresholds': dict(budget.defaults()['thresholds'], personal_allowance=13600.0),
+            'revenue_schemes': [tax_label],
+            'spending_schemes': [spend_label],
+            'projects': [{
+                'label': 'Legacy hospital renewal', 'department': 'health',
+                'capital_cost_bn': 2.0, 'annual_cost_bn': 0.4,
+                'duration_years': 4,
+            }],
+        }
+        s.budget_history = [legacy_history]
+        s.budget_applied = budget.defaults()
+        s.budget_editor_period = '1-1'
+        s.year = 2
+        s.budget_day_draft = None
+        s.budget_editor_restore_draft = False
+        for key, spec in budget.TAXES.items():
+            s[f'bt_{key}'] = spec['default']
+        for key in budget.SPEND_DEFAULTS:
+            s[f'bs_{key}'] = 0.0
+        budget.prepare_editor_state()
+        restored = s.budget_applied
+        if abs(float(restored['tax']['income']) - 19.0) > 0.001:
+            failures.append("A legacy save did not recover its approved basic income-tax rate.")
+        if abs(float(s.bt_income) - 19.0) > 0.001:
+            failures.append("A legacy save did not hydrate the basic income-tax control.")
+        if abs(float(restored['spend']['health']) - (-4.0)) > 0.001 or abs(float(s.bs_health) - (-4.0)) > 0.001:
+            failures.append("A legacy save did not recover its approved departmental spending rate.")
+        if restored['strategy'] != 'investment':
+            failures.append("A legacy save did not recover its approved Budget strategy.")
+        if float(restored['thresholds']['personal_allowance']) != 13600.0:
+            failures.append("A legacy save did not recover its approved tax threshold.")
+        if not restored['tax_pol'].get(tax_policy) or not restored['spend_pol'].get(spend_policy):
+            failures.append("A legacy save did not recover its named tax and spending schemes.")
+        if not restored['projects'] or restored['projects'][0]['label'] != 'Legacy hospital renewal':
+            failures.append("A legacy save did not recover its recorded capital project.")
+    except Exception as exc:
+        failures.append(f"Legacy Budget journal migration regression failed: {exc}")
+
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
         first_offer = budget.negotiate_spending_offer(0.0, 6.0, 1)
