@@ -1597,8 +1597,13 @@ def effective_rebel_risks(b):
     """Apply negotiated concessions to the relevant faction's remaining rebellion risk."""
     s = st.session_state
     negotiated = set(s.get('whip_negotiations', []))
-    return [(stat, round(size * (0.4 if msg in negotiated else 1.0), 1), msg)
-            for stat, size, msg in rebel_risks(b)]
+    import living_politics
+    adjusted = []
+    for stat, size, msg in rebel_risks(b):
+        faction, multiplier = living_politics.budget_risk_multiplier(s, msg)
+        concession_factor = 0.4 if msg in negotiated else 1.0
+        adjusted.append((stat, round(size * concession_factor * multiplier, 1), msg))
+    return adjusted
 
 
 def _negotiate_rebel(msg, stat, size):
