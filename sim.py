@@ -933,6 +933,21 @@ def living_politics_checks():
     next_year = living_politics.annual_review(fake)
     assert len(fake.political_climate_history) == 2
     assert next_year["Government Mainstream"]["trend"] != 999.0
+    faction = min(next_year, key=lambda key: next_year[key]["mood"])
+    capital_before = int(fake.get("political_capital_points", 5))
+    mood_before = next_year[faction]["mood"]
+    success, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert success, "A faction meeting should be available with political capital."
+    assert fake.political_capital_points == capital_before - 1
+    assert fake.political_climate[faction]["mood"] >= mood_before
+    assert fake.backbench_opinion > 57.0 and fake.party_opinion > 64.0
+    success_again, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert not success_again, "Only one faction meeting may be held each year."
+    fake.political_capital_points = 0
+    fake.year = 4
+    living_politics.annual_review(fake)
+    no_capital, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert not no_capital, "Faction meetings must not be available without political capital."
     return True
 
 
