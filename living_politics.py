@@ -134,6 +134,38 @@ def hold_faction_meeting(s, faction):
     return True, f"Listening meeting held with {faction}. Faction mood improved by {row['mood'] - before:.1f} points."
 
 
+
+def budget_risk_faction(message):
+    """Map common Budget flashpoints to the party faction most likely to lead resistance."""
+    text = str(message).lower()
+    if any(term in text for term in ("welfare", "disabled", "poverty", "trade-union")):
+        return "Socialist Left"
+    if any(term in text for term in ("climate", "green activists", "environment")):
+        return "Soft Left"
+    if any(term in text for term in ("inheritance", "fuel duty", "rural", "shires")):
+        return "Traditionalist"
+    if any(term in text for term in ("corporation tax", "business", "market", "enterprise")):
+        return "Economic Liberal"
+    if any(term in text for term in ("devolved", "regional", "assembly", "block grants")):
+        return "Regional Voices"
+    if any(term in text for term in ("foreign aid", "overseas aid", "international")):
+        return "Reformist"
+    return "Government Mainstream"
+
+
+def budget_risk_multiplier(s, message):
+    """Translate the linked faction's mood into a modest Budget rebellion modifier."""
+    faction = budget_risk_faction(message)
+    climate = s.get("political_climate", {}) or {}
+    if faction not in climate:
+        return faction, 1.0
+    mood = _clip(climate[faction].get("mood", 55.0))
+    # A discontented faction is harder to contain; a content faction is more willing
+    # to tolerate a difficult Budget. Keep the modifier bounded and secondary.
+    multiplier = _clip(1.0 + (55.0 - mood) * 0.006, 0.75, 1.30)
+    return faction, round(multiplier, 3)
+
+
 def render(s=None):
     if s is None:
         s = st.session_state
