@@ -40,6 +40,14 @@ At the start of a new Chancellor game, choose one of six measurable government p
 
 The weekly political briefing deck has also been expanded, with new events covering planning delays, skills shortages, public-service productivity, supply chains, grid connections, winter household bills, research investment and retail competition. Event selection is lightly weighted towards the subject of the Government's chosen mandate.
 
+## Living Britain — Phase 1: Living Economy
+
+The annual economy now has a stronger transmission chain between households, firms, credit markets and overseas demand. Household confidence and balance-sheet stress respond to real wages, unemployment, inflation, energy bills and credit conditions. Bank Rate, gilt yields and market confidence feed into credit availability; trading-partner growth feeds export demand; these indicators influence business confidence, investment, consumer spending, employment, productivity, inflationary pressure and the Treasury's demand-linked receipts.
+
+The new household confidence, household debt-stress, credit-conditions and export-demand indices are illustrative gameplay measures, not official ONS or Bank of England statistics. They are bounded, persisted in game saves and applied once per in-game year. Existing saves are migrated with neutral starting values. The model remains deliberately modest: it supplements the established macro, OBR-style, household, regional and public-service systems rather than replacing them or claiming to be an official forecast.
+
+Run `python sim.py check` to include the new Living Economy regression checks. These verify annual idempotence, bounded indicators and expected directional responses to contrasting rate, inflation, labour-market and trading-partner conditions.
+
 ## Chancellor fiscal calendar
 
 The main Chancellor game treats major fiscal events as part of the Decisions calendar rather than permanent Treasury controls:

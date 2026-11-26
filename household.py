@@ -48,10 +48,16 @@ def calculate(s=None):
     rent = _clip(45 + (house_ratio - 8.0) * 7.0 - (homes_built - 215.0) * 0.09)
     bills = _clip(35 + (energy_bill - 1750.0) / 18.0 + (inflation - 2.0) * 3.0)
     income = max(70.0, min(130.0, 100.0 + real_wages * 2.4 - max(0.0, inflation - 2.0) * 1.1))
+    # The Living Economy's credit and balance-sheet channels feed into the
+    # same household-confidence measure used by the rest of the simulation.
+    credit_conditions = float(s.get("credit_conditions", 100.0))
+    debt_stress = float(s.get("household_debt_stress", 24.0))
     confidence = _clip(
         55 + real_wages * 5.0 - (unemployment - 4.3) * 3.2
         - (mortgage - 45) * 0.18 - (rent - 50) * 0.16
         - (bills - 50) * 0.13 - max(0.0, child_poverty - 31.0) * 0.45
+        + (credit_conditions - 100.0) * 0.07
+        - (debt_stress - 24.0) * 0.07
     )
     return {
         "confidence": round(confidence, 1),
