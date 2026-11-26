@@ -8,7 +8,8 @@ import country
 
 
 def ensure(s=None):
-    s = s or st.session_state
+    if s is None:
+        s = st.session_state
     # Persistent transmission indicators. setdefault safely migrates existing saves.
     s.setdefault("household_confidence", 55.0)
     s.setdefault("household_debt_stress", 24.0)
@@ -147,13 +148,17 @@ def advance(s=None):
 
     # Tax receipts respond automatically to the size of the nominal economy and
     # the strength of consumption/employment. Keep this a modest annual dividend.
-    nominal_gdp_bn = max(500.0, float(s.get("gdp_trillion", 3.0)) * 1000.0)
-    demand_receipts = _clip(
+    receipt_base = _clip(
         ((s.consumer_spending - 100.0) * 0.025)
         + ((s.business_investment - 100.0) * 0.018)
         + ((s.export_demand - 100.0) * 0.012)
         + ((4.5 - new_unemployment) * 0.16), -1.8, 2.8
     )
+    # Scale the illustrative £bn effect with the size of the nominal economy,
+    # while capping it so GDP size alone cannot create an outsized windfall.
+    nominal_gdp_bn = max(500.0, float(s.get("gdp_trillion", 3.0)) * 1000.0)
+    receipt_scale = _clip(nominal_gdp_bn / 3000.0, 0.75, 1.25)
+    demand_receipts = round(receipt_base * receipt_scale, 2)
     s.headroom = round(float(s.get("headroom", 0.0)) + demand_receipts, 1)
     s.deficit = round(max(0.0, float(s.get("deficit", 0.0)) - demand_receipts), 1)
     s.living_economy_last_year = period
