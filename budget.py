@@ -1551,13 +1551,51 @@ def _restore_last_delivered_ledger(s=None):
     restored = _ledger_from_history_entry(latest)
     if not isinstance(restored, dict):
         return False
-    s.budget_applied = restored
+
+    # The delivery journal is authoritative for recurring fiscal choices, but
+    # the live ledger also contains legitimate annual changes (threshold
+    # uprating and project delivery progress) made after the Budget was passed.
+    # Restore only the controls that must persist unchanged between Budgets.
+    live = s.get('budget_applied')
+    live = live if isinstance(live, dict) else {}
+    current = dict(live)
+    for section in ('tax', 'spend', 'tax_pol', 'spend_pol'):
+        archived_section = restored.get(section)
+        if isinstance(archived_section, dict):
+            current[section] = dict(archived_section)
+    current['strategy'] = restored.get('strategy', current.get('strategy', 'balanced'))
+    if not isinstance(current.get('thresholds'), dict):
+        current['thresholds'] = dict(restored.get('thresholds', defaults()['thresholds']))
+    if not isinstance(current.get('projects'), list):
+        current['projects'] = [dict(row) for row in restored.get('projects', [])]
+    current['_tax_units_version'] = restored.get('_tax_units_version', 2)
+    _migrate_applied(current)
+    s.budget_applied = current
     _sync_editor_controls(s.budget_applied)
     s.budget_last_tax = dict(s.budget_applied.get('tax', {}))
     s.budget_last_pol = {
         'tax_pol': dict(s.budget_applied.get('tax_pol', {})),
         'spend_pol': dict(s.budget_applied.get('spend_pol', {})),
     }
+    return True
+
+
+def carry_forward_to_new_year(s=None):
+    """Lock the approved fiscal settings into the next year's editor controls.
+
+    Called after the game clock advances, not just when the player opens the
+    Budget screen. This makes the carry-forward part of the annual transition
+    itself and prevents stale Streamlit widget state or a saved draft from
+    becoming the next year's starting point.
+    """
+    s = s if s is not None else st.session_state
+    ensure()
+    _restore_last_delivered_ledger(s)
+    _sync_editor_controls(s.budget_applied)
+    period = f"{int(s.get('term', 1))}-{int(s.get('year', 1))}"
+    s.budget_editor_period = period
+    s.budget_day_draft = None
+    s.budget_editor_restore_draft = False
     return True
 
 
