@@ -1564,10 +1564,25 @@ def _restore_last_delivered_ledger(s=None):
         if isinstance(archived_section, dict):
             current[section] = dict(archived_section)
     current['strategy'] = restored.get('strategy', current.get('strategy', 'balanced'))
-    if not isinstance(current.get('thresholds'), dict):
-        current['thresholds'] = dict(restored.get('thresholds', defaults()['thresholds']))
-    if not isinstance(current.get('projects'), list):
-        current['projects'] = [dict(row) for row in restored.get('projects', [])]
+    archived_thresholds = restored.get('thresholds', {})
+    live_thresholds = current.get('thresholds')
+    threshold_defaults = defaults()['thresholds']
+    thresholds_look_reset = (
+        not isinstance(live_thresholds, dict)
+        or all(
+            key not in live_thresholds
+            or live_thresholds.get(key) == value
+            for key, value in threshold_defaults.items()
+        )
+    )
+    if thresholds_look_reset and isinstance(archived_thresholds, dict):
+        if any(archived_thresholds.get(key, value) != value for key, value in threshold_defaults.items()):
+            current['thresholds'] = dict(archived_thresholds)
+    elif not isinstance(live_thresholds, dict):
+        current['thresholds'] = dict(archived_thresholds or threshold_defaults)
+    archived_projects = restored.get('projects', [])
+    if (not isinstance(current.get('projects'), list) or not current.get('projects')) and archived_projects:
+        current['projects'] = [dict(row) for row in archived_projects]
     current['_tax_units_version'] = restored.get('_tax_units_version', 2)
     _migrate_applied(current)
     s.budget_applied = current
