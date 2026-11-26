@@ -1455,6 +1455,46 @@ def _sync_editor_controls(source=None):
         s[f'bt_threshold_{key}'] = thresholds.get(key, value)
 
 
+def _restore_last_delivered_ledger(s=None):
+    """Make the latest Commons-approved package authoritative at the start of a new fiscal period.
+
+    Widget state and live session state can become stale independently. The delivered
+    history entry is the durable record of what Parliament approved, so restore the
+    whole package (not just values that happen to look like defaults).
+    """
+    s = s if s is not None else st.session_state
+    history = s.get('budget_history', [])
+    if not isinstance(history, list) or not history:
+        return False
+    latest = history[-1]
+    if not isinstance(latest, dict):
+        return False
+    try:
+        approved_period = (int(latest.get('term', 1)), int(latest.get('year', 1)))
+        current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
+    except (TypeError, ValueError):
+        return False
+    archived = latest.get('approved_ledger')
+    if approved_period >= current_period or not isinstance(archived, dict):
+        return False
+
+    restored = defaults()
+    for section, value in archived.items():
+        if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
+            restored[section].update(value)
+        else:
+            restored[section] = value
+    s.budget_applied = restored
+    _migrate_applied(s.budget_applied)
+    _sync_editor_controls(s.budget_applied)
+    s.budget_last_tax = dict(s.budget_applied.get('tax', {}))
+    s.budget_last_pol = {
+        'tax_pol': dict(s.budget_applied.get('tax_pol', {})),
+        'spend_pol': dict(s.budget_applied.get('spend_pol', {})),
+    }
+    return True
+
+
 def prepare_editor_state():
     """Restore controls at a new Budget period or when returning from a forecast stage."""
     s = st.session_state
@@ -1463,6 +1503,13 @@ def prepare_editor_state():
     resume_draft = bool(s.get('budget_editor_restore_draft'))
     if not (new_period or resume_draft):
         return False
+
+    # At a new fiscal period, recover the complete Commons-approved package
+    # from the delivery journal before hydrating any Streamlit controls. This is
+    # deliberately unconditional: a partially reset ledger is just as damaging
+    # as one whose values all happen to match the opening defaults.
+    if new_period:
+        _restore_last_delivered_ledger(s)
 
     pending = s.get('budget_day_draft')
     # A pending draft belongs to the period in which it was created. Never
