@@ -454,6 +454,8 @@ if s.year > 5:
             "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get("seat_changes_available", False) else "—"),
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    if r.get("opening_mandate_applied", False):
+        st.caption("Opening-term rule: your chosen non-regional party is given a 365-seat working majority at the first general election. Later elections use the normal constituency-level first-past-the-post result.")
     changes = r.get("constituency_changes", {})
     if changes:
         st.markdown("### Constituency gains and losses")
