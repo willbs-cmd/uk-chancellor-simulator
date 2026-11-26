@@ -2097,6 +2097,8 @@ def check(n=None, difficulty=None):
         result = engine.compute_election()
         if not result.get("seat_changes_available"):
             failures.append("The first general election did not expose seat changes against the opening Parliament baseline.")
+        if not result.get("opening_mandate_applied"):
+            failures.append("The first general election did not record the opening-term majority rule.")
         if sum(result.get("seat_changes", {}).values()) != 0:
             failures.append("First-election seat changes do not balance to zero against the opening 650-seat Parliament.")
         count = len(election_state.get("election_history", []))
