@@ -184,6 +184,19 @@ def annual_review(s=None):
         competence[department] = round(max(20.0, min(95.0, float(competence.get(department, 60.0)) + delta)), 1)
         loyalty_delta = 1.0 if change >= 0.8 else (-1.0 if change <= -0.8 else 0.0)
         loyalty_delta += float(traits.get("loyalty", 0.0))
+        # A minister's faction mood now feeds into their willingness to support
+        # the government's programme. This uses the previous annual climate
+        # reading; the new year's climate is calculated immediately afterwards.
+        faction_mood = None
+        faction_pressure = 0.0
+        try:
+            import living_politics
+            faction_position = living_politics.ministerial_faction_position(s, department)
+            faction_mood = faction_position.get("mood")
+            faction_pressure = float(faction_position.get("pressure", 0.0))
+            loyalty_delta -= faction_pressure
+        except (ImportError, TypeError, ValueError):
+            faction_position = {}
         faction_ideologies = FACTION_IDEOLOGIES.get(profile.get("faction"), ["Centric"])
         latest_ideology = str(s.get("last_ideology", "Centric"))
         loyalty_delta += 0.2 if latest_ideology in faction_ideologies else -0.2
@@ -218,6 +231,9 @@ def annual_review(s=None):
         rows.append({"department": department, "minister": minister, "service": service,
                      "score": round(score, 1), "change": round(change, 1),
                      "competence": competence[department], "loyalty": loyalty[department],
+                     "faction": profile.get("faction", "Government Mainstream"),
+                     "faction_mood": faction_mood,
+                     "faction_pressure": round(faction_pressure, 2),
                      "appraisal_score": round(appraisal_score, 1), "grade": grade,
                      "recommendation": recommendation, "warning": warning,
                      "poor_years": poor_years[department]})
