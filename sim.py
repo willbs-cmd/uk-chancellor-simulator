@@ -912,11 +912,13 @@ def living_politics_checks():
         "approval": 58.0, "party_opinion": 64.0, "backbench_opinion": 57.0,
         "cab_opinion": 62.0, "media_opinion": 54.0, "growth": 1.2,
         "inflation": 2.4, "country": {"unemployment": 4.8},
+        "political_capital_points": 5,
         "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
         "ministerial_profiles": {}, "ministerial_loyalty": {"health": 42.0, "education": 75.0},
         "ministerial_competence": {"health": 48.0, "education": 82.0},
     })
     living_politics.ensure(fake)
+    assert fake.political_capital_points == 5, "Old saves should receive the established political-capital default."
     assert fake.political_climate == {} and fake.political_climate_history == []
     climate = living_politics.annual_review(fake)
     assert climate and "Government Mainstream" in climate
