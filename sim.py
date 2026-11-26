@@ -826,11 +826,11 @@ def living_economy_checks():
     """The annual household/firm/credit/trade model is bounded, causal and rerun-safe."""
     import living_economy
 
-    def scenario(name, *, rate, gilt, market, inflation, wages, unemployment, energy, partner_growth):
+    def scenario(name, *, rate, gilt, market, inflation, wages, unemployment, energy, partner_growth, gdp=3.0):
         fake = FakeState({
             "term": 1, "year": 2, "growth": 1.0, "inflation": inflation,
             "interest_rate": rate, "gilt_yield": gilt, "market_conf": market,
-            "approval": 50.0, "gdp_trillion": 3.0, "headroom": 2.0, "deficit": 60.0,
+            "approval": 50.0, "gdp_trillion": gdp, "headroom": 2.0, "deficit": 60.0,
             "country": {"real_wages": wages, "unemployment": unemployment,
                         "energy_bills": energy},
             "world_economy": {
@@ -890,6 +890,15 @@ def living_economy_checks():
     assert favourable.business_investment > adverse.business_investment, (
         "Stronger credit and export demand should support business investment."
     )
+    larger_economy = scenario(
+        "larger nominal tax base", rate=2.0, gilt=2.5, market=80.0,
+        inflation=2.0, wages=2.0, unemployment=3.5, energy=1500.0,
+        partner_growth=4.0, gdp=6.0,
+    )
+    assert larger_economy.headroom > favourable.headroom, (
+        "The illustrative receipts feedback should scale modestly with nominal GDP."
+    )
+    assert larger_economy.deficit < favourable.deficit
     return True
 
 
