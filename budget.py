@@ -339,7 +339,7 @@ def ensure():
         latest_budget = s.budget_history[-1]
         latest_period = (int(latest_budget.get('term', 1)), int(latest_budget.get('year', 1)))
         current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
-        archived_ledger = latest_budget.get('approved_ledger')
+        archived_ledger = _ledger_from_history_entry(latest_budget)
         if latest_period < current_period and isinstance(archived_ledger, dict):
             live = s.get('budget_applied')
             live = live if isinstance(live, dict) else {}
@@ -1455,6 +1455,78 @@ def _sync_editor_controls(source=None):
         s[f'bt_threshold_{key}'] = thresholds.get(key, value)
 
 
+def _ledger_from_history_entry(entry):
+    """Rebuild an approved ledger from both current and legacy Budget journal entries.
+
+    Older saves recorded tax, spending, thresholds and scheme labels but did not
+    include the complete approved_ledger snapshot. Recover every field that the
+    older journal actually retained instead of silently replacing it with defaults.
+    """
+    if not isinstance(entry, dict):
+        return None
+    archived = entry.get('approved_ledger')
+    if isinstance(archived, dict):
+        restored = defaults()
+        for section, value in archived.items():
+            if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
+                restored[section].update(value)
+            else:
+                restored[section] = value
+        _migrate_applied(restored)
+        return restored
+
+    tax = entry.get('tax')
+    spend = entry.get('spend')
+    if not isinstance(tax, dict) or not isinstance(spend, dict):
+        return None
+
+    restored = defaults()
+    restored['tax'].update({k: v for k, v in tax.items() if k in TAXES})
+    restored['spend'].update({k: v for k, v in spend.items() if k in SPEND_DEFAULTS})
+    restored['strategy'] = entry.get('strategy', 'balanced')
+
+    thresholds = entry.get('thresholds')
+    if isinstance(thresholds, dict):
+        restored['thresholds'].update(thresholds)
+
+    tax_labels = {str(spec.get('label', '')).strip().casefold(): key
+                  for key, spec in TAX_POLICIES.items()}
+    spend_labels = {str(spec.get('label', '')).strip().casefold(): key
+                    for key, spec in SPEND_POLICIES.items()}
+    for label in entry.get('revenue_schemes', []) or []:
+        key = tax_labels.get(str(label).strip().casefold())
+        if key:
+            restored['tax_pol'][key] = True
+    for label in entry.get('spending_schemes', []) or []:
+        key = spend_labels.get(str(label).strip().casefold())
+        if key:
+            restored['spend_pol'][key] = True
+
+    # Older journal entries retained project costs and durations but not every
+    # modelling field. Rebuild those projects conservatively, without inventing
+    # productivity gains or changing the approved cash commitments.
+    projects = []
+    for index, row in enumerate(entry.get('projects', []) or []):
+        if not isinstance(row, dict):
+            continue
+        projects.append({
+            'id': str(row.get('id') or f"legacy-{entry.get('term', 1)}-{entry.get('year', 1)}-{index}"),
+            'label': str(row.get('label', 'Capital project')),
+            'department': str(row.get('department', 'other')),
+            'capital_cost_bn': float(row.get('capital_cost_bn', row.get('capital_cost', 0.0)) or 0.0),
+            'annual_cost_bn': float(row.get('annual_cost_bn', row.get('annual_cost', 0.0)) or 0.0),
+            'duration_years': max(1, min(5, int(row.get('duration_years', row.get('duration', 5)) or 5))),
+            'start_term': int(entry.get('term', 1)),
+            'start_year': int(entry.get('year', 1)),
+            'productivity_effect': 0.0,
+            'status': str(row.get('status', 'Approved')),
+        })
+    restored['projects'] = projects
+    restored['_tax_units_version'] = 2
+    _migrate_applied(restored)
+    return restored
+
+
 def _restore_last_delivered_ledger(s=None):
     """Make the latest Commons-approved package authoritative at the start of a new fiscal period.
 
@@ -1474,18 +1546,12 @@ def _restore_last_delivered_ledger(s=None):
         current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
     except (TypeError, ValueError):
         return False
-    archived = latest.get('approved_ledger')
-    if approved_period >= current_period or not isinstance(archived, dict):
+    if approved_period >= current_period:
         return False
-
-    restored = defaults()
-    for section, value in archived.items():
-        if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
-            restored[section].update(value)
-        else:
-            restored[section] = value
+    restored = _ledger_from_history_entry(latest)
+    if not isinstance(restored, dict):
+        return False
     s.budget_applied = restored
-    _migrate_applied(s.budget_applied)
     _sync_editor_controls(s.budget_applied)
     s.budget_last_tax = dict(s.budget_applied.get('tax', {}))
     s.budget_last_pol = {
