@@ -777,6 +777,50 @@ def national_investment_checks():
     return True
 
 
+
+def public_service_strike_resolution_checks():
+    """Every strike resolution updates the service(s) affected by that workforce dispute."""
+    import public_services
+
+    def resolve(strike_id, choice, negotiation_round=0):
+        fake = FakeState({
+            "term": 1, "year": 2, "headroom": 5.0, "deficit": 10.0,
+            "approval": 55.0, "country": {"nhs_morale": 52.0},
+            "public_service_scores": {key: 60.0 for key in public_services.SERVICES},
+            "public_service_strikes": [{
+                "id": strike_id, "group": strike_id, "severity": 1.0,
+                "demand_bn": 1.0, "negotiation_round": negotiation_round,
+            }],
+            "public_service_resolved": [], "event_cards": [], "message": "",
+        })
+        st.session_state = fake
+        public_services.resolve_strike(strike_id, choice)
+        return fake
+
+    general = resolve("Public-sector pay", "settle")
+    changed = {key for key, value in general.public_service_scores.items() if value > 60.0}
+    assert changed == set(public_service_services := public_services.SERVICES), (
+        f"General public-sector settlement should improve every service, changed {changed}"
+    )
+    assert general.headroom == 4.0 and general.deficit == 11.0
+
+    education = resolve("Education workforce", "settle")
+    assert education.public_service_scores["Education"] > 60.0
+    assert education.public_service_scores["NHS"] == 60.0
+    assert education.public_service_scores["Local government"] == 60.0
+
+    general_offer = resolve("Public-sector pay", "final_offer", negotiation_round=1)
+    assert all(value > 60.0 for value in general_offer.public_service_scores.values()), (
+        "Accepted final public-sector pay offer must improve every affected service."
+    )
+
+    general_hold = resolve("Public-sector pay", "hold")
+    assert all(value < 60.0 for value in general_hold.public_service_scores.values()), (
+        "Holding the line on a general pay dispute must worsen every affected service."
+    )
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -793,6 +837,7 @@ def check(n=None, difficulty=None):
         political_survival_checks()
         assert number10_committee_checks()
         cabinet_checks()
+        public_service_strike_resolution_checks()
         try:
             government_programme_checks()
         except Exception as programme_error:
