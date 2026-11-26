@@ -943,6 +943,8 @@ def living_politics_checks():
     assert fake.political_capital_points == capital_before - 1
     assert fake.political_climate[faction]["mood"] >= mood_before
     assert fake.backbench_opinion > 57.0 and fake.party_opinion > 64.0
+    assert len(fake.political_climate_action_history) == 1
+    assert fake.political_climate_action_history[-1]["faction"] == faction
     success_again, _ = living_politics.hold_faction_meeting(fake, faction)
     assert not success_again, "Only one faction meeting may be held each year."
     fake.political_capital_points = 0
