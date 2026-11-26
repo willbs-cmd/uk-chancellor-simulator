@@ -914,7 +914,10 @@ def living_politics_checks():
         "inflation": 2.4, "country": {"unemployment": 4.8},
         "political_capital_points": 5,
         "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
-        "ministerial_profiles": {}, "ministerial_loyalty": {"health": 42.0, "education": 75.0},
+        "ministerial_profiles": {
+            "health": {"minister": "Health Secretary", "party": "Labour", "faction": "Labour Right"},
+            "education": {"minister": "Education Secretary", "party": "Labour", "faction": "Socialist Left"},
+        }, "ministerial_loyalty": {"health": 42.0, "education": 75.0},
         "ministerial_competence": {"health": 48.0, "education": 82.0},
     })
     living_politics.ensure(fake)
@@ -922,6 +925,12 @@ def living_politics_checks():
     assert fake.political_climate == {} and fake.political_climate_history == []
     climate = living_politics.annual_review(fake)
     assert climate and "Government Mainstream" in climate
+    assert climate["Government Mainstream"]["members"] == 1, (
+        "Party-specific Labour Right ministers must contribute to the shared Government Mainstream climate."
+    )
+    assert climate["Socialist Left"]["members"] == 1, (
+        "Party-specific faction names must contribute to their shared political-climate group."
+    )
     assert len(fake.political_climate_history) == 1
     first = {key: dict(value) for key, value in climate.items()}
     fake.approval = 10.0
