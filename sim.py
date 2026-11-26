@@ -2095,6 +2095,10 @@ def check(n=None, difficulty=None):
         election_state.pm_opinion = 80.0
         election_state.party_opinion = 80.0
         result = engine.compute_election()
+        if not result.get("seat_changes_available"):
+            failures.append("The first general election did not expose seat changes against the opening Parliament baseline.")
+        if sum(result.get("seat_changes", {}).values()) != 0:
+            failures.append("First-election seat changes do not balance to zero against the opening 650-seat Parliament.")
         count = len(election_state.get("election_history", []))
         if count != 1 or engine.compute_election() != result or len(election_state.get("election_history", [])) != count:
             failures.append("General election result was not archived exactly once.")
