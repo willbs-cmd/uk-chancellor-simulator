@@ -23,6 +23,8 @@ def ensure(s=None):
     s.setdefault("political_climate", {})
     s.setdefault("political_climate_history", [])
     s.setdefault("political_climate_last_year", "")
+    s.setdefault("political_climate_action_period", "")
+    s.setdefault("political_climate_action_history", [])
     return s
 
 
@@ -100,6 +102,36 @@ def annual_review(s=None):
     return climate
 
 
+
+def hold_faction_meeting(s, faction):
+    """Spend political capital on one annual listening meeting with a party faction."""
+    ensure(s)
+    period = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+    if s.get("political_climate_action_period") == period:
+        return False, "You have already held a faction meeting this year."
+    capital = int(s.get("political_capital_points", 0))
+    if capital < 1:
+        return False, "You need at least one political capital point to arrange a faction meeting."
+    climate = dict(s.get("political_climate", {}))
+    if faction not in climate:
+        return False, "That faction is not currently recorded in the political climate."
+    row = dict(climate[faction])
+    before = _clip(row.get("mood", 55.0))
+    row["mood"] = round(_clip(before + 5.0), 1)
+    row["trend"] = round(float(row.get("trend", 0.0)) + 5.0, 1)
+    climate[faction] = row
+    s.political_climate = climate
+    s.political_capital_points = capital - 1
+    s.political_climate_action_period = period
+    s.backbench_opinion = round(_clip(float(s.get("backbench_opinion", 60.0)) + 1.0), 1)
+    s.party_opinion = round(_clip(float(s.get("party_opinion", 60.0)) + 0.5), 1)
+    history = list(s.get("political_climate_action_history", []))
+    history.append({"period": period, "faction": faction, "action": "Listening meeting",
+                    "mood_change": round(float(row["mood"]) - before, 1)})
+    s.political_climate_action_history = history[-30:]
+    return True, f"Listening meeting held with {faction}. Faction mood improved by {row['mood'] - before:.1f} points."
+
+
 def render(s=None):
     if s is None:
         s = st.session_state
@@ -121,3 +153,21 @@ def render(s=None):
     st.dataframe(rows, hide_index=True, use_container_width=True)
     weakest = min(climate.items(), key=lambda item: float(item[1].get("mood", 50.0)))
     st.caption(f"Faction requiring most attention: {weakest[0]} ({float(weakest[1].get('mood', 50.0)):.0f}/100). This is an advisory indicator, not an automatic rebellion.")
+    st.markdown("#### Manage party relationships")
+    st.caption("You can spend one political capital point each year to hold a listening meeting with one faction. It improves that faction's mood and slightly strengthens party unity.")
+    period = f"{int(s.get('term', 1))}:{int(s.get('year', 1))}"
+    capital = int(s.get("political_capital_points", 0))
+    used = s.get("political_climate_action_period") == period
+    st.write(f"Political capital available: **{capital}**")
+    choices = sorted(climate, key=lambda key: float(climate[key].get("mood", 50.0)))
+    for faction in choices:
+        mood = float(climate[faction].get("mood", 50.0))
+        label = f"Hold listening meeting with {faction} ({mood:.0f}/100)"
+        if st.button(label, key=f"living_politics_meeting_{faction.lower().replace(' ', '_')}",
+                     disabled=used or capital < 1, use_container_width=True):
+            ok, message = hold_faction_meeting(s, faction)
+            if ok:
+                st.success(message)
+            else:
+                st.warning(message)
+            st.rerun()
