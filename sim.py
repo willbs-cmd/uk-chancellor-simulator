@@ -931,6 +931,15 @@ def living_politics_checks():
     assert climate["Socialist Left"]["members"] == 1, (
         "Party-specific faction names must contribute to their shared political-climate group."
     )
+    health_position = living_politics.ministerial_faction_position(fake, "health")
+    assert health_position["faction"] == "Government Mainstream"
+    assert health_position["mood"] is not None
+    fake.political_climate["Government Mainstream"]["mood"] = 20.0
+    resistant = living_politics.ministerial_faction_position(fake, "health")
+    assert resistant["resistance"] == "High resistance" and resistant["pressure"] == 1.2
+    fake.political_climate["Government Mainstream"]["mood"] = 80.0
+    supportive = living_politics.ministerial_faction_position(fake, "health")
+    assert supportive["resistance"] == "Supportive" and supportive["pressure"] == -0.3
     assert len(fake.political_climate_history) == 1
     first = {key: dict(value) for key, value in climate.items()}
     fake.approval = 10.0
