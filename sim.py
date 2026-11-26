@@ -68,6 +68,7 @@ import delivery_centre  # noqa: E402
 import national_investment  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
+import living_politics  # noqa: E402
 import number10  # noqa: E402
 import budget_aftermath  # noqa: E402
 import mp_politics  # noqa: E402
@@ -904,6 +905,37 @@ def living_economy_checks():
     return True
 
 
+def living_politics_checks():
+    """Faction climate migrates cleanly, remains bounded and advances only once per year."""
+    fake = FakeState({
+        "seed": 812, "party": "Labour", "term": 1, "year": 2,
+        "approval": 58.0, "party_opinion": 64.0, "backbench_opinion": 57.0,
+        "cab_opinion": 62.0, "media_opinion": 54.0, "growth": 1.2,
+        "inflation": 2.4, "country": {"unemployment": 4.8},
+        "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
+        "ministerial_profiles": {}, "ministerial_loyalty": {"health": 42.0, "education": 75.0},
+        "ministerial_competence": {"health": 48.0, "education": 82.0},
+    })
+    living_politics.ensure(fake)
+    assert fake.political_climate == {} and fake.political_climate_history == []
+    climate = living_politics.annual_review(fake)
+    assert climate and "Government Mainstream" in climate
+    assert len(fake.political_climate_history) == 1
+    first = {key: dict(value) for key, value in climate.items()}
+    fake.approval = 10.0
+    repeated = living_politics.annual_review(fake)
+    assert repeated == first, "A Streamlit rerun must not apply a second annual faction review."
+    assert len(fake.political_climate_history) == 1
+    for faction, row in climate.items():
+        assert 0.0 <= row["mood"] <= 100.0, f"Faction mood out of bounds for {faction}: {row}"
+        assert 0.0 <= living_politics.faction_mood(fake, faction) <= 100.0
+    fake.year = 3
+    next_year = living_politics.annual_review(fake)
+    assert len(fake.political_climate_history) == 2
+    assert next_year["Government Mainstream"]["trend"] != 999.0
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -921,6 +953,7 @@ def check(n=None, difficulty=None):
         assert number10_committee_checks()
         cabinet_checks()
         living_economy_checks()
+        assert living_politics_checks()
         public_service_strike_resolution_checks()
         try:
             government_programme_checks()
