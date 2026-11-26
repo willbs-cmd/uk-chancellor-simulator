@@ -952,6 +952,19 @@ def living_politics_checks():
     living_politics.annual_review(fake)
     no_capital, _ = living_politics.hold_faction_meeting(fake, faction)
     assert not no_capital, "Faction meetings must not be available without political capital."
+
+    welfare_message = "The left wing of your party is in open revolt over welfare cuts."
+    linked = living_politics.budget_risk_faction(welfare_message)
+    assert linked == "Socialist Left", f"Budget issue linked to the wrong faction: {linked}"
+    fake.political_climate[linked]["mood"] = 20.0
+    restless_multiplier = living_politics.budget_risk_multiplier(fake, welfare_message)[1]
+    fake.political_climate[linked]["mood"] = 90.0
+    content_multiplier = living_politics.budget_risk_multiplier(fake, welfare_message)[1]
+    assert restless_multiplier > 1.0, "A restless faction should intensify its Budget rebellion risk."
+    assert content_multiplier < 1.0, "A content faction should moderate its Budget rebellion risk."
+    assert living_politics.budget_risk_multiplier(FakeState(), welfare_message)[1] == 1.0, (
+        "Saves without a political-climate record should retain the original Budget risk."
+    )
     return True
 
 
