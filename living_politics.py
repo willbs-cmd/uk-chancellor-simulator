@@ -25,6 +25,9 @@ def ensure(s=None):
     s.setdefault("political_climate_last_year", "")
     s.setdefault("political_climate_action_period", "")
     s.setdefault("political_climate_action_history", [])
+    # Match the existing engine resource default so old saves can use this action
+    # before their next annual update.
+    s.setdefault("political_capital_points", 5)
     return s
 
 
@@ -45,7 +48,6 @@ def annual_review(s=None):
         return s.get("political_climate", {})
     import cabinet_management
 
-    profiles = s.get("ministerial_profiles", {})
     loyalty = s.get("ministerial_loyalty", {})
     competence = s.get("ministerial_competence", {})
     grouped = {}
