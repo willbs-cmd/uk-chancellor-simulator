@@ -821,6 +821,70 @@ def public_service_strike_resolution_checks():
     return True
 
 
+
+def living_economy_checks():
+    """The annual household/firm/credit/trade model is bounded, causal and rerun-safe."""
+    import living_economy
+
+    def scenario(name, *, rate, gilt, market, inflation, wages, unemployment, energy, partner_growth):
+        fake = FakeState({
+            "term": 1, "year": 2, "growth": 1.0, "inflation": inflation,
+            "interest_rate": rate, "gilt_yield": gilt, "market_conf": market,
+            "approval": 50.0, "gdp_trillion": 3.0, "headroom": 2.0, "deficit": 60.0,
+            "country": {"real_wages": wages, "unemployment": unemployment,
+                        "energy_bills": energy},
+            "world_economy": {
+                "United States": {"growth": partner_growth},
+                "Euro area": {"growth": partner_growth},
+                "China": {"growth": partner_growth},
+            },
+            "living_economy_history": [],
+        })
+        living_economy.advance(fake)
+        first = {key: fake.get(key) for key in (
+            "household_confidence", "household_debt_stress", "credit_conditions",
+            "export_demand", "business_confidence", "business_investment",
+            "consumer_spending", "growth", "inflation", "headroom", "deficit",
+        )}
+        living_economy.advance(fake)
+        second = {key: fake.get(key) for key in first}
+        assert first == second, f"{name}: annual transmission applied twice on a Streamlit rerun"
+        assert len(fake.living_economy_history) == 1, f"{name}: duplicate annual history row"
+        assert 5 <= fake.household_confidence <= 95
+        assert 0 <= fake.household_debt_stress <= 100
+        assert 55 <= fake.credit_conditions <= 115
+        assert 65 <= fake.export_demand <= 140
+        assert 5 <= fake.business_confidence <= 95
+        assert 55 <= fake.business_investment <= 150
+        assert 65 <= fake.consumer_spending <= 140
+        assert -8 <= fake.growth <= 8
+        assert 0 <= fake.inflation <= 12
+        return fake
+
+    adverse = scenario(
+        "high-cost squeeze", rate=8.0, gilt=8.0, market=25.0, inflation=6.0,
+        wages=-1.0, unemployment=7.0, energy=2300.0, partner_growth=-2.0,
+    )
+    favourable = scenario(
+        "strong household and export demand", rate=2.0, gilt=2.5, market=80.0,
+        inflation=2.0, wages=2.0, unemployment=3.5, energy=1500.0,
+        partner_growth=4.0,
+    )
+    assert favourable.household_confidence > adverse.household_confidence, (
+        "Stronger real wages, jobs and affordable credit should improve household confidence."
+    )
+    assert favourable.credit_conditions > adverse.credit_conditions, (
+        "Lower rates and stronger market confidence should improve credit conditions."
+    )
+    assert favourable.export_demand > adverse.export_demand, (
+        "Stronger trading-partner growth should support export demand."
+    )
+    assert favourable.business_investment > adverse.business_investment, (
+        "Stronger credit and export demand should support business investment."
+    )
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -837,6 +901,7 @@ def check(n=None, difficulty=None):
         political_survival_checks()
         assert number10_committee_checks()
         cabinet_checks()
+        living_economy_checks()
         public_service_strike_resolution_checks()
         try:
             government_programme_checks()
