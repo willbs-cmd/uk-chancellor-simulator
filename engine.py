@@ -1665,6 +1665,9 @@ def proceed_to_spring():
     regional_economy.advance(s)
     public_services.advance(s)
     cabinet_management.annual_review(s)
+    # Record the accumulated mood of parliamentary and ministerial factions once per year.
+    import living_politics
+    living_politics.annual_review(s)
     # Public-service capacity feeds back into productive potential with a
     # modest, bounded effect rather than an instant GDP windfall.
     s.growth = round(s.growth + float(s.get('public_service_productivity_effect', 0.0)), 2)

@@ -260,7 +260,12 @@ def simulate_vote(option, party_votes, s=None):
     term, year, block = int(s.get("term", 1)), int(s.get("year", 1)), int(s.get("block", 1))
     title = str(option.get("label", option.get("title", "Policy bill")))
     counts = {
-        party: {"seats": 0, "ayes": 0, "noes": 0, "rebels": 0, "line": row.get("line", "")}
+        party: {
+            **{key: value for key, value in row.items()
+               if key not in {"seats", "ayes", "noes", "rebels"}},
+            "seats": 0, "ayes": 0, "noes": 0, "rebels": 0,
+            "line": row.get("line", ""),
+        }
         for party, row in party_votes.items()
     }
     rebel_examples, marginal_count = [], 0

@@ -265,6 +265,8 @@ def _defaults():
         council_control={}, local_government_mandate=0.0, general_election_mandate=0,
         cabinet_reshuffle_terms=[], cabinet_reshuffle_history=[], chancellor_actions=[],
         political_pressure_issue=None, political_pressure_history=[],
+        political_climate={}, political_climate_history=[], political_climate_last_year='',
+        political_climate_action_period='', political_climate_action_history=[],
         leadership_pressure=0.0, leadership_last_review=0, leadership_issue=None, leadership_history=[],
         current_prime_minister='The Prime Minister', pm_profile={}, pm_transition_issue=None, pm_history=[], chancellor_status='incumbent', chancellor_appointment_history=[], pm_policy_mandate={}, pm_mandate_history=[], pm_reshuffle_issue=None, pm_reshuffle_queue=[], pm_cabinet_reshuffle_history=[],
         annual_reports=[], latest_annual_report=None,

@@ -32,6 +32,7 @@ import long_run_simulation
 import public_services
 import chancellors_desk
 import cabinet_management
+import living_politics
 import government_programme
 import political_pressure
 import number10
@@ -1645,12 +1646,15 @@ elif active_workspace == 'cabinet':
             profile = cabinet_management.profile_for(s, department)
             competence = float(s.get('ministerial_competence', {}).get(department, 60.0))
             loyalty = float(s.get('ministerial_loyalty', {}).get(department, 60.0))
+            faction_position = living_politics.ministerial_faction_position(s, department)
             minister_rows.append({
                 'Department': str(department).replace('_', ' ').title(),
                 'Minister': minister or 'Vacant',
                 'Competence': round(competence),
                 'Loyalty': round(loyalty),
                 'Faction': profile.get('faction', '—'),
+                'Faction mood': faction_position.get('mood'),
+                'Faction position': faction_position.get('resistance', 'Not yet assessed'),
                 'Personality': profile.get('personality', '—')
             })
         if minister_rows:
@@ -1665,7 +1669,9 @@ elif active_workspace == 'cabinet':
                             status = "Needs attention" if row["Competence"] < 45 else "Strong delivery" if row["Competence"] >= 70 else "Developing"
                             st.markdown(f"**{row['Department']}**")
                             st.markdown(f"### {row['Minister']}")
-                            st.caption(f"{status} · {row['Faction']} · {row['Personality']}")
+                            mood_note = (f" · faction mood {row['Faction mood']:.0f}/100 · {row['Faction position']}"
+                                        if row['Faction mood'] is not None else " · faction climate not yet assessed")
+                            st.caption(f"{status} · {row['Faction']} · {row['Personality']}{mood_note}")
                             st.progress(max(0, min(100, row["Competence"])) / 100,
                                         text=f"Delivery competence · {row['Competence']}/100")
                             st.progress(max(0, min(100, row["Loyalty"])) / 100,
@@ -1741,7 +1747,7 @@ elif active_workspace == 'parliament':
 elif active_workspace == 'news':
     st.markdown('### The News')
     st.caption('Your daily briefing, opposition attacks, polling, headlines and public reaction.')
-    news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition'])
+    news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition', 'Political climate'])
     with news_tabs[0]:
         briefing()
     with news_tabs[1]:
@@ -1793,3 +1799,6 @@ elif active_workspace == 'news':
         st.caption('These indicators describe different pressures: public approval is not the same as voting intention, and party unity measures internal cohesion rather than popularity.')
     with news_tabs[2]:
         opposition_campaign.render(s)
+    with news_tabs[3]:
+        import living_politics
+        living_politics.render(s)

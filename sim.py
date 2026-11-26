@@ -68,6 +68,7 @@ import delivery_centre  # noqa: E402
 import national_investment  # noqa: E402
 import cabinet_management  # noqa: E402
 import political_pressure  # noqa: E402
+import living_politics  # noqa: E402
 import number10  # noqa: E402
 import budget_aftermath  # noqa: E402
 import mp_politics  # noqa: E402
@@ -904,6 +905,87 @@ def living_economy_checks():
     return True
 
 
+def living_politics_checks():
+    """Faction climate migrates cleanly, remains bounded and advances only once per year."""
+    fake = FakeState({
+        "seed": 812, "party": "Labour", "term": 1, "year": 2,
+        "approval": 58.0, "party_opinion": 64.0, "backbench_opinion": 57.0,
+        "cab_opinion": 62.0, "media_opinion": 54.0, "growth": 1.2,
+        "inflation": 2.4, "country": {"unemployment": 4.8},
+        "political_capital_points": 5,
+        "cabinet_ministers": {"health": "Health Secretary", "education": "Education Secretary"},
+        "ministerial_profiles": {
+            "health": {"minister": "Health Secretary", "party": "Labour", "faction": "Labour Right"},
+            "education": {"minister": "Education Secretary", "party": "Labour", "faction": "Socialist Left"},
+        }, "ministerial_loyalty": {"health": 42.0, "education": 75.0},
+        "ministerial_competence": {"health": 48.0, "education": 82.0},
+    })
+    living_politics.ensure(fake)
+    assert fake.political_capital_points == 5, "Old saves should receive the established political-capital default."
+    assert fake.political_climate == {} and fake.political_climate_history == []
+    climate = living_politics.annual_review(fake)
+    assert climate and "Government Mainstream" in climate
+    assert climate["Government Mainstream"]["members"] == 1, (
+        "Party-specific Labour Right ministers must contribute to the shared Government Mainstream climate."
+    )
+    assert climate["Socialist Left"]["members"] == 1, (
+        "Party-specific faction names must contribute to their shared political-climate group."
+    )
+    health_position = living_politics.ministerial_faction_position(fake, "health")
+    assert health_position["faction"] == "Government Mainstream"
+    assert health_position["mood"] is not None
+    fake.political_climate["Government Mainstream"]["mood"] = 20.0
+    resistant = living_politics.ministerial_faction_position(fake, "health")
+    assert resistant["resistance"] == "High resistance" and resistant["pressure"] == 1.2
+    fake.political_climate["Government Mainstream"]["mood"] = 80.0
+    supportive = living_politics.ministerial_faction_position(fake, "health")
+    assert supportive["resistance"] == "Supportive" and supportive["pressure"] == -0.3
+    assert len(fake.political_climate_history) == 1
+    first = {key: dict(value) for key, value in climate.items()}
+    fake.approval = 10.0
+    repeated = living_politics.annual_review(fake)
+    assert repeated == first, "A Streamlit rerun must not apply a second annual faction review."
+    assert len(fake.political_climate_history) == 1
+    for faction, row in climate.items():
+        assert 0.0 <= row["mood"] <= 100.0, f"Faction mood out of bounds for {faction}: {row}"
+        assert 0.0 <= living_politics.faction_mood(fake, faction) <= 100.0
+    fake.year = 3
+    next_year = living_politics.annual_review(fake)
+    assert len(fake.political_climate_history) == 2
+    assert next_year["Government Mainstream"]["trend"] != 999.0
+    faction = min(next_year, key=lambda key: next_year[key]["mood"])
+    capital_before = int(fake.get("political_capital_points", 5))
+    mood_before = next_year[faction]["mood"]
+    success, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert success, "A faction meeting should be available with political capital."
+    assert fake.political_capital_points == capital_before - 1
+    assert fake.political_climate[faction]["mood"] >= mood_before
+    assert fake.backbench_opinion > 57.0 and fake.party_opinion > 64.0
+    assert len(fake.political_climate_action_history) == 1
+    assert fake.political_climate_action_history[-1]["faction"] == faction
+    success_again, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert not success_again, "Only one faction meeting may be held each year."
+    fake.political_capital_points = 0
+    fake.year = 4
+    living_politics.annual_review(fake)
+    no_capital, _ = living_politics.hold_faction_meeting(fake, faction)
+    assert not no_capital, "Faction meetings must not be available without political capital."
+
+    welfare_message = "The left wing of your party is in open revolt over welfare cuts."
+    linked = living_politics.budget_risk_faction(welfare_message)
+    assert linked == "Socialist Left", f"Budget issue linked to the wrong faction: {linked}"
+    fake.political_climate[linked]["mood"] = 20.0
+    restless_multiplier = living_politics.budget_risk_multiplier(fake, welfare_message)[1]
+    fake.political_climate[linked]["mood"] = 90.0
+    content_multiplier = living_politics.budget_risk_multiplier(fake, welfare_message)[1]
+    assert restless_multiplier > 1.0, "A restless faction should intensify its Budget rebellion risk."
+    assert content_multiplier < 1.0, "A content faction should moderate its Budget rebellion risk."
+    assert living_politics.budget_risk_multiplier(FakeState(), welfare_message)[1] == 1.0, (
+        "Saves without a political-climate record should retain the original Budget risk."
+    )
+    return True
+
+
 def check(n=None, difficulty=None):
     """Fail if editable content breaks its schema or the sensible-strategy win rates collapse.
 
@@ -921,6 +1003,7 @@ def check(n=None, difficulty=None):
         assert number10_committee_checks()
         cabinet_checks()
         living_economy_checks()
+        assert living_politics_checks()
         public_service_strike_resolution_checks()
         try:
             government_programme_checks()
@@ -2210,6 +2293,38 @@ def check(n=None, difficulty=None):
         minority_budget_votes = budget.commons_ayes(backbench=60)
         if majority_budget_votes - minority_budget_votes < 30:
             failures.append("A minority government's Budget vote was not sufficiently harder than a majority government's.")
+
+        # Living Britain: a faction's mood now changes governing-party discipline
+        # on relevant Commons policy votes, while remaining bounded and auditable.
+        s.party = 'Labour'
+        s.government_type = 'majority'
+        s.government_coalition_partners = []
+        s.parliament_seats = dict(elected)
+        faction_option = {'label': 'Expand the NHS and protect public services',
+                          'ideology': 'Social Democratic', 'effect': {'health': 2.0}}
+        if parliament.policy_pressure_faction(faction_option) != 'Socialist Left':
+            failures.append("A public-service Commons proposal was not linked to the Socialist Left faction.")
+        s.political_climate = {}
+        neutral_ayes, neutral_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        if neutral_votes['Labour'].get('faction_adjustment') != 0.0:
+            failures.append("Missing faction-climate data changed Commons discipline for an older save.")
+        s.political_climate = {'Socialist Left': {'mood': 20.0}}
+        unhappy_ayes, unhappy_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        s.political_climate = {'Socialist Left': {'mood': 90.0}}
+        content_ayes, content_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        if content_ayes <= unhappy_ayes:
+            failures.append("A content governing-party faction did not improve support on an aligned Commons vote.")
+        if content_votes['Labour'].get('faction_mood') != 90.0 or unhappy_votes['Labour'].get('faction_mood') != 20.0:
+            failures.append("Commons vote records did not retain the relevant faction mood.")
+        if content_votes['Labour'].get('pressure_faction') != 'Socialist Left':
+            failures.append("Commons vote record did not identify the faction exerting pressure.")
+        if abs(float(content_votes['Labour'].get('faction_adjustment', 0.0))) > 0.06:
+            failures.append("Faction influence on Commons discipline exceeded its safety bound.")
+        if neutral_ayes == content_ayes:
+            failures.append("Faction mood had no effect on the governing-party Commons vote.")
+        _, individual_vote_rows, _ = mp_politics.simulate_vote(faction_option, content_votes, s)
+        if individual_vote_rows.get('Labour', {}).get('pressure_faction') != 'Socialist Left':
+            failures.append("Individual MP voting discarded the governing faction context from the Commons result.")
 
         s.election_result = {
             'win': True, 'kind': 'coalition', 'margin': 19, 'mandate_strength': 1,

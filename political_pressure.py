@@ -36,6 +36,10 @@ def review_policy(s, decision, option, vote):
         pressure = 48.0 + float(traits.get("ambition", 0.0)) * 18.0
         pressure += 12.0 if personality == "Public campaigner" else 0.0
         pressure += max(0.0, 60.0 - loyalty) * 0.28
+        # A faction already in a poor political mood is more likely to press its minister to dissent.
+        import living_politics
+        faction_mood = living_politics.faction_mood(s, faction)
+        pressure += max(0.0, 55.0 - faction_mood) * 0.22
         pressure += max(0.0, float(vote.get("rebels", 0)) - 10.0) * 0.12
         active.append((pressure, department, minister, faction, personality, loyalty))
     active.sort(reverse=True)
