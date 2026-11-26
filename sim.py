@@ -2228,7 +2228,21 @@ def check(n=None, difficulty=None):
         election_state.year = 6
         election_state.pm_opinion = 80.0
         election_state.party_opinion = 80.0
+        expected_seats, _ = engine.compute_seats(
+            {p: election_state.poll_history[p][-1] for p in state.PARTIES},
+            return_details=True,
+        )
         result = engine.compute_election()
+        if result.get("opening_mandate_applied"):
+            failures.append("The first general election incorrectly reapplied the opening 365-seat mandate.")
+        if result.get("seats") != expected_seats:
+            failures.append("The first general election seat result was altered after the constituency FPTP model ran.")
+        if election_state.get("opening_mandate_pending"):
+            failures.append("The opening mandate remained pending after the first general election.")
+        if not result.get("seat_changes_available"):
+            failures.append("The first general election did not show seat changes against the opening Parliament.")
+        if sum(result.get("seat_changes", {}).values()) != 0:
+            failures.append("First-election seat changes do not balance to zero.")
         count = len(election_state.get("election_history", []))
         if count != 1 or engine.compute_election() != result or len(election_state.get("election_history", [])) != count:
             failures.append("General election result was not archived exactly once.")
