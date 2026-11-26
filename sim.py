@@ -861,6 +861,14 @@ def living_economy_checks():
         assert 0 <= fake.inflation <= 12
         return fake
 
+    legacy_save = FakeState({"term": 1, "year": 1, "business_confidence": 70.0})
+    living_economy.ensure(legacy_save)
+    assert legacy_save.business_confidence == 70.0, "Save migration must preserve existing economic values."
+    assert legacy_save.household_confidence == 55.0
+    assert legacy_save.household_debt_stress == 24.0
+    assert legacy_save.credit_conditions == 100.0
+    assert legacy_save.export_demand == 100.0
+
     adverse = scenario(
         "high-cost squeeze", rate=8.0, gilt=8.0, market=25.0, inflation=6.0,
         wages=-1.0, unemployment=7.0, energy=2300.0, partner_growth=-2.0,
