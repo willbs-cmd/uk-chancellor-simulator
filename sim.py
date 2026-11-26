@@ -2202,6 +2202,9 @@ def check(n=None, difficulty=None):
             failures.append("Faction influence on Commons discipline exceeded its safety bound.")
         if neutral_ayes == content_ayes:
             failures.append("Faction mood had no effect on the governing-party Commons vote.")
+        _, individual_vote_rows, _ = mp_politics.simulate_vote(faction_option, content_votes, s)
+        if individual_vote_rows.get('Labour', {}).get('pressure_faction') != 'Socialist Left':
+            failures.append("Individual MP voting discarded the governing faction context from the Commons result.")
 
         s.election_result = {
             'win': True, 'kind': 'coalition', 'margin': 19, 'mandate_strength': 1,
