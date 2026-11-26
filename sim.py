@@ -2174,6 +2174,35 @@ def check(n=None, difficulty=None):
         if majority_budget_votes - minority_budget_votes < 30:
             failures.append("A minority government's Budget vote was not sufficiently harder than a majority government's.")
 
+        # Living Britain: a faction's mood now changes governing-party discipline
+        # on relevant Commons policy votes, while remaining bounded and auditable.
+        s.party = 'Labour'
+        s.government_type = 'majority'
+        s.government_coalition_partners = []
+        s.parliament_seats = dict(elected)
+        faction_option = {'label': 'Expand the NHS and protect public services',
+                          'ideology': 'Social Democratic', 'effect': {'health': 2.0}}
+        if parliament.policy_pressure_faction(faction_option) != 'Socialist Left':
+            failures.append("A public-service Commons proposal was not linked to the Socialist Left faction.")
+        s.political_climate = {}
+        neutral_ayes, neutral_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        if neutral_votes['Labour'].get('faction_adjustment') != 0.0:
+            failures.append("Missing faction-climate data changed Commons discipline for an older save.")
+        s.political_climate = {'Socialist Left': {'mood': 20.0}}
+        unhappy_ayes, unhappy_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        s.political_climate = {'Socialist Left': {'mood': 90.0}}
+        content_ayes, content_votes = parliament._simulate_party_vote(faction_option, bonus=0)
+        if content_ayes <= unhappy_ayes:
+            failures.append("A content governing-party faction did not improve support on an aligned Commons vote.")
+        if content_votes['Labour'].get('faction_mood') != 90.0 or unhappy_votes['Labour'].get('faction_mood') != 20.0:
+            failures.append("Commons vote records did not retain the relevant faction mood.")
+        if content_votes['Labour'].get('pressure_faction') != 'Socialist Left':
+            failures.append("Commons vote record did not identify the faction exerting pressure.")
+        if abs(float(content_votes['Labour'].get('faction_adjustment', 0.0))) > 0.06:
+            failures.append("Faction influence on Commons discipline exceeded its safety bound.")
+        if neutral_ayes == content_ayes:
+            failures.append("Faction mood had no effect on the governing-party Commons vote.")
+
         s.election_result = {
             'win': True, 'kind': 'coalition', 'margin': 19, 'mandate_strength': 1,
             'working_majority': 19, 'player_seats': 260, 'seats': dict(elected),
