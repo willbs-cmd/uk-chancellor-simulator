@@ -173,3 +173,15 @@ def render(s=None):
             else:
                 st.warning(message)
             st.rerun()
+    action_history = list(s.get("political_climate_action_history", []))
+    if action_history:
+        st.markdown("#### Recent party-management actions")
+        recent = []
+        for item in reversed(action_history[-5:]):
+            recent.append({
+                "Period": f"Term {item.get('period', '?').split(':')[0]}, Year {item.get('period', '?').split(':')[-1]}",
+                "Action": item.get("action", "Party-management action"),
+                "Faction": item.get("faction", "Party"),
+                "Mood change": f"{float(item.get('mood_change', 0.0)):+.1f}",
+            })
+        st.dataframe(recent, hide_index=True, use_container_width=True)
