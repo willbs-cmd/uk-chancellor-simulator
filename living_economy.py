@@ -59,7 +59,7 @@ def advance(s=None):
                           + max(0.0, inflation - 2.0) * 0.32
                           + max(0.0, unemployment - 4.5) * 0.38
                           + max(0.0, energy_bill - 1750.0) / 500.0 * 0.25
-                          - max(0.0, real_wages) * 0.30)
+                          - real_wages * 0.30)
     s.household_debt_stress = round(_clip(s.household_debt_stress + debt_stress_change, 0, 100), 1)
 
     # Household confidence is distinct from headline government approval: it
