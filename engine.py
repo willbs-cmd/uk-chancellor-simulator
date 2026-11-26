@@ -1957,7 +1957,8 @@ def compute_election():
     seats, constituency_results = compute_seats(polls, return_details=True)
     # The selected non-regional party begins the game with a comfortable first-term mandate.
     # Preserve that opening premise through the first election, then return to the normal FPTP model.
-    if s.get('opening_mandate_pending') and party_is_nonregional(s.get('party')):
+    opening_mandate_applied = bool(s.get('opening_mandate_pending') and party_is_nonregional(s.get('party')))
+    if opening_mandate_applied:
         player_party = s.party
         target_seats = 365
         current = int(seats.get(player_party, 0))
@@ -2005,6 +2006,7 @@ def compute_election():
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              constituency_results=constituency_results, seat_changes=seat_changes,
+             opening_mandate_applied=opening_mandate_applied,
              seat_changes_available=seat_changes_available,
              constituency_changes=constituency_changes,
              defeated_incumbents=defeated_incumbents, marginal_seats=marginal_seats,
