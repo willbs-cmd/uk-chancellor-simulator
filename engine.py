@@ -1957,31 +1957,45 @@ def party_is_nonregional(party):
 def compute_election():
     """Work out (once) the general election result. Stored in session state so reruns don't change it."""
     s = st.session_state
-    if s.get('election_result'):
-        return s.election_result
+    cached_result = s.get('election_result')
+    if cached_result:
+        # Upgrade an already-completed first election from older saves. Those
+        # results were generated with the opening 365-seat override and lack
+        # the result-version marker. Rebuild from the saved final polls and
+        # restore the opening Parliament/incumbency baseline before recalculating.
+        opening_baseline = s.get('opening_parliament_seats', {})
+        if (
+            int(s.get('term', 1)) == 1
+            and isinstance(opening_baseline, dict)
+            and sum(int(v) for v in opening_baseline.values()) == SEATS
+            and 'seat_result_version' not in cached_result
+        ):
+            old_rows = cached_result.get('constituency_results', [])
+            s.constituency_incumbents = {
+                str(row.get('code', '')): row.get('previous_winner')
+                for row in old_rows
+                if row.get('code') and row.get('previous_winner') in state.PARTIES
+            }
+            s.previous_election_seats = dict(opening_baseline)
+            s.parliament_seats = dict(opening_baseline)
+            s.opening_mandate_pending = False
+            archived = list(s.get('election_history', []))
+            if archived and int(archived[-1].get('term', -1)) == 1:
+                archived.pop()
+            s.election_history = archived
+            s.election_result = None
+        else:
+            return cached_result
     reseed('election')
     polls = {p: s.poll_history[p][-1] for p in state.PARTIES}
     seats, constituency_results = compute_seats(polls, return_details=True)
-    # The selected non-regional party begins the game with a comfortable first-term mandate.
-    # Preserve that opening premise through the first election, then return to the normal FPTP model.
-    if s.get('opening_mandate_pending') and party_is_nonregional(s.get('party')):
-        player_party = s.party
-        target_seats = 365
-        current = int(seats.get(player_party, 0))
-        if current < target_seats:
-            available = sorted(
-                (row for row in constituency_results if row.get('winner') != player_party),
-                key=lambda row: (float(row.get('margin', 0.0)), row.get('code', ''))
-            )
-            for row in available[:target_seats - current]:
-                displaced = row.get('winner')
-                seats[displaced] = max(0, int(seats.get(displaced, 0)) - 1)
-                seats[player_party] = int(seats.get(player_party, 0)) + 1
-                row['winner'], row['runner_up'] = player_party, displaced
-                row['margin'] = max(0.1, float(row.get('margin', 0.0)))
-                row['is_marginal'] = True
-        s.opening_mandate_pending = False
+    # The opening 365-seat mandate applies only to the Parliament at game
+    # start. Once the first five-year term ends, the election must use the
+    # constituency-level FPTP result without any opening-seat intervention.
+    opening_mandate_applied = False
+    s.opening_mandate_pending = False
     previous_seats = s.get('previous_election_seats', {})
+    seat_changes_available = isinstance(previous_seats, dict) and bool(previous_seats)
     seat_changes = {p: int(seats.get(p, 0)) - int(previous_seats.get(p, seats.get(p, 0))) for p in state.PARTIES}
     # Store this parliament's results and winners for the next general election.
     s.previous_election_seats = dict(seats)
@@ -2011,6 +2025,9 @@ def compute_election():
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              constituency_results=constituency_results, seat_changes=seat_changes,
+             opening_mandate_applied=opening_mandate_applied,
+             seat_changes_available=seat_changes_available,
+             seat_result_version=2,
              constituency_changes=constituency_changes,
              defeated_incumbents=defeated_incumbents, marginal_seats=marginal_seats,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '

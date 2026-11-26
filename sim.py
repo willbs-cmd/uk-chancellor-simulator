@@ -2280,7 +2280,39 @@ def check(n=None, difficulty=None):
         election_state.year = 6
         election_state.pm_opinion = 80.0
         election_state.party_opinion = 80.0
+        expected_seats, _ = engine.compute_seats(
+            {p: election_state.poll_history[p][-1] for p in state.PARTIES},
+            return_details=True,
+        )
         result = engine.compute_election()
+        if result.get("opening_mandate_applied"):
+            failures.append("The first general election incorrectly reapplied the opening 365-seat mandate.")
+        if result.get("seats") != expected_seats:
+            failures.append("The first general election seat result was altered after the constituency FPTP model ran.")
+        if election_state.get("opening_mandate_pending"):
+            failures.append("The opening mandate remained pending after the first general election.")
+        if not result.get("seat_changes_available"):
+            failures.append("The first general election did not show seat changes against the opening Parliament.")
+        if sum(result.get("seat_changes", {}).values()) != 0:
+            failures.append("First-election seat changes do not balance to zero.")
+        # A save made by the old version may already contain the forced 365-seat
+        # result. Opening it under the fixed version should rebuild that result.
+        legacy = dict(result)
+        legacy.pop("seat_result_version", None)
+        legacy["opening_mandate_applied"] = True
+        legacy["seats"] = dict(result["seats"])
+        legacy["seats"]["Labour"] = 365
+        election_state.election_result = legacy
+        election_state.previous_election_seats = dict(legacy["seats"])
+        election_state.election_history = [{
+            "term": 1, "year": 6, "seats": dict(legacy["seats"]),
+            "governing_party": "Labour",
+        }]
+        repaired = engine.compute_election()
+        if repaired.get("seat_result_version") != 2 or repaired.get("opening_mandate_applied"):
+            failures.append("A cached legacy first-election result was not upgraded to the normal FPTP model.")
+        if len(election_state.get("election_history", [])) != 1:
+            failures.append("Upgrading a cached first-election result duplicated its election archive entry.")
         count = len(election_state.get("election_history", []))
         if count != 1 or engine.compute_election() != result or len(election_state.get("election_history", [])) != count:
             failures.append("General election result was not archived exactly once.")
