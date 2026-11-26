@@ -1975,6 +1975,7 @@ def compute_election():
                 row['is_marginal'] = True
         s.opening_mandate_pending = False
     previous_seats = s.get('previous_election_seats', {})
+    seat_changes_available = isinstance(previous_seats, dict) and bool(previous_seats)
     seat_changes = {p: int(seats.get(p, 0)) - int(previous_seats.get(p, seats.get(p, 0))) for p in state.PARTIES}
     # Store this parliament's results and winners for the next general election.
     s.previous_election_seats = dict(seats)
@@ -2004,6 +2005,7 @@ def compute_election():
     r = dict(seats=seats, player_seats=mine, regional=regional, win=False, kind='loss', margin=0,
              coalition=None, sacked=sacked, polls=polls, swings=swings, turnout=turnout,
              constituency_results=constituency_results, seat_changes=seat_changes,
+             seat_changes_available=seat_changes_available,
              constituency_changes=constituency_changes,
              defeated_incumbents=defeated_incumbents, marginal_seats=marginal_seats,
              sacked_msg=('Your relationship with the Prime Minister and your own backbenches collapsed. Regardless of the '
