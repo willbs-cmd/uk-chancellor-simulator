@@ -452,9 +452,13 @@ if s.year > 5:
             "Vote share": f"{r['polls'][party]:.1f}%",
             "Change": f"{r.get('swings', {}).get(party, 0):+.1f}pp",
             "Seats": r['seats'][party],
-            "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get('seat_changes') and s.get('term', 1) > 1 else "—"),
+            "Seat change": (f"{r.get('seat_changes', {}).get(party, 0):+d}" if r.get("seat_changes_available", False) else "—"),
         })
     st.dataframe(pd.DataFrame(election_rows), hide_index=True, use_container_width=True)
+    if not r.get("seat_changes_available", False):
+        st.caption("Seat changes are unavailable because this save has no recorded opening-Parliament baseline.")
+    else:
+        st.caption("Seat changes are measured against the Parliament you began the game with.")
     changes = r.get("constituency_changes", {})
     if changes:
         st.markdown("### Constituency gains and losses")
