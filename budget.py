@@ -3,6 +3,7 @@
 Everything about *how* a Budget changes the numbers lives here (``impact``, ``apply_ongoing``); the Streamlit
 drawing code is at the bottom (``render``).
 """
+import json
 import math
 
 import pandas as pd

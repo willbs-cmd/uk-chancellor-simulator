@@ -296,8 +296,12 @@ def resolve_strike(strike_id, choice):
     severity = float(strike.get("severity", 1.0))
     demand = round(float(strike.get("demand_bn", 0.7 + severity * 0.45)), 2)
     scores = dict(s.public_service_scores)
-    service_key = ("NHS" if strike_id == "NHS workforce" else
-                   "Education" if strike_id == "Education workforce" else "Local government")
+    affected_services = (
+        ("NHS",) if strike_id == "NHS workforce" else
+        ("Education",) if strike_id == "Education workforce" else
+        tuple(SERVICES) if strike_id == "Public-sector pay" else
+        ("Local government",)
+    )
 
     if choice in ("offer", "improve", "final_offer"):
         round_no = int(strike.get("negotiation_round", 0)) + 1
@@ -320,7 +324,8 @@ def resolve_strike(strike_id, choice):
         if accepted:
             s.headroom = round(float(s.get("headroom", 0.0)) - amount, 1)
             s.deficit = round(float(s.get("deficit", 0.0)) + amount, 1)
-            scores[service_key] = _clip(scores.get(service_key, 50) + 1.4 + severity * 0.25, 10, 95)
+            for service_key in affected_services:
+                scores[service_key] = _clip(scores.get(service_key, SERVICES[service_key]["start"]) + 1.4 + severity * 0.25, 10, 95)
             if strike_id == "NHS workforce":
                 c = dict(country); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) + 5); s.country = c
             outcome = (f"Unions accept your {round(fraction * 100)}% offer. The settlement costs "
@@ -350,7 +355,8 @@ def resolve_strike(strike_id, choice):
         amount = demand
         s.headroom = round(float(s.get("headroom", 0.0)) - amount, 1)
         s.deficit = round(float(s.get("deficit", 0.0)) + amount, 1)
-        scores[service_key] = _clip(scores.get(service_key, 50) + 1.4 + severity * 0.25, 10, 95)
+        for service_key in affected_services:
+            scores[service_key] = _clip(scores.get(service_key, SERVICES[service_key]["start"]) + 1.4 + severity * 0.25, 10, 95)
         if strike_id == "NHS workforce":
             c = dict(s.get("country", {})); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) + 5); s.country = c
         s.public_service_strikes = [x for x in strikes if x.get("id") != strike_id]
@@ -368,7 +374,8 @@ def resolve_strike(strike_id, choice):
         outcome = f"You appoint an independent mediator, spending £{mediation_cost:.2f}bn on a temporary package. The dispute is paused; unions will return if no lasting agreement is reached."
         decision = "Mediation"
     elif choice == "hold":
-        scores[service_key] = _clip(scores.get(service_key, 50) - 1.5 - severity * 0.4, 10, 95)
+        for service_key in affected_services:
+            scores[service_key] = _clip(scores.get(service_key, SERVICES[service_key]["start"]) - 1.5 - severity * 0.4, 10, 95)
         s.approval = _clip(float(s.get("approval", 50.0)) - 0.7 - severity * 0.2)
         if strike_id == "NHS workforce":
             c = dict(s.get("country", {})); c["nhs_morale"] = _clip(c.get("nhs_morale", 52) - 4); s.country = c
