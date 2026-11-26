@@ -1671,6 +1671,57 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Cross-year stale Budget draft regression check failed: {exc}")
 
+    # A delivered Budget is the source of truth for every setting at the next
+    # fiscal-year boundary, even when the live ledger is only partially reset.
+    try:
+        new_run('Labour', 'Normal', 97534)
+        s = st.session_state
+        archived = budget.defaults()
+        archived['tax']['income'] = 19.0
+        archived['tax']['vat'] = 19.5
+        archived['spend']['health'] = -4.0
+        archived['spend']['education'] = 2.5
+        first_tax_policy = next(iter(archived['tax_pol']))
+        first_spend_policy = next(iter(archived['spend_pol']))
+        archived['tax_pol'][first_tax_policy] = True
+        archived['spend_pol'][first_spend_policy] = True
+        archived['thresholds']['personal_allowance'] = 13500.0
+        archived['strategy'] = 'redistribution'
+        s.budget_history = [{
+            'term': 1, 'year': 1, 'approved_ledger': archived,
+            'tax': dict(archived['tax']), 'spend': dict(archived['spend']),
+        }]
+        # Simulate the reported failure: the live ledger and all widget keys
+        # have reverted to opening defaults, while the delivered archive survives.
+        s.budget_applied = budget.defaults()
+        s.budget_editor_period = '1-1'
+        s.year = 2
+        s.budget_day_draft = None
+        s.budget_editor_restore_draft = False
+        for key, spec in budget.TAXES.items():
+            s[f'bt_{key}'] = spec['default']
+        for key in budget.SPEND_DEFAULTS:
+            s[f'bs_{key}'] = 0.0
+        budget.prepare_editor_state()
+        if abs(float(s.budget_applied['tax']['income']) - 19.0) > 0.001:
+            failures.append("The delivered basic income-tax rate was not recovered from Budget history.")
+        if abs(float(s.bt_income) - 19.0) > 0.001:
+            failures.append("The Budget editor did not restore the delivered basic income-tax widget.")
+        if abs(float(s.budget_applied['spend']['health']) - (-4.0)) > 0.001:
+            failures.append("The delivered departmental settlement was not recovered from Budget history.")
+        if abs(float(s.bs_health) - (-4.0)) > 0.001:
+            failures.append("The Budget editor did not restore the delivered departmental spending widget.")
+        if not s.budget_applied['tax_pol'].get(first_tax_policy):
+            failures.append("A delivered tax policy was lost at the next fiscal-year boundary.")
+        if not s.budget_applied['spend_pol'].get(first_spend_policy):
+            failures.append("A delivered spending policy was lost at the next fiscal-year boundary.")
+        if float(s.budget_applied['thresholds']['personal_allowance']) != 13500.0:
+            failures.append("The delivered tax threshold was lost at the next fiscal-year boundary.")
+        if s.budget_applied.get('strategy') != 'redistribution':
+            failures.append("The delivered Budget strategy was lost at the next fiscal-year boundary.")
+    except Exception as exc:
+        failures.append(f"Delivered Budget carry-forward recovery regression failed: {exc}")
+
     # Spending Review lobbying must react proportionately to the Chancellor's offer.
     try:
         first_offer = budget.negotiate_spending_offer(0.0, 6.0, 1)
