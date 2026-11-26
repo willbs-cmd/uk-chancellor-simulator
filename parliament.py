@@ -9,6 +9,7 @@ import streamlit as st
 
 import state
 import mp_politics
+import living_politics
 
 WIN = 326
 CLEAR_PASS = 346
@@ -114,12 +115,46 @@ def _policy_pressure(option):
     return ideology, austerity, homes
 
 
+def policy_pressure_faction(option):
+    """Identify the governing-party faction most exposed by a policy proposal."""
+    text = " ".join([
+        str(option.get("label", "")), str(option.get("ideology", "")),
+        str(option.get("description", "")), " ".join(str(k) for k in option.get("effect", {})),
+    ]).lower()
+    if any(word in text for word in ("devolution", "devolved", "barnett", "regional", "welsh", "scottish")):
+        return "Regional Voices"
+    if any(word in text for word in ("climate", "net zero", "environment", "renewable", "green", "nature")):
+        return "Soft Left"
+    if any(word in text for word in ("welfare", "poverty", "inequality", "social security", "public service", "nhs", "health", "education", "workers", "trade union")):
+        return "Socialist Left"
+    if any(word in text for word in ("business", "enterprise", "corporation tax", "investment", "market", "entrepreneur", "small firms")):
+        return "Economic Liberal"
+    if any(word in text for word in ("fuel duty", "rural", "defence", "border", "immigration", "tradition", "pension")):
+        return "Traditionalist"
+    if any(word in text for word in ("reform", "modernis", "constitutional", "international", "foreign aid", "europe")):
+        return "Reformist"
+    return "Government Mainstream"
+
+
+def faction_vote_adjustment(s, option):
+    """Return the bounded support-rate effect of the policy's most exposed faction."""
+    faction = policy_pressure_faction(option)
+    climate = s.get("political_climate", {}) or {}
+    if faction not in climate:
+        return faction, 55.0, 0.0
+    mood = max(0.0, min(100.0, float(climate[faction].get("mood", 55.0))))
+    # At most six percentage points either way; mood is influential, not decisive.
+    adjustment = max(-0.06, min(0.06, (mood - 55.0) * 0.0012))
+    return faction, mood, round(adjustment, 4)
+
+
 def _simulate_party_vote(option, bonus=0, cabinet_support=None):
     """Simulate government, coalition-partner and opposition support by party."""
     s = st.session_state
     seats = _party_seats(s)
     ideology, austerity, homes = _policy_pressure(option)
     government = s.get("party", "Labour")
+    exposed_faction, faction_mood, faction_adjustment = faction_vote_adjustment(s, option)
     coalition_partners = set(s.get("government_coalition_partners", [])) if s.get("government_type") == "coalition" else set()
     result, total_ayes = {}, 0
     for party, strength in seats.items():
@@ -137,6 +172,8 @@ def _simulate_party_vote(option, bonus=0, cabinet_support=None):
             support += min(0.08, max(-0.08, bonus / max(1, strength)))
             if cabinet_support is not None:
                 support += max(-0.06, min(0.06, (float(cabinet_support) - 50.0) * 0.0012))
+            # Faction mood affects only governing-party discipline, not opposition maths.
+            support += faction_adjustment
         elif party in coalition_partners:
             # Coalition MPs are part of the governing bloc, but their support
             # depends on policy alignment and the health of the agreement.
@@ -169,6 +206,10 @@ def _simulate_party_vote(option, bonus=0, cabinet_support=None):
         rebels = noes if party == government or party in coalition_partners else ayes
         result[party] = {"seats": strength, "ayes": ayes, "noes": noes,
                          "rebels": rebels, "line": expected}
+        if party == government:
+            result[party]["pressure_faction"] = exposed_faction
+            result[party]["faction_mood"] = round(faction_mood, 1)
+            result[party]["faction_adjustment"] = faction_adjustment
         total_ayes += ayes
     # Whip/SPAD bonuses persuade wavering MPs across the House, without creating seats.
     total_ayes = max(0, min(650, total_ayes))
@@ -199,6 +240,9 @@ def review_bill(decision, option, cabinet_support=None):
         "ideology": option.get("ideology", "Centric"), "ayes": int(votes),
         "noes": int(650 - votes), "status": status, "factor": factor,
         "bonus": bonus, "rebels": rebels, "party_votes": party_votes,
+        "pressure_faction": party_votes.get(s.get("party", "Labour"), {}).get("pressure_faction", "Government Mainstream"),
+        "faction_mood": party_votes.get(s.get("party", "Labour"), {}).get("faction_mood", 55.0),
+        "faction_adjustment": party_votes.get(s.get("party", "Labour"), {}).get("faction_adjustment", 0.0),
         "cabinet_support": None if cabinet_support is None else round(float(cabinet_support), 1),
         "base_ayes": int(base_votes), "mp_summary": mp_summary,
         "explanation": explanation,
