@@ -1741,7 +1741,7 @@ elif active_workspace == 'parliament':
 elif active_workspace == 'news':
     st.markdown('### The News')
     st.caption('Your daily briefing, opposition attacks, polling, headlines and public reaction.')
-    news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition'])
+    news_tabs = st.tabs(['Briefing & events', 'Polling', 'Opposition', 'Political climate'])
     with news_tabs[0]:
         briefing()
     with news_tabs[1]:
@@ -1793,3 +1793,6 @@ elif active_workspace == 'news':
         st.caption('These indicators describe different pressures: public approval is not the same as voting intention, and party unity measures internal cohesion rather than popularity.')
     with news_tabs[2]:
         opposition_campaign.render(s)
+    with news_tabs[3]:
+        import living_politics
+        living_politics.render(s)
