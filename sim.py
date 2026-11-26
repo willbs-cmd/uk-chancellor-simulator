@@ -1719,6 +1719,20 @@ def check(n=None, difficulty=None):
             failures.append("The delivered tax threshold was lost at the next fiscal-year boundary.")
         if s.budget_applied.get('strategy') != 'redistribution':
             failures.append("The delivered Budget strategy was lost at the next fiscal-year boundary.")
+
+        # Also recover when the live ledger contains plausible but stale
+        # non-default values. Default-only detection must never be required.
+        s.budget_applied['tax']['income'] = 20.0
+        s.budget_applied['spend']['health'] = 1.0
+        s.bt_income = 20.0
+        s.bs_health = 1.0
+        budget.ensure()
+        if abs(float(s.budget_applied['tax']['income']) - 19.0) > 0.001:
+            failures.append("A stale non-default income-tax value overrode the latest approved Budget.")
+        if abs(float(s.budget_applied['spend']['health']) - (-4.0)) > 0.001:
+            failures.append("A stale non-default departmental value overrode the latest approved Budget.")
+        if abs(float(s.bt_income) - 19.0) > 0.001 or abs(float(s.bs_health) - (-4.0)) > 0.001:
+            failures.append("Budget controls were not synchronised after authoritative ledger recovery.")
     except Exception as exc:
         failures.append(f"Delivered Budget carry-forward recovery regression failed: {exc}")
 

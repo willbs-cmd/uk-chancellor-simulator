@@ -341,29 +341,19 @@ def ensure():
         current_period = (int(s.get('term', 1)), int(s.get('year', 1)))
         archived_ledger = latest_budget.get('approved_ledger')
         if latest_period < current_period and isinstance(archived_ledger, dict):
-            live = s.get('budget_applied')
-            live = live if isinstance(live, dict) else {}
-            live_spend = live.get('spend', {}) if isinstance(live.get('spend'), dict) else {}
-            archived_spend = archived_ledger.get('spend', {}) if isinstance(archived_ledger.get('spend'), dict) else {}
-            live_tax = live.get('tax', {}) if isinstance(live.get('tax'), dict) else {}
-            archived_tax = archived_ledger.get('tax', {}) if isinstance(archived_ledger.get('tax'), dict) else {}
-            looks_reset = (
-                not live_tax or not live_spend
-                or (all(abs(float(live_spend.get(k, 0.0))) < 0.0001 for k in SPEND_DEFAULTS)
-                    and any(abs(float(archived_spend.get(k, 0.0))) >= 0.0001 for k in SPEND_DEFAULTS))
-                or (all(abs(float(live_tax.get(k, TAXES[k]['default'])) - float(TAXES[k]['default'])) < 0.0001 for k in TAXES)
-                    and any(abs(float(archived_tax.get(k, TAXES[k]['default'])) - float(TAXES[k]['default'])) >= 0.0001 for k in TAXES))
-            )
-            if looks_reset:
-                restored = defaults()
-                for section, value in archived_ledger.items():
-                    if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
-                        restored[section].update(value)
-                    else:
-                        restored[section] = value
-                s.budget_applied = restored
-                _migrate_applied(s.budget_applied)
-                _sync_editor_controls(s.budget_applied)
+            # The latest Commons-approved ledger is authoritative in every later
+            # fiscal period. Do not infer a reset from values resembling defaults:
+            # a partial reset, a changed baseline, or a stale non-default ledger can
+            # otherwise survive and silently overwrite the Chancellor's approved Budget.
+            restored = defaults()
+            for section, value in archived_ledger.items():
+                if section in restored and isinstance(restored[section], dict) and isinstance(value, dict):
+                    restored[section].update(value)
+                else:
+                    restored[section] = value
+            s.budget_applied = restored
+            _migrate_applied(s.budget_applied)
+            _sync_editor_controls(s.budget_applied)
 
     # Repair saves affected by the old Spending Review carry-forward bug. That
     # code zeroed departmental Budget percentages while applying a multi-year
