@@ -2089,15 +2089,20 @@ def render_whips(cur):
                 f" · Whip votes **+{s.get('whip_ayes', 0)}**")
     risks = rebel_risks(cur)
     negotiated = set(s.get('whip_negotiations', []))
+    effective_sizes = {msg: size for _, size, msg in effective_rebel_risks(cur)}
+    import living_politics
     if risks:
         st.markdown("**Faction-by-faction negotiations**")
         st.caption("Offer a small, targeted concession to reduce one faction’s threatened rebellion. Each issue can be negotiated once; concessions use fiscal headroom.")
         for index, (stat, size, msg) in enumerate(risks):
             done = msg in negotiated
-            remaining = round(size * (0.4 if done else 1.0), 1)
+            remaining = effective_sizes.get(msg, float(size))
+            faction, _ = living_politics.budget_risk_multiplier(s, msg)
+            mood = living_politics.faction_mood(s, faction) if faction in s.get("political_climate", {}) else None
+            faction_note = f" · {faction} mood {mood:.0f}/100" if mood is not None else f" · linked faction: {faction}"
             issue_col, action_col = st.columns([5, 2])
             with issue_col:
-                st.warning(f'{msg} · remaining penalty: {remaining:.1f}')
+                st.warning(f'{msg}{faction_note} · remaining penalty: {remaining:.1f}')
             with action_col:
                 st.button(
                     "✓ Concession agreed" if done else f"Negotiate · £{0.75 if stat == 'backbench_opinion' else 0.5:.2f}bn",
