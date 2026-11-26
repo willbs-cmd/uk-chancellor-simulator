@@ -68,6 +68,35 @@ def faction_mood(s, faction):
     return _clip(row.get("mood", 55.0))
 
 
+def ministerial_faction_position(s, department):
+    """Return the shared faction climate facing a minister's portfolio."""
+    import cabinet_management
+    profile = cabinet_management.profile_for(s, department)
+    party_faction = profile.get("faction", "Government Mainstream")
+    faction = _climate_faction(party_faction)
+    climate = s.get("political_climate", {}) or {}
+    if faction not in climate:
+        return {
+            "party_faction": party_faction, "faction": faction,
+            "mood": None, "resistance": "Not yet assessed",
+            "pressure": 0.0,
+        }
+    mood = faction_mood(s, faction)
+    if mood < 35:
+        resistance, pressure = "High resistance", 1.2
+    elif mood < 45:
+        resistance, pressure = "Elevated resistance", 0.6
+    elif mood < 60:
+        resistance, pressure = "Manageable", 0.0
+    else:
+        resistance, pressure = "Supportive", -0.3
+    return {
+        "party_faction": party_faction, "faction": faction,
+        "mood": round(mood, 1), "resistance": resistance,
+        "pressure": pressure,
+    }
+
+
 def annual_review(s=None):
     """Record one annual faction review; safe across Streamlit reruns and old saves."""
     if s is None:
