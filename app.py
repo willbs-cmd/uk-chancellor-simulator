@@ -1366,7 +1366,12 @@ def economy():
         public_services.render()
     with economy_tabs[4]:
         import term_strategy
+        st.markdown("### Five-year national strategy")
         term_strategy.render(s)
+        st.divider()
+        st.markdown("### Government mandate")
+        st.caption("Track the three measurable promises selected when you formed your government.")
+        government_missions.render(s)
     with economy_tabs[5]:
         long_run_simulation.render(s)
     with economy_tabs[6]:
@@ -1732,7 +1737,7 @@ elif active_workspace == 'cabinet':
 elif active_workspace == 'parliament':
     st.markdown('### Parliament')
     st.caption('Commons votes, constituency MPs, rebellions, local elections and party management.')
-    parliament_tabs = st.tabs(['House of Commons', 'Accountability', 'Local elections', 'Government mandate', 'Election archive'])
+    parliament_tabs = st.tabs(['House of Commons', 'Accountability', 'Local elections', 'Election archive'])
     with parliament_tabs[0]:
         parliament.render()
     with parliament_tabs[1]:
@@ -1740,8 +1745,6 @@ elif active_workspace == 'parliament':
     with parliament_tabs[2]:
         local_elections.render(widget_namespace='parliament')
     with parliament_tabs[3]:
-        government_missions.render(s)
-    with parliament_tabs[4]:
         election_archive.render(s)
 
 elif active_workspace == 'news':
