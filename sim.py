@@ -1816,6 +1816,7 @@ def check(n=None, difficulty=None):
         archived['spend']['health'] = -3.5
         archived['spend']['education'] = 2.0
         archived['strategy'] = 'investment'
+        archived['thresholds']['personal_allowance'] = 13500.0
         archived['tax_pol'][next(iter(archived['tax_pol']))] = True
         archived['spend_pol'][next(iter(archived['spend_pol']))] = True
         s.budget_history = [{
