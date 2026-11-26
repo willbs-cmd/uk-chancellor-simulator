@@ -1805,6 +1805,57 @@ def check(n=None, difficulty=None):
     except Exception as exc:
         failures.append(f"Delivered Budget carry-forward recovery regression failed: {exc}")
 
+    # The actual annual boundary must hydrate next year's controls immediately,
+    # not rely on the Budget page being opened before stale widget state is reused.
+    try:
+        new_run('Labour', 'Normal', 97536)
+        s = st.session_state
+        archived = budget.defaults()
+        archived['tax']['income'] = 19.0
+        archived['tax']['vat'] = 19.5
+        archived['spend']['health'] = -3.5
+        archived['spend']['education'] = 2.0
+        archived['strategy'] = 'investment'
+        archived['tax_pol'][next(iter(archived['tax_pol']))] = True
+        archived['spend_pol'][next(iter(archived['spend_pol']))] = True
+        s.budget_history = [{
+            'term': 1, 'year': 1, 'approved_ledger': json.loads(json.dumps(archived)),
+            'tax': dict(archived['tax']), 'spend': dict(archived['spend']),
+        }]
+        s.budget_applied = json.loads(json.dumps(archived))
+        # These are legitimate annual changes and must not be rolled back.
+        s.budget_applied['thresholds']['personal_allowance'] = 13837.0
+        s.budget_applied['projects'] = [{
+            'id': 'carry-test', 'label': 'Test project', 'status': 'In delivery',
+            'last_charged_period': '1:2',
+        }]
+        s.year = 2
+        for key, spec in budget.TAXES.items():
+            s[f'bt_{key}'] = spec['default']
+        for key in budget.SPEND_DEFAULTS:
+            s[f'bs_{key}'] = 0.0
+        for key in budget.TAX_POLICIES:
+            s[f'btp_{key}'] = False
+        for key in budget.SPEND_POLICIES:
+            s[f'bsp_{key}'] = False
+        budget.carry_forward_to_new_year(s)
+        if float(s.budget_applied['tax']['income']) != 19.0 or float(s.bt_income) != 19.0:
+            failures.append("Annual boundary did not carry the approved income-tax rate into the next Budget.")
+        if float(s.budget_applied['spend']['health']) != -3.5 or float(s.bs_health) != -3.5:
+            failures.append("Annual boundary did not carry the approved departmental setting into the next Budget.")
+        if not any(s.budget_applied['tax_pol'].values()) or not any(s.budget_applied['spend_pol'].values()):
+            failures.append("Annual boundary did not carry approved tax and spending policies.")
+        if s.budget_strategy != 'investment':
+            failures.append("Annual boundary did not carry the approved fiscal strategy.")
+        if float(s.budget_applied['thresholds']['personal_allowance']) != 13837.0:
+            failures.append("Annual carry-forward incorrectly rolled back automatic tax-threshold uprating.")
+        if s.budget_applied['projects'][0].get('status') != 'In delivery':
+            failures.append("Annual carry-forward incorrectly rolled back capital-project delivery progress.")
+        if s.budget_editor_period != '1-2' or s.budget_day_draft is not None:
+            failures.append("Annual carry-forward did not clear the old draft and mark the new Budget period.")
+    except Exception as exc:
+        failures.append(f"Annual Budget boundary carry-forward regression failed: {exc}")
+
     # Older save files have Budget history snapshots but no approved_ledger.
     # The recovery path must reconstruct the retained figures and named schemes.
     try:
