@@ -63,15 +63,8 @@ def advance(s=None):
                           - real_wages * 0.30)
     s.household_debt_stress = round(_clip(s.household_debt_stress + debt_stress_change, 0, 100), 1)
 
-    # Household confidence is distinct from headline government approval: it
-    # reflects purchasing power, job security, borrowing costs and household strain.
-    household_change = (real_wages * 0.75
-                        + (4.5 - unemployment) * 0.55
-                        - max(0.0, inflation - 2.0) * 0.65
-                        + (s.credit_conditions - 100.0) * 0.06
-                        - (s.household_debt_stress - 24.0) * 0.035
-                        + (approval - 50.0) * 0.025)
-    s.household_confidence = round(_clip(s.household_confidence + household_change, 5, 95), 1)
+    # household.calculate() combines these new balance-sheet pressures with
+    # mortgage, rent and bill affordability into the shared confidence measure.
 
     # Overseas demand feeds UK exporters. Use the already-simulated trading
     # partners; if a legacy save has no world roster, the neutral baseline applies.
