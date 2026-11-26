@@ -878,8 +878,9 @@ def living_economy_checks():
         inflation=2.0, wages=2.0, unemployment=3.5, energy=1500.0,
         partner_growth=4.0,
     )
-    assert favourable.household_confidence > adverse.household_confidence, (
-        "Stronger real wages, jobs and affordable credit should improve household confidence."
+    import household
+    assert household.calculate(favourable)["confidence"] > household.calculate(adverse)["confidence"], (
+        "Stronger real wages, jobs and affordable credit should improve the shared household-confidence measure."
     )
     assert favourable.credit_conditions > adverse.credit_conditions, (
         "Lower rates and stronger market confidence should improve credit conditions."
