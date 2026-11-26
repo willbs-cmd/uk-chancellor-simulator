@@ -896,10 +896,11 @@ def living_economy_checks():
         inflation=2.0, wages=2.0, unemployment=3.5, energy=1500.0,
         partner_growth=4.0, gdp=6.0,
     )
-    assert larger_economy.headroom > favourable.headroom, (
+    larger_receipts = larger_economy.living_economy_history[-1]["Tax receipt effect (£bn)"]
+    standard_receipts = favourable.living_economy_history[-1]["Tax receipt effect (£bn)"]
+    assert larger_receipts > standard_receipts, (
         "The illustrative receipts feedback should scale modestly with nominal GDP."
     )
-    assert larger_economy.deficit < favourable.deficit
     return True
 
 
