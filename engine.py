@@ -1792,6 +1792,10 @@ def proceed_to_spring():
     s.budget_risk_outcome = None
     s.budget_day_type = 'annual'
     s.budget_day_draft = None
+    # Carry the delivered fiscal package into the next year immediately. Do not
+    # wait for the Budget screen to open: Streamlit may retain stale widget keys
+    # across reruns and save/load cycles.
+    budget.carry_forward_to_new_year(s)
     s.headlines = None
     s.steps += 1
     state.log('event', f'Spring, year {s.year}', note=s.message, before=before)
