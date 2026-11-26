@@ -16,6 +16,36 @@ FACTION_LABELS = (
 def _clip(value, low=0.0, high=100.0):
     return max(low, min(high, float(value)))
 
+def _climate_faction(label):
+    """Translate each party's internal faction names into the shared climate groups."""
+    mapping = {
+        "Party Mainstream": "Government Mainstream",
+        "Labour Right": "Government Mainstream",
+        "One Nation": "Government Mainstream",
+        "SNP Mainstream": "Government Mainstream",
+        "Social Liberal": "Soft Left",
+        "Green Pragmatist": "Soft Left",
+        "Social Democratic": "Soft Left",
+        "Welsh Social Democrat": "Soft Left",
+        "Soft Left": "Soft Left",
+        "Socialist Left": "Socialist Left",
+        "Eco-Socialist": "Socialist Left",
+        "Welsh Socialist": "Socialist Left",
+        "Economic Liberal": "Economic Liberal",
+        "Thatcherite Right": "Economic Liberal",
+        "New Right": "Economic Liberal",
+        "Free-Market": "Economic Liberal",
+        "Federalist": "Regional Voices",
+        "Decentralist": "Regional Voices",
+        "Independence Pragmatist": "Regional Voices",
+        "Civic Nationalist": "Regional Voices",
+        "Populist": "Reformist",
+        "Reformist": "Reformist",
+        "Traditionalist": "Traditionalist",
+        "National Conservative": "Traditionalist",
+    }
+    return mapping.get(str(label), str(label) if str(label) in FACTION_LABELS else "Government Mainstream")
+
 
 def ensure(s=None):
     if s is None:
@@ -55,7 +85,7 @@ def annual_review(s=None):
         if not minister or str(minister).startswith(("Vacant", "New appointment")):
             continue
         profile = cabinet_management.profile_for(s, department)
-        faction = str(profile.get("faction", "Government Mainstream"))
+        faction = _climate_faction(profile.get("faction", "Government Mainstream"))
         grouped.setdefault(faction, []).append((
             float(loyalty.get(department, 60.0)),
             float(competence.get(department, 60.0)),
